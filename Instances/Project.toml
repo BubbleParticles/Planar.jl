@@ -1,0 +1,8 @@
+name = "Instances"
+uuid = "36291b3f-06ca-4570-b5b6-65fb8ed80b61"
+authors = ["untoreh <francesco.giannelli@yahoo.it>"]
+version = "0.1.0"
+
+[deps]
+Exchanges = "ab04e009-1d60-4d36-ac2f-58b9338a89b5"
+OrderTypes = "fba5cb4a-2089-4510-9d41-52be7ff19328"

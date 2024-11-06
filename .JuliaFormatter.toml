@@ -1,0 +1,6 @@
+style="blue"
+margin=92
+always_use_return=false
+remove_extra_newlines=true
+overwrite=false
+pipe_to_function_call=false

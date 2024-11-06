@@ -1,0 +1,213 @@
+name: build-docker
+
+on:
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        required: false
+        default: false
+  push:
+    tags:
+      - 'v*'
+
+# docker/build-push-action@v4.1.1
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      JULIA_VERSION: 1.11
+    permissions: write-all
+    timeout-minutes: 300
+
+    steps:
+      # Check out code
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@v2
+      - name: compile
+        run: echo "COMPILE_SCRIPT=scripts/compile.jl" >> $GITHUB_ENV
+      # This is a separate action that sets up buildx runner
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      # So now you can use Actions' own caching!
+      - name: restore cache
+        uses: actions/cache/restore@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: panifie
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          limit-access-to-actor: true
+        timeout-minutes: 300
+      - name: Docker meta precomp
+        id: meta-precomp
+        uses: docker/metadata-action@v5
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            panifie/vindicta-precomp
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=schedule
+            type=ref,event=tag
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+      - name: Precomp
+        uses: docker/build-push-action@v2
+        id: precomp
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta-precomp.outputs.tags }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          target: vindicta-precomp
+      - name: Docker meta sysimage
+        id: meta-sysimage
+        uses: docker/metadata-action@v5
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            panifie/vindicta-sysimage
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=schedule
+            type=ref,event=tag
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+      - name: Sysimage
+        uses: docker/build-push-action@v2
+        id: sysimage
+        with:
+          context: .
+          build-args: "COMPILE_SCRIPT=${{ env.COMPILE_SCRIPT }}"
+          push: true
+          tags: ${{ steps.meta-sysimage.outputs.tags }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          target: vindicta-sysimage
+      - name: Docker meta precomp interactive
+        id: meta-precomp-interactive
+        uses: docker/metadata-action@v5
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            panifie/vindicta-precomp-interactive
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=schedule
+            type=ref,event=tag
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+      - name: Precomp Interactive
+        uses: docker/build-push-action@v2
+        id: precomp-interactive
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta-precomp-interactive.outputs.tags }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          target: vindicta-precomp-interactive
+      - name: Docker meta sysimage interactive
+        id: meta-sysimage-interactive
+        uses: docker/metadata-action@v5
+        with:
+          # list of Docker images to use as base name for tags
+          images: |
+            panifie/vindicta-sysimage-interactive
+          # generate Docker tags based on the following events/attributes
+          tags: |
+            type=schedule
+            type=ref,event=tag
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+      - name: Sysimage Interactive
+        uses: docker/build-push-action@v2
+        id: sysimage-interactive
+        with:
+          context: .
+          build-args: "COMPILE_SCRIPT=${{ env.COMPILE_SCRIPT }}"
+          push: true
+          tags: ${{ steps.meta-sysimage-interactive.outputs.tags }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+          target: vindicta-sysimage-interactive
+        # This ugly bit is necessary if you don't want your cache to grow forever
+        # until it hits GitHub's limit of 5GB.
+        # Temp fix
+        # https://github.com/docker/build-push-action/issues/252
+        # https://github.com/moby/buildkit/issues/1896
+      - name: Move cache
+        if: always()
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+      - name: Save Cache
+        uses: actions/cache/save@v3
+        id: last_save
+        if: ${{ !cancelled() }}
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ github.sha }}
+      - name: Cleanup
+        if: always()
+        run: |
+          gh extension install actions/gh-actions-cache
+
+          REPO=${{ github.repository }}
+          BRANCH=${{ github.ref }}
+
+          echo "Fetching list of cache key for $REPO / $BRANCH"
+          cacheKeysForPR=$(gh actions-cache list -R $REPO -B $BRANCH | grep -E 'buildx')
+          echo ${{ steps.last_save.outcome }}
+          if [ ${{ steps.last_save.outcome }} = 'success' ]; then
+            echo "excluding this commit"
+            EXCLUDE=${{ github.sha }}
+          else
+            echo "excluding commit before"
+            EXCLUDE=${{ github.event.before }}
+          fi
+          cacheKeysForPR=$(echo "$cacheKeysForPR" | grep -v "$EXCLUDE" | cut -f 1 )
+
+          ## Setting this to not fail the workflow while deleting cache keys.
+          set +e
+          echo "Deleting caches..."
+          for cacheKey in $cacheKeysForPR
+          do
+              gh actions-cache delete $cacheKey -R $REPO -B $BRANCH --confirm
+          done
+          echo "Done"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

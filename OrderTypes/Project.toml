@@ -1,0 +1,8 @@
+name = "OrderTypes"
+uuid = "fba5cb4a-2089-4510-9d41-52be7ff19328"
+authors = ["untoreh <francesco.giannelli@yahoo.it>"]
+version = "0.1.0"
+
+[deps]
+ExchangeTypes = "16e96388-e60e-4b60-892f-986722d15ae4"
+Instruments = "36fdd1e0-de92-434c-a120-c8ed410c5e3c"

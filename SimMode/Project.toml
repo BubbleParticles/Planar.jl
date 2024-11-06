@@ -1,0 +1,8 @@
+name = "SimMode"
+uuid = "70084082-5615-4098-a9f0-eda0197c0e82"
+authors = ["untoreh <francesco.giannelli@yahoo.it>"]
+version = "0.1.0"
+
+[deps]
+Executors = "8d044263-b64b-4593-bc6a-15d2ec3d7aea"
+Simulations = "a69aad36-f532-4133-ba48-77171b778e6d"

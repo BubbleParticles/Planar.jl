@@ -1,0 +1,10 @@
+name = "ExchangeTypes"
+uuid = "16e96388-e60e-4b60-892f-986722d15ae4"
+authors = ["untoreh <francesco.giannelli@yahoo.it>"]
+version = "0.1.0"
+
+[deps]
+Ccxt = "a58c4053-12c5-4e22-b66a-82c3bd74bf8a"
+FunctionalCollections = "de31a74c-ac4f-5751-b3fd-e18cd04993ca"
+OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
+Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"

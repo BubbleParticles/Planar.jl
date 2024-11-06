@@ -1,0 +1,9 @@
+name = "Ccxt"
+uuid = "a58c4053-12c5-4e22-b66a-82c3bd74bf8a"
+authors = ["untoreh <francesco.giannelli@yahoo.it>"]
+version = "0.1.0"
+
+[deps]
+Misc = "ff97321b-aa60-4104-8cd6-2e42973349ab"
+PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
+Python = "e8cdc95d-7257-4c38-ab0e-cc8a28c19776"

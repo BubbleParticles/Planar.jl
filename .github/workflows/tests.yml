@@ -1,0 +1,99 @@
+name: run-tests
+
+# NOTE: Tests shouldn't be run at the same time as the build workflows since
+# they query the same exchange point and can make tests fail
+
+on:
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        required: false
+        default: false
+jobs:
+  test:
+    strategy:
+      max-parallel: 1
+      matrix:
+        os: [ubuntu-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    env:
+      JULIA_VERSION: 1
+    steps:
+    - uses: actions/checkout@v2
+    - name: restore cache
+      uses: actions/cache/restore@v3
+      id: julia-cache
+      with:
+        path: |
+          ~/.julia
+          .conda
+          VindictaDev/.CondaPkg/env
+        key: ${{ matrix.os }}-julia-${{ env.JULIA_VERSION }}-test-${{ github.sha }}
+        restore-keys: |
+          ${{ matrix.os }}-julia-${{ env.JULIA_VERSION }}-test-
+    - name: Set up Julia
+      uses: julia-actions/setup-julia@v1
+      with:
+        version: ${{ env.JULIA_VERSION }}
+        include-all-prereleases: false
+    - name: Setup tmate session
+      env:
+        VINDICTA_BYBIT_SANDBOX_APIKEY: ${{ secrets.VINDICTA_BYBIT_SANDBOX_APIKEY }}
+        VINDICTA_BYBIT_SANDBOX_SECRET: ${{ secrets.VINDICTA_BYBIT_SANDBOX_SECRET }}
+        VINDICTA_BYBIT_SANDBOX_PASSWORD: ${{ secrets.VINDICTA_BYBIT_SANDBOX_PASSWORD }}
+        VINDICTA_PHEMEX_SANDBOX_APIKEY: ${{ secrets.VINDICTA_PHEMEX_SANDBOX_APIKEY }}
+        VINDICTA_PHEMEX_SANDBOX_SECRET: ${{ secrets.VINDICTA_PHEMEX_SANDBOX_SECRET }}
+        VINDICTA_PHEMEX_SANDBOX_PASSWORD: ${{ secrets.VINDICTA_PHEMEX_SANDBOX_PASSWORD }}
+        VINDICTA_CMC_APIKEY: ${{ secrets.VINDICTA_CMC_APIKEY }}
+      uses: mxschmitt/action-tmate@v3
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+    - name: Git submodules
+      run: git submodule init; git submodule update
+    - name: Install dependencies
+      if: ${{ matrix.os == 'ubuntu-latest' }}
+      run: sudo apt-get install -y xauth direnv
+    - name: Install dependencies
+      if: ${{ matrix.os == 'macos-14' }}
+      run: brew install xauth direnv
+    - name: Instantiate
+      run: |
+        direnv allow .
+        eval "$(direnv hook bash)"
+        git reset --hard # otherwise instantiate fails
+        julia --project=VindictaDev/ -e 'import Pkg; Pkg.instantiate(); using VindictaDev;'
+    - name: Run tests # coverage is generated only on success
+      env:
+        VINDICTA_TEST_EXCHANGE: "phemex"
+        VINDICTA_TEST_EXCHANGE_MM: "phemex"
+        VINDICTA_BYBIT_SANDBOX_APIKEY: ${{ secrets.VINDICTA_BYBIT_SANDBOX_APIKEY }}
+        VINDICTA_BYBIT_SANDBOX_SECRET: ${{ secrets.VINDICTA_BYBIT_SANDBOX_SECRET }}
+        VINDICTA_BYBIT_SANDBOX_PASSWORD: ${{ secrets.VINDICTA_BYBIT_SANDBOX_PASSWORD }}
+        VINDICTA_PHEMEX_SANDBOX_APIKEY: ${{ secrets.VINDICTA_PHEMEX_SANDBOX_APIKEY }}
+        VINDICTA_PHEMEX_SANDBOX_SECRET: ${{ secrets.VINDICTA_PHEMEX_SANDBOX_SECRET }}
+        VINDICTA_PHEMEX_SANDBOX_PASSWORD: ${{ secrets.VINDICTA_PHEMEX_SANDBOX_PASSWORD }}
+        VINDICTA_CMC_APIKEY: ${{ secrets.VINDICTA_CMC_APIKEY }}
+      run: |
+        direnv allow .
+        eval "$(direnv hook bash)"
+        julia --project=VindictaDev/ -e 'import Pkg; Pkg.test(coverage=true)'
+    - name: Process coverage
+      if: always()
+      uses: julia-actions/julia-processcoverage@v1
+      with:
+        directories: StrategyStats/src,Ccxt/src,Collections/src,Data/src,Engine/src,ExchangeTypes/src,Exchanges/src,Executors/src,Fetch/src,Instances/src,Instruments/src,Lang/src,LiveMode/src,Misc/src,Optimization/src,OrderTypes/src,PaperMode/src,Pbar/src,Vindicta/src,Plotting/src,Processing/src,Python/src,Remote/src,Scrapers/src,SimMode/src,Simulations/src,Stats/src,Strategies/src,Stubs/src,TimeTicks/src,Watchers/src
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v2
+      if: always()
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    - name: Save Cache
+      uses: actions/cache/save@v3
+      if: always()
+      with:
+        path: |
+          ~/.julia
+          .conda
+          VindictaDev/.CondaPkg/env
+        key: ${{ runner.os }}-julia-${{ env.JULIA_VERSION }}-test-${{ github.sha }}

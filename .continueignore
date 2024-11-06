@@ -1,0 +1,6 @@
+.conda/*
+.conda
+.conda/
+.Vindicta.so
+*/.conda/*
+wip.jl
