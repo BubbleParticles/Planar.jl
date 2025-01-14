@@ -1,5 +1,5 @@
 module SimpleStrategy
-using Vindicta
+using Planar
 const DESCRIPTION = "SimpleStrategy"
 const EXC = :binance
 const MARGIN = NoMargin

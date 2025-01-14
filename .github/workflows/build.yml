@@ -60,7 +60,7 @@ jobs:
         with:
           # list of Docker images to use as base name for tags
           images: |
-            panifie/vindicta-precomp
+            panifie/planar-precomp
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule
@@ -80,14 +80,14 @@ jobs:
           tags: ${{ steps.meta-precomp.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
-          target: vindicta-precomp
+          target: planar-precomp
       - name: Docker meta sysimage
         id: meta-sysimage
         uses: docker/metadata-action@v5
         with:
           # list of Docker images to use as base name for tags
           images: |
-            panifie/vindicta-sysimage
+            panifie/planar-sysimage
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule
@@ -108,14 +108,14 @@ jobs:
           tags: ${{ steps.meta-sysimage.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
-          target: vindicta-sysimage
+          target: planar-sysimage
       - name: Docker meta precomp interactive
         id: meta-precomp-interactive
         uses: docker/metadata-action@v5
         with:
           # list of Docker images to use as base name for tags
           images: |
-            panifie/vindicta-precomp-interactive
+            panifie/planar-precomp-interactive
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule
@@ -135,14 +135,14 @@ jobs:
           tags: ${{ steps.meta-precomp-interactive.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
-          target: vindicta-precomp-interactive
+          target: planar-precomp-interactive
       - name: Docker meta sysimage interactive
         id: meta-sysimage-interactive
         uses: docker/metadata-action@v5
         with:
           # list of Docker images to use as base name for tags
           images: |
-            panifie/vindicta-sysimage-interactive
+            panifie/planar-sysimage-interactive
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule
@@ -163,7 +163,7 @@ jobs:
           tags: ${{ steps.meta-sysimage-interactive.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
-          target: vindicta-sysimage-interactive
+          target: planar-sysimage-interactive
         # This ugly bit is necessary if you don't want your cache to grow forever
         # until it hits GitHub's limit of 5GB.
         # Temp fix

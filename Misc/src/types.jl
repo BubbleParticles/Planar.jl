@@ -73,27 +73,27 @@ const StrOrVec = Union{AbstractString,AbstractVector}
 # still scientific notation literals need a macro to be rewritten
 @doc "The floating point number type to use."
 const DFT =
-    DEFAULT_FLOAT_TYPE = get(ENV, "VINDICTA_FLOAT_TYPE", "Float64") |> Sandbox.safereval
+    DEFAULT_FLOAT_TYPE = get(ENV, "PLANAR_FLOAT_TYPE", "Float64") |> Sandbox.safereval
 @doc "Static `zero(DFT)`"
 const ZERO = zero(DFT)
 @doc "Static `one(DFT)`"
 const ONE = one(DFT)
-@assert DEFAULT_FLOAT_TYPE isa DataType "$ENV must be edited within julia, before loading vindicta!"
+@assert DEFAULT_FLOAT_TYPE isa DataType "$ENV must be edited within julia, before loading planar!"
 @doc "The margin of error to use [`2eps`]."
-const ATOL = @something tryparse(DFT, get(ENV, "VINDICTA_ATOL", "")) 10 * eps()
+const ATOL = @something tryparse(DFT, get(ENV, "PLANAR_ATOL", "")) 10 * eps()
 
 @doc "Min, max named tuple"
 const MM{T<:Real} = NamedTuple{(:min, :max),Tuple{T,T}}
 
 # TODO: This should use `Scratch.jl` instead
 @doc "Returns the default local directory."
-default_local_dir(args...) = joinpath(ENV["HOME"], ".cache", "Vindicta", args...)
+default_local_dir(args...) = joinpath(ENV["HOME"], ".cache", "Planar", args...)
 function local_dir(args...)
     xdg = get(ENV, "XDG_CACHE_DIR", nothing)
     if isnothing(xdg)
         default_local_dir(args...)
     else
-        joinpath(xdg, "Vindicta")
+        joinpath(xdg, "Planar")
     end
 end
 const DATA_PATH = local_dir("data")

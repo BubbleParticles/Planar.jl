@@ -35,7 +35,7 @@ function fetch_ohlcv(
     # err_file = joinpath(DATA_PATH, "err.log")
     # FIXME: find out how io redirection interacts with distributed
     # t = redirect_stdio(; stdout=out_file, stderr=err_file) do
-    parallel && _instantiate_workers(:Vindicta; num=length(excs))
+    parallel && _instantiate_workers(:Planar; num=length(excs))
     # NOTE: The python classes have to be instantiated inside the worker processes
     if eltype(excs) === Symbol
         e_pl = s -> (ex = getexchange!(s; sandbox, account); (ex, tickers(ex; as_vec=true)))

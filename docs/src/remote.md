@@ -1,6 +1,6 @@
 # Control the bot remotely
 
-A vindicta strategy can be controlled with telegram. 
+A planar strategy can be controlled with telegram. 
 
 ## Requirements
 Create a new telegram bot:
@@ -21,8 +21,8 @@ Once you have the token and the id, save them either:
 Start listening for commands:
 
 ``` julia
-using Vindicta
-Vindicta.Remote.tgstart!(s) # where s is your strategy object
+using Planar
+Planar.Remote.tgstart!(s) # where s is your strategy object
 ```
 
 Now you can start a chat with your telegram bot.
@@ -44,7 +44,7 @@ The supported commands are:
 To manually stop the telegram bot:
 
 ``` julia
-Vindicta.Remote.tgstop!(s) # where s is your strategy object
+Planar.Remote.tgstop!(s) # where s is your strategy object
 ```
 
 To prevent the bot from talking with strangers you can set a specific username that the bot is allowed to talk to by setting the `tgusername`(`Symbol`) key to your desired telegram username.

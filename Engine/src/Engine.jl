@@ -9,4 +9,4 @@ else
     include("module.jl")
 end
 
-end # module Vindicta
+end # module Planar

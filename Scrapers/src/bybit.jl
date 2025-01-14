@@ -228,7 +228,7 @@ function bybitdownload(
                 bybitsave(s, ohlcv; path)
                 ca.save_cache(cache_key(s; path), last_file)
             elseif !isnothing(tmpdata)
-                tmp_path = joinpath(_tempdir(), "vindicta")
+                tmp_path = joinpath(_tempdir(), "planar")
                 mkpath(tmp_path)
                 name = basename(tempname())
                 ca.save_cache(name, tmpdata; cache_path=tmp_path)

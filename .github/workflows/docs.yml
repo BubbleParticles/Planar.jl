@@ -34,9 +34,9 @@ jobs:
         path: |
           ~/.julia
           ~/.conda
-        key: ${{ runner.os }}-julia-${{ env.JULIA_VERSION }}-cache-${{ hashFiles('Vindicta/Project.toml') }}
+        key: ${{ runner.os }}-julia-${{ env.JULIA_VERSION }}-cache-${{ hashFiles('Planar/Project.toml') }}
         restore-keys: |
-          ${{ runner.os }}-julia-${{ env.JULIA_VERSION }}-cache-${{ hashFiles('Vindicta/Project.toml') }}
+          ${{ runner.os }}-julia-${{ env.JULIA_VERSION }}-cache-${{ hashFiles('Planar/Project.toml') }}
           ${{ runner.os }}-julia-${{ env.JULIA_VERSION }}-
           ${{ runner.os }}-
     - name: Setup tmate session
@@ -50,14 +50,14 @@ jobs:
         git submodule update --init;
         sudo apt-get install -y xauth
         # FIXME
-        # [ -e ~/.cache/Vindicta.jl/data ] && rm -r ~/.cache/Vindicta.jl/data
-        julia --project=Vindicta docs/setup.jl
+        # [ -e ~/.cache/Planar.jl/data ] && rm -r ~/.cache/Planar.jl/data
+        julia --project=Planar docs/setup.jl
     - name: Build docs
       run: |
         # FIXME
-        # [ -e ~/.cache/Vindicta.jl/data ] && rm -r ~/.cache/Vindicta.jl/data
+        # [ -e ~/.cache/Planar.jl/data ] && rm -r ~/.cache/Planar.jl/data
         # export JULIA_CONDAPKG_OFFLINE=yes
-        julia --project=Vindicta docs/make.jl
+        julia --project=Planar docs/make.jl
     - name: Checkout gh-pages branch
       uses: actions/checkout@v3
       with:

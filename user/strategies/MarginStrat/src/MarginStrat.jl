@@ -1,5 +1,5 @@
 module MarginStrat
-using Vindicta
+using Planar
 
 const DESCRIPTION = "MarginStrat"
 const EXC = :binance

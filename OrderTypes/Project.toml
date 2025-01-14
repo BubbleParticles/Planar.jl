@@ -1,6 +1,6 @@
 name = "OrderTypes"
 uuid = "fba5cb4a-2089-4510-9d41-52be7ff19328"
-authors = ["untoreh <francesco.giannelli@yahoo.it>"]
+authors = ["zbc <francesco.giannelli@yahoo.it>"]
 version = "0.1.0"
 
 [deps]

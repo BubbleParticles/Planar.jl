@@ -18,11 +18,11 @@ function _doinit()
     Data.zi[] = Data.zinstance()
 end
 
-@doc """ Brings most vindicta modules into scope (generally used inside the repl). """
-macro environment!(vdn=@__MODULE__)
+@doc """ Brings most planar modules into scope (generally used inside the repl). """
+macro environment!(pln=@__MODULE__)
     quote
-        if !isdefined($(__module__), :vdn)
-            const $(esc(:vdn)) = $vdn
+        if !isdefined($(__module__), :pln)
+            const $(esc(:pln)) = $pln
         end
         using .vdt.Exchanges
         using .vdt.Exchanges: Exchanges as exs
@@ -70,7 +70,7 @@ end
 macro strategyenv!()
     expr = quote
         __revise_mode__ = :eval
-        using Vindicta: Vindicta as vdt
+        using Planar: Planar as vdt
         using .vdt.Engine
         using .vdt.Engine: Strategies as st
         using .vdt.Engine.Instances: Instances as inst
@@ -116,7 +116,7 @@ macro strategyenv!()
 
         using .vdt.Engine.LiveMode: asset_tasks, strategy_tasks, @retry
 
-        $(Vindicta.Engine.Strategies).@interface
+        $(Planar.Engine.Strategies).@interface
 
         const EXCID = ExchangeID(isdefined(@__MODULE__, :EXC) ? EXC : Symbol())
         if !isdefined(@__MODULE__, :MARGIN)
@@ -128,11 +128,11 @@ macro strategyenv!()
     esc(expr)
 end
 
-@doc """ Sets up the environment for contract management in the Vindicta module.
+@doc """ Sets up the environment for contract management in the Planar module.
 
 $(TYPEDSIGNATURES)
 
-This macro imports necessary modules and aliases for managing contracts in the Vindicta module.
+This macro imports necessary modules and aliases for managing contracts in the Planar module.
 It prepares the environment for working with positions, leverage, and updates to leverage, margin, and positions.
 """
 macro contractsenv!()
@@ -146,16 +146,16 @@ macro contractsenv!()
     end
 end
 
-@doc """ Sets up the environment for optimization in the Vindicta module.
+@doc """ Sets up the environment for optimization in the Planar module.
 
 $(TYPEDSIGNATURES)
 
-This macro imports necessary modules and aliases for optimization in the Vindicta module.
+This macro imports necessary modules and aliases for optimization in the Planar module.
 It prepares the environment for working with simulation modes and statistics.
 """
 macro optenv!()
     quote
-        using Vindicta.Engine.SimMode: SimMode as sm
+        using Planar.Engine.SimMode: SimMode as sm
         using Optimization.Metrics: Metrics as mt
     end
 end

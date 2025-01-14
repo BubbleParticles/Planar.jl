@@ -1,6 +1,6 @@
 # Optimization
 
-Vindicta provides tools to optimize strategy parameters. Optimzations are managed through the [`Optimization.OptSession`](@ref) type. Which is a structure that holds informations about the optimization parameters, configuration and previous runs.
+Planar provides tools to optimize strategy parameters. Optimzations are managed through the [`Optimization.OptSession`](@ref) type. Which is a structure that holds informations about the optimization parameters, configuration and previous runs.
 Optimization sessions can be periodically saved, and therefore can be reloaded at a later time to explore previous results or continue the optimization from where it left off.
 
 There are currently 3 different optimization methods: [`Optimization.gridsearch`](@ref), [`Optimization.bboptimize`](@ref), `boptimize!`(when using `BayesianOptimization`).
@@ -65,16 +65,16 @@ Visualizing the outcomes of an optimization can be accomplished with the `Plotti
     The `plot_results` function is part of the `Plotting` package, which acts as an extension. To use it, perform the following steps:
     ```
     julia
-    # Restart the REPL if Vindicta was previously imported.
+    # Restart the REPL if Planar was previously imported.
     using Pkg: Pkg
-    Pkg.activate("VindictaInteractive")
-    using VindictaInteractive
+    Pkg.activate("PlanarInteractive")
+    using PlanarInteractive
     # Now you can call Plotting.plot_results(...)
     ```
-    Alternatively, activate and load the `Plotting` package first, followed by the `Optimization` package. The `Vindicta` framework provides convenience functions to streamline this process:
+    Alternatively, activate and load the `Plotting` package first, followed by the `Optimization` package. The `Planar` framework provides convenience functions to streamline this process:
     ```
     julia
-    using Vindicta
+    using Planar
     plots!() # This loads the Plotting package.
     using Optimization
     ```

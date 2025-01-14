@@ -1,6 +1,6 @@
 ## High-Frequency Trading (HFT) Backtesting Documentation
 
-The `SimMode` class, also known as the vindicta backtester, utilizes Open-High-Low-Close-Volume (OHLCV) data to simulate the execution of trades.
+The `SimMode` class, also known as the planar backtester, utilizes Open-High-Low-Close-Volume (OHLCV) data to simulate the execution of trades.
 
 ### Reasons to Avoid Tick-by-Tick Backtesting
 Tick-by-tick backtesting may not be ideal due to several factors:

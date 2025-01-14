@@ -1,5 +1,5 @@
 module BBWithOpt
-using Vindicta
+using Planar
 
 const DESCRIPTION = "BBWithOpt"
 const EXC = :phemex

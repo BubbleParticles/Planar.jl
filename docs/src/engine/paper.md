@@ -1,5 +1,5 @@
 # Running in Paper Mode
-In order to configure a strategy in paper mode, you can define the default mode in `user/vindicta.toml` or in your strategy project's `Project.toml` file. Alternatively, pass the mode as a keyword argument:
+In order to configure a strategy in paper mode, you can define the default mode in `user/planar.toml` or in your strategy project's `Project.toml` file. Alternatively, pass the mode as a keyword argument:
 
 ```toml
 [Example]

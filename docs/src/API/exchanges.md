@@ -1,5 +1,5 @@
 # Exchanges
 
 ```@autodocs
-Modules = [Vindicta.Exchanges, Vindicta.Exchanges.ExchangeTypes]
+Modules = [Planar.Exchanges, Planar.Exchanges.ExchangeTypes]
 ```

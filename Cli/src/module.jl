@@ -35,7 +35,7 @@ end
 #     exchange = esc(:exchange)
 #     quote
 #         @info "Setting Exchange"
-#         Vindicta.setexchange!(Symbol($exchange))
+#         Planar.setexchange!(Symbol($exchange))
 #     end
 # end
 
@@ -148,6 +148,6 @@ Downsamples ohlcv data from a timeframe to another.
 end
 
 """
-Vindicta CLI
+Planar CLI
 """
 @main

@@ -1,6 +1,6 @@
 name = "Ccxt"
 uuid = "a58c4053-12c5-4e22-b66a-82c3bd74bf8a"
-authors = ["untoreh <francesco.giannelli@yahoo.it>"]
+authors = ["zbc <francesco.giannelli@yahoo.it>"]
 version = "0.1.0"
 
 [deps]

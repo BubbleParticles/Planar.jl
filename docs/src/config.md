@@ -1,4 +1,4 @@
-The bot is configured using a file named `user/vindicta.toml`, which serves as the default configuration file. This file typically contains:
+The bot is configured using a file named `user/planar.toml`, which serves as the default configuration file. This file typically contains:
 
 - Minor exchange configurations, which are referenced using the `ExchangeID` symbol as the key for the exchange's config section.
 - Strategy settings, where the strategy module's name is used as the section key. Each strategy section may include:

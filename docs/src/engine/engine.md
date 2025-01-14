@@ -1,10 +1,10 @@
 # Engine
 
-Within the Vindicta "model", we use the _call!_ and _call!_ functions to communicate between _strategies_ and _executors_. The executor calls the strategy, implying that the strategy should do or return something. The strategy calls the executor, expecting it to do or return something.
+Within the Planar "model", we use the _call!_ and _call!_ functions to communicate between _strategies_ and _executors_. The executor calls the strategy, implying that the strategy should do or return something. The strategy calls the executor, expecting it to do or return something.
 
-In the Vindicta framework, the user generally only writes `call!` functions within their strategies.
+In the Planar framework, the user generally only writes `call!` functions within their strategies.
 
-Unlike other trading bots that offer a set of methods for tuning purposes, usually tied to the super class of the strategy, Vindicta conventionally deals only with `call!` functions. This allows you to know that whenever a _call!_ call is made from the strategy, it is a point where simulation and live execution may diverge.
+Unlike other trading bots that offer a set of methods for tuning purposes, usually tied to the super class of the strategy, Planar conventionally deals only with `call!` functions. This allows you to know that whenever a _call!_ call is made from the strategy, it is a point where simulation and live execution may diverge.
 
 The functions are implemented in a way that they dispatch differently according to the execution mode of the strategy. There are 3 execution modes:
 

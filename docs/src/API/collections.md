@@ -1,5 +1,5 @@
 # Collections
 
 ```@autodocs
-Modules = [Vindicta.Engine.Collections]
+Modules = [Planar.Engine.Collections]
 ```

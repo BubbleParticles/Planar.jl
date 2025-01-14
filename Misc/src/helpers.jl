@@ -5,12 +5,12 @@
 
 $(TYPEDSIGNATURES)
 
-This function sets the offline mode based on the `VINDICTA_OFFLINE` environment variable. If the environment variable is set, it parses its value as a boolean to set the offline mode.
+This function sets the offline mode based on the `PLANAR_OFFLINE` environment variable. If the environment variable is set, it parses its value as a boolean to set the offline mode.
 It is used to skip some errors during precompilation, if precompiling offline.
 
 """
 setoffline!() = begin
-    opt = get(ENV, "VINDICTA_OFFLINE", "")
+    opt = get(ENV, "PLANAR_OFFLINE", "")
     OFFLINE[] = if opt == ""
         false
     else
@@ -20,7 +20,7 @@ end
 
 isoffline() = OFFLINE[]
 
-@doc """Same as the Lang.@ignore` macro, but only if `VINDICTA_OFFLINE` is set."""
+@doc """Same as the Lang.@ignore` macro, but only if `PLANAR_OFFLINE` is set."""
 macro skipoffline(
     expr,
     this_file=string(__source__.file),

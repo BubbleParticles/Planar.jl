@@ -5,8 +5,8 @@ The simplest way to create a strategy is to use the interactive generator which 
 for the required set of options to set.
 
 ``` julia
-julia> using Vindicta
-julia> Vindicta.generate_strategy()
+julia> using Planar
+julia> Planar.generate_strategy()
 Strategy name: : MyNewStrategy
 
 Timeframe:
@@ -38,12 +38,12 @@ Margin mode:
  > NoMargin
    Isolated
 
-Activate strategy project at /run/media/fra/stateful-1/dev/Vindicta.jl/user/strategies/MyNewStrategy? [y]/n: y
+Activate strategy project at /run/media/fra/stateful-1/dev/Planar.jl/user/strategies/MyNewStrategy? [y]/n: y
 
 Add project dependencies (comma separated): Indicators
    Resolving package versions...
    [...]
-  Activating project at `/run/media/fra/stateful-1/dev/Vindicta.jl/user/strategies/MyNewStrategy`
+  Activating project at `/run/media/fra/stateful-1/dev/Planar.jl/user/strategies/MyNewStrategy`
 
 ┌ Info: New Strategy
 │   name = "MyNewStrategy"
@@ -57,19 +57,19 @@ julia> s = ans
 ```
 Alternatively you can directly pass kwargs and skip interaction by passing `ask=false`.
 ``` julia
-Vindicta.generate_strat("MyNewStrategy", ask=false, exchange=:myexc)
+Planar.generate_strat("MyNewStrategy", ask=false, exchange=:myexc)
 ```
 or just use a config:
 ``` julia
-cfg = Vindicta.Config(exchange=:myexc)
-Vindicta.generate_strat("MyNewStrategy", cfg)
+cfg = Planar.Config(exchange=:myexc)
+Planar.generate_strat("MyNewStrategy", cfg)
 ```
 ## Load a strategy
 
 The strategy is instantiated by loading a julia module at runtime.
 
 ```julia
-using Vindicta
+using Planar
 cfg = Config(exchange=:kucoin) # Constructs a configuration object, choosing kucoin as exchange
 s = strategy(:Example, cfg) # Load the Example strategy
 ```
@@ -87,7 +87,7 @@ See here how the `load` method is defined.
 
 ```julia
 module Example
-using Vindicta
+using Planar
 
 const DESCRIPTION = "Example"
 const EXC = :phemex
@@ -114,12 +114,12 @@ If you want to create a strategy manually you can either:
 - Copy the `user/strategies/Template.jl` to a new file in the same directory and customize it.
 - Generate a new project in `user/strategies` and customize `Template.jl` to be your project entry file. The strategy `Project.toml` is used to store strategy config options. See other strategies examples for what the keys that are required.
 
-For more advanced setups you can also use `Vindicta` as a library, and construct the strategy object directly from your own module:
+For more advanced setups you can also use `Planar` as a library, and construct the strategy object directly from your own module:
 
 ``` julia
-using Vindicta
+using Planar
 using MyDownStreamModule
-s = Vindicta.Engine.Strategies.strategy(MyDownStreamModule)
+s = Planar.Engine.Strategies.strategy(MyDownStreamModule)
 ```
 
 
@@ -137,8 +137,8 @@ Engine.Strategies.call!
 The function `remove_strategy` allows to discard a strategy by its name. It will delete the julia file or the project directory and optionally the config entry.
 
 ``` julia
-julia> Vindicta.remove_strategy("MyNewStrategy")
-Really delete strategy located at /run/media/fra/stateful-1/dev/Vindicta.jl/user/strategies/MyNewStrategy? [n]/y: y
+julia> Planar.remove_strategy("MyNewStrategy")
+Really delete strategy located at /run/media/fra/stateful-1/dev/Planar.jl/user/strategies/MyNewStrategy? [n]/y: y
 [ Info: Strategy removed
 Remove user config entry MyNewStrategy? [n]/y: y
 ```

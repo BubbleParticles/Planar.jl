@@ -1,4 +1,4 @@
-# Why Vindicta?
+# Why Planar?
 
 ```@eval
 using Markdown

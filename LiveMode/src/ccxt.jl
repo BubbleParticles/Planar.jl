@@ -137,7 +137,7 @@ ordertype_fromccxt(resp, eid::EIDType) =
         end
     end
 
-@doc "Convert a Vindicta order type to a ccxt time-in-force string."
+@doc "Convert a Planar order type to a ccxt time-in-force string."
 function _ccxttif(exc, type)
     if type <: AnyPostOnlyOrder
         @assert has(exc, :createPostOnlyOrder) "Exchange $(nameof(exc)) doesn't support post only orders."
@@ -156,7 +156,7 @@ function _ccxttif(exc, type)
     end
 end
 
-@doc "Convert a ccxt time-in-force string to a Vindicta order type."
+@doc "Convert a ccxt time-in-force string to a Planar order type."
 ordertype_fromtif(o::Py, eid::EIDType) =
     let tif = resp_order_tif(o, eid)
         if pyeq(Bool, tif, @pyconst("PO"))
@@ -170,7 +170,7 @@ ordertype_fromtif(o::Py, eid::EIDType) =
         end
     end
 
-@doc "Convert a ccxt order side to a Vindicta order side."
+@doc "Convert a ccxt order side to a Planar order side."
 _orderside(o::Union{Py,PyDict}, eid) =
     let v = resp_order_side(o, eid)
         if pyeq(Bool, v, @pyconst("buy"))
@@ -197,7 +197,7 @@ function _checkordertype(exc, sym)
     @assert has(exc, sym) "Exchange $(nameof(exc)) doesn't support $sym orders."
 end
 
-@doc "Get the ccxt order type string from a Vindicta order type."
+@doc "Get the ccxt order type string from a Planar order type."
 function _ccxtordertype(exc, type)
     @pystr if type <: AnyLimitOrder
         _checkordertype(exc, :createLimitOrder)
@@ -244,7 +244,7 @@ function isorder_synced(o, ai, resp::Union{Py,PyDict}, eid::EIDType=exchangeid(a
     return v
 end
 
-@doc "Determine the Vindicta order side from a ccxt order object."
+@doc "Determine the Planar order side from a ccxt order object."
 function _ccxt_sidetype(
     resp, eid::EIDType; o=nothing, getter=resp_trade_side, def::Type{<:OrderSide}=Sell
 )::Type{<:OrderSide}

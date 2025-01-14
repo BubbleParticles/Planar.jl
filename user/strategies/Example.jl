@@ -1,5 +1,5 @@
 module Example
-using Vindicta
+using Planar
 
 const DESCRIPTION = "Example"
 const EXC = :phemex

@@ -13,7 +13,7 @@ $(TYPEDSIGNATURES)
 This function recursively searches for a file with the specified `name` starting from `cur_path`. It stops once the file is found or when it reaches the root directory.
 
 """
-function find_config(cur_path=splitpath(pwd()); name="vindicta.toml", dir="user")
+function find_config(cur_path=splitpath(pwd()); name="planar.toml", dir="user")
     length(cur_path) == 1 && return nothing
     this_file = joinpath(cur_path..., name)
     isfile(this_file) && return this_file
@@ -62,7 +62,7 @@ This function attempts to find the configuration file using `find_config()`. If 
 function config_path()
     path = find_config()
     if isnothing(path)
-        path = joinpath(default_dir(), "vindicta.toml")
+        path = joinpath(default_dir(), "planar.toml")
         if !ispath(path)
             this_path = Base.active_project()
             @warn "Config file not found at $path, fallback to $this_path"
@@ -107,7 +107,7 @@ function exchange_keys(name; sandbox, account="")::Dict{String,Any}
         Dict()
     end
     for k in names
-        this_name = "VINDICTA_$(uppercase(exc_name))_$(uppercase(k))"
+        this_name = "PLANAR_$(uppercase(exc_name))_$(uppercase(k))"
         if haskey(ENV, this_name)
             ans[k] = ENV[this_name]
         end

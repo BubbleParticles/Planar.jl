@@ -1,5 +1,5 @@
 # Executors
 
 ```@autodocs
-Modules = [Vindicta.Engine.Executors]
+Modules = [Planar.Engine.Executors]
 ```

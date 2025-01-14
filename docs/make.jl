@@ -1,6 +1,6 @@
 include("noprecomp.jl")
 using Pkg: Pkg;
-Pkg.activate("Vindicta")
+Pkg.activate("Planar")
 let dse = "~/.julia/environments/$(VERSION)/"
     if dse ∉ LOAD_PATH
         push!(LOAD_PATH, dse)
@@ -9,7 +9,7 @@ end
 using Documenter, DocStringExtensions, Suppressor
 
 # Modules
-using Vindicta
+using Planar
 project_path = dirname(dirname(Pkg.project().path))
 function use(name, args...; activate=false)
     activate_and_import() = begin
@@ -42,13 +42,13 @@ function use(name, args...; activate=false)
     end
 end
 
-if isempty(get(ENV, "VINDICTA_DOCS_SKIP_BUILD", ""))
-    withenv("VINDICTA_DOCS_SKIP_BUILD" => "true") do
-        run(`julia --project=Vindicta docs/make.jl`)
+if isempty(get(ENV, "PLANAR_DOCS_SKIP_BUILD", ""))
+    withenv("PLANAR_DOCS_SKIP_BUILD" => "true") do
+        run(`julia --project=Planar docs/make.jl`)
     end
 end
 
-get(ENV, "VINDICTA_DOCS_LOADED", "false") == "true" || begin
+get(ENV, "PLANAR_DOCS_LOADED", "false") == "true" || begin
     use(:Prices, "Data", "src", "prices.jl")
     use(:Fetch, "Fetch")
     use(:Processing, "Processing")
@@ -64,7 +64,7 @@ get(ENV, "VINDICTA_DOCS_LOADED", "false") == "true" || begin
     use(:Python, "Python")
     use(:StrategyTools, "StrategyTools")
     use(:StrategyStats, "StrategyStats")
-    using Vindicta.Data.DataStructures
+    using Planar.Data.DataStructures
     @eval using Base: Timer
     ENV["LOADED"] = "true"
 end
@@ -81,10 +81,10 @@ function filter_strategy(t)
     end
 end
 
-get(ENV, "VINDICTA_DOCS_SKIP_BUILD", "") == "true" && exit()
+get(ENV, "PLANAR_DOCS_SKIP_BUILD", "") == "true" && exit()
 
 makedocs(;
-    sitename="Vindicta.jl",
+    sitename="Planar.jl",
     pages=[
         "Introduction" => ["presentation.md", "index.md"],
         "Types" => "types.md",

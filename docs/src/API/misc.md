@@ -1,4 +1,4 @@
 # Misc
 ```@autodocs
-Modules = [Vindicta.Misc]
+Modules = [Planar.Misc]
 ```

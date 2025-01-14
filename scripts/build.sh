@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 set -e
-tmp_path=${BUILD_TMP_PATH:-/tmp/vindicta-build}
-# repo="https://github.com/panifie/Vindicta.jl"
+tmp_path=${BUILD_TMP_PATH:-/tmp/planar-build}
+# repo="https://github.com/panifie/Planar.jl"
 repo=${BUILD_REPO:-.}
-image=${1:-${BUILD_IMAGE:-vindicta}}
+image=${1:-${BUILD_IMAGE:-planar}}
 if [ -n "$2" ]; then
     shift
 fi

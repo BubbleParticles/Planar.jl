@@ -1,5 +1,5 @@
 module TwoParameters
-using Vindicta
+using Planar
 const DESCRIPTION = "TwoParameters"
 const EXC = :okx
 const MARGIN = NoMargin

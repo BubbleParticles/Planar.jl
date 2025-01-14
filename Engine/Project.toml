@@ -1,6 +1,6 @@
 name = "Engine"
 uuid = "2ee4d486-7c03-4138-87ff-17a01ae58543"
-authors = ["untoreh <francesco.giannelli@yahoo.it>"]
+authors = ["zbc <francesco.giannelli@yahoo.it>"]
 version = "0.1.0"
 
 [deps]

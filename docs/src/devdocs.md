@@ -1,13 +1,13 @@
-## VindictaDev Documentation
+## PlanarDev Documentation
 
-The `VindictaDev` package assists developers by providing helper functions for working with Vindicta and for conducting tests.
+The `PlanarDev` package assists developers by providing helper functions for working with Planar and for conducting tests.
 
 ### Precompilation Control
 
 To skip precompilation for selected modules, set the `JULIA_NOPRECOMP` environment variable:
 
 ```julia
-ENV["JULIA_NOPRECOMP"] = (:Vindicta, :Scrapers, :Engine, :Watchers, :Plotting, :Metrics)
+ENV["JULIA_NOPRECOMP"] = (:Planar, :Scrapers, :Engine, :Watchers, :Plotting, :Metrics)
 ```
 
 Alternatively, you can manage environment variables with `direnv` (refer to the `.envrc` in the repository). To disable precompilation entirely for certain packages, use `JULIA_NOPRECOMP=all`. This is recommended only when altering low-level components of the module stack. Remember to clear the compilation cache when changing precompilation settings:
@@ -62,11 +62,11 @@ end
 
 ### Handling Segfaults
 
-In rare cases involving complex multi-threaded scenarios, disable and re-enable the garbage collector (GC) around the loading of Vindicta to avoid segmentation faults:
+In rare cases involving complex multi-threaded scenarios, disable and re-enable the garbage collector (GC) around the loading of Planar to avoid segmentation faults:
 
 ```julia
 GC.enable(false)
-using Vindicta
+using Planar
 s = st.strategy()
 GC.enable(true)
 GC.gc()

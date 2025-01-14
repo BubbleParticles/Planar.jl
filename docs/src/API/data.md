@@ -1,5 +1,5 @@
 # Data
 
 ```@autodocs
-Modules = [Vindicta.Data]
+Modules = [Planar.Data]
 ```

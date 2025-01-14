@@ -1,6 +1,6 @@
 name = "Optimization"
 uuid = "01837fd2-c099-442f-ae89-75fa208aad36"
-authors = ["untoreh <francesco.giannelli@yahoo.it>"]
+authors = ["zbc <francesco.giannelli@yahoo.it>"]
 version = "0.1.0"
 
 [deps]

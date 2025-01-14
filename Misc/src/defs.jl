@@ -1,5 +1,4 @@
 call!(args...; kwargs...) = error("Not implemented")
-call!(args...; kwargs...) = error("Not implemented")
 
 start!(args...; kwargs...) = error("not implemented")
 stop!(args...; kwargs...) = error("not implemented")

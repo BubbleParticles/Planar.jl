@@ -13,7 +13,7 @@ function _ensure_env!()
     "JULIA_CONDAPKG_ENV" ∉ keys(ENV) && setindex!(
         ENV, joinpath(dirname(Base.active_project()), ".conda"), "JULIA_CONDAPKG_ENV"
     )
-    if @something tryparse(Bool, get(ENV, "VINDICTA_OFFLINE", "")) false
+    if @something tryparse(Bool, get(ENV, "PLANAR_OFFLINE", "")) false
         ENV["JULIA_CONDAPKG_OFFLINE"] = true
     end
     setpypath!()

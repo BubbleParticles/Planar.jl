@@ -12,7 +12,7 @@ recurse_projects() # Optionally set update=true
 - **Starting the REPL:** Rather than starting a REPL and then activating the project, launch Julia directly with the project as an argument to avoid precompilation issues:
 
 ```julia
-julia --project=./Vindicta
+julia --project=./Planar
 ```
 
 - **Python-Dependent Precompilation:** Precompiling code that relies on Python, such as exchange functions, may lead to segmentation faults. To prevent this:
@@ -21,7 +21,7 @@ julia --project=./Vindicta
   
 - **Persistent Precompilation Skipping:** If a package consistently skips precompilation, check if `JULIA_NOPRECOMP` environment variable includes dependencies of the package.
 
-- **`_debug_` not found** happens when trying to precompile a strategy with debug enabled (`JULIA_DEBUG="all"`) while the module (`Vindicta` or a submodule like `SimMode`) has been not precompiled with debug enabled.
+- **`_debug_` not found** happens when trying to precompile a strategy with debug enabled (`JULIA_DEBUG="all"`) while the module (`Planar` or a submodule like `SimMode`) has been not precompiled with debug enabled.
 
 ## Python Module Discovery
 

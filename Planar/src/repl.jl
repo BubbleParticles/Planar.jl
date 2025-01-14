@@ -33,7 +33,7 @@ If the module is not already defined, it tries to activate the module's project 
 """
 function module!(sym, bind)
     if !isdefined(Main, bind)
-        projpath = dirname(dirname(pathof(Vindicta)))
+        projpath = dirname(dirname(pathof(Planar)))
         modpath = joinpath(projpath, string(sym, ".jl"))
         try
             @eval Main using $sym: $sym as $bind
@@ -84,7 +84,7 @@ analysis!() = module!(:StrategyStats, :sst)
 stubs!() = module!(:Stubs, :stubs)
 @doc """ Activates and Imports the `Optimization` module. """
 optim!() = _activate_and_import(:Optimization, :opt)
-@doc """ Activates and Imports the `VindictaInteractive` module. """
-interactive!() = _activate_and_import(:VindictaInteractive, :vdni)
+@doc """ Activates and Imports the `PlanarInteractive` module. """
+interactive!() = _activate_and_import(:PlanarInteractive, :plni)
 
 export plots!, optim!, metrics!, engine!, analysis!, interactive!

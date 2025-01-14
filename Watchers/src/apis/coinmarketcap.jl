@@ -14,12 +14,12 @@ const API_HEADERS = ["Accept-Encoding" => "deflate,gzip", "Accept" => "applicati
 
 @doc """Sets coinmarketcap api key.
 
-- from env var `VINDICTA_CMC_APIKEY`
+- from env var `PLANAR_CMC_APIKEY`
 - or from config key $(API_KEY_CONFIG)
 """
 function setapikey!(from_env=false, config_path=joinpath(pwd(), "user", "secrets.toml"))
     apikey = if from_env
-        Base.get(ENV, "VINDICTA_CMC_APIKEY", "")
+        Base.get(ENV, "PLANAR_CMC_APIKEY", "")
     else
         cfg = Config(:default, config_path)
         @assert API_KEY_CONFIG ∈ keys(cfg.attrs) "$API_KEY_CONFIG not found in secrets."

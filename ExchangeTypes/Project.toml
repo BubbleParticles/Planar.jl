@@ -1,6 +1,6 @@
 name = "ExchangeTypes"
 uuid = "16e96388-e60e-4b60-892f-986722d15ae4"
-authors = ["untoreh <francesco.giannelli@yahoo.it>"]
+authors = ["zbc <francesco.giannelli@yahoo.it>"]
 version = "0.1.0"
 
 [deps]

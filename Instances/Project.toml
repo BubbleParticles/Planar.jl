@@ -1,6 +1,6 @@
 name = "Instances"
 uuid = "36291b3f-06ca-4570-b5b6-65fb8ed80b61"
-authors = ["untoreh <francesco.giannelli@yahoo.it>"]
+authors = ["zbc <francesco.giannelli@yahoo.it>"]
 version = "0.1.0"
 
 [deps]

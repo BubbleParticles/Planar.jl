@@ -1,4 +1,4 @@
-module Vindicta
+module Planar
 
 if get(ENV, "JULIA_NOPRECOMP", "") == "all"
     __init__() = begin

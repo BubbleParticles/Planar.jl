@@ -2,7 +2,7 @@ module Load
 using PrecompileTools
 
 @compile_workload begin
-    using Vindicta
+    using Planar
     using Stubs
     using Scrapers
     using Metrics

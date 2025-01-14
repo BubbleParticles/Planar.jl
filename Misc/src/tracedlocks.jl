@@ -8,7 +8,7 @@ using .Lang: @caller
     lock = ReentrantLock()
 end
 
-const SafeLock = if @something tryparse(Bool, get(ENV, "VINDICTA_TRACE_LOCKS", "0")) false
+const SafeLock = if @something tryparse(Bool, get(ENV, "PLANAR_TRACE_LOCKS", "0")) false
     TracedLock
 else
     ReentrantLock

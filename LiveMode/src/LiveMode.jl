@@ -1,5 +1,5 @@
 
-@doc """ LiveMode runs Vindicta strategies against an exchange with real cash or in sandbox mode.
+@doc """ LiveMode runs Planar strategies against an exchange with real cash or in sandbox mode.
 
 Disambiguation:
 - Functions which mimicks Ccxt (private) api are just wrappers around the omonimous functions.
@@ -12,13 +12,13 @@ Disambiguation:
      If the exchange doesn't support neither version, an error should be expected.
 - Functions that start with `live_*` use the wrappers mentioned above, and perform the actual queries over Ccxt.
   The jobs of these functions are:
-  1. Take Vindicta native types and values, and convert them into (python) Ccxt arguments.
+  1. Take Planar native types and values, and convert them into (python) Ccxt arguments.
   2. Handle potential errors thrown during quering Ccxt (and log them). Values returned by these functions are either
      - Valid Ccxt responses (can be in python)
      - `nothing` in case of errors.
      - They can throw julia exceptions, but should not throw Ccxt exceptions.
-- Other functions should instead conform to Vindicta naming conventions (as used in Paper and Sim modes),
-  and should deal with Vindicta native types, and values.
+- Other functions should instead conform to Planar naming conventions (as used in Paper and Sim modes),
+  and should deal with Planar native types, and values.
 """
 module LiveMode
 

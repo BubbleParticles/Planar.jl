@@ -1,5 +1,5 @@
 module TwoIntervals
-using Vindicta
+using Planar
 
 const DESCRIPTION = "TwoIntervals"
 const EXC = :binance

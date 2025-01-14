@@ -1,6 +1,6 @@
 .conda/*
 .conda
 .conda/
-.Vindicta.so
+.Planar.so
 */.conda/*
 wip.jl

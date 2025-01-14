@@ -1,5 +1,5 @@
 module Template
-using Vindicta
+using Planar
 
 const DESCRIPTION = "Template"
 const EXC = Symbol()

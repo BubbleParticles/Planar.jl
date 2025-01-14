@@ -4,7 +4,7 @@ The Data module is responsible for the persistent storage and representation of 
 
 The primary backend is Zarr, which is similar to Feather or Parquet in that it optimizes for columnar data, or more generally, _arrays_. Zarr is simpler and allows for different encoding schemes. It supports compression by default and can be backed by various storage layers, including network-based ones. Compared to NoSQL databases, columnar storage has the drawback of having to read _chunks_ for queries. However, we are almost always interested in time-series data, not scalar values, so the latency loss is negligible.
 
-We wrap a Zarr subtype of `AbstractStore` in a [`Vindicta.Data.ZarrInstance`](@ref). The module holds a global `ZarrInstance` at `Data.zi[]`. The default store used relies on LMDB. OHLCV data is organized according to exchanges, pairs, and timeframes ([`Vindicta.Data.key_path`](@ref)).
+We wrap a Zarr subtype of `AbstractStore` in a [`Planar.Data.ZarrInstance`](@ref). The module holds a global `ZarrInstance` at `Data.zi[]`. The default store used relies on LMDB. OHLCV data is organized according to exchanges, pairs, and timeframes ([`Planar.Data.key_path`](@ref)).
 
 There are several ways to collect data:
 
@@ -51,7 +51,7 @@ Implemented are watchers that track OHLCV:
 
 ```julia
 using Exchanges
-using Vindicta.Watchers: Watchers as wc, WatchersImpls as wi
+using Planar.Watchers: Watchers as wc, WatchersImpls as wi
 exc = getexchange!(:kucoin)
 
 w = wi.ccxt_ohlcv_tickers_watcher(exc;)
@@ -96,11 +96,11 @@ Other implemented watchers are the orderbook watcher, and watchers that parse da
 
 ## Other sources
 
-Assuming you have your own pipeline to fetch candles, you can use the functions [`Vindicta.Data.save_ohlcv`](@ref) and [`Vindicta.Data.load_ohlcv`](@ref) to manage the data.
+Assuming you have your own pipeline to fetch candles, you can use the functions [`Planar.Data.save_ohlcv`](@ref) and [`Planar.Data.load_ohlcv`](@ref) to manage the data.
 To save the data, it is easier if you pass a standard OHLCV dataframe, otherwise you need to provide a `saved_col` argument that indicates the correct column index to use as the `timestamp` column (or use lower-level functions).
 
 ```julia
-using Vindicta
+using Planar
 @environment!
 @assert da === Data
 source_name = "mysource"
@@ -119,7 +119,7 @@ da.load_ohlcv(zi, source_name, pair, timeframe)
 Data is returned as a `DataFrame` with `open,high,low,close,volume,timestamp` columns.
 Since these save/load functions require a timestamp column, they check that the provided index is contiguous, it should not have missing timestamps, according to the subject timeframe. It is possible to disable those checks by passing `check=:none`.
 
-If you want to save other kinds of data, there are the [`Vindicta.Data.save_data`](@ref) and [`Vindicta.Data.load_data`](@ref) functions. Unlike the ohlcv functions, these functions don't check for contiguity, so it is possible to store sparse data. The data, however, still requires a timestamp column, because data when saved can either be prepend or appended, therefore an index must still be available to maintain order.
+If you want to save other kinds of data, there are the [`Planar.Data.save_data`](@ref) and [`Planar.Data.load_data`](@ref) functions. Unlike the ohlcv functions, these functions don't check for contiguity, so it is possible to store sparse data. The data, however, still requires a timestamp column, because data when saved can either be prepend or appended, therefore an index must still be available to maintain order.
 While OHLCV data requires a concrete type for storage (default `Float64`) generic data can either be saved with a shared type, or instead serialized. To serialize the data while saving pass the `serialize=true` argument to `save_data`, while to load serialized data pass `serialized=true` to `load_data`.
 
 When loading data from storage, you can directly use the `ZArray` by passing `raw=true` to `load_ohlcv` or `as_z=true` or `with_z=true` to `load_data`. By managing the array directly you can avoid materializing the entire dataset, which is required when dealing with large amounts of data.
@@ -137,6 +137,6 @@ before(df, dt"2020-01-01") # get all candles up until the date 2020-01-01
 With ohlcv data, we can access the timeframe of the series directly from the dataframe by calling `timeframe!(df)`. This will either return the previously set timeframe or infer it from the `timestamp` column. You can set the timeframe by calling e.g. `timeframe!(df, tf"1m")` or `timeframe!!` to overwrite it.
 
 ## Caching
-`Data.Cache.save_cache` and `Data.Cache.load_cache` can be used to store generic metadata like JSON payloads. The data is saved in the Vindicta data directory which is either under the `XDG_CACHE_DIR`[^1] if set or under `$HOME/.cache` by default.
+`Data.Cache.save_cache` and `Data.Cache.load_cache` can be used to store generic metadata like JSON payloads. The data is saved in the Planar data directory which is either under the `XDG_CACHE_DIR`[^1] if set or under `$HOME/.cache` by default.
 
 [^1]: Default path might be a scratchspace (from Scratch.jl) in the future

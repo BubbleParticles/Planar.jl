@@ -1,5 +1,5 @@
 module BollingerBands
-using Vindicta
+using Planar
 
 const DESCRIPTION = "BollingerBands"
 const EXC = :phemex

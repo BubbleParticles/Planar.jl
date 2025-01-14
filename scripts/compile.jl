@@ -25,6 +25,6 @@ function compile(proj_path="user/Load"; comp_dir="Dist", cpu_target="generic", a
             proj_path, comp_dir; cpu_target, incremental=true, include_lazy_artifacts=true, kwargs...
         )
     else
-        create_sysimage([name]; cpu_target, sysimage_path="./Vindicta.so", kwargs...)
+        create_sysimage([name]; cpu_target, sysimage_path="./Planar.so", kwargs...)
     end
 end

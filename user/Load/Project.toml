@@ -1,11 +1,11 @@
 name = "Load"
 uuid = "530aee93-9b5d-4423-8dbe-9bf7490b02fc"
-authors = ["untoreh <francesco.giannelli@yahoo.it>"]
+authors = ["zbc <francesco.giannelli@yahoo.it>"]
 version = "0.1.0"
 
 [deps]
 PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
-Vindicta = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
+Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 Python = "e8cdc95d-7257-4c38-ab0e-cc8a28c19776"
 Scrapers = "38b379f7-ca41-4278-b0dc-774ced1e32bb"

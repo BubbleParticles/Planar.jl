@@ -1,5 +1,5 @@
 module RandomStratIso
-using Vindicta
+using Planar
 
 const DESCRIPTION = "RandomStratIso"
 const EXC = :bybit

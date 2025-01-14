@@ -1,6 +1,6 @@
 #!/usr/bin/env julia
 
-using Vindicta
+using Planar
 @environment!
 
 strat_name = Symbol(get(ARGS, 1, ""))

@@ -2,7 +2,7 @@ using .Lang: PrecompileTools, @preset, @precomp
 
 @preset let
     using Data: Data as da
-    path = joinpath(@__DIR__, "../../VindictaDev/test/stubs/ohlcv.jls")
+    path = joinpath(@__DIR__, "../../PlanarDev/test/stubs/ohlcv.jls")
     df = read(path) |> da.todata
     @precomp begin
         resample(df, tf"1d")

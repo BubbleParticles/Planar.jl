@@ -10,7 +10,7 @@
 using CompileBot
 
 botconfig = BotConfig(
-    "Vindicta";                            # package name (the one this configuration lives in)
+    "Planar";                            # package name (the one this configuration lives in)
     os=["linux"],
     # yml_path = "SnoopCompile.yml"        # parse `os` and `version` from `SnoopCompile.yml`
     exclusions=[""],        # exclude functions (by name) that would be problematic if precompiled

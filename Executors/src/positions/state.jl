@@ -116,9 +116,9 @@ byflow(t::IncreaseTrade, k) = abs(getproperty(t, k))
 using Base: negate
 @doc "Some exchanges add funding rates and trading fees to the liquidation price, we use a default buffer of $LIQUIDATION_BUFFER."
 const LIQUIDATION_BUFFER =
-    parse(DFT, get(ENV, "VINDICTA_LIQUIDATION_BUFFER", "0.02")) |> abs |> negate
+    parse(DFT, get(ENV, "PLANAR_LIQUIDATION_BUFFER", "0.02")) |> abs |> negate
 const LIQUIDATION_FEES =
-    parse(DFT, get(ENV, "VINDICTA_LIQUIDATION_FEES", "0.02")) |> abs
+    parse(DFT, get(ENV, "PLANAR_LIQUIDATION_FEES", "0.02")) |> abs
 
 _pricebypos(ai, date, ::Long) = lowat(ai, date)
 _pricebypos(ai, date, ::Short) = highat(ai, date)

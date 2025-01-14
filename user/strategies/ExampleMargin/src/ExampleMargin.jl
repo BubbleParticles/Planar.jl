@@ -1,5 +1,5 @@
 module ExampleMargin
-using Vindicta
+using Planar
 
 const DESCRIPTION = "ExampleMargin"
 const MARGIN = Isolated

@@ -2,7 +2,7 @@
 
 Every trade, order, asset instance, and strategy is parameterized against an `ExchangeID`, which is a type constructed from the name (`Symbol`) of an exchange. Currently, the bot supports CCXT with exchanges subtypes of `CcxtExchange`.
 
-There is only one exchange instance (one sandbox and one non-sandbox) constructed per exchange, so calling [`Vindicta.Engine.Exchanges.getexchange!`](@ref) will always return the same object for each exchange (w.r.t. `sandbox` and `account` options). The sandbox instance is generally a test-net with synthetic markets. The account name indicates which api keys to use.
+There is only one exchange instance (one sandbox and one non-sandbox) constructed per exchange, so calling [`Planar.Engine.Exchanges.getexchange!`](@ref) will always return the same object for each exchange (w.r.t. `sandbox` and `account` options). The sandbox instance is generally a test-net with synthetic markets. The account name indicates which api keys to use.
 
 We try to parse as much info from the (CCXT) exchange such that we can fill attributes such as:
 - Markets
@@ -13,7 +13,7 @@ We try to parse as much info from the (CCXT) exchange such that we can fill attr
 The support for exchanges is a best-effort basis. To overview if the exchange is likely compatible with the bot, call `check`:
 
 ``` julia
-using Vindicta
+using Planar
 @environment!
 e = getexchange!(:bybit)
 exs.check(e, type=:basic) # for backtesting and paper trading
@@ -22,7 +22,7 @@ exs.check(e, type=:live) # for live support
 
 The bot tries to use the WebSocket API if available, otherwise, it falls back to the basic REST API. The API keys are read from a file in the `user/` directory named after the exchange name like `user/bybit.json` for the Bybit exchange or `user/bybit_sandbox.json` for the respective sandbox API keys. The JSON file has to contain the fields `apiKey`, `secret`, and `password`.
 
-The strategy quote currency and each asset currency is a subtype of [`Vindicta.Engine.Exchanges.CurrencyCash`](@ref), which is a `Number` where operations respect the precision defined by the exchange.
+The strategy quote currency and each asset currency is a subtype of [`Planar.Engine.Exchanges.CurrencyCash`](@ref), which is a `Number` where operations respect the precision defined by the exchange.
 
 Some commonly fetched information is cached with a TTL, like tickers, markets, and balances.
 
@@ -30,14 +30,14 @@ Some commonly fetched information is cached with a TTL, like tickers, markets, a
 Basic exchange types, and global exchange vars.
 
 ```@autodocs; canonical=false
-Modules = [Vindicta.Exchanges.ExchangeTypes]
+Modules = [Planar.Exchanges.ExchangeTypes]
 ```
 
 ## Construct and query exchanges
 
 Helper module for downloading data off exchanges.
 ```@autodocs; canonical=false
-Modules = [Vindicta.Engine.Exchanges]
+Modules = [Planar.Engine.Exchanges]
 Pages = ["exchanges.jl", "tickers.jl", "-data.jl"]
 ```
 

@@ -7,7 +7,7 @@ The `Metrics` module provides functions for analyzing the outcomes of backtest r
 Using the [`Metrics.resample_trades`](@ref) function, trades can be resampled to a specified time frame. This aggregates the profit and loss (PnL) of each trade for every asset in the strategy over the given period.
 
 ```julia
-using Vindicta
+using Planar
 using Metrics
 
 strategy_instance = strategy(:Example)

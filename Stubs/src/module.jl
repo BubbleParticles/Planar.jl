@@ -20,7 +20,7 @@ read_ohlcv() = CSV.read(OHLCV_FILE_PATH, DataFrame)
 
 function stubscache_path()
     proj = Pkg.project()
-    @something get(ENV, "VINDICTA_STUBS_PATH", nothing) joinpath(dirname(proj.path), "test", "stubs")
+    @something get(ENV, "PLANAR_STUBS_PATH", nothing) joinpath(dirname(proj.path), "test", "stubs")
 
 end
 

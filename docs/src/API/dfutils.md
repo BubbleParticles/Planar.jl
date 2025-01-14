@@ -1,5 +1,5 @@
 # DataFrame utils
 
 ```@autodocs
-Modules = [Vindicta.Data.DFUtils]
+Modules = [Planar.Data.DFUtils]
 ```

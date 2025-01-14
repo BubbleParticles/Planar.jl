@@ -1,5 +1,5 @@
 # Engine
 
 ```@autodocs
-Modules = [Vindicta.Engine]
+Modules = [Planar.Engine]
 ```

@@ -1,5 +1,5 @@
 # Instances
 
 ```@autodocs
-Modules = [Vindicta.Engine.Instances]
+Modules = [Planar.Engine.Instances]
 ```

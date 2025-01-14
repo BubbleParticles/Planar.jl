@@ -1,5 +1,5 @@
-using Vindicta.Engine.Lang: @ifdebug, safewait, safenotify
-using Vindicta.Engine.LiveMode.Watchers.WatchersImpls:
+using Planar.Engine.Lang: @ifdebug, safewait, safenotify
+using Planar.Engine.LiveMode.Watchers.WatchersImpls:
     ccxt_ohlcv_tickers_watcher, start!, load!, isstopped
 
 __revise_mode__ = :eval
