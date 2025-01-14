@@ -7,6 +7,8 @@ using .Lang: @lget!, Option
 using .Lang.Preferences
 import Base: delete!, isempty, empty!
 
+include("zarr_dictstore.jl")
+
 @doc "Default zarr compressor used in the module (zstd, clevel=2)."
 const compressor = Zarr.BloscCompressor(; cname="zstd", clevel=2, shuffle=true)
 
@@ -202,6 +204,8 @@ default_value(f::Function) =
             return default_value(t)
         end
     end
+
+Zarr.fill_value_decoding(v::Vector, t::Type) = default_value(t)
 
 @doc "Candles data is stored with hierarchy PAIR -> [TIMEFRAMES...]. A pair is a ZGroup, a timeframe is a ZArray.
 

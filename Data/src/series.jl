@@ -221,7 +221,7 @@ function _wrap_load_data(zi::ZarrInstance, key; sz=nothing, serialized=false, kw
             emptyz = zcreate(
                 type,
                 zi.store,
-                sz;
+                sz...;
                 fill_value=default_value(type),
                 fill_as_missing=false,
                 path=key,

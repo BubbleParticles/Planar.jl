@@ -18,7 +18,7 @@ LMDBDictStore can be created using the LMDBDictStore constructor function. It ta
 
 LMDBDictStore implements the AbstractDictStore interface, which provides methods for reading and writing data to the store.
 """
-struct LMDBDictStore <: za.AbstractDictStore
+struct LMDBDictStore <: AbstractDictStore
     a::lm.LMDBDict
     lock::ReentrantLock
     function LMDBDictStore(path::AbstractString; reset=false, mapsize=64MB)
@@ -92,7 +92,7 @@ Base.length(store::LMDBDictStore) = length(keys(store.a))
 
 _withsuffix(p, sf='/') = (isempty(p) || endswith(p, sf)) ? p : p * sf
 
-za._pkeys(d::LMDBDictStore, p) = keys(d.a; prefix=_withsuffix(p))
+_pkeys(d::LMDBDictStore, p) = keys(d.a; prefix=_withsuffix(p))
 za._pdict(d::LMDBDictStore, p) = dictview(d.a, keys(d.a; prefix=_withsuffix(p)))
 
 @doc """Get the root group of a store.
