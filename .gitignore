@@ -9,12 +9,10 @@
 /**/.projectile
 /**/__pycache__/*
 /**/deps/precompiles/*
-/Data/vendor/*
 /docs/build/
 /render.html
 /src/__pycache__/
 /user/strategies/*
-/vendor/*
 Planar.so
 test/test.jlo
 Planar/test/

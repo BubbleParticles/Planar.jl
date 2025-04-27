@@ -53,6 +53,7 @@ function gensave_trades(n=10_000; s, dosave=true)
         da.stub!(ai, n)
     end
     SimMode.start!(s; doreset=true)
+    return
     if dosave
         for ai in s.universe
             save_stubtrades(ai)

@@ -1,0 +1,160 @@
+diff --git a/src/Filters.jl b/src/Filters.jl
+index 2666bdf..2951e4e 100644
+--- a/src/Filters.jl
++++ b/src/Filters.jl
+@@ -27,18 +27,21 @@ Encodes and decodes variable-length arrays of arbitrary data type
+ """
+ struct VLenArrayFilter{T} <: Filter{T,UInt8} end
+ 
+-function zdecode(ain, ::VLenArrayFilter{T}) where T
++function _zdecode(ain, E::Type)
+     f = IOBuffer(ain)
+     nitems = read(f, UInt32)
+-    out = Array{Vector{T}}(undef,nitems)
++    out = Array{Vector{E}}(undef,nitems)
+     for i=1:nitems
+         len1 = read(f,UInt32)
+-        out[i] = read!(f,Array{T}(undef,len1 ÷ sizeof(T)))
++        out[i] = read!(f,Array{E}(undef,len1 ÷ sizeof(E)))
+     end
+     close(f)
+     out
+ end
+ 
++zdecode(ain, ::VLenArrayFilter{T}) where T <: AbstractArray{E} where E = _zdecode(ain, E)
++zdecode(ain, ::VLenArrayFilter{V}) where V = _zdecode(ain, V)
++
+ #Encodes Array of Vectors a into bytes
+ function zencode(ain,::VLenArrayFilter)
+     b = IOBuffer()
+@@ -51,8 +54,46 @@ function zencode(ain,::VLenArrayFilter)
+     take!(b)
+ end
+ 
+-JSON.lower(::VLenArrayFilter{T}) where T = Dict("id"=>"vlen-array","dtype"=> typestr(T) )
++JSON.lower(::VLenArrayFilter{T}) where T = Dict("id"=>"vlen-array","dtype"=> typestr(eltype(T)) )
++
++getfilter(::Type{<:VLenArrayFilter}, f) = VLenArrayFilter{Vector{typestr(f["dtype"])}}()
++
++"""
++    VLenUTF8Filter
++
++Encodes and decodes variable-length arrays of arbitrary data type
++"""
++struct VLenUTF8Filter <: Filter{String,UInt8} end
++
++function zdecode(ain, ::VLenUTF8Filter)
++    arbuf = UInt8[]
++    f = IOBuffer(ain)
++    nitems = read(f, UInt32)
++    out = Array{String}(undef,nitems)
++    for i=1:nitems
++        len1 = read(f,UInt32)
++        resize!(arbuf,len1)
++        read!(f,arbuf)
++        out[i] = String(arbuf)
++    end
++    close(f)
++    out
++end
++
++#Encodes Array of Vectors a into bytes
++function zencode(ain,::VLenUTF8Filter)
++    b = IOBuffer()
++    nitems = length(ain)
++    write(b,UInt32(nitems))
++    for a in ain
++        write(b, UInt32(sizeof(a)))
++        write(b, a)
++    end
++    take!(b)
++end
++
++JSON.lower(::VLenUTF8Filter) = Dict("id"=>"vlen-utf8","dtype"=> "|O" )
+ 
+-getfilter(::Type{<:VLenArrayFilter}, f) = VLenArrayFilter{typestr(f["dtype"])}()
++getfilter(::Type{<:VLenUTF8Filter}, f) = VLenUTF8Filter()
+ 
+-filterdict = Dict("vlen-array"=>VLenArrayFilter)
+\ No newline at end of file
++const filterdict = Dict("vlen-array"=>VLenArrayFilter, "vlen-utf8"=>VLenUTF8Filter)
+diff --git a/src/ZArray.jl b/src/ZArray.jl
+index 4e7b300..c41dd96 100644
+--- a/src/ZArray.jl
++++ b/src/ZArray.jl
+@@ -135,11 +135,7 @@ function getchunkarray(z::ZArray{>:Missing})
+   inner = fill(z.metadata.fill_value, z.metadata.chunks)
+   a = SenMissArray(inner,z.metadata.fill_value)
+ end
+-_zero(T) = zero(T)
+-_zero(T::Type{<:MaxLengthString}) = T("")
+-_zero(T::Type{ASCIIChar}) = ASCIIChar(0)
+-_zero(::Type{<:Vector{T}}) where T = T[]
+-getchunkarray(z::ZArray) = fill(_zero(eltype(z)), z.metadata.chunks)
++getchunkarray(z::ZArray) = Array{eltype(z)}(undef, z.metadata.chunks...)
+ 
+ maybeinner(a::Array) = a
+ maybeinner(a::SenMissArray) = a.x
+@@ -254,6 +250,10 @@ Read the chunk specified by `i` from the Zarray `z` and write its content to `a`
+ """
+ function uncompress_raw!(a,z::ZArray{<:Any,N},curchunk) where N
+   if curchunk === nothing
++    @assert eltype(a) == typeof(z.metadata.fill_value) "Type mismatch \
++      between array element of type '$(eltype(a))' \
++      and default value of type '$(typeof(z.metadata.fill_value))'. \
++      Use a different default value."
+     fill!(a, z.metadata.fill_value)
+   else
+     zuncompress!(a, curchunk, z.metadata.compressor, z.metadata.filters)
+@@ -355,6 +355,7 @@ function zcreate(::Type{T},storage::AbstractStore,
+ end
+ 
+ filterfromtype(::Type{<:Any}) = nothing
++filterfromtype(::Type{<:AbstractString}) = (VLenUTF8Filter(),)
+ 
+ function filterfromtype(::Type{<:AbstractArray{T}}) where T
+   #Here we have to apply the vlenarray filter
+diff --git a/src/ZGroup.jl b/src/ZGroup.jl
+index 8bc54be..6d92548 100644
+--- a/src/ZGroup.jl
++++ b/src/ZGroup.jl
+@@ -19,6 +19,10 @@ function ZGroup(s::T,mode="r",path="";fill_as_missing=false) where T <: Abstract
+   groups = Dict{String, ZGroup}()
+ 
+   for d in subdirs(s,path)
++    @debug if d == path
++      @warn "Store is corrupted, probably has keys starting with '/' (it should not!)."
++      continue
++    end
+     dshort = split(d,'/')[end]
+     m = zopen_noerr(s,mode,path=_concatpath(path,dshort),fill_as_missing=fill_as_missing)
+     if isa(m, ZArray)
+diff --git a/src/metadata.jl b/src/metadata.jl
+index ae50634..7a8b0b9 100644
+--- a/src/metadata.jl
++++ b/src/metadata.jl
+@@ -53,6 +53,7 @@ Base.zero(t::Union{DateTime64, Type{<:DateTime64}}) = t(0)
+ 
+ 
+ typestr(t::Type) = string('<', 'V', sizeof(t))
++typestr(t::Type{<:AbstractString}) = string('<', 'O')
+ typestr(t::Type{>:Missing}) = typestr(Base.nonmissingtype(t))
+ typestr(t::Type{Bool}) = string('<', 'b', sizeof(t))
+ typestr(t::Type{<:Signed}) = string('<', 'i', sizeof(t))
+@@ -63,6 +64,7 @@ typestr(::Type{MaxLengthString{N,UInt32}}) where N = string('<', 'U', N)
+ typestr(::Type{MaxLengthString{N,UInt8}}) where N = string('<', 'S', N)
+ typestr(::Type{<:Array}) = "|O"
+ typestr(::Type{<:DateTime64{P}}) where P = "<M8[$(pdt64string[P])]"
++typestr(t::Type{Union{Nothing, T}}) where T = typestr(T)
+ 
+ const typestr_regex = r"^([<|>])([tbiufcmMOSUV])(\d*)(\[\w+\])?$"
+ const typemap = Dict{Tuple{Char, Int}, DataType}(
+@@ -96,7 +98,7 @@ function typestr(s::AbstractString, filterlist=nothing)
+             if filterlist === nothing
+                 throw(ArgumentError("Object array can only be parsed when an appropriate filter is defined"))
+             end
+-            return Vector{sourcetype(first(filterlist))}
++            return sourcetype(first(filterlist))
+         end
+         isempty(typesize) && throw((ArgumentError("$s is not a valid numpy typestr")))
+         tc, ts = first(typecode), parse(Int, typesize)

@@ -20,7 +20,6 @@ struct WarmupPeriod <: ExecAction end
 struct StartStrategy <: ExecAction end
 @doc "[`call!(s::Strategy, ::StopStrategy)`](@ref)"
 struct StopStrategy <: ExecAction end
-# TODO: maybe methods that dispatch on strategy types should be named `ping` (without excl mark)
 @doc """Called to construct the strategy, should return the strategy instance.
 $(TYPEDSIGNATURES)"""
 call!(::Type{<:Strategy}, cfg, ::LoadStrategy) = nothing

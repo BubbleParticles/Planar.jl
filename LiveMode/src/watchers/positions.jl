@@ -145,7 +145,7 @@ function _w_positions_func(s, w, interval; iswatch, kwargs)
             end
             v, fetched = popfirst!(buf)
             if v isa Exception
-                @error "positions watcher: unexpected value" exception = v
+                @error "positions watcher: unexpected value" exception = v maxlog=3
                 sleep(1)
             else
                 @debug "positions watcher: PUSHING" _module = LogWatchPos islocked(

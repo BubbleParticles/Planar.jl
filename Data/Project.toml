@@ -14,3 +14,6 @@ Misc = "ff97321b-aa60-4104-8cd6-2e42973349ab"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 Serialization = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 Zarr = "0a941bbe-ad1d-11e8-39d9-ab76183a1d99"
+
+[compat]
+Zarr = "0.9.4"
