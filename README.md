@@ -1,5 +1,5 @@
-[![build-status-docs](https://github.com/panifie/Planar.jl/actions/workflows/docs.yml/badge.svg?branch=master)](https://panifie.github.io/Planar.jl/) [![build-status-docker](https://github.com/panifie/Planar.jl/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/panifie/Planar.jl/actions/workflows/build.yml) 
-[![build-status-docker-v1.0.1](https://github.com/panifie/Planar.jl/actions/workflows/build.yml/badge.svg?branch=v1.0.1)](https://github.com/panifie/Planar.jl/actions/workflows/build.yml)[![tests](https://github.com/panifie/Planar.jl/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/panifie/Planar.jl/actions/workflows/tests.yml)
+[![build-status-docs](https://github.com/defnlnotme/Planar.jl/actions/workflows/docs.yml/badge.svg?branch=master)](https://defnlnotme.github.io/Planar.jl/) [![build-status-docker](https://github.com/defnlnotme/Planar.jl/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/defnlnotme/Planar.jl/actions/workflows/build.yml) 
+[![build-status-docker-v1.0.1](https://github.com/defnlnotme/Planar.jl/actions/workflows/build.yml/badge.svg?branch=v1.0.1)](https://github.com/defnlnotme/Planar.jl/actions/workflows/build.yml)[![tests](https://github.com/defnlnotme/Planar.jl/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/defnlnotme/Planar.jl/actions/workflows/tests.yml)
 
 
 <!-- PRESENTATION BEGIN -->
@@ -55,7 +55,7 @@ Other frameworks achieve low code duplication by completely abstracting away ord
 ## Comparison
 Here's a comparison of features with other popular trading frameworks:
 
-> ⚠️ This table might be imprecise or outdated (please file an [issue](https://github.com/panifie/Planar.jl/issues) for improvements)
+> ⚠️ This table might be imprecise or outdated (please file an [issue](https://github.com/defnlnotme/Planar.jl/issues) for improvements)
 
 | _Feature_                     | *Planar*   | [*Freqtrade*](https://github.com/freqtrade/freqtrade) | [*Hummingbot*](https://github.com/hummingbot/hummingbot) | [*OctoBot*](https://github.com/Drakkar-Software/OctoBot) | [*Jesse*](https://github.com/jesse-ai/jesse) | [*Nautilus*](https://github.com/nautechsystems/nautilus_trader) | [*Backtrader*](https://github.com/mementum/backtrader) |
 |-------------------------------|:------------:|:-----------------------------------------------------:|:--------------------------------------------------------:|:--------------------------------------------------------:|:--------------------------------------------:|:---------------------------------------------------------------:|:------------------------------------------------------:|
@@ -105,7 +105,7 @@ Planar.jl requires at least Julia 1.9. Is not in the julia registry, to install 
 
 - Clone the repository:
 ```bash
-git clone --recurse-submodules https://github.com/panifie/Planar.jl
+git clone --recurse-submodules https://github.com/defnlnotme/Planar.jl
 ```
 - Check the env vars in `.envrc`, then enabled them with `direnv allow`.
 ```bash
@@ -122,6 +122,6 @@ julia
 using Planar  # or PlanarInteractive for plotting and optimization
 ```
 
-Read the :book: documentation ([link](https://panifie.github.io/Planar.jl/)) to learn how to get started with the bot.
+Read the :book: documentation ([link](https://defnlnotme.github.io/Planar.jl/)) to learn how to get started with the bot.
 
-[PROJECT STATUS](https://github.com/panifie/Planar.jl/issues/28)
+[PROJECT STATUS](https://github.com/defnlnotme/Planar.jl/issues/28)
