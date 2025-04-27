@@ -47,7 +47,6 @@ jobs:
         echo "JULIA_CONDAPKG_ENV=$GITHUB_WORKSPACE/.conda" >> $GITHUB_ENV
     - name: Install dependencies
       run: |
-        git submodule update --init;
         sudo apt-get install -y xauth
         # FIXME
         # [ -e ~/.cache/Planar.jl/data ] && rm -r ~/.cache/Planar.jl/data
