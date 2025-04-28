@@ -58,7 +58,6 @@ function get(path, query=nothing, inc=500)
         else
             @assert resp.status == 200 resp
         end
-        setglobal!(Main, :v, resp.body)
         json = JSON3.read(resp.body)
         return json
     else
