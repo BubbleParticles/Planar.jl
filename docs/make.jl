@@ -1,7 +1,7 @@
 include("noprecomp.jl")
 using Pkg: Pkg;
 Pkg.activate("Planar")
-let dse = "~/.julia/environments/$(VERSION)/"
+let dse = expanduser("~/.julia/environments/v$(VERSION.major).$(VERSION.minor)/")
     if dse ∉ LOAD_PATH
         push!(LOAD_PATH, dse)
     end
@@ -146,6 +146,7 @@ makedocs(;
             "API/strategystats.md",
         ],
     ],
+    remotes=nothing,
     format=Documenter.HTML(;
         sidebar_sitename=false,
         size_threshold_ignore=[
