@@ -248,8 +248,13 @@ function markets(exc_id, qc="usd")
     data = Dict{String,Any}()
     for v in json
         pair = v["pair"] * ":" * v["category"]
-        @assert pair ∉ keys(data)
-        data[pair] = v
+        if pair ∉ keys(data)
+            data[pair] = v
+        else
+            id = v["base_currency_id"]
+            @warn "@warn \"Repeated pair $(pair)\" using base currency id $(id)"
+            data[id] = v
+        end
     end
     data
 end
