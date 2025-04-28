@@ -24,9 +24,9 @@ macro environment!(pln=@__MODULE__)
         if !isdefined($(__module__), :pln)
             const $(esc(:pln)) = $pln
         end
-        using .vdt.Exchanges
-        using .vdt.Exchanges: Exchanges as exs
-        using .vdt.Engine:
+        using .pln.Exchanges
+        using .pln.Exchanges: Exchanges as exs
+        using .pln.Engine:
             OrderTypes as ot,
             Instances as inst,
             Collections as co,
@@ -38,23 +38,23 @@ macro environment!(pln=@__MODULE__)
             LiveMode as lm,
             Engine as egn
 
-        using .vdt.Engine.Lang: @m_str
-        using .vdt.Engine.TimeTicks
+        using .pln.Engine.Lang: @m_str
+        using .pln.Engine.TimeTicks
         using .TimeTicks: TimeTicks as tt
         using .st: strategy
-        using .vdt.Engine.Misc
+        using .pln.Engine.Misc
         using .Misc: Misc as mi
-        using .vdt.Engine.Instruments
+        using .pln.Engine.Instruments
         using .Instruments: Instruments as im
         using .Instruments.Derivatives
         using .Instruments.Derivatives: Derivatives as der
-        using .vdt.Engine.Data: Data as da, DFUtils as du
+        using .pln.Engine.Data: Data as da, DFUtils as du
 
         using .da.Cache: save_cache, load_cache
-        using .vdt.Engine.Processing: Processing as pro
-        using .vdt.Remote: Remote as rmt
-        using .vdt.Engine.LiveMode.Watchers
-        using .vdt.Engine: fetch_ohlcv, load_ohlcv
+        using .pln.Engine.Processing: Processing as pro
+        using .pln.Remote: Remote as rmt
+        using .pln.Engine.LiveMode.Watchers
+        using .pln.Engine: fetch_ohlcv, load_ohlcv
         using .Watchers: WatchersImpls as wi
 
         if !isdefined($(__module__), :Stubs)
@@ -70,31 +70,31 @@ end
 macro strategyenv!()
     expr = quote
         __revise_mode__ = :eval
-        using Planar: Planar as vdt
-        using .vdt.Engine
-        using .vdt.Engine: Strategies as st
-        using .vdt.Engine.Instances: Instances as inst
-        using .vdt.Engine.OrderTypes: OrderTypes as ot
-        using .vdt.Engine.Executors: Executors as ect
-        using .vdt.Engine.LiveMode.Watchers: Watchers as wa
-        using .vdt.Engine.Processing: Processing as pc
+        using Planar: Planar as pln
+        using .pln.Engine
+        using .pln.Engine: Strategies as st
+        using .pln.Engine.Instances: Instances as inst
+        using .pln.Engine.OrderTypes: OrderTypes as ot
+        using .pln.Engine.Executors: Executors as ect
+        using .pln.Engine.LiveMode.Watchers: Watchers as wa
+        using .pln.Engine.Processing: Processing as pc
         using .wa.WatchersImpls: WatchersImpls as wim
         using .st
         using .ect
         using .ot
 
         using .ot.ExchangeTypes
-        using .vdt.Engine.Data
-        using .vdt.Engine.Data.DFUtils
-        using .vdt.Engine.Data.DataFrames
-        using .vdt.Engine.Instruments
-        using .vdt.Engine.Misc
-        using .vdt.Engine.TimeTicks
-        using .vdt.Engine.Lang
+        using .pln.Engine.Data
+        using .pln.Engine.Data.DFUtils
+        using .pln.Engine.Data.DataFrames
+        using .pln.Engine.Instruments
+        using .pln.Engine.Misc
+        using .pln.Engine.TimeTicks
+        using .pln.Engine.Lang
 
         using .st: freecash, setattr!, attr
         using .ect: orders
-        using .vdt.Engine.Exchanges: getexchange!, marketsid
+        using .pln.Engine.Exchanges: getexchange!, marketsid
         using .pc: resample, islast, iscomplete, isincomplete
         using .Data: propagate_ohlcv!, stub!, load_ohlcv
         using .Data.DataStructures: CircularBuffer
@@ -104,8 +104,8 @@ macro strategyenv!()
         using .inst: asset, ohlcv, ohlcv_dict, raw, lastprice, bc, qc
         using .inst: takerfees, makerfees, maxfees, minfees
         using .inst: ishedged, cash, committed, instance, isdust, nondust
-        using .vdt.Engine.LiveMode: updated_at!, @retry
-        using .vdt.Engine.LiveMode: ohlcvmethod, ohlcvmethod!
+        using .pln.Engine.LiveMode: updated_at!, @retry
+        using .pln.Engine.LiveMode: ohlcvmethod, ohlcvmethod!
         using .Instruments: compactnum
         using .Lang: @m_str
 
@@ -114,7 +114,7 @@ macro strategyenv!()
         using .ect: WatchOHLCV, UpdateData, InitData
         using .ect: UpdateOrders, CancelOrders
 
-        using .vdt.Engine.LiveMode: asset_tasks, strategy_tasks, @retry
+        using .pln.Engine.LiveMode: asset_tasks, strategy_tasks, @retry
 
         $(Planar.Engine.Strategies).@interface
 
