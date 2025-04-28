@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Strategies · Planar.jl</title><meta name="title" content="Strategies · Planar.jl"/><meta property="og:title" content="Strategies · Planar.jl"/><meta property="twitter:title" content="Strategies · Planar.jl"/><meta name="description" content="Documentation for Planar.jl."/><meta property="og:description" content="Documentation for Planar.jl."/><meta property="twitter:description" content="Documentation for Planar.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><span class="tocitem">Introduction</span><ul><li><a class="tocitem" href="../presentation/">Why Planar?</a></li><li><a class="tocitem" href="../">What is Planar?</a></li></ul></li><li><a class="tocitem" href="../types/">Types</a></li><li class="is-active"><a class="tocitem" href>Strategies</a><ul class="internal"><li><a class="tocitem" href="#Setup-a-new-strategy"><span>Setup a new strategy</span></a></li><li><a class="tocitem" href="#Load-a-strategy"><span>Load a strategy</span></a></li><li><a class="tocitem" href="#Manual-setup"><span>Manual setup</span></a></li><li><a class="tocitem" href="#Strategy-interface-2"><span>Strategy interface</span></a></li><li><a class="tocitem" href="#List-of-strategy-call!-functions"><span>List of strategy call! functions</span></a></li><li><a class="tocitem" href="#Removing-a-strategy"><span>Removing a strategy</span></a></li><li><a class="tocitem" href="#Strategy-examples"><span>Strategy examples</span></a></li><li><a class="tocitem" href="#Resizeable-universe"><span>Resizeable universe</span></a></li></ul></li><li><span class="tocitem">Engine</span><ul><li><a class="tocitem" href="../engine/engine/">Executors</a></li><li><a class="tocitem" href="../engine/backtesting/">Backtesting</a></li><li><a class="tocitem" href="../engine/paper/">Paper</a></li><li><a class="tocitem" href="../engine/live/">Live</a></li><li><a class="tocitem" href="../engine/features/">Features</a></li></ul></li><li><a class="tocitem" href="../exchanges/">Exchanges</a></li><li><a class="tocitem" href="../data/">Data</a></li><li><span class="tocitem">Watchers</span><ul><li><a class="tocitem" href="../watchers/watchers/">Interface</a></li><li><input class="collapse-toggle" id="menuitem-7-2" type="checkbox"/><label class="tocitem" for="menuitem-7-2"><span class="docs-label">Apis</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../watchers/apis/coingecko/">CoinGecko</a></li><li><a class="tocitem" href="../watchers/apis/coinpaprika/">CoinPaprika</a></li><li><a class="tocitem" href="../watchers/apis/coinmarketcap/">CoinMarketCap</a></li></ul></li></ul></li><li><a class="tocitem" href="../metrics/">Metrics</a></li><li><a class="tocitem" href="../optimization/">Optimization</a></li><li><a class="tocitem" href="../plotting/">Plotting</a></li><li><span class="tocitem">Misc</span><ul><li><a class="tocitem" href="../config/">Config</a></li><li><a class="tocitem" href="../disambiguation/">Disambiguation (Glossary)</a></li><li><a class="tocitem" href="../troubleshooting/">Troubleshooting</a></li><li><a class="tocitem" href="../devdocs/">Devdocs</a></li><li><a class="tocitem" href="../contacts/">Contacts</a></li></ul></li><li><span class="tocitem">Customizations</span><ul><li><a class="tocitem" href="../customizations/customizations/">Overview</a></li><li><a class="tocitem" href="../customizations/orders/">Orders</a></li><li><a class="tocitem" href="../customizations/backtest/">Backtester</a></li><li><a class="tocitem" href="../customizations/exchanges/">Exchanges</a></li></ul></li><li><span class="tocitem">API</span><ul><li><a class="tocitem" href="../API/collections/">Collections</a></li><li><a class="tocitem" href="../API/data/">Data</a></li><li><a class="tocitem" href="../API/ccxt/">Ccxt</a></li><li><a class="tocitem" href="../API/dfutils/">DataFrame utils</a></li><li><a class="tocitem" href="../API/executors/">Executors</a></li><li><a class="tocitem" href="../API/exchanges/">Exchanges</a></li><li><a class="tocitem" href="../API/fetch/">Fetch module</a></li><li><a class="tocitem" href="../API/engine/">Engine</a></li><li><a class="tocitem" href="../API/instances/">Instances</a></li><li><a class="tocitem" href="../API/instruments/">Instruments</a></li><li><a class="tocitem" href="../API/misc/">Misc</a></li><li><a class="tocitem" href="../API/optimization/">Optimization</a></li><li><a class="tocitem" href="../API/pbar/">Pbar</a></li><li><a class="tocitem" href="../API/plotting/">Plotting</a></li><li><a class="tocitem" href="../API/prices/">Prices</a></li><li><a class="tocitem" href="../API/processing/">Processing</a></li><li><a class="tocitem" href="../API/python/">Python</a></li><li><a class="tocitem" href="../API/metrics/">Metrics</a></li><li><a class="tocitem" href="../API/strategies/">Strategies</a></li><li><a class="tocitem" href="../API/strategytools/">StrategyTools</a></li><li><a class="tocitem" href="../API/strategystats/">StrategyStats</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Strategies</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Strategies</a></li></ul></nav><div class="docs-right"><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Strategy-interface"><a class="docs-heading-anchor" href="#Strategy-interface">Strategy interface</a><a id="Strategy-interface-1"></a><a class="docs-heading-anchor-permalink" href="#Strategy-interface" title="Permalink"></a></h1><h2 id="Setup-a-new-strategy"><a class="docs-heading-anchor" href="#Setup-a-new-strategy">Setup a new strategy</a><a id="Setup-a-new-strategy-1"></a><a class="docs-heading-anchor-permalink" href="#Setup-a-new-strategy" title="Permalink"></a></h2><p>The simplest way to create a strategy is to use the interactive generator which will prompt  for the required set of options to set.</p><pre><code class="language-julia hljs">julia&gt; using Planar
+julia&gt; Planar.generate_strategy()
+Strategy name: : MyNewStrategy
+
+Timeframe:
+   1m
+ &gt; 5m
+   15m
+   1h
+   1d
+
+Select exchange by:
+ &gt; volume
+   markets
+   nokyc
+
+ &gt; binance
+   bitforex
+   okx
+   xt
+   coinbase
+
+Quote currency:
+   USDT
+   USDC
+ &gt; BTC
+   ETH
+   DOGE
+
+Margin mode:
+ &gt; NoMargin
+   Isolated
+
+Activate strategy project at /run/media/fra/stateful-1/dev/Planar.jl/user/strategies/MyNewStrategy? [y]/n: y
+
+Add project dependencies (comma separated): Indicators
+   Resolving package versions...
+   [...]
+  Activating project at `/run/media/fra/stateful-1/dev/Planar.jl/user/strategies/MyNewStrategy`
+
+┌ Info: New Strategy
+│   name = &quot;MyNewStrategy&quot;
+│   exchange = :binance
+└   timeframe = &quot;5m&quot;
+[ Info: Config file updated
+
+Load strategy? [y]/n: 
+
+julia&gt; s = ans</code></pre><p>Alternatively you can directly pass kwargs and skip interaction by passing <code>ask=false</code>.</p><pre><code class="language-julia hljs">Planar.generate_strat(&quot;MyNewStrategy&quot;, ask=false, exchange=:myexc)</code></pre><p>or just use a config:</p><pre><code class="language-julia hljs">cfg = Planar.Config(exchange=:myexc)
+Planar.generate_strat(&quot;MyNewStrategy&quot;, cfg)</code></pre><h2 id="Load-a-strategy"><a class="docs-heading-anchor" href="#Load-a-strategy">Load a strategy</a><a id="Load-a-strategy-1"></a><a class="docs-heading-anchor-permalink" href="#Load-a-strategy" title="Permalink"></a></h2><p>The strategy is instantiated by loading a julia module at runtime.</p><pre><code class="language-julia hljs">using Planar
+cfg = Config(exchange=:kucoin) # Constructs a configuration object, choosing kucoin as exchange
+s = strategy(:Example, cfg) # Load the Example strategy</code></pre><p>The key is the name of the module (in this case <code>Example</code>) which will be imported from the included file &quot;cfg/strategies/Example.jl&quot; or &quot;cfg/strategies/Example/src/Example.jl&quot;.</p><p>After the strategy module is imported the strategy is instantiated by calling the <code>call!(::Type{S}, ::LoadStrategy, cfg)</code> function.</p><pre><code class="language-julia hljs">&gt; typeof(s)
+Engine.Strategies.Strategy37{:Example, ExchangeTypes.ExchangeID{:kucoin}(), :USDT}</code></pre><p>See here how the <code>load</code> method is defined.</p><pre><code class="language-julia hljs">module Example
+using Planar
+
+const DESCRIPTION = &quot;Example&quot;
+const EXC = :phemex
+const MARGIN = NoMargin
+const TF = tf&quot;1m&quot;
+
+@strategyenv!
+
+function call!(::Type{&lt;:SC}, ::LoadStrategy, config)
+    assets = marketsid(S)
+    s = Strategy(Example, assets; config)
+    s
+end
+
+end</code></pre><p>See that the <code>load</code> method dispatches on the strategy <em>type</em> with <code>cfg</code> as argument of type <code>Misc.Config</code>.</p><p>As a rule of thumb if the method should be called before the strategy is constructed, then it dispatches to the strategy type (<code>Type{&lt;:S}</code>), otherwise the strategy instance (<code>S</code>). For convention the module property <code>S</code> of your strategy module, declares the strategy type (<code>const S = Strategy{name, exc, ...}</code>) and <code>SC</code> defines the same strategy type where the exchange is still generic.</p><h2 id="Manual-setup"><a class="docs-heading-anchor" href="#Manual-setup">Manual setup</a><a id="Manual-setup-1"></a><a class="docs-heading-anchor-permalink" href="#Manual-setup" title="Permalink"></a></h2><p>If you want to create a strategy manually you can either:</p><ul><li>Copy the <code>user/strategies/Template.jl</code> to a new file in the same directory and customize it.</li><li>Generate a new project in <code>user/strategies</code> and customize <code>Template.jl</code> to be your project entry file. The strategy <code>Project.toml</code> is used to store strategy config options. See other strategies examples for what the keys that are required.</li></ul><p>For more advanced setups you can also use <code>Planar</code> as a library, and construct the strategy object directly from your own module:</p><pre><code class="language-julia hljs">using Planar
+using MyDownStreamModule
+s = Planar.Engine.Strategies.strategy(MyDownStreamModule)</code></pre><h2 id="Strategy-interface-2"><a class="docs-heading-anchor" href="#Strategy-interface-2">Strategy interface</a><a class="docs-heading-anchor-permalink" href="#Strategy-interface-2" title="Permalink"></a></h2><p>Both <code>call!</code> and <code>call!</code> functions adhere to a convention for function signatures. The first argument is always  either an instance of the <em>subject</em> or its type, followed by the arguments of the function, with the last <em>non kw</em> argument being the <em>verb</em> which describes the purpose of the function. KW arguments are optional and don&#39;t have any requirements. We can see below that <code>Type{S}</code> is the <em>subject, <code>config</code> is an argument, and <code>::LoadStrategy</code> is the _verb</em>.</p><h2 id="List-of-strategy-call!-functions"><a class="docs-heading-anchor" href="#List-of-strategy-call!-functions">List of strategy call! functions</a><a id="List-of-strategy-call!-functions-1"></a><a class="docs-heading-anchor-permalink" href="#List-of-strategy-call!-functions" title="Permalink"></a></h2><article class="docstring"><header><a class="docstring-article-toggle-button fa-solid fa-chevron-down" href="javascript:;" title="Collapse docstring"></a><a class="docstring-binding" id="Misc.call!" href="#Misc.call!"><code>Misc.call!</code></a> — <span class="docstring-category">Function</span><span class="is-flex-grow-1 docstring-article-toggle-button" title="Collapse docstring"></span></header><section><div><p>Places a limit order and synchronizes the cash balance.</p><pre><code class="language-julia hljs">call!(
+    s::Strategies.Strategy{Misc.Live, N, &lt;:ExchangeID, NoMargin, C} where {N, C},
+    ai,
+    t::Type{&lt;:OrderTypes.Order{&lt;:OrderTypes.LimitOrderType{S}, &lt;:AbstractAsset, &lt;:ExchangeID, P} where {S&lt;:OrderTypes.OrderSide, P&lt;:Misc.PositionSide}};
+    amount,
+    price,
+    waitfor,
+    synced,
+    skipchecks,
+    kwargs...
+)
+</code></pre><p>This function initiates a limit order through the <code>_live_limit_order</code> function. Once the order is placed, it synchronizes the cash balance in the live strategy to reflect the transaction. It returns the trade information once the transaction is complete.</p></div></section><section><div><p>Places a market order and synchronizes the cash balance.</p><pre><code class="language-julia hljs">call!(
+    s::Strategies.Strategy{Misc.Live, N, &lt;:ExchangeID, NoMargin, C} where {N, C},
+    ai,
+    t::Type{&lt;:OrderTypes.Order{&lt;:OrderTypes.MarketOrderType{S}, &lt;:AbstractAsset, &lt;:ExchangeID, P} where {S&lt;:OrderTypes.OrderSide, P&lt;:Misc.PositionSide}};
+    amount,
+    waitfor,
+    synced,
+    skipchecks,
+    kwargs...
+)
+</code></pre><p>This function initiates a market order through the <code>_live_market_order</code> function. Once the order is placed, it synchronizes the cash balance in the live strategy to reflect the transaction. It returns the trade information once the transaction is complete.</p></div></section><section><div><p>Cancels all live orders of a certain type and synchronizes the cash balance.</p><pre><code class="language-julia hljs">call!(
+    s::Strategies.Strategy{Misc.Live},
+    ai::Instances.AssetInstance,
+    ::Executors.CancelOrders;
+    t,
+    waitfor,
+    confirm,
+    synced,
+    ids
+) -&gt; Bool
+</code></pre><p>This function cancels all live orders of a certain side (buy/sell) through the <code>live_cancel</code> function. Once the orders are canceled, it waits for confirmation of the cancelation and then synchronizes the cash balance in the live strategy to reflect the cancelations. It returns a boolean indicating whether the cancellation was successful.</p></div></section><section><div><p>Updates leverage or places an order in a live trading strategy.</p><pre><code class="language-julia hljs">call!(
+    s::Strategies.Strategy{Misc.Live, N, &lt;:ExchangeID, &lt;:Misc.WithMargin, C} where {N, C},
+    ai::Instances.AssetInstance{&lt;:AbstractAsset, &lt;:ExchangeID, M} where M&lt;:Misc.WithMargin,
+    lev,
+    ::Executors.UpdateLeverage;
+    pos,
+    synced,
+    atol,
+    force
+)
+</code></pre><p>This function either updates the leverage of a position or places an order in a live trading strategy. It first checks if the position is open or has pending orders. If not, it updates the leverage on the exchange and then synchronizes the position. If an order is to be placed, it checks for any open positions on the opposite side and places the order if none exist. The function returns the trade or leverage update status.</p></div></section><section><div><p>Executes a limit order in a live trading strategy.</p><pre><code class="language-julia hljs">call!(
+    s::Strategies.Strategy{Misc.Live, N, &lt;:ExchangeID, Isolated, C} where {N, C},
+    ai::Instances.AssetInstance{&lt;:AbstractAsset, &lt;:ExchangeID, M} where M&lt;:Misc.WithMargin,
+    t::Type{&lt;:OrderTypes.Order{&lt;:OrderTypes.LimitOrderType{S}, &lt;:AbstractAsset, &lt;:ExchangeID, P} where {S&lt;:OrderTypes.OrderSide, P&lt;:Misc.PositionSide}};
+    amount,
+    price,
+    waitfor,
+    skipchecks,
+    synced,
+    kwargs...
+)
+</code></pre><p>This function executes a limit order in a live trading strategy, given a strategy <code>s</code>, an asset instance <code>ai</code>, and a trade type <code>t</code>. It checks for open positions on the opposite side and places the order if none exist. The function returns the trade or leverage update status.</p></div></section><section><div><p>Executes a market order in a live trading strategy.</p><pre><code class="language-julia hljs">call!(
+    s::Strategies.Strategy{Misc.Live, N, &lt;:ExchangeID, Isolated, C} where {N, C},
+    ai::Instances.AssetInstance{&lt;:AbstractAsset, &lt;:ExchangeID, M} where M&lt;:Misc.WithMargin,
+    t::Type{&lt;:OrderTypes.Order{&lt;:OrderTypes.MarketOrderType{S}, &lt;:AbstractAsset, &lt;:ExchangeID, P} where {S&lt;:OrderTypes.OrderSide, P&lt;:Misc.PositionSide}};
+    amount,
+    waitfor,
+    skipchecks,
+    synced,
+    kwargs...
+)
+</code></pre><p>This function executes a market order in a live trading strategy, given a strategy <code>s</code>, an asset instance <code>ai</code>, and a trade type <code>t</code>. It checks for open positions on the opposite side and places the order if none exist. The function returns the trade or leverage update status.</p></div></section><section><div><p>Closes a leveraged position in a live trading strategy.</p><pre><code class="language-julia hljs">call!(
+    s::Strategies.Strategy{Misc.Live, N, &lt;:ExchangeID, &lt;:Misc.WithMargin, C} where {N, C},
+    ai::Instances.AssetInstance{&lt;:AbstractAsset, &lt;:ExchangeID, M} where M&lt;:Misc.WithMargin,
+    ::Union{Type{P&lt;:Misc.PositionSide}, Type{O} where O&lt;:(OrderTypes.Order{&lt;:OrderTypes.OrderType, &lt;:AbstractAsset, &lt;:ExchangeID, P&lt;:Misc.PositionSide}), Type{T} where T&lt;:(OrderTypes.Trade{&lt;:OrderTypes.OrderType, &lt;:AbstractAsset, &lt;:ExchangeID, P&lt;:Misc.PositionSide}), OrderTypes.Order{&lt;:OrderTypes.OrderType, &lt;:AbstractAsset, &lt;:ExchangeID, P&lt;:Misc.PositionSide}, OrderTypes.Trade{&lt;:OrderTypes.OrderType, &lt;:AbstractAsset, &lt;:ExchangeID, P&lt;:Misc.PositionSide}, P&lt;:Misc.PositionSide},
+    date,
+    ::Instances.PositionClose;
+    t,
+    waitfor,
+    kwargs...
+) -&gt; Bool
+</code></pre><p>This function cancels any pending orders and checks the position status. If the position is open, it places a closing trade and waits for it to be executed. The function returns <code>true</code> if the position is successfully closed, <code>false</code> otherwise.</p></div></section><section><div><p>Executes the OHLCV watcher for a real-time strategy.</p><pre><code class="language-julia hljs">call!(
+    s::Strategies.RTStrategy,
+    ::Executors.WatchOHLCV,
+    args...;
+    kwargs...
+)
+</code></pre><p>This function triggers the execution of the OHLCV (Open, High, Low, Close, Volume) watcher for a real-time strategy <code>s</code>.</p></div></section><section><div><p>Triggers the data update for a real-time strategy.</p><pre><code class="language-julia hljs">call!(
+    f::Function,
+    s::Strategies.RTStrategy,
+    ::Executors.UpdateData;
+    cols,
+    timeframe
+)
+</code></pre><p>This function initiates the update of data for a real-time strategy <code>s</code>. The update is performed for the specified columns <code>cols</code> and uses the provided timeframe <code>timeframe</code>.</p></div></section><section><div><p>Triggers the data update for an asset instance in a real-time strategy.</p><pre><code class="language-julia hljs">call!(
+    f::Function,
+    s::Strategies.RTStrategy,
+    ai::Instances.AssetInstance,
+    ::Executors.UpdateData;
+    cols,
+    timeframe
+)
+</code></pre><p>This function triggers the update of data for a specific asset instance <code>ai</code> in a real-time strategy <code>s</code>. The update is performed for the specified columns <code>cols</code> and uses the provided timeframe <code>timeframe</code>.</p></div></section><section><div><p>Initializes the data for a real-time strategy.</p><pre><code class="language-julia hljs">call!(
+    f::Function,
+    s::Strategies.RTStrategy,
+    ::Executors.InitData;
+    cols,
+    timeframe
+)
+</code></pre><p>This function initializes the data for a real-time strategy <code>s</code>. The initialization is performed for the specified columns <code>cols</code> and uses the provided timeframe <code>timeframe</code>. After the initialization, the <code>updated_at!</code> function is called to update the timestamp for the updated columns.</p></div></section><section><div><p>Called on each timestep iteration, possible multiple times. Receives:</p><ul><li><code>current_time</code>: the current timestamp to evaluate (the current candle would be <code>current_time - timeframe</code>).</li><li><code>ctx</code>: The context of the executor.</li></ul><pre><code class="language-julia hljs">call!(
+    _::Strategies.Strategy,
+    current_time::Dates.DateTime,
+    ctx
+)
+</code></pre></div></section><section><div><p>Called to construct the strategy, should return the strategy instance.</p><pre><code class="language-julia hljs">call!(
+    _::Type{&lt;:Strategies.Strategy},
+    cfg,
+    _::Strategies.LoadStrategy
+)
+</code></pre></div></section><section><div><p>Called at the end of the <code>reset!</code> function applied to a strategy.</p><pre><code class="language-julia hljs">call!(_::Strategies.Strategy, _::Strategies.ResetStrategy)
+</code></pre></div></section><section><div><p>How much lookback data the strategy needs. </p><pre><code class="language-julia hljs">call!(
+    s::Strategies.Strategy,
+    _::Strategies.WarmupPeriod
+) -&gt; Any
+</code></pre></div></section><section><div><p>When an order is canceled the strategy is pinged with an order error. </p><pre><code class="language-julia hljs">call!(
+    s::Strategies.Strategy,
+    ::OrderTypes.Order,
+    err::OrderTypes.OrderError,
+    ::Instances.AssetInstance;
+    kwargs...
+) -&gt; Any
+</code></pre></div></section><section><div><p>Market symbols that populate the strategy universe</p></div></section><section><div><p>Called before the strategy is started. </p><pre><code class="language-julia hljs">call!(_::Strategies.Strategy, _::Strategies.StartStrategy)
+</code></pre></div></section><section><div><p>Called after the strategy is stopped. </p><pre><code class="language-julia hljs">call!(_::Strategies.Strategy, _::Strategies.StopStrategy)
+</code></pre></div></section><section><div><p>Creates a simulated limit order.</p><pre><code class="language-julia hljs">call!(
+    s::Strategies.SimStrategy{N, &lt;:ExchangeID, NoMargin, C} where {N, C},
+    ai,
+    t::Type{&lt;:OrderTypes.Order{&lt;:OrderTypes.LimitOrderType{S}, &lt;:AbstractAsset, &lt;:ExchangeID, P} where {S&lt;:OrderTypes.OrderSide, P&lt;:Misc.PositionSide}};
+    amount,
+    kwargs...
+)
+</code></pre><p>The function <code>call!</code> is responsible for creating a simulated limit order. It creates the order using <code>create_sim_limit_order</code>, checks if the order is not <code>nothing</code>, and then calls <code>limitorder_ifprice!</code>. The parameters include a strategy <code>s</code>, an asset <code>ai</code>, and a type <code>t</code>. The function also accepts an <code>amount</code> and additional arguments <code>kwargs...</code>.</p></div></section><section><div><p>Creates a simulated market order.</p><pre><code class="language-julia hljs">call!(
+    s::Strategies.SimStrategy{N, &lt;:ExchangeID, NoMargin, C} where {N, C},
+    ai,
+    t::Type{&lt;:OrderTypes.Order{&lt;:OrderTypes.MarketOrderType{S}, &lt;:AbstractAsset, &lt;:ExchangeID, P} where {S&lt;:OrderTypes.OrderSide, P&lt;:Misc.PositionSide}};
+    amount,
+    date,
+    kwargs...
+)
+</code></pre><p>The function <code>call!</code> creates a simulated market order using <code>create_sim_market_order</code>. It checks if the order is not <code>nothing</code>, and then calls <code>marketorder!</code>. Parameters include a strategy <code>s</code>, an asset <code>ai</code>, a type <code>t</code>, an <code>amount</code> and a <code>date</code>. Additional arguments can be passed through <code>kwargs...</code>.</p></div></section><section><div><p>Cancel orders for a specific asset instance.</p><pre><code class="language-julia hljs">call!(
+    s::Strategies.Strategy{&lt;:Union{Misc.Paper, Misc.Sim}},
+    ai::Instances.AssetInstance,
+    ::Executors.CancelOrders;
+    t,
+    kwargs...
+) -&gt; Bool
+</code></pre><p>The function <code>call!</code> cancels all orders for a specific asset instance <code>ai</code>. It iterates over the orders of the asset and cancels each one using <code>cancel!</code>. Parameters include a strategy <code>s</code>, an asset instance <code>ai</code>, and a type <code>t</code> which defaults to <code>BuyOrSell</code>. Additional arguments can be passed through <code>kwargs...</code>.</p></div></section><section><div><p>After a position was updated from a trade.</p><pre><code class="language-julia hljs">call!(
+    _::Strategies.Strategy{X, N, &lt;:ExchangeID, &lt;:Misc.WithMargin, C} where {X&lt;:Misc.ExecMode, N, C},
+    ai,
+    trade::OrderTypes.Trade,
+    _::Instances.Position,
+    _::Instances.PositionChange
+) -&gt; Bool
+</code></pre><p>This function is called after a position is updated due to a trade. It takes in a <code>MarginStrategy</code>, <code>ai</code>, <code>trade</code>, <code>Position</code>, and <code>PositionChange</code> as arguments. The function does not return any value.</p></div></section><section><div><p>After a position update from a candle.</p><pre><code class="language-julia hljs">call!(
+    _::Strategies.Strategy{X, N, &lt;:ExchangeID, &lt;:Misc.WithMargin, C} where {X&lt;:Misc.ExecMode, N, C},
+    ai,
+    date::Dates.DateTime,
+    _::Instances.Position,
+    _::Instances.PositionUpdate
+)
+</code></pre><p>This function is called after a position is updated from a candle. It provides the necessary functionality for handling position updates in response to candle data.</p></div></section><section><div><p>Creates a simulated limit order, updating a levarged position.</p></div></section><section><div><p>&quot;Creates a simulated market order, updating a levarged position.</p><div class="admonition is-warning"><header class="admonition-header">Protections</header><div class="admonition-body"><p>Usually an exchange checks before executing a trade if right after the trade the position would be liquidated, and would prevent you to do such trade, however we always check after the trade, and liquidate accordingly, this is pessimistic since we can&#39;t ensure that all exchanges have such protections in place.</p></div></div></div></section><section><div><p>Closes a leveraged position.</p></div></section><section><div><p>Closes all strategy positions</p></div></section><section><div><p>Update position leverage. Returns true if the update was successful, false otherwise.</p><p>The leverage is not updated when the position has pending orders or is open (and it will return false in such cases.)</p></div></section><section><div><p>Watchers are not used in <code>SimMode</code>.</p></div></section><section><div><p>Data should be pre initialized in <code>SimMode</code>.</p></div></section><section><div><p>Data should be pre initialized in <code>SimMode</code>.</p></div></section><section><div><p>Data should be pre initialized in <code>SimMode</code>.</p></div></section><section><div><p>Initialize data for each asset in the strategy.</p><pre><code class="language-julia hljs">call!(
+    f::Function,
+    s::Strategies.SimStrategy,
+    ::Executors.InitData;
+    cols,
+    timeframe
+)
+</code></pre><p>This function initializes data for each asset in the strategy by retrieving the OHLCV data and setting the specified columns.</p></div></section><section><div><p>Creates a paper market order.</p><pre><code class="language-julia hljs">call!(
+    s::Strategies.Strategy{Misc.Paper, N, &lt;:ExchangeID, NoMargin, C} where {N, C},
+    ai,
+    t::Type{&lt;:OrderTypes.Order{&lt;:OrderTypes.MarketOrderType{S}, &lt;:AbstractAsset, &lt;:ExchangeID, P} where {S&lt;:OrderTypes.OrderSide, P&lt;:Misc.PositionSide}};
+    amount,
+    date,
+    price,
+    kwargs...
+)
+</code></pre><p>The function creates a paper market order for a given strategy and asset.  It specifies the amount of the order and the type of order (e.g., limit order, immediate order).</p></div></section><section><div><p>Creates a simulated limit order.</p><pre><code class="language-julia hljs">call!(
+    s::Strategies.Strategy{Misc.Paper, N, &lt;:ExchangeID, NoMargin, C} where {N, C},
+    ai,
+    t::Type{&lt;:OrderTypes.Order{&lt;:OrderTypes.LimitOrderType}};
+    amount,
+    date,
+    kwargs...
+)
+</code></pre><p>The function creates a simulated limit order for a given strategy and asset. It specifies the amount of the order and the date.  Additional keyword arguments can be passed.</p></div></section><section><div><p>Creates a paper market order, updating a leveraged position.</p><pre><code class="language-julia hljs">call!(
+    s::Strategies.Strategy{Misc.Paper, N, &lt;:ExchangeID, Isolated, C} where {N, C},
+    ai::Instances.AssetInstance{&lt;:AbstractAsset, &lt;:ExchangeID, M} where M&lt;:Misc.WithMargin,
+    t::Type{&lt;:OrderTypes.Order{&lt;:OrderTypes.MarketOrderType{S}, &lt;:AbstractAsset, &lt;:ExchangeID, P} where {S&lt;:OrderTypes.OrderSide, P&lt;:Misc.PositionSide}};
+    amount,
+    date,
+    price,
+    kwargs...
+)
+</code></pre><p>The function creates a paper market order for a given strategy, asset, and order type.  It specifies the amount and date of the order.  Additional keyword arguments can be passed.</p></div></section><section><div><p>Creates a simulated limit order.</p><pre><code class="language-julia hljs">call!(
+    s::Strategies.Strategy{Misc.Paper, N, &lt;:ExchangeID, Isolated, C} where {N, C},
+    ai,
+    t::Type{&lt;:OrderTypes.Order{&lt;:OrderTypes.LimitOrderType{S}, &lt;:AbstractAsset, &lt;:ExchangeID, P} where {S&lt;:OrderTypes.OrderSide, P&lt;:Misc.PositionSide}};
+    amount,
+    date,
+    kwargs...
+)
+</code></pre><p>The function creates a simulated limit order for a given strategy, asset, and order type. It specifies the amount and date of the order.  Additional keyword arguments can be passed.</p></div></section><section><div><p>Closes positions for a live margin strategy.</p><pre><code class="language-julia hljs">call!(
+    s::Strategies.RTStrategy{var&quot;#s232&quot;, N, &lt;:ExchangeID, &lt;:Misc.WithMargin, C} where {var&quot;#s232&quot;&lt;:Union{Misc.Live, Misc.Paper}, N, C},
+    bp::OrderTypes.ByPos,
+    date,
+    ::Instances.PositionClose;
+    kwargs...
+)
+</code></pre><p>Initiates asynchronous position closing for each asset instance in the strategy&#39;s universe. </p></div></section><section><div><p>Returns <code>Optimizations.ContextSpace</code> for backtesting</p><pre><code class="language-julia hljs">call!(_::Strategies.Strategy, _::Executors.OptSetup)
+</code></pre><p>The <code>ctx</code> field (<code>Executors.Context</code>) specifies the backtest time period, while <code>space</code> is either an already built <code>BlackBoxOptim.SearchSpace</code> subtype or a tuple (<code>Symbol</code>, args...) for a pre-defined BBO package search space.</p></div></section><section><div><p>Applies parameters to strategy before backtest</p><pre><code class="language-julia hljs">call!(_::Strategies.Strategy, params, _::Executors.OptRun)
+</code></pre></div></section><section><div><p>Initializes warmup attributes for a strategy.</p><pre><code class="language-julia hljs">call!(
+    s::Strategies.Strategy,
+    ::InitSimWarmup;
+    timeout,
+    n_candles
+) -&gt; Bool
+</code></pre></div></section><section><div><p>Initiates the warmup process for a real-time strategy instance.</p><pre><code class="language-julia hljs">call!(
+    cb::Function,
+    s::Strategies.RTStrategy,
+    ai::Instances.AssetInstance,
+    ats::Dates.DateTime,
+    ::SimWarmup;
+    n_candles
+)
+</code></pre><p>If warmup has not been previously completed for the given asset instance, it performs the necessary preparations.</p></div></section></article><h2 id="Removing-a-strategy"><a class="docs-heading-anchor" href="#Removing-a-strategy">Removing a strategy</a><a id="Removing-a-strategy-1"></a><a class="docs-heading-anchor-permalink" href="#Removing-a-strategy" title="Permalink"></a></h2><p>The function <code>remove_strategy</code> allows to discard a strategy by its name. It will delete the julia file or the project directory and optionally the config entry.</p><pre><code class="language-julia hljs">julia&gt; Planar.remove_strategy(&quot;MyNewStrategy&quot;)
+Really delete strategy located at /run/media/fra/stateful-1/dev/Planar.jl/user/strategies/MyNewStrategy? [n]/y: y
+[ Info: Strategy removed
+Remove user config entry MyNewStrategy? [n]/y: y</code></pre><h2 id="Strategy-examples"><a class="docs-heading-anchor" href="#Strategy-examples">Strategy examples</a><a id="Strategy-examples-1"></a><a class="docs-heading-anchor-permalink" href="#Strategy-examples" title="Permalink"></a></h2><p>Strategy examples can be found in the <code>user/strategies</code> folder, some strategies are single files like <code>Example.jl</code> while strategies like <code>BollingerBands</code> or <code>ExampleMargin</code> are project based.</p><h2 id="Resizeable-universe"><a class="docs-heading-anchor" href="#Resizeable-universe">Resizeable universe</a><a id="Resizeable-universe-1"></a><a class="docs-heading-anchor-permalink" href="#Resizeable-universe" title="Permalink"></a></h2><p>The universe (<code>s.universe</code>) is backed by a <code>DataFrame</code> (<code>s.universe.data</code>). It is possible to add and remove assets from the universe during runtime, (although not extensively tested).</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../types/">« Types</a><a class="docs-footer-nextpage" href="../engine/engine/">Executors »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.10.2 on <span class="colophon-date" title="Monday 28 April 2025 14:22">Monday 28 April 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
