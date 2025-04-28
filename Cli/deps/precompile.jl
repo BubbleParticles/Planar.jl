@@ -1,3 +1,0 @@
-using Cli
-
-Cli.main()

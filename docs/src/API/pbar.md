@@ -1,4 +1,0 @@
-# Pbar
-```@autodocs
-Modules = [Pbar]
-```

@@ -1,8 +1,0 @@
-name = "Fetch"
-uuid = "01b7c4b8-c42c-4ba7-97ce-8f8fab6ee59e"
-authors = ["zbc <francesco.giannelli@yahoo.it>"]
-version = "0.1.0"
-
-[deps]
-Exchanges = "ab04e009-1d60-4d36-ac2f-58b9338a89b5"
-Processing = "71db1b01-ba5b-4918-92ad-dd9436844736"
