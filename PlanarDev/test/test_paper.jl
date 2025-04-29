@@ -2,6 +2,8 @@ using Test
 using .Planar.Engine.Simulations.Random
 using PlanarDev.Stubs
 using PlanarDev.Planar.Engine.Lang: @m_str
+using Logging
+using Base.CoreLogging: Debug
 
 function emptyuni!(s)
     copysubs! = @eval da.DFUtils.copysubs!
@@ -141,16 +143,22 @@ function test_paper_margin(s)
     date += Millisecond(1)
     t = ect.call!(s, ai, ot.FOKOrder{ot.Buy}; amount=total_vol[], date)
     @test isnothing(t)
-    t = ect.call!(
-        s,
-        ai,
-        ot.IOCOrder{ot.Buy};
-        amount=total_vol[] / 10.0,
-        price=this_p + this_p / 2.0,
-        date,
-    )
+    logger = Test.TestLogger(min_level=Debug)
+    with_logger(logger) do
+        t = ect.call!(
+            s,
+            ai,
+            ot.IOCOrder{ot.Buy};
+            amount=total_vol[] / 10.0,
+            price=this_p + this_p / 2.0,
+            date,
+        )
+    end
     @test t isa ot.Trade
-    @test ect.isfilled(ai, t.order)
+    @test ect.isfilled(ai, t.order) || begin
+        debug_logs = filter(r -> r.level == Debug, logger.logs) .|> r -> r.message
+        "paper from ob: out of depth (!)" ∈ debug_logs
+    end
 end
 
 function test_paper_nomargin_market(s)
