@@ -5,7 +5,11 @@ const OHLCV_CACHE_KEY = Tuple{ExchangeID,Symbol,Period,String}
 const OHLCV_CACHE = ConcurrentDict{OHLCV_CACHE_KEY,DataFrame}()
 const OHLCV_CACHE_LOCK = ReentrantLock()
 
-function cached_ohlcv!(eid::ExchangeID, met::Symbol, period::Period, sym::String; def=nothing)
+function cached_ohlcv!(eidt::Type{<:ExchangeID}, args...; kwargs...)
+    cached_ohlcv!(eidt(), args...; kwargs...)
+end
+
+function cached_ohlcv!(eid::ExchangeID, met::Symbol, period::Period, sym::AbstractString; def=nothing)
     @lget! OHLCV_CACHE (eid, met, period, sym) @lock OHLCV_CACHE_LOCK @lget! OHLCV_CACHE (
         eid, met, period, sym
     ) @something def empty_ohlcv()
