@@ -4,7 +4,7 @@ using Test
 using PlanarDev.Planar.Engine.Exchanges: Exchanges as exs
 using PlanarDev.Planar.Engine.Misc: MarginMode
 
-global ords, resps, body, s, args, kwargs, strategy_cache, disabled
+global ords, resp, resps, body, s, ai, args, kwargs, strategy_cache, disabled
 
 include("common.jl")
 
@@ -13,6 +13,9 @@ patch_pf = @expr function Python.pyfetch(f::Py, args...; kwargs...)
 end
 patch_pft = @expr function Python.pyfetch_timeout(f::Py, args...; kwargs...)
     _mock_py_f(Python._pyfetch_timeout, f, args...; kwargs...)
+end
+patch_dosetmargin = @expr function exs.dosetmargin(exc::Exchange{ExchangeID{:phemex}}, mode, symbol; kwargs...)
+    return true
 end
 
 function _mock_py_f(pyf, f, args...; kwargs...)
@@ -286,6 +289,7 @@ function test_live_position_sync(s)
         # set some parameters for testing
         commits = true
         p = Short()
+        lm.empty_caches!(s)
         resp = lm.fetch_positions(s, ai; side=p)[0]
         @test lm.pyisTrue(resp["unrealizedPnl"] == 1.4602989788032e-07)
         update = lm._posupdate(now(), resp)::lm.PositionTuple
@@ -316,14 +320,20 @@ function test_live_position_sync(s)
 
         # test hedged mode mismatch
         @info "TEST: double check" posside(ai) resp[lm.Pos.side] ccxt_side = lm._ccxtposside(opposite(lm.posside(p)))
-        resp[lm.Pos.side] = lm._ccxtposside(opposite(lm.posside(p)))
+        resp[lm.Pos.side] = lm._ccxtposside(opposite(lm.posside(p))) # Long
         position(ai, opposite(posside(ai))).status[] = lm.PositionOpen()
+        update = lm._posupdate(now(), resp)::lm.PositionTuple
+        update.read[] = false
+        update.closed[] = false
+        update.closed[] = false
         pos = position(ai)
         @test isopen(position(ai, Long))
         @test isopen(position(ai, Short))
-        lm.live_sync_position!(
+        @test_throws AssertionError lm.live_sync_position!(
             s, ai, p, update; commits=commits
         )
+        resp[lm.Pos.liquidationPrice] = resp[lm.Pos.entryPrice] * 0.9
+        @info "TEST: asset instance" ai position(ai, Long) inst.status(ai.longpos) position(ai, Short) inst.status(ai.shortpos)
         @test (isopen(position(ai, Long)) && !isopen(position(ai, Short))) ||
               (isopen(position(ai, Short)) && !isopen(position(ai, Long)))
 
@@ -343,6 +353,7 @@ function test_live_pnl(s)
     @pass [patch_pf, patch_pft] begin
         # set some parameters for testing
         p = Short()
+        lm.empty_caches!(s)
         lp = lm.fetch_positions(s, ai; side=p)[0]
         @test !isnothing(lp)
         update = lm.PositionTuple(lm._posupdate(now(), lp))
@@ -364,7 +375,7 @@ function test_live_pnl(s)
         @test pnl ≈ 124.992 atol = 1e-2
         lm.entryprice!(pos, 0.0)
         pnl = lm.live_pnl(s, ai, p; update, synced=true, verbose=false)
-        @test pnl ≈ 124.992 atol = 1
+        @test isapprox(pnl, -9299.75, atol=1) || isapprox(pnl, -9299.75, atol=1)
     end
 end
 
@@ -387,8 +398,11 @@ function test_live_send_order(s)
     end
     @live_setup!
     lm.cash!(s.cash, 1e8)
-    @pass [patch1] begin
-        cash!(ai, 0.123, Long())
+    cash!(ai, 0.123, Long())
+    @pass [patch_pf] begin
+        @test_throws TaskFailedException lm.live_send_order(s, ai, ect.GTCOrder{Sell}; amount=0.123, price=60000.0)
+    end
+    @pass [patch1, patch_dosetmargin] begin
         @info "TEST: send1"
         resp = lm.live_send_order(s, ai, ect.GTCOrder{Sell}; amount=0.123, price=60000.0)
         @test pyisinstance(resp, pybuiltins.dict)
@@ -560,7 +574,7 @@ function _test_live(debug="LiveMode")
     end
     prev_debug = get(ENV, "JULIA_DEBUG", nothing)
     ENV["JULIA_DEBUG"] = debug
-    setglobal!(Main, :strategy_cash, nothing)
+    setglobal!(Main, :strategy_cache, nothing)
     try
         let cbs = st.STRATEGY_LOAD_CALLBACKS.live
             if lm.load_strategy_cache ∉ cbs
@@ -600,6 +614,13 @@ function _test_live(debug="LiveMode")
 end
 
 function test_live(debug=true)
-    @eval _live_load()
-    @eval _test_live($debug)
+    global EXCHANGE_MM
+    PREV_EXC_MM = EXCHANGE_MM
+    try
+        EXCHANGE_MM = :phemex
+        @eval _live_load()
+        @eval _test_live($debug)
+    finally
+        EXCHANGE_MM = PREV_EXC_MM
+    end
 end
