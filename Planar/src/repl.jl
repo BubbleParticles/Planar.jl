@@ -86,5 +86,7 @@ stubs!() = module!(:Stubs, :stubs)
 optim!() = _activate_and_import(:Optimization, :opt)
 @doc """ Activates and Imports the `PlanarInteractive` module. """
 interactive!() = _activate_and_import(:PlanarInteractive, :plni)
+@doc """ Activates and Imports the `Scrapers` module. """
+scrape!() = _activate_and_import(:Scrapers, :scr)
 
-export plots!, optim!, metrics!, engine!, analysis!, interactive!
+export plots!, optim!, metrics!, engine!, analysis!, interactive!, scrape!
