@@ -11,29 +11,79 @@ const TF = tf"1d"
 
 # Load required indicators
 # using .Indicators
-using Indicators: rsi, ema
+using OnlineTechnicalIndicators: RSI, EMA, fit!
 
 call!(_::SC, ::WarmupPeriod) = Day(27 * 2)
 
-function qqe(close)
-    rsi(close; n=14) |>
-    (x -> ema(x; n=5)) |>
-    (x -> abs.(diff(x))) |>
-    (x -> ema(x; n=27)) |>
-    (x -> ema(x; n=27)) |>
-    (x -> x .* 4.236) |>
-    (x -> pushfirst!(x, NaN)) # because of `diff`
+# function qqe(close)
+#     ot = RSI(close; period=14) |>
+#     (x -> EMA(x; n=5)) |>
+#     (x -> abs.(diff(x))) |>
+#     (x -> EMA(x; n=27)) |>
+#     (x -> EMA(x; n=27)) |>
+#     (x -> x .* 4.236) |>
+#     (x -> pushfirst!(x, NaN)) # because of `diff`
+# end
+
+function online_qqe(close)
+
+    # Step 1: Calculate RSI
+    rsi_period = 14
+    rsi = RSI{DFT}(; period=rsi_period)
+    # Step 2: Smooth RSI with EMA
+    smoothed_rsi = EMA{DFT}(; period=5)
+    # Step 3: Absolute Change in Smoothed RSI
+    abs_change = (x, y) -> abs(x - y)
+    # Step 4: Double 27-period EMA on absolute changes
+    ema1 = EMA{DFT}(; period=27)
+    ema2 = EMA{DFT}(; period=27)
+    # Step 5: Multiply by 4.236 for slow trailing line
+    slow_trailing_multiplier = 4.236
+
+    qqe = DFT[]
+    prev_smoothed_rsi = NaN
+    for (n, price) in enumerate(close)
+        fit!(rsi, price)
+        if ismissing(rsi.value)
+            push!(qqe, NaN)
+            continue
+        end
+        fit!(smoothed_rsi, rsi.value)
+        if ismissing(smoothed_rsi.value)
+            push!(qqe, NaN)
+            continue
+        end
+        v1 = abs_change(smoothed_rsi.value, prev_smoothed_rsi)
+        if ismissing(v1) || isnan(v1)
+            prev_smoothed_rsi = smoothed_rsi.value
+            push!(qqe, NaN)
+            continue
+        end
+        fit!(ema1, v1)
+        if ismissing(ema1.value)
+            push!(qqe, NaN)
+            continue
+        end
+        fit!(ema2, ema1.value)
+        if ismissing(ema2.value)
+            push!(qqe, NaN)
+            continue
+        end
+        v2 = ema2.value * slow_trailing_multiplier
+        push!(qqe, v2)
+        prev_smoothed_rsi = smoothed_rsi.value
+    end
+    qqe
 end
 
 function qqe!(ohlcv, from_date)
-    ohlcv = viewfrom(ohlcv, from_date; offset=-27*2)
-    # shift by one to avoid lookahead # FIXME: this should not be needed
-    [qqe(ohlcv.close);;] # it's a matrix
+    ohlcv = viewfrom(ohlcv, from_date; offset=-27 * 2)
+    [online_qqe(ohlcv.close);;] # it's a matrix
 end
 
 function call!(s::SC{<:ExchangeID,Sim}, ::ResetStrategy)
     call!(qqe!, s, InitData(); cols=(:qqe,), timeframe=tf"1d")
-    @assert hasproperty(ohlcv(first(s.universe), tf"1d"), :qqe)
+    @assert hasproperty(ohlcv(first(s.universe), tf"1d"), :qqe) "is ohlcv at 1d timeframe available?"
 end
 
 function handler(s, ai, ats, date)
@@ -45,7 +95,7 @@ function handler(s, ai, ats, date)
     v = data[ats, :qqe]
     trend = if v > 13.22
         -1
-    elseif v <  8.96
+    elseif v < 8.96
         1
     else
         0
