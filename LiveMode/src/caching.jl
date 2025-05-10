@@ -26,7 +26,7 @@ end
 const LATEST_RESP_KEY = DateTime(0)
 
 function _order_trades_resp_cache(a, ai)
-    cache = @lget! a :trades_cache Dict{AssetInstance,ttl_dict_type(a[:trades_cache_ttl], String)}()
+    cache = @lget! a :order_trades_cache Dict{AssetInstance,ttl_dict_type(a[:trades_cache_ttl], String)}()
     @lget! cache ai ttl_resp_dict(a[:trades_cache_ttl], String)
 end
 

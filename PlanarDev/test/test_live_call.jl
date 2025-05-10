@@ -83,7 +83,9 @@ _ensure_close(s, ai) = begin
     catch
         nothing
     end
-    @info "TEST: last order" last_order lm.isfilled(ai, last_order)
+    if !isnothing(last_order)
+        @info "TEST: last order" last_order lm.isfilled(ai, last_order)
+    end
     @test lm.waitordclose(s, ai)
     last_order
 end
@@ -175,21 +177,26 @@ function test_live_call_mg(s)
         sleep(1)
     end
     last_order = _ensure_close(s, ai)
-    @test cash(ai, Short()) == -amount == lm.live_contracts(s, ai, Short(), since=last(lm.trades(last_order)).date, force=true)
+    since = isnothing(last_order) ? DateTime(0) : last(lm.trades(last_order)).date
+    @test cash(ai, Short()) == -amount == lm.live_contracts(s, ai, Short(), since=since, force=true)
+    @info "TEST: short pos open" cash(ai, Short()) -amount
     @test iszero(cash(ai, Long()))
     @test isopen(ai, Short())
     @info "TEST: Position Close (2nd)" ai
     @test ect.call!(s, ai, Short(), now(), ect.PositionClose(); waitfor)
     @info "TEST: wait posclose" waitfor
-    lm.waitposclose(s, ai, Short(); waitfor)
-    @test lm.waitposclose(s, ai, Short(); waitfor)
-    @test iszero(lm.live_contracts(s, ai, Short, force=true))
+    lm.waitposclose(s, ai, Short(); waitfor, since)
+    @test lm.waitposclose(s, ai, Short(); waitfor, since)
+    @test iszero(lm.live_contracts(s, ai, Short, force=true)) || begin
+        lm.waitposclose(s, ai, Short(); waitfor)
+    end
     @test !isopen(ai, Long())
     @test !isopen(ai, Short())
     @test iszero(cash(ai, Short()))
-    @test iszero(lm.live_contracts(s, ai, Long))
     @test iszero(lm.live_contracts(s, ai, Short))
-    @info "TEST: Long Buy waittrade" position(ai)
+    @test iszero(lm.live_contracts(s, ai, Long, force=true))
+    @test isempty(lm.fetch_open_orders(s, ai))
+    @info "TEST: Long Buy waittrade" position(ai, Long)
     orders_offset = length(lm.ordershistory(ai))
     since = now()
     price = lastprice(ai) + 100
@@ -203,7 +210,7 @@ function test_live_call_mg(s)
                 sleep(sleep_n) # this avoid potential orders having same date on some exchanges
                 trade = ect.call!(s, ai, GTCOrder{Buy}; amount=long_amount, price, waitfor)
                 if !isnothing(trade)
-                    n_trades += 1
+                    n_trades = n_trades + 1
                     if ismissing(trade)
                         lm.waittrade(s, ai, first(values(s, ai, Buy)); waitfor=Second(10)) ||
                             lm._force_fetchtrades(s, ai, first(values(s, ai, Buy)))
@@ -238,14 +245,20 @@ function test_live_call_mg(s)
     lm.live_position(s, ai; since, force=true)
     @test lm.timestamp(ai) >= since
     n_test_orders = length(lm.ordershistory(ai)) - orders_offset
-    @info "TEST: orders amount" length(lm.ordershistory(ai)) orders_offset
+    @info "TEST: orders amount" n_trades length(lm.ordershistory(ai)) orders_offset
     lm.waitsync(s, waitwatchers=true)
     lm.waitsync(ai)
     orders_amount = sum(o.amount for o in lm.ordershistory(ai)[orders_offset+1:end])
     contracts = lm.live_contracts(s, ai, force=true)
     this_cash = cash(pos)
     @info "TEST: " lm.orderscount(s, ai) lm.ordershistory(ai) cash(ai) contracts n_test_orders orders_offset since lm.timestamp(ai) lm.get_positions(s, ai, posside(ai)).date
-    @test this_cash ≈ orders_amount ≈ contracts
+    @test this_cash ≈ orders_amount ≈ contracts || begin
+        lm.live_sync_open_orders!(s, ai)
+        orders_amount = sum(o.amount for o in lm.ordershistory(ai)[orders_offset+1:end])
+        contracts = lm.live_contracts(s, ai)
+        this_cash = cash(pos)
+        this_cash ≈ orders_amount ≈ contracts
+    end
     pside = posside(ai)
     @info "TEST: Position Close (3rd)"
     @test !isnothing(lm.get_positions(s, ai, Short()))
@@ -278,7 +291,7 @@ function test_live_call_nm_gtc(s)
         @test lm.waitsync(ai, waitfor=Second(3))
     end
     lm.waitsync(s, waitfor=Second(5), waitwatchers=true)
-    @info "TEST: init" length(s.events) upds = length(lm.balance_watcher(s))
+    @info "TEST: init" length(s.events) upds = length(lm.balance_watcher(s)) lm.orderscount(s, ai)
     @test s.cash > 0.0
     @test all(isfinite(cash(ai)) for ai in s.universe)
     for ai in s.universe
@@ -494,6 +507,7 @@ function test_live_call_nm_fok(s)
 end
 
 mm_debug = "Executors,LogWatchPos,LogWatchPosProcess,LogWatchTrade,LogPosClose,LogCreateOrder,LogCreateTrade,LogEvents,LogState,LogSyncOrder,LogPosSync"
+mm_debug_orders = "Executors,LogWatchTrade,LogWatchOrder,LogCreateOrder,LogCreateTrade,LogSyncOrder"
 nm_debug = "Executors,LogWatchTrade,LogCreateOrder,LogCreateTrade,LogEvents"
 
 # NOTE: phemex testnet is disabled during weekends

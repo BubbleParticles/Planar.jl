@@ -3,13 +3,13 @@ using Planar
 const DESCRIPTION = "TwoParameters"
 const EXC = :okx
 const MARGIN = NoMargin
-const TF = tf"15m"
+const TF = tf"1h"
 @strategyenv!
-using OnlineTechnicalIndicators: RSI, EMA, fit!
+using Indicators: rsi, ema, Indicators
 
 SignalD = Dict{inst.AssetInstance,Union{Type{Buy},Type{Sell},Nothing}}
 
-function indicators!(s, args...; timeframe=tf"15m")
+function indicators!(s, args...; timeframe=TF)
     for (n, func) in s[:params]
         call!(
             (args...) -> func(args...; n),
@@ -19,11 +19,6 @@ function indicators!(s, args...; timeframe=tf"15m")
             timeframe,
         )
     end
-end
-function call!(t::Type{<:SC}, config, ::LoadStrategy)
-    config.min_timeframe = tf"15m"
-    config.timeframes = [tf"15m", tf"1h", tf"1d"]
-    st.default_load(@__MODULE__, t, config)
 end
 function call!(s::SC, ::ResetStrategy)
     s[:signals] = SignalD()
@@ -45,7 +40,7 @@ function call!(s::SC, ts::DateTime, _)
         return nothing
     end
     eth = s[m"eth"]
-    @linfo 1 "Resolved signal" action sym = raw(eth)
+    @linfo "Resolved signal" action sym = raw(eth)
     price = closeat(ohlcv(eth, s.timeframe), ats)
     closed = isdust(eth, price)
     if action == Buy && closed
@@ -61,7 +56,7 @@ function call!(::Type{<:SC}, ::StrategyMarkets)
 end
 
 function signal(s, ai, ats)
-    data = ohlcv(ai, tf"15m")
+    data = ohlcv(ai, TF)
     idx = dateindex(data, ats)
     ind_ema_short = data.ind_ema20[idx]
     ind_ema_long = data.ind_ema40[idx]
@@ -84,23 +79,12 @@ end
 
 function ind_ema(ohlcv, from_date; n)
     ohlcv = viewfrom(ohlcv, from_date; offset=-n)
-    ema = EMA{DFT}(period=n)
-    vec = Union{Missing,DFT}[]
-    for price in ohlcv.close
-        fit!(ema, price)
-        push!(vec, ema.value)
-    end
+    vec = ema(ohlcv.close; n)
     [vec;;]
 end
-function ind_rsi(ohlcv, from_date; n=14)
-    @assert timeframe!(ohlcv) == tf"15m"
-    ohlcv = viewfrom(ohlcv, from_date; offset=-n)
-    rsi = RSI{DFT}(period=n)
-    vec = Union{Missing,DFT}[]
-    for price in ohlcv.close
-        fit!(rsi, price)
-        push!(vec, rsi.value)
-    end
+function ind_rsi(ohlcv, from_date; kwargs...)
+    ohlcv = viewfrom(ohlcv, from_date; offset=-14)
+    vec = rsi(ohlcv.close; n=14)
     [vec;;]
 end
 end

@@ -78,13 +78,15 @@ function lastprice(s, ai::AssetInstance, bs::BySide, ::Val{:ob})
         @deassert get_string(ob, "symbol") == raw(ai)
         side_list = get_py(ob, _ccxtobside(bs))
         if islist(side_list)
-            return pytofloat(side_list[0][0])
+            if !isempty(side_list)
+                return pytofloat(side_list[0][0])
+            end
         end
     end
 end
 
 function lastprice(s, ai::AssetInstance, bs::BySide)
-    @something lastprice(ai, bs, last_fallback=false) lastprice(s, ai, bs, Val(:ob))
+    @something lastprice(ai, bs, last_fallback=false) lastprice(s, ai, bs, Val(:ob)) lastprice(s, ai, opposite(bs), Val(:ob)) lastprice(ai, bs, last_fallback=true)
 end
 
 updates_dict(s) = @lget! s.attrs :updated_at Dict{Tuple{Vararg{Symbol}},DateTime}()

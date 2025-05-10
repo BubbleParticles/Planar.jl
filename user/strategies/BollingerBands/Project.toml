@@ -4,12 +4,9 @@ authors = ["zbc <francesco.giannelli@yahoo.it>"]
 version = "0.1.0"
 
 [deps]
-OnlineTechnicalIndicators = "dc2d07fb-478f-4566-8417-81bb3e5a7af1"
-Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
-
-[compat]
-OnlineTechnicalIndicators = "0.1.0"
+Indicators = "70c4c096-89a6-5ec6-8236-da8aa3bd86fd"
 
 [strategy]
+# include_file = "src/ExampleMargin.jl"
 margin = "Isolated"
-mode = "Paper"
+mode = "Paper" # "Sim", "Live"

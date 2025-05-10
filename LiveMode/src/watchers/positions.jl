@@ -412,7 +412,7 @@ function Watchers._process!(w::Watcher, ::CcxtPositionsVal; fetched=false)
         side_dict = ifelse(islong(side), long_dict, short_dict)
         pup_prev = get(side_dict, sym, nothing)
         prev_date, pos_cond = if isnothing(pup_prev)
-            DateTime(0), Threads.Condition()
+            w.started, Threads.Condition()
         else
             pup_prev.date, pup_prev.notify
         end
@@ -422,7 +422,7 @@ function Watchers._process!(w::Watcher, ::CcxtPositionsVal; fetched=false)
             @debug "watchers pos process: scheduling" _module = LogWatchPosProcess data_date prev_date
         end
         prev_side = get(last_dict, sym, side)
-        this_date = let resp_date = @something pytodate(resp, eid) DateTime(0)
+        this_date = let resp_date = @something pytodate(resp, eid) w.started
             resp_date == prev_date ? data_date : resp_date
         end
         if resp === get(@something(pup_prev, (;)), :resp, nothing)
