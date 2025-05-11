@@ -70,6 +70,7 @@ USER root
 RUN apt-get install -y gcc g++
 ENV JULIA_PROJECT=/planar/user/Load
 ARG COMPILE_SCRIPT
+ENV CACHE=1
 RUN scripts/docker_compile.sh; \
     su plnuser -c "cd /planar; \
     . .envrc; \

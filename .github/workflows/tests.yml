@@ -46,6 +46,9 @@ jobs:
         PLANAR_PHEMEX_SANDBOX_APIKEY: ${{ secrets.PLANAR_PHEMEX_SANDBOX_APIKEY }}
         PLANAR_PHEMEX_SANDBOX_SECRET: ${{ secrets.PLANAR_PHEMEX_SANDBOX_SECRET }}
         PLANAR_PHEMEX_SANDBOX_PASSWORD: ${{ secrets.PLANAR_PHEMEX_SANDBOX_PASSWORD }}
+        PLANAR_BINANCE_SANDBOX_APIKEY: ${{ secrets.PLANAR_BINANCE_SANDBOX_APIKEY }}
+        PLANAR_BINANCE_SANDBOX_SECRET: ${{ secrets.PLANAR_BINANCE_SANDBOX_SECRET }}
+        PLANAR_BINANCE_SANDBOX_PASSWORD: ${{ secrets.PLANAR_BINANCE_SANDBOX_PASSWORD }}
         PLANAR_CMC_APIKEY: ${{ secrets.PLANAR_CMC_APIKEY }}
       uses: mxschmitt/action-tmate@v3
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
