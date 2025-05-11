@@ -6,9 +6,9 @@ project_hash = "eb4e1d6e6645e23fd2d77c85301616823e496c98"
 
 [[deps.AWS]]
 deps = ["Base64", "Compat", "Dates", "Downloads", "GitHub", "HTTP", "IniFile", "JSON", "MbedTLS", "Mocking", "OrderedCollections", "Random", "SHA", "Sockets", "URIs", "UUIDs", "XMLDict"]
-git-tree-sha1 = "319ade7f8fc88243369e119859a7d3a3e7e7f267"
+git-tree-sha1 = "cf78e5ba4f24ff7100fdfaf1ff05547f91abbef8"
 uuid = "fbe9abb3-538b-5e4e-ba9e-bc94f4f92ebc"
-version = "1.92.0"
+version = "1.92.1"
 
 [[deps.AWSS3]]
 deps = ["AWS", "ArrowTypes", "Base64", "Compat", "Dates", "EzXML", "FilePathsBase", "MbedTLS", "Mocking", "OrderedCollections", "Retry", "SymDict", "URIs", "UUIDs", "XMLDict"]
