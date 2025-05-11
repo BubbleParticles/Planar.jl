@@ -82,6 +82,13 @@ jobs:
         id: precomp
         with:
           context: .
+          build-args: |
+            PLANAR_BINANCE_SANDBOX_APIKEY=${{ env.PLANAR_BINANCE_SANDBOX_APIKEY }}
+            PLANAR_BINANCE_SANDBOX_SECRET=${{ env.PLANAR_BINANCE_SANDBOX_SECRET }}
+            PLANAR_BINANCE_SANDBOX_PASSWORD=${{ env.PLANAR_BINANCE_SANDBOX_PASSWORD }}
+            PLANAR_PHEMEX_SANDBOX_APIKEY=${{ env.PLANAR_PHEMEX_SANDBOX_APIKEY }}
+            PLANAR_PHEMEX_SANDBOX_SECRET=${{ env.PLANAR_PHEMEX_SANDBOX_SECRET }}
+            PLANAR_PHEMEX_SANDBOX_PASSWORD=${{ env.PLANAR_PHEMEX_SANDBOX_PASSWORD }}
           push: true
           tags: ${{ steps.meta-precomp.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
@@ -109,7 +116,14 @@ jobs:
         id: sysimage
         with:
           context: .
-          build-args: "COMPILE_SCRIPT=${{ env.COMPILE_SCRIPT }}"
+          build-args: |
+            COMPILE_SCRIPT=${{ env.COMPILE_SCRIPT }}
+            PLANAR_BINANCE_SANDBOX_APIKEY=${{ env.PLANAR_BINANCE_SANDBOX_APIKEY }}
+            PLANAR_BINANCE_SANDBOX_SECRET=${{ env.PLANAR_BINANCE_SANDBOX_SECRET }}
+            PLANAR_BINANCE_SANDBOX_PASSWORD=${{ env.PLANAR_BINANCE_SANDBOX_PASSWORD }}
+            PLANAR_PHEMEX_SANDBOX_APIKEY=${{ env.PLANAR_PHEMEX_SANDBOX_APIKEY }}
+            PLANAR_PHEMEX_SANDBOX_SECRET=${{ env.PLANAR_PHEMEX_SANDBOX_SECRET }}
+            PLANAR_PHEMEX_SANDBOX_PASSWORD=${{ env.PLANAR_PHEMEX_SANDBOX_PASSWORD }}
           push: true
           tags: ${{ steps.meta-sysimage.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
@@ -137,6 +151,13 @@ jobs:
         id: precomp-interactive
         with:
           context: .
+          build-args: |
+            PLANAR_BINANCE_SANDBOX_APIKEY=${{ env.PLANAR_BINANCE_SANDBOX_APIKEY }}
+            PLANAR_BINANCE_SANDBOX_SECRET=${{ env.PLANAR_BINANCE_SANDBOX_SECRET }}
+            PLANAR_BINANCE_SANDBOX_PASSWORD=${{ env.PLANAR_BINANCE_SANDBOX_PASSWORD }}
+            PLANAR_PHEMEX_SANDBOX_APIKEY=${{ env.PLANAR_PHEMEX_SANDBOX_APIKEY }}
+            PLANAR_PHEMEX_SANDBOX_SECRET=${{ env.PLANAR_PHEMEX_SANDBOX_SECRET }}
+            PLANAR_PHEMEX_SANDBOX_PASSWORD=${{ env.PLANAR_PHEMEX_SANDBOX_PASSWORD }}
           push: true
           tags: ${{ steps.meta-precomp-interactive.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
@@ -164,17 +185,24 @@ jobs:
         id: sysimage-interactive
         with:
           context: .
-          build-args: "COMPILE_SCRIPT=${{ env.COMPILE_SCRIPT }}"
+          build-args: |
+            COMPILE_SCRIPT=${{ env.COMPILE_SCRIPT }}
+            PLANAR_BINANCE_SANDBOX_APIKEY=${{ env.PLANAR_BINANCE_SANDBOX_APIKEY }}
+            PLANAR_BINANCE_SANDBOX_SECRET=${{ env.PLANAR_BINANCE_SANDBOX_SECRET }}
+            PLANAR_BINANCE_SANDBOX_PASSWORD=${{ env.PLANAR_BINANCE_SANDBOX_PASSWORD }}
+            PLANAR_PHEMEX_SANDBOX_APIKEY=${{ env.PHEMEX_BINANCE_SANDBOX_APIKEY }}
+            PLANAR_PHEMEX_SANDBOX_SECRET=${{ env.PLANAR_PHEMEX_SANDBOX_SECRET }}
+            PLANAR_PHEMEX_SANDBOX_PASSWORD=${{ env.PLANAR_PHEMEX_SANDBOX_PASSWORD }}
           push: true
           tags: ${{ steps.meta-sysimage-interactive.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
           target: planar-sysimage-interactive
-        # This ugly bit is necessary if you don't want your cache to grow forever
-        # until it hits GitHub's limit of 5GB.
-        # Temp fix
-        # https://github.com/docker/build-push-action/issues/252
-        # https://github.com/moby/buildkit/issues/1896
+          # This ugly bit is necessary if you don't want your cache to grow forever
+          # until it hits GitHub's limit of 5GB.
+          # Temp fix
+          # https://github.com/docker/build-push-action/issues/252
+          # https://github.com/moby/buildkit/issues/1896
       - name: Move cache
         if: always()
         run: |

@@ -13,6 +13,7 @@
 /render.html
 /src/__pycache__/
 /user/strategies/*
+/user/.envrc
 Planar.so
 test/test.jlo
 Planar/test/
