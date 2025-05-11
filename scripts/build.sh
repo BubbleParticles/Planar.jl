@@ -2,7 +2,7 @@
 
 set -e
 tmp_path=${BUILD_TMP_PATH:-/tmp/planar-build}
-# repo="https://github.com/panifie/Planar.jl"
+# repo="https://github.com/psydyllic/Planar.jl"
 repo=${BUILD_REPO:-.}
 image=${1:-${BUILD_IMAGE:-planar}}
 if [ -n "$2" ]; then

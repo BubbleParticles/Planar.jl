@@ -60,7 +60,7 @@ jobs:
         with:
           # list of Docker images to use as base name for tags
           images: |
-            panifie/planar-precomp
+            psydyllic/planar-precomp
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule
@@ -87,7 +87,7 @@ jobs:
         with:
           # list of Docker images to use as base name for tags
           images: |
-            panifie/planar-sysimage
+            psydyllic/planar-sysimage
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule
@@ -115,7 +115,7 @@ jobs:
         with:
           # list of Docker images to use as base name for tags
           images: |
-            panifie/planar-precomp-interactive
+            psydyllic/planar-precomp-interactive
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule
@@ -142,7 +142,7 @@ jobs:
         with:
           # list of Docker images to use as base name for tags
           images: |
-            panifie/planar-sysimage-interactive
+            psydyllic/planar-sysimage-interactive
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule

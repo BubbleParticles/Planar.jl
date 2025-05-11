@@ -48,4 +48,4 @@ Helper module for downloading data off exchanges.
 Modules = [Fetch]
 ```
 
-[1]: It is possible that in the future the bot will work with the hummingbot gateway for DEX support, and at least another exchange type natively implemented (from panifie).
+[1]: It is possible that in the future the bot will work with the hummingbot gateway for DEX support, and at least another exchange type natively implemented (from psydyllic).

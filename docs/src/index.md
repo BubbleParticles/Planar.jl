@@ -44,8 +44,8 @@ Recommended installation is through docker. There are 4 images:
 
 
 ```shell
-docker pull docker.io/panifie/planar-precomp
-docker run -it --rm docker.io/panifie/planar-precomp julia
+docker pull docker.io/psydyllic/planar-precomp
+docker run -it --rm docker.io/psydyllic/planar-precomp julia
 using Planar # or PlanarInteractive for plotting and optimization
 ```
 
@@ -55,7 +55,7 @@ Planar.jl requires at least Julia 1.9. Is not in the julia registry, to install 
 
 - Clone the repository:
 ```bash
-git clone --recurse-submodules https://github.com/panifie/Planar.jl
+git clone --recurse-submodules https://github.com/psydyllic/Planar.jl
 ```
 - Check the env vars in `.envrc`, then enabled them with `direnv allow`.
 ```bash
