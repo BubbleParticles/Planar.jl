@@ -1,6 +1,6 @@
 name = "PlanarInteractive"
 uuid = "482fd972-58d7-43f2-aa46-1266790cbdd8"
-authors = ["zbc <francesco.giannelli@yahoo.it>"]
+authors = ["zbc"]
 version = "0.1.0"
 
 [deps]

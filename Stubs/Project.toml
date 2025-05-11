@@ -1,6 +1,6 @@
 name = "Stubs"
 uuid = "19a5ee1f-efca-4178-b297-263c7ceb508d"
-authors = ["zbc <francesco.giannelli@yahoo.it>"]
+authors = ["zbc"]
 version = "0.1.0"
 
 [deps]

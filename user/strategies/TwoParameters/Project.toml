@@ -1,6 +1,6 @@
 name = "TwoParameters"
 uuid = "c1ae5a22-cd03-426d-8e7b-ac28392c777f"
-authors = ["zbc <francesco.giannelli@yahoo.it>"]
+authors = ["zbc"]
 version = "0.1.0"
 
 [deps]

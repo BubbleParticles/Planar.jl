@@ -1,6 +1,6 @@
 name = "Data"
 uuid = "934a4ae5-3fdb-4fa4-b6dd-2cd889d3d27b"
-authors = ["zbc <francesco.giannelli@yahoo.it>"]
+authors = ["zbc"]
 version = "0.1.1"
 
 [deps]

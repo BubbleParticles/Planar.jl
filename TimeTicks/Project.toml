@@ -1,6 +1,6 @@
 name = "TimeTicks"
 uuid = "1ce46816-3f51-4f52-9fcf-6d091670788d"
-authors = ["zbc <francesco.giannelli@yahoo.it>"]
+authors = ["zbc"]
 version = "0.1.0"
 
 [deps]

@@ -1,6 +1,6 @@
 name = "Misc"
 uuid = "ff97321b-aa60-4104-8cd6-2e42973349ab"
-authors = ["zbc <francesco.giannelli@yahoo.it>"]
+authors = ["zbc"]
 version = "0.1.0"
 
 [deps]

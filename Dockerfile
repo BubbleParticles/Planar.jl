@@ -1,4 +1,4 @@
-FROM julia:1.11 as base
+FROM julia:1.11ASbase
 RUN mkdir /planar \
     && apt-get update \
     && apt-get -y install sudo direnv git \
@@ -20,7 +20,7 @@ ENV JULIA_NOPRECOMP=""
 ENV JULIA_PRECOMP=Remote,PaperMode,LiveMode,Fetch,Optimization,Plotting
 CMD $JULIA_BIN -C $JULIA_CPU_TARGET
 
-FROM base as python1
+FROM baseASpython1
 ENV JULIA_LOAD_PATH=:/planar
 ENV JULIA_CONDAPKG_ENV=/planar/user/.conda
 # avoids progressbar spam
@@ -33,39 +33,39 @@ RUN $JULIA_CMD --project=/planar/Python -e "import Pkg; Pkg.instantiate()"
 COPY --chown=plnuser:plnuser ./Python /planar/Python
 RUN $JULIA_CMD --project=/planar/Python -e "using Python"
 
-FROM python1 as precompile1
+FROM python1ASprecompile1
 COPY --chown=plnuser:plnuser ./Planar/*.toml /planar/Planar/
 ENV JULIA_PROJECT=/planar/Planar
 ARG CACHE=1
 RUN $JULIA_CMD --project=/planar/Planar -e "import Pkg; Pkg.instantiate()"
 
-FROM precompile1 as precompile2
+FROM precompile1ASprecompile2
 RUN JULIA_PROJECT= $JULIA_CMD -e "import Pkg; Pkg.add([\"DataFrames\", \"CSV\", \"ZipFile\"])"
 
-FROM precompile2 as precompile3
+FROM precompile2ASprecompile3
 COPY --chown=plnuser:plnuser ./ /planar/
 RUN git submodule update --init
 
-FROM precompile3 as precomp-base
+FROM precompile3ASprecomp-base
 USER plnuser
 WORKDIR /planar
 ENV JULIA_NUM_THREADS=auto
 CMD $JULIA_BIN -C $JULIA_CPU_TARGET
 
-FROM precomp-base as planar-precomp
+FROM precomp-baseASplanar-precomp
 ENV JULIA_PROJECT=/planar/Planar
 RUN $JULIA_CMD -e "import Pkg; Pkg.instantiate()"
 RUN $JULIA_CMD -e "using Planar; using Metrics"
 RUN $JULIA_CMD -e "using Metrics"
 
-FROM planar-precomp as planar-precomp-interactive
+FROM planar-precompASplanar-precomp-interactive
 ENV JULIA_PROJECT=/planar/PlanarInteractive
 RUN JULIA_PROJECT= $JULIA_CMD -e "import Pkg; Pkg.add([\"Makie\", \"WGLMakie\"])"
 RUN $JULIA_CMD -e "import Pkg; Pkg.instantiate()"
 RUN $JULIA_CMD -e "using PlanarInteractive"
 
 
-FROM planar-precomp as planar-sysimage
+FROM planar-precompASplanar-sysimage
 USER root
 RUN apt-get install -y gcc g++
 ENV JULIA_PROJECT=/planar/user/Load
@@ -83,7 +83,7 @@ ENV JULIA_PROJECT=/planar/Planar
 RUN $JULIA_CMD --sysimage "/planar/Planar.so" -e "using Planar"
 CMD $JULIA_CMD --sysimage "/planar/Planar.so"
 
-FROM planar-precomp-interactive as planar-sysimage-interactive
+FROM planar-precomp-interactiveASplanar-sysimage-interactive
 USER root
 ENV JULIA_PROJECT=/planar/PlanarInteractive
 RUN apt-get install -y gcc g++

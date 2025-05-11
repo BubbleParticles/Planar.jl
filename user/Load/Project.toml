@@ -1,6 +1,6 @@
 name = "Load"
 uuid = "530aee93-9b5d-4423-8dbe-9bf7490b02fc"
-authors = ["zbc <francesco.giannelli@yahoo.it>"]
+authors = ["zbc"]
 version = "0.1.0"
 
 [deps]

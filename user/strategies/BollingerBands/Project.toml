@@ -1,6 +1,6 @@
 name = "BollingerBands"
 uuid = "10b1af8b-f1db-49c2-b9bb-56825b35e338"
-authors = ["zbc <francesco.giannelli@yahoo.it>"]
+authors = ["zbc"]
 version = "0.1.0"
 
 [deps]

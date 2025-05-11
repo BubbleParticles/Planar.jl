@@ -1,6 +1,6 @@
 name = "Cli"
 uuid = "dd3f7155-34c1-473d-a171-ef1e8dc6f388"
-authors = ["zbc <francesco.giannelli@yahoo.it>"]
+authors = ["zbc"]
 version = "0.1.0"
 
 [deps]

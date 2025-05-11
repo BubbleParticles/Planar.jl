@@ -1,6 +1,6 @@
 name = "Remote"
 uuid = "711acd30-27b5-475d-809f-796ffbe15f78"
-authors = ["zbc <francesco.giannelli@yahoo.it>"]
+authors = ["zbc"]
 version = "0.1.0"
 
 [deps]

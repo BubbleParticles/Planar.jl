@@ -1,6 +1,6 @@
 name = "Exchanges"
 uuid = "ab04e009-1d60-4d36-ac2f-58b9338a89b5"
-authors = ["zbc <francesco.giannelli@yahoo.it>"]
+authors = ["zbc"]
 version = "0.1.0"
 
 [deps]

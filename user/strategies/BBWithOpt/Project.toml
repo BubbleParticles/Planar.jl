@@ -1,6 +1,6 @@
 name = "BBWithOpt"
 uuid = "49e7d402-6e80-11ee-3ea0-03e999f86b56"
-authors = ["zbc <francesco.giannelli@yahoo.it>"]
+authors = ["zbc"]
 version = "0.1.0"
 
 [deps]
