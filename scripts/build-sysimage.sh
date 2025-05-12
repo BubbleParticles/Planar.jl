@@ -6,7 +6,7 @@
 podman build \
   --target planar-sysimage \
   --build-arg=COMPILE_SCRIPT=scripts/compile.jl \
-  --build-arg=JULIA_NUM_THREADS=1 \
+  --build-arg=NTHREADS=1 \
   --build-arg=PLANAR_BINANCE_SANDBOX_APIKEY=$PLANAR_BINANCE_SANDBOX_APIKEY \
   --build-arg=PLANAR_BINANCE_SANDBOX_SECRET=$PLANAR_BINANCE_SANDBOX_SECRET \
   --build-arg=PLANAR_BINANCE_SANDBOX_PASSWORD=$PLANAR_BINANCE_SANDBOX_PASSWORD \

@@ -77,7 +77,7 @@ RUN apt-get install -y gcc g++
 ENV JULIA_PROJECT=/planar/user/Load
 ENV CACHE=1
 ARG COMPILE_SCRIPT
-ARG JULIA_NUM_THREADS=auto
+ARG NTHREADS=auto
 ARG PLANAR_BINANCE_SANDBOX_APIKEY
 ARG PLANAR_BINANCE_SANDBOX_SECRET
 ARG PLANAR_BINANCE_SANDBOX_PASSWORD
@@ -88,7 +88,7 @@ RUN scripts/docker_compile.sh; \
     su plnuser -c "cd /planar; \
     . .envrc; \
     cat /tmp/compile.jl; \
-    $JULIA_CMD -e \
+    $JULIA_CMD -t ${NTHREADS} -e \
     'include(\"/tmp/compile.jl\"); compile(\"user/Load\"; cpu_target=\"$JULIA_CPU_TARGET\")'"; \
     rm -rf /tmp/compile.jl
 USER plnuser
