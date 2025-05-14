@@ -12,7 +12,7 @@ end
 function cached_ohlcv!(eid::ExchangeID, met::Symbol, period::Period, sym::AbstractString; def=nothing)
     @lget! OHLCV_CACHE (eid, met, period, sym) @lock OHLCV_CACHE_LOCK @lget! OHLCV_CACHE (
         eid, met, period, sym
-    ) @something def empty_ohlcv()
+    ) @something def Data.empty_ohlcv()
 end
 
 function cached_ohlcv!(

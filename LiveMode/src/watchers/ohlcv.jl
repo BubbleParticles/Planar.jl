@@ -66,12 +66,16 @@ Returns the method used for generating OHLCV data in the strategy.
 values: `tickers`, `trades`, `candles`
 
 """
-ohlcvmethod(s::Strategy) = s[:live_ohlcv_method]
+ohlcvmethod(s::Strategy) = attr(s, :live_ohlcv_method, :candles)
+ohlcvmethod(ai::AssetInstance) = attr(ai, :live_ohlcv_method, :candles)
 function ohlcvmethod!(s::Strategy, k=:candles)
     if k ∉ (:tickers, :candles, :trades)
         error("ohlcv methods supported are `tickers`, `candles` and `trades`")
     end
     s[:live_ohlcv_method] = k
+    for ai in universe(s)
+        attr!(ai, :live_ohlcv_method, k)
+    end
 end
 
 @doc """ Returns the watchers for OHLCV data.
@@ -208,11 +212,11 @@ function stop_watch_ohlcv!(s::RTStrategy)
 end
 
 function empty_ohlcv(s::Strategy, ai::AssetInstance)
-    cached_ohlcv!(exchangeid(s), ohlcvmethod(s), s.timeframe, raw(ai))
+    cached_ohlcv!(exchangeid(s), ohlcvmethod(s), period(s.timeframe), raw(ai))
 end
 
 function empty_ohlcv(ai::AssetInstance, tf::TimeFrame; met=:candles)
-    cached_ohlcv!(exchangeid(ai), ohlcvmethod(s), s.timeframe, raw(ai))
+    cached_ohlcv!(exchangeid(ai), ohlcvmethod(ai), period(tf), raw(ai))
 end
 
 @doc "Ensures dataframes in the strategy are present in the cache"
