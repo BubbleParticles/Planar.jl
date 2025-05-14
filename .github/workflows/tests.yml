@@ -64,6 +64,7 @@ jobs:
       run: |
         direnv allow .
         eval "$(direnv hook bash)"
+        echo "Conda env path: ${JULIA_CONDAPKG_ENV}"
         git reset --hard # otherwise instantiate fails
         julia --project=PlanarDev/ -e 'import Pkg; Pkg.instantiate(); using PlanarDev;'
     - name: Run tests # coverage is generated only on success
