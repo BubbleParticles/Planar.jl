@@ -63,7 +63,7 @@ jobs:
     - name: Instantiate
       run: |
         direnv allow .
-        eval "$(direnv hook bash)"
+        eval "$(direnv export bash)"
         echo "Conda env path: ${JULIA_CONDAPKG_ENV}"
         git reset --hard # otherwise instantiate fails
         julia --project=PlanarDev/ -e 'import Pkg; Pkg.instantiate(); using PlanarDev;'
@@ -83,7 +83,7 @@ jobs:
         PLANAR_CMC_APIKEY: ${{ secrets.PLANAR_CMC_APIKEY }}
       run: |
         direnv allow .
-        eval "$(direnv hook bash)"
+        eval "$(direnv export bash)"
         julia --project=PlanarDev/ -e 'import Pkg; Pkg.test(coverage=true)'
     - name: Process coverage
       if: always()
