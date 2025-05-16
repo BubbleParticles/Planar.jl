@@ -82,7 +82,7 @@ This function constructs a filename from the given `exc_name`, replacing any exi
 function keys_path(exc_name::AbstractString)
     keys_dir = joinpath(user_dir(), "keys")
     file = lowercase((replace(exc_name, ".json" => "") * ".json"))
-    joinpath(cfg_dir, file)
+    joinpath(keys_dir, file)
 end
 
 # TODO: should be unified into a single `secrets.toml` file
