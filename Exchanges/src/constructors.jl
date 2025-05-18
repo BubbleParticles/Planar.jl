@@ -383,15 +383,19 @@ The `filter_markets` function takes the following parameters:
 - `sep` (optional, default is '/'): the separator used in market strings.
 
 """
-function filter_markets(exc; min_volume=10e4, quot="USDT", sep='/')
+function filter_markets(exc; min_volume=10e4, quot="USDT", sep='/', type=:spot)
     markets = exc.markets
-    @tickers!
+    @tickers! type
     f_markets = Dict()
-    for (p, info) in markets
-        _, pquot = split(p, sep)
+    for (p, tick) in tickers
+        if !haskey(markets, p)
+            continue
+        end
+        _, pquot_frag = split(p, sep)
+        pquot = spotpair(pquot_frag)
         # NOTE: split returns a substring
         if pquot == quot && tickers[p]["quoteVolume"] > min_volume
-            f_markets[p] = info
+            f_markets[p] = markets[p]
         end
     end
     f_markets
