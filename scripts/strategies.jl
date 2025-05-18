@@ -17,26 +17,30 @@ sandbox = false
 
 # set the strategies you want to run
 config  = [
-    (; name=:SurgeV4, exchange=:phemex, account="1")
+    (; name=:MyStrat, exchange=:myexchange, account="")
 ]
 
 strats = st.Strategy[]
 
+function start_strat(s)
+    try
+        start!(s, foreground=false)
+    catch e
+        @error "can't start strategy" exception = e
+    end
+end
+
 for c in config
     @info "loading strategy $(c.name)"
     s = st.strategy(c.name; mode, sandbox, c.exchange, c.account)
-    start!(s, foreground=false)
+    start_strat(s)
     push!(strats, s)
 end
 
 monitor = @async while true
     for s in strats
         if !isrunning(s)
-            try
-                start!(s, foreground=false)
-            catch e
-                @error "can't re-start strategy" exception = e
-            end
+            start_strat(s)
         end
     end
     sleep(5)
