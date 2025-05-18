@@ -24,7 +24,7 @@ strats = st.Strategy[]
 
 function start_strat(s)
     try
-        start!(s, foreground=false)
+        start!(s, foreground=false, with_stdout=false)
     catch e
         @error "can't start strategy" exception = e
     end
