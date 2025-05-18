@@ -16,7 +16,7 @@ sandbox = false
 @info "strategy run mode $mode"
 
 # set the strategies you want to run
-config  = [
+config = [
     (; name=:MyStrat, exchange=:myexchange, account="")
 ]
 
