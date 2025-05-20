@@ -168,7 +168,7 @@ end
 function test_timestamp_function()
     @asset_constructor()
     @test inst.timestamp(ai) == inst._history_timestamp(ai)
-    @test_throws MethodError inst.timestamp(ai, Long())
+    @test inst.timestamp(ai, Long()) == DateTime(0)
     @asset_constructor(d"BTC/USDT:USDT", Isolated)
     @test inst.timestamp(ai, Long()) == inst.timestamp(position(ai, Long()))
     @test inst.timestamp(ai, Short()) == inst.timestamp(position(ai, Short()))
