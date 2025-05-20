@@ -23,9 +23,9 @@ version = "0.1.1"
 
 [[deps.CondaPkg]]
 deps = ["JSON3", "Markdown", "MicroMamba", "Pidfile", "Pkg", "Preferences", "Scratch", "TOML", "pixi_jll"]
-git-tree-sha1 = "6aedabfa737e647664ae87f933d3678dad5f61d7"
+git-tree-sha1 = "93e81a68a84dba7e652e61425d982cd71a1a0835"
 uuid = "992eb4ea-22a4-4c89-a5bb-47a3300528ab"
-version = "0.2.28"
+version = "0.2.29"
 
 [[deps.DataAPI]]
 git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
@@ -249,9 +249,9 @@ version = "0.1.0"
 
 [[deps.PythonCall]]
 deps = ["CondaPkg", "Dates", "Libdl", "MacroTools", "Markdown", "Pkg", "Requires", "Serialization", "Tables", "UnsafePointers"]
-git-tree-sha1 = "feab249add2d40873acbd6b286b450bd30b083dd"
+git-tree-sha1 = "ce4a33749e0061fa51dbe40533dc112bf7d2d28e"
 uuid = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
-version = "0.9.24"
+version = "0.9.25"
 
 [[deps.Random]]
 deps = ["SHA"]
