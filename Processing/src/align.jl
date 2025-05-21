@@ -38,7 +38,7 @@ function trim_to!(df::AbstractDataFrame, to, tf, tail=false)
         rev_idx = @something findfirst(f, @view(df.timestamp[end:-1:1])) 1
         start = size(df)[1] - rev_idx + 1
         idx = start:size(df)[1]
-        # @show rev_idx, idx, size(df), df.timestamp[end], to
+        # @show rev_idx, start, idx, size(df), df.timestamp[end], to, tail
     else
         f = is_left_adjacent(to, tf.period)
         stop = @something(findfirst(f, df.timestamp), 1) - 1
@@ -63,13 +63,38 @@ function _trim_1(data::AbstractDict{K,V}, tail::Bool) where {K,V}
     end
 end
 
+@doc """ Run this after trim! to erase out of bounds dataframes.
+"""
+function empty_unaligned!(data::AbstractDict)
+    tsdict = Dict{DateTime, Int}()
+    df_to_empty = Set{DataFrame}()
+    common = 0
+    check_ohlcvs(ohlcvs) = for df in ohlcvs
+        this_ts = df.timestamp[begin]
+        if !haskey(tsdict, this_ts)
+            tsdict[this_ts] = 1
+        else
+            tsdict[this_ts] += 1
+        end
+        if this_ts != maximum(tsdict).first
+            push!(df_to_empty, df)
+        end
+    end
+    for ohlcvs in values(data)
+        check_ohlcvs(ohlcvs)
+    end
+    check_ohlcvs(first(values(data)))
+    foreach(empty!, df_to_empty)
+    data
+end
+
 @doc """ Trims the data to start from the same timestamp.
 
 $(TYPEDSIGNATURES)
 
 This function ensures that all the data frames in the given AbstractDict start from the same timestamp, with an option to also trim the end.
 """
-function trim!(data::AbstractDict; tail=false)
+function trim!(data::AbstractDict; tail=false, align=false)
     @ifdebug @assert begin
         (bigger_tf, bigger_ohlcv) = last(data)
         all(
@@ -80,6 +105,7 @@ function trim!(data::AbstractDict; tail=false)
     end
     _trim_1(data, false)
     tail && _trim_1(data, true)
+    align && empty_unaligned!(data)
     nothing
 end
 
@@ -94,8 +120,7 @@ function check_alignment(data::AbstractDict; raise=false)
     first_ts = first(data)[2][1][begin, :timestamp]
     last_ts = first(data)[2][1][end, :timestamp]
     for (tf, dfs) in data
-        check = all(
-            df[begin, :timestamp] == first_ts && df[end, :timestamp] == last_ts for
+        check = all(df[begin, :timestamp] == first_ts && df[end, :timestamp] == last_ts for
             df in dfs
         )
         if !check
