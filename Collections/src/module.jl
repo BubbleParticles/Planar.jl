@@ -192,10 +192,26 @@ The `flatten` function takes the following parameter:
 The function returns a SortedDict where the keys are TimeFrame objects and the values are vectors of DataFrames that represent OHLCV (Open, High, Low, Close, Volume) data. The dictionary is sorted by the TimeFrame keys.
 
 """
-function flatten(ac::AssetCollection)::SortedDict{TimeFrame,Vector{DataFrame}}
+function flatten(ac::AssetCollection; noempty=false)::SortedDict{TimeFrame,Vector{DataFrame}}
     out = SortedDict{TimeFrame,Vector{DataFrame}}()
+    if noempty
+        return _flatten_noempty!(out, ac)
+    end
+    return _flatten!(out, ac)
+end
+
+function _flatten!(out, ac::AssetCollection)
     @eachrow ac.data for (tf, df) in :instance.data
         push!(@lget!(out, tf, DataFrame[]), df)
+    end
+    out
+end
+
+function _flatten_noempty!(out, ac::AssetCollection)
+    @eachrow ac.data for (tf, df) in :instance.data
+        if !isempty(df)
+            push!(@lget!(out, tf, DataFrame[]), df)
+        end
     end
     out
 end
