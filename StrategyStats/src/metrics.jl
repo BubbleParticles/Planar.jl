@@ -1,7 +1,5 @@
-using Indicators: Indicators;
-const ind = Indicators;
 using Data.DataFramesMeta
-using .Misc: config
+using .Misc: config, DFT
 using Data: @to_mat, PairData
 using .Misc.Lang
 
@@ -265,13 +263,31 @@ function bbands!(df::AbstractDataFrame; kwargs...)
     df
 end
 
-function Indicators.bbands(df::AbstractDataFrame; kwargs...)
-    Indicators.bbands(df.close; kwargs...)
-end
-
 using Base.Iterators: countfrom, take
 using Base.Threads: @spawn
+using OnlineTechnicalIndicators: BB, OnlineTechnicalIndicators as oti
 const Float = typeof(0.0)
+
+function bbands(df::AbstractDataFrame, n=oti.BB_PERIOD; sigma=oti.BB_STD_DEV_MULT)
+    o = oti.BB{DFT}(period=n, std_dev_mult=sigma)
+    bb_low = Union{Missing,DFT}[]
+    bb_mid = Union{Missing,DFT}[]
+    bb_high = Union{Missing,DFT}[]
+    for price in df.close
+        oti.fit!(o, price)
+        v = o.value
+        if ismissing(v)
+            push!(bb_low, missing)
+            push!(bb_mid, missing)
+            push!(bb_high, missing)
+            continue
+        end
+        push!(bb_low, v.lower)
+        push!(bb_mid, v.central)
+        push!(bb_high, v.upper)
+    end
+    DataFrame(; lower=bb_low, central=bb_mid, upper=bb_high)
+end
 
 @doc """Generates a grid of Bollinger Bands with varying parameters.
 
@@ -399,9 +415,32 @@ The function determines if an uptrend has occurred in the OHLCV data based on th
 """
 function is_uptrend(ohlcv::DataFrame; thresh=0.05, n=26)
     @checksize
-    ind.momentum(@view(ohlcv.close[(end - n):end]); n)[end] > thresh
+    momentum(@view(ohlcv.close[(end - n):end]); n)[end] > thresh
 end
 
 # function is_lowvol(ohlcv::DataFrame; thresh=0.05, n=3) end
+
+"""
+```
+diffn(x::Vector{T}; n::Int=1)::Vector{T} where {T<:Real}
+diffn(X::Matrix; n::Int=1)::Matrix = hcat([diffn(X[:,j], n=n) for j in 1:size(X,2)]...)
+```
+
+Lagged differencing
+"""
+function diffn(x::AbstractVector{T}; n::Int=1)::Vector{T} where {T<:Real}
+    @assert n<size(x,1) && n>0 "Argument n out of bounds."
+    dx = zeros(size(x))
+    dx[1:n] .= NaN
+    @inbounds for i=n+1:size(x,1)
+        dx[i] = x[i] - x[i-n]
+    end
+    return dx
+end
+diffn(X::AbstractMatrix; n::Int=1)::Matrix = hcat([diffn(X[:,j], n=n) for j in 1:size(X,2)]...)
+function momentum(x::AbstractArray{T}; n::Int64=1)::Array{Float64} where {T<:Real}
+    @assert n>0 "Argument n must be positive."
+    return diffn(x, n=n)
+end
 
 include("slope.jl")

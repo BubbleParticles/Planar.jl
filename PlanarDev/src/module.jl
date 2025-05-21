@@ -33,6 +33,10 @@ function symnames(s=Main.s)
     String[lowercase(v) for v in (string.(getproperty.(st.assets(s), :bc)))]
 end
 
+function symnames(data::Dict)
+    String[lowercase(string(parse(st.Instruments.AbstractAsset, k).bc)) for k in keys(data)]
+end
+
 function default_data_loader(load_func=nothing)
     @eval Main begin
         using Scrapers: Scrapers as scr

@@ -1,5 +1,3 @@
-using Indicators;
-const ind = Indicators;
 using Data.DataFrames: DataFrame, AbstractDataFrame
 
 @doc """Applies a slope filter to a dataset.
@@ -36,7 +34,7 @@ This function takes an array `arr` and optionally an integer `n` (default is 10)
 """
 function slopeangle(arr; n=10)
     size(arr)[1] >= n || return [missing]
-    slopetoangle.(ind.mlr_slope(arr; n))
+    slopetoangle.(mlr_slope(arr; n))
 end
 
 slopetoangle(s) = begin
@@ -51,7 +49,22 @@ This function takes a DataFrame `ohlcv` and optionally three integers `mn` (defa
 
 """
 function is_slopebetween(ohlcv::DataFrame; mn=5, mx=90, n=26)
-    slope = ind.mlr_slope(@view(ohlcv.close[(end - n):end]); n)[end]
+    slope = mlr_slope(@view(ohlcv.close[(end - n):end]); n)[end]
     angle = atan(slope) * (180 / π)
     mx > angle > mn
+end
+
+function mlr_slope(y::AbstractArray{T}; n::Int64=10, x::AbstractArray{T}=collect(1.0:n))::Array{Float64} where {T<:Real}
+    @assert n<length(y) && n>0 "Argument n out of bounds."
+    @assert size(y,2) == 1
+    @assert size(x,1) == n || size(x,1) == size(y,1)
+    const_x = size(x,1) == n
+    out = zeros(size(y))
+    out[1:n-1] .= NaN
+    @inbounds for i = n:length(y)
+        yi = y[i-n+1:i]
+        xi = const_x ? x : x[i-n+1:i]
+        out[i] = cov(xi,yi) / var(xi)
+    end
+    return out
 end

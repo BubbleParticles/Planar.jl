@@ -7,6 +7,7 @@ version = "0.1.0"
 Data = "934a4ae5-3fdb-4fa4-b6dd-2cd889d3d27b"
 ExchangeTypes = "16e96388-e60e-4b60-892f-986722d15ae4"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
+OnlineTechnicalIndicators = "dc2d07fb-478f-4566-8417-81bb3e5a7af1"
 
 [weakdeps]
 CausalityTools = "01837fd2-c099-442f-ae89-75fa208aad36"
@@ -16,3 +17,6 @@ StatsModels = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
 
 [extensions]
 CorrExt = ["CausalityTools", "StatsBase", "StatsModels", "EffectSizes"]
+
+[compat]
+OnlineTechnicalIndicators = "0.1.0"
