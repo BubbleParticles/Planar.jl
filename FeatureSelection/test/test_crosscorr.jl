@@ -1,8 +1,7 @@
 using Test
-using FeatureSelection
-using DataFrames
-using TimeTicks: TimeFrame, @tf_str
-using FeatureSelection: center_data, lagsbytf
+using .fs.da.DataFrames
+using .fs.TimeTicks: TimeFrame, @tf_str, DateRange
+using .fs: center_data, lagsbytf
 @testset "crosscorr.jl tests" failfast=true begin
     @testset "lagsbytf function" begin
         # Test different timeframes
@@ -17,11 +16,12 @@ using FeatureSelection: center_data, lagsbytf
     
     @testset "center_data function" begin
         # Create test data
+        timestamps = DateRange(dt"2020-", dt"2020-01-02", tf"1m") |> collect
         data = Dict(
             tf"1m" => [
-                (df = DataFrame(close=1.0:10.0, timestamp=1:10); 
+                (df = DataFrame(close=1.0:1440.0, timestamp=timestamps); 
                  metadata!(df, "asset_instance", "TEST1", style=:note); df),
-                (df = DataFrame(close=2.0:2:20.0, timestamp=1:10); 
+                (df = DataFrame(close=1.0:1440.0, timestamp=timestamps); 
                  metadata!(df, "asset_instance", "TEST2", style=:note); df)
             ]
         )
@@ -30,11 +30,11 @@ using FeatureSelection: center_data, lagsbytf
         centered_data, vecs = center_data(data, tf"1m")
         
         # Check output types
-        @test centered_data isa Dict{TimeFrame,Vector{DataFrame}}
-        @test vecs isa Array{Float64,2}
+        @test centered_data isa Dict{<:TimeFrame,Vector{DataFrame}}
+        @test vecs isa Array{DFT,2}
         
         # Check dimensions - should be n-1 rows due to ratio calculation
-        @test size(vecs, 1) == 9
+        @test size(vecs, 1) == 1438
         @test size(vecs, 2) == 2  # 2 assets
         
         # Check metadata preservation

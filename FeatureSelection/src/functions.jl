@@ -2,6 +2,8 @@ using Statistics: quantile, mean, std, var, cov
 using Clustering: kmeans, kmedoids
 using Distributions: Normal, cdf
 using LinearAlgebra: eigen, Symmetric
+using Distances: pairwise, Euclidean
+using StatsBase: mode
 
 function sort_col_byrowsum!(df)
     # first calculate row sum
@@ -89,8 +91,8 @@ function pairs_trading_signals(prices::Tuple{AbstractVector,AbstractVector}, loo
     spread = p1 ./ p2
     
     # Initialize indicators
-    sma = SMA(period=lookback)
-    std_dev = StdDev(period=lookback)
+    sma = SMA{DFT}(period=lookback)
+    std_dev = StdDev{DFT}(period=lookback)
     
     # Initialize arrays to store results
     n = length(spread)
@@ -166,11 +168,12 @@ function detect_correlation_regime(corr_matrices::AbstractArray, window::Int=20;
     end
     
     # Use k-medoids for regime detection
-    clusters = kmedoids(transpose(features), n_regimes)
-    
+    dist = pairwise(Euclidean(), features; dims=2)
+    clusters = kmedoids(dist, n_regimes)
+
     # Smooth the regime labels with a rolling window
-    smoothed_regimes = zeros(Int, n)
-    for i in window:n
+    smoothed_regimes = ones(Int, n)
+    for i in window:size(dist, 1)
         window_regimes = clusters.assignments[(i-window+1):i]
         smoothed_regimes[i] = mode(window_regimes)
     end

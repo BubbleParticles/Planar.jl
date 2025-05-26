@@ -1,7 +1,11 @@
 using Test
 using FeatureSelection
-using Statistics
+using FeatureSelection: FeatureSelection as fs
+using .fs.Statistics
 using Random
+using .fs.Processing.Misc
+using .fs.Processing.Misc.TimeTicks
+using .fs.Statistics: mode
 
 @testset "FeatureSelection Tests" failfast=true begin
     include("test_ratio.jl")
