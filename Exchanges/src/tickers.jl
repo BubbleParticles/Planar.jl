@@ -85,7 +85,7 @@ function tickers(
     as_vec=false,
     verbose=true,
     type=markettype(exc),
-    cross_match::Tuple{Vararg{Symbol}}=()
+    cross_match::Tuple{Vararg{Symbol}}=(),
 ) # ::Union{Dict,Vector}
     # swap exchange in case of futures
     @tickers! type
@@ -103,7 +103,7 @@ function tickers(
     # TODO: all this checks should be decomposed into functions transducer style
     function skip_check(sym, spot, islev, mkt)
         notinmarket(sym) ||
-        (with_leverage == :no && islev) ||
+            (with_leverage == :no && islev) ||
             (with_leverage == :only && !islev) ||
             !leverage_check(spot) ||
             hasvolume(sym, spot; tickers, min_vol) ||
@@ -127,7 +127,10 @@ function tickers(
             verbose &&
             @warn "No pairs found, check quote currency ($quot) and min volume parameters ($min_vol)."
         isempty(quot) && return pairlist
-        as_vec && return unique!(pairlist)
+        if as_vec
+            unique!(pairlist)
+            return sort!(pairlist; by=k -> quotevol(tickers[k]))
+        end
         Dict(pairlist)
     end
     result(pairlist, as_vec)

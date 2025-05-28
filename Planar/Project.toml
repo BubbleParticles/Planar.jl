@@ -5,6 +5,7 @@ data_store = ""
 version = "1.5.30"
 
 [deps]
+Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 Engine = "2ee4d486-7c03-4138-87ff-17a01ae58543"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
@@ -13,6 +14,9 @@ REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Remote = "711acd30-27b5-475d-809f-796ffbe15f78"
 Zarr = "0a941bbe-ad1d-11e8-39d9-ab76183a1d99"
+
+[compat]
+Clustering = "0.15.8"
 
 [extras]
 Data = "934a4ae5-3fdb-4fa4-b6dd-2cd889d3d27b"

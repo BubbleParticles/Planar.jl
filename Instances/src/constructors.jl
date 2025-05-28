@@ -45,3 +45,9 @@ function Instances.AssetInstance{AA,EID,MM}(sym; sandbox, params=nothing, accoun
         margin=MM(),
     )
 end
+
+function default_asset_df(ai::AssetInstance)
+    df = DataFrame()
+    metadata!(df, "asset_instance", ai; style=:note)
+    return df
+end

@@ -202,6 +202,7 @@ end
 
 function _flatten!(out, ac::AssetCollection)
     @eachrow ac.data for (tf, df) in :instance.data
+        metadata!(df, "asset_instance", :instance; style=Symbol("note"))
         push!(@lget!(out, tf, DataFrame[]), df)
     end
     out
@@ -210,6 +211,7 @@ end
 function _flatten_noempty!(out, ac::AssetCollection)
     @eachrow ac.data for (tf, df) in :instance.data
         if !isempty(df)
+            metadata!(df, "asset_instance", :instance; style=Symbol("note"))
             push!(@lget!(out, tf, DataFrame[]), df)
         end
     end

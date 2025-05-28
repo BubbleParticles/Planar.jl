@@ -1096,7 +1096,7 @@ end
 include("constructors.jl")
 
 export AssetInstance, instance, load!, @rprice, @ramount
-export asset, raw, ohlcv, ohlcv_dict, bc, qc
+export asset, raw, ohlcv, ohlcv_dict, bc, qc, default_asset_df
 export takerfees, makerfees, maxfees, minfees, ishedged, isdust, nondust
 export Long, Short, position, posside, cash, committed
 export liqprice, leverage, bankruptcy, entryprice, price

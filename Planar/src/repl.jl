@@ -88,5 +88,6 @@ optim!() = _activate_and_import(:Optimization, :opt)
 interactive!() = _activate_and_import(:PlanarInteractive, :plni)
 @doc """ Activates and Imports the `Scrapers` module. """
 scrape!() = _activate_and_import(:Scrapers, :scr)
+feats!() = _activate_and_import(:FeatureSelection, :feats)
 
-export plots!, optim!, metrics!, engine!, analysis!, interactive!, scrape!
+export plots!, optim!, metrics!, engine!, analysis!, interactive!, scrape!, feats!
