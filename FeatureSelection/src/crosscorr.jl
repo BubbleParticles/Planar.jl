@@ -70,16 +70,26 @@ function crosscorr_assets(
     x_num=5,
     demean=false,
     lags=lagsbytf(tf),
+    tail::Option{Int}=nothing
 )
     data = st.coll.flatten(st.universe(s); noempty=true)
     (trimmed_data, v) = center_data(data, tf; ratio_func)
     names = [raw(metadata(df, "asset_instance")) for df in trimmed_data[tf] if !isempty(df)]
     # NOTE: as_vec=true is required to sort by volume (lower volumes first)
     centered = DataFrame(v, names)
-    assets =
-        let vec = tickers(st.getexchange!(s.exchange), s.qc; min_vol=min_vol, as_vec=true)
-            [el for el in vec if el in names]
+
+    # Apply tail lookback if specified
+    if !isnothing(tail) && tail > 0
+        if size(centered, 1) > tail
+            centered = @view centered[(end - tail + 1):end, :]
+        else
+            @warn "Tail lookback ($tail) is greater than or equal to the number of data points ($(size(centered, 1))). Using all data."
         end
+    end
+
+    assets = let vec = tickers(st.getexchange!(s.exchange), s.qc; min_vol=min_vol, as_vec=true)
+        [el for el in vec if el in names]
+    end
     x_assets = assets[(end - x_num + 1):end]
     y_assets = assets[begin:(end - x_num + 1)]
     x_df = @view centered[:, x_assets]
@@ -96,6 +106,9 @@ function crosscorr_assets(
     for i in eachindex(lags)
         m = @view corr[i, :, :]
         df = DataFrame(m, y_assets)
+        # Add x_assets as the first column to match streaming version output
+        df.x_asset = x_assets
+        select!(df, vcat("x_asset", y_assets))
         metadata!(df, "lag", lags[i]; style=:note)
         metadata!(df, "x_assets", x_assets; style=:note)
         corr_dict[lags[i]] = df
