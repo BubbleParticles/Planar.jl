@@ -87,6 +87,41 @@ function crosscorr_assets(
         end
     end
 
+    # --- Added logging ---
+    if size(centered, 1) > 0
+        # Attempt to get corresponding timestamps.
+        # Assuming centered rows align with timestamps from trimmed_data[tf][1]
+        # after ratio calculation (which reduces rows by 1).
+        # Need to adjust indices for the tail.
+        original_timestamps = trimmed_data[tf][1].timestamp # Assuming all assets have the same timestamps after trim!/empty_unaligned!
+        # The ratio reduces row count by 1, so the i-th row of 'centered' corresponds to the (i+1)-th original timestamp
+        # The tail selects rows from (end - tail + 1) to end of 'centered'.
+        # If centered has N rows after ratio, tail selects rows N-tail+1 to N.
+        # These correspond to original timestamps at indices (N-tail+1)+1 to N+1.
+        N_centered = size(centered, 1) # Number of rows in centered after potential trimming
+        N_original = size(original_timestamps, 1) # Number of timestamps in original data (per asset) after alignment
+
+        if N_centered > 0 && N_original > 0
+             # Determine the index in original_timestamps corresponding to the first row of the potentially trimmed centered
+             first_ts_idx_in_original = N_original - N_centered + 2 # +1 for ratio, +1 for 1-based indexing
+
+             # Determine the index in original_timestamps corresponding to the last row of the potentially trimmed centered
+             last_ts_idx_in_original = N_original # The last row of centered comes from the last data point in the original data
+
+            if first_ts_idx_in_original > 0 && last_ts_idx_in_original <= N_original && first_ts_idx_in_original <= last_ts_idx_in_original
+                 @debug "crosscorr_assets: First timestamp used: $(original_timestamps[first_ts_idx_in_original]), Last timestamp used: $(original_timestamps[last_ts_idx_in_original])"
+             else
+                  @debug "crosscorr_assets: Could not determine valid timestamp range for logging."
+             end
+        else
+            @debug "crosscorr_assets: Centered data is empty, no timestamps to report."
+        end
+    else
+        @debug "crosscorr_assets: Centered data is empty, no timestamps to report."
+    end
+    # --- End added logging ---
+
+
     assets = let vec = tickers(st.getexchange!(s.exchange), s.qc; min_vol=min_vol, as_vec=true)
         [el for el in vec if el in names]
     end
