@@ -107,12 +107,13 @@ The benchmark can be:
 - `benchmark::Union{Symbol, String, DataFrame}`: Specifies the benchmark. See description above. Defaults to `:top_asset`.
 - `min_vol::DFT`: The minimum volume required for an asset to be considered for `:top_asset` or `:top_5_percent` benchmarks. Defaults to 1e6.
 - `method::Symbol`: The method to use for Beta calculation. Accepts `:covariance`, `:regression`, or `:both`. Defaults to `:both`. Defaults to `:covariance`.
+- `tail::Option{Int}`: The number of data points to use for the Beta calculation. If `nothing`, all data points are used. If a positive integer, the last `tail` data points are used.
 
 # Returns
 - `DataFrame`: A DataFrame with columns `:Asset`, and either `:Beta_Covariance`, `:Beta_Regression`, or both, depending on the `method` argument.
              Returns an empty DataFrame if insufficient data or assets are available, or if the benchmark cannot be determined.
 """
-function beta_indicator(s::st.Strategy, tf=s.timeframe; benchmark::Union{Symbol, String, DataFrame} = :top_asset, min_vol::DFT=1e6, method::Symbol = :covariance)::DataFrame
+function beta_indicator(s::st.Strategy, tf=s.timeframe; benchmark::Union{Symbol, String, DataFrame} = :top_asset, min_vol::DFT=1e6, method::Symbol = :covariance, tail::Option{Int} = nothing)::DataFrame
     # Get universe data
     universe_data = st.universe(s)
 
@@ -294,6 +295,38 @@ function beta_indicator(s::st.Strategy, tf=s.timeframe; benchmark::Union{Symbol,
           return DataFrame()
      end
 
+    # --- New code for handling 'tail' argument ---
+    local data_length = size(centered_df, 1)
+    local returns_to_use_df::DataFrame
+    local benchmark_returns_to_use::Vector{DFT}
+
+    if tail !== nothing
+        if tail <= 0
+            @warn "Invalid 'tail' value provided. Must be a positive integer." tail=tail
+            return DataFrame()
+        end
+        if tail > data_length
+            @warn "'tail' value ($(tail)) is greater than the available data length ($(data_length)). Using all available data." tail=tail data_length=data_length
+            returns_to_use_df = centered_df
+            benchmark_returns_to_use = benchmark_returns
+        else
+            @debug "Using last $(tail) data points for Beta calculation."
+            returns_to_use_df = centered_df[end-tail+1:end, :]
+            benchmark_returns_to_use = benchmark_returns[end-tail+1:end]
+        end
+    else
+        # If tail is not provided, use all available data
+        returns_to_use_df = centered_df
+        benchmark_returns_to_use = benchmark_returns
+    end
+
+    # Ensure sufficient data points are available AFTER applying the tail (if any)
+    if size(returns_to_use_df, 1) < 2
+         @warn "Not enough data points to calculate beta after applying 'tail' or centering." data_points=size(returns_to_use_df, 1) minimum_required=2
+         return DataFrame()
+    end
+    # --- End of new code for handling 'tail' argument ---
+
     # Determine the columns for the results DataFrame
     local result_cols::Vector{Symbol}
     if method == :covariance
@@ -309,8 +342,8 @@ function beta_indicator(s::st.Strategy, tf=s.timeframe; benchmark::Union{Symbol,
     # Prepare to collect results
     results_data = []
 
-    # Convert centered_df to matrix for efficient calculations
-    centered_matrix = Matrix(centered_df)
+    # Convert centered_df to matrix for efficient calculations - NOW using returns_to_use_df
+    centered_matrix = Matrix(returns_to_use_df)
 
     # Initialize result variables - ensure type can handle missing
     local beta_cov_results::Union{Vector{<:Union{DFT, Missing}}, Nothing} = nothing
@@ -319,10 +352,11 @@ function beta_indicator(s::st.Strategy, tf=s.timeframe; benchmark::Union{Symbol,
     # Calculate betas based on the specified method using vectorized operations
     if method == :covariance || method == :both
         # Calculate covariance vector: cov(asset_returns, benchmark_returns) for all assets
-        cov_vector = cov(centered_matrix, benchmark_returns)
+        # NOW using benchmark_returns_to_use
+        cov_vector = cov(centered_matrix, benchmark_returns_to_use)
 
-        # Calculate variance of benchmark returns
-        var_market = var(benchmark_returns)
+        # Calculate variance of benchmark returns - NOW using benchmark_returns_to_use
+        var_market = var(benchmark_returns_to_use)
 
         if abs(var_market) < eps(DFT)
             @warn "Cannot calculate Beta by Covariance: Market variance is zero or near zero."
@@ -342,8 +376,9 @@ function beta_indicator(s::st.Strategy, tf=s.timeframe; benchmark::Union{Symbol,
         # Model: centered_matrix (asset returns) = intercept + beta * benchmark_returns + error
 
         # Prepare data for regression: benchmark_returns as the predictor (X) and centered_matrix as the response (Y)
-        # Add intercept column to benchmark_returns vector
-        X = hcat(fill(one(DFT), size(centered_df, 1)), benchmark_returns)
+        # NOW using benchmark_returns_to_use
+        # Add intercept column to benchmark_returns vector - NOW using benchmark_returns_to_use
+        X = hcat(fill(one(DFT), size(returns_to_use_df, 1)), benchmark_returns_to_use)
         Y = centered_matrix
 
         # Perform linear regression using the backslash operator for least squares
