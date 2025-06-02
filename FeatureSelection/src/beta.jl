@@ -4,14 +4,13 @@ using Statistics: mean
 using Strategies: Strategies as st
 using .st.Misc: Option
 using .st.Data: Data as da, DataFrame
-using .da.DataFrames: DataFrame, metadata!, deletemetadata!, names, timeframe!, metadata
+using .da.DataFrames: DataFrame, metadata!, deletemetadata!, names, metadata
 using .st: TimeFrame, DFT, @tf_str
 using .st.coll: _flatten_noempty!, raw, flatten
 using .st.Exchanges: tickers
 using Processing.Alignments: trim!, empty_unaligned!
 using GLM: @formula
 using LinearAlgebra: diag
-using .da: SortedDict
 
 @doc """
     calculate_beta_covariance(stock_returns, market_returns)
