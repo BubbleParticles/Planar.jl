@@ -7,6 +7,15 @@ using .st.Misc: DFT, Option # Assuming DFT is in Misc
 using .st: Strategy, AssetInstance, universe, raw # Added imports for strategy and asset access
 using .da.DataStructures: BinaryHeap, isempty, push!, peek, pop! # Added for min-heap
 
+# Helper function to calculate quote volume safely
+function _calculate_quote_volume(df::DataFrame)::DFT
+    if isempty(df) || !hasproperty(df, :close) || !hasproperty(df, :volume) || ismissing(df[end, :close]) || ismissing(df[end, :volume]) || isnan(df[end, :close]) || isnan(df[end, :volume])
+        return DFT(-Inf) # Use -Inf to handle cases with missing/invalid data during sorting
+    else
+        return DFT(df[end, :close] * df[end, :volume])
+    end
+end
+
 # Define a new OnlineStat for rolling variance
 mutable struct RollingVariance{T <: Number, W <: EqualWeight} <: OnlineStat{T}
     buffer::CircBuff{T}
@@ -31,7 +40,7 @@ function OnlineStats.fit!(o::RollingVariance{T}, x::T) where T
     buffer_is_full = o.nobs == o.window
 
     if buffer_is_full
-        oldest_x = first(o.buffer) # Get the oldest value before it's overwritten
+        oldest_x = o.buffer[1] # Get the oldest value before it's overwritten
         o.sum_x -= oldest_x
         o.sum_x2 -= oldest_x^2
     end
@@ -96,7 +105,7 @@ function OnlineStats.fit!(o::RollingCovMatrix{T}, xy::Tuple{T, T}) where T
     buffer_is_full = o.nobs == o.window
 
     if buffer_is_full
-        oldest_xy = first(o.buffer)
+        oldest_xy = o.buffer[1]
         oldest_x, oldest_y = oldest_xy
         o.sum_x -= oldest_x
         o.sum_y -= oldest_y
@@ -189,7 +198,7 @@ function OnlineStats.fit!(o::RollingLinReg{T}, yx::Tuple{T, T}) where T
     buffer_is_full = o.nobs == o.window
 
     if buffer_is_full
-        oldest_yx = first(o.buffer)
+        oldest_yx = o.buffer[1]
         oldest_y, oldest_x = oldest_yx
         o.sum_y -= oldest_y
         o.sum_x -= oldest_x
@@ -551,99 +560,204 @@ function _prepare_asset_data(
     tf,
     benchmark::Union{Symbol, String, DataFrame},
     min_vol::DFT,
-    benchmark_name_str::Ref{String} # Pass benchmark_name_str by reference to modify it
+    benchmark_name_str_ref::Ref{String} # Pass benchmark_name_str by reference to modify it
 )::Tuple{Dict{String, DataFrame}, Option{DataFrame}, Vector{String}, String}
 
     local asset_dfs::Dict{String, DataFrame} = Dict()
     local benchmark_df::Option{DataFrame} = nothing
-    local all_relevant_assets::Vector{String}
-    local benchmark_asset_name::String
+    local all_relevant_assets::Vector{String} = []
+    local benchmark_asset_name::String = ""
 
+    # 1. Get the universe data for the specified timeframe and flatten it
+    universe_asset_dfs_flattened = st.coll.flatten(st.universe(s); noempty=true)
+    universe_dfs_for_tf = get(universe_asset_dfs_flattened, tf, DataFrame[])
+
+    # Initial populate asset_dfs from universe data for the timeframe
+    local initial_universe_asset_dfs = Dict{String, DataFrame}()
+    for df in universe_dfs_for_tf
+        if haskey(metadata(df), "asset_instance")
+            asset_name = raw(metadata(df, "asset_instance"))
+            initial_universe_asset_dfs[asset_name] = df
+        else
+            @warn "DataFrame in flattened universe data for timeframe $(tf) is missing 'asset_instance' metadata." color=:yellow
+        end
+    end
+
+    local candidate_assets = collect(keys(initial_universe_asset_dfs))
+
+    # 2. Apply minimum volume filter to initial candidate assets
+    local all_assets_after_volume_filter::Vector{String} = tickers(st.getexchange!(s.exchange), s.qc; min_vol=min_vol, as_vec=true)
+
+    # Filter down the initial_universe_asset_dfs to only include assets passing volume filter
+    asset_dfs = Dict{String, DataFrame}()
+    for asset_name in all_assets_after_volume_filter
+        if haskey(initial_universe_asset_dfs, asset_name)
+            # Ensure the DataFrame is not empty and has a timestamp column
+            df = initial_universe_asset_dfs[asset_name]
+            if !isempty(df) && "timestamp" in names(df)
+                asset_dfs[asset_name] = df
+            else
+                @debug "Skipping asset $(asset_name) due to empty DataFrame or missing timestamp column."
+            end
+        else
+            @debug "Asset $(asset_name) from volume filter not found in initial universe data for timeframe $(tf)."
+        end
+    end
+
+    # Update candidate_assets to reflect those that passed volume and data checks
+    candidate_assets = collect(keys(asset_dfs))
+
+    # 3. Determine the benchmark asset/DataFrame from the volume-filtered set
     if typeof(benchmark) <: DataFrame
         benchmark_df = benchmark
         if !("timestamp" in names(benchmark_df)) || !(size(benchmark_df, 2) >= 2)
-             @error "External benchmark DataFrame must contain a 'timestamp' column and at least one value column."
-             return Dict(), nothing, [], "" # Return empty on error
-         end
-        benchmark_name_str[] = "external_benchmark" # Update the ref
+            @error "External benchmark DataFrame must contain a 'timestamp' column and at least one value column."
+            return Dict(), nothing, [], "" # Return empty on error
+        end
+        # Attempt to get asset name from metadata, fallback to a default name
         if haskey(metadata(benchmark), "asset_instance")
-             benchmark_name_str[] = raw(metadata(benchmark, "asset_instance")) # Update the ref
-         end
-        benchmark_asset_name = benchmark_name_str[]
-
-        universe_asset_dfs = st.coll.flatten(st.universe(s); noempty=true) |> tf_data -> get(tf_data, tf, Dict{String, DataFrame}())
-        all_relevant_assets = vcat(collect(keys(universe_asset_dfs)), [benchmark_asset_name])
-        asset_dfs = merge(universe_asset_dfs, Dict(benchmark_asset_name => benchmark_df))
-
-    else # benchmark is Symbol or String
-        all_asset_names_vol_filtered = tickers(st.getexchange!(s.exchange), s.qc; min_vol=min_vol, as_vec=true)
-        universe_asset_dfs_flattened = st.coll.flatten(st.universe(s); noempty=true)
-        universe_dfs_for_tf = get(universe_asset_dfs_flattened, tf, DataFrame[])
-
-        universe_asset_dfs = Dict{String, DataFrame}()
-        for df in universe_dfs_for_tf
-            if haskey(metadata(df), "asset_instance")
-                asset_name = raw(metadata(df, "asset_instance"))
-                universe_asset_dfs[asset_name] = df
-            else
-                @warn "DataFrame in flattened universe data for timeframe $(tf) is missing 'asset_instance' metadata." color=:yellow
-            end
-        end
-
-        filtered_universe_asset_dfs = Dict{String, DataFrame}()
-        for name in all_asset_names_vol_filtered
-             if haskey(universe_asset_dfs, name) && !isempty(universe_asset_dfs[name])
-                 filtered_universe_asset_dfs[name] = universe_asset_dfs[name]
-             end
-        end
-        asset_dfs = filtered_universe_asset_dfs
-
-        local available_assets = collect(keys(asset_dfs))
-
-        if typeof(benchmark) <: Symbol
-            if benchmark == :top_asset
-                 available_assets_sorted_by_vol = sort(available_assets, by=asset->begin
-                      df = asset_dfs[asset]
-                      isempty(df) ? -Inf : df[end, :volume]
-                 end, rev=true) # Sort descending for top asset
-                 if isempty(available_assets_sorted_by_vol)
-                      @warn "No assets meet the minimum volume requirement or have data to determine top asset benchmark."
-                      return Dict(), nothing, [], ""
-                  end
-                benchmark_asset_name = first(available_assets_sorted_by_vol) # Get the first (top) asset
-                benchmark_name_str[] = benchmark_asset_name # Update the ref
-            elseif benchmark == :top_5_percent
-                @warn "Top 5% benchmark aggregation in online mode is not fully implemented. Using top asset." # TODO: Implement proper aggregation
-                available_assets_sorted_by_vol = sort(available_assets, by=asset->begin
-                     df = asset_dfs[asset]
-                     isempty(df) ? -Inf : df[end, :volume]
-                end, rev=true)
-                if isempty(available_assets_sorted_by_vol)
-                     @warn "No assets meet the minimum volume requirement or have data to determine top 5% benchmark."
-                     return Dict(), nothing, [], ""
-                 end
-                benchmark_asset_name = first(available_assets_sorted_by_vol)
-                benchmark_name_str[] = benchmark_asset_name
-            else
-                error("Invalid benchmark symbol: $(benchmark). Must be :top_asset or :top_5_percent.")
-            end
-        elseif typeof(benchmark) <: String
-            benchmark_asset_name = benchmark
-            benchmark_name_str[] = benchmark_asset_name
-             if !(benchmark_asset_name in available_assets)
-                  @warn "Specified benchmark asset \"$(benchmark_asset_name)\" is not in the strategy's universe data after volume filtering."
-                  return Dict(), nothing, [], ""
-             end
-        end
-
-        if haskey(asset_dfs, benchmark_asset_name)
-             benchmark_df = asset_dfs[benchmark_asset_name]
+            benchmark_asset_name = raw(metadata(benchmark, "asset_instance"))
         else
-             @error "Benchmark asset \"$(benchmark_asset_name)\" data not found after filtering."
-             return Dict(), nothing, [], ""
-         end
-        all_relevant_assets = collect(keys(asset_dfs))
-    end
+            benchmark_asset_name = "external_benchmark"
+            @warn "External benchmark DataFrame is missing 'asset_instance' metadata. Using 'external_benchmark' as name." color=:yellow
+        end
+
+        # If the benchmark DataFrame's asset is not in the volume-filtered set, add it
+        if !(benchmark_asset_name in candidate_assets)
+            @warn "External benchmark asset \"$(benchmark_asset_name)\" is not in the volume-filtered universe. Adding it for calculation." color=:yellow
+            push!(candidate_assets, benchmark_asset_name)
+            asset_dfs[benchmark_asset_name] = benchmark_df
+        end
+
+    elseif typeof(benchmark) <: Symbol
+        if benchmark == :top_asset
+            # Determine top asset based on quote volume from the *already volume-filtered* assets
+            candidate_assets_with_volume = [(asset, _calculate_quote_volume(asset_dfs[asset])) for asset in candidate_assets]
+            sort!(candidate_assets_with_volume, by=x->x[2], rev=true)
+            if isempty(candidate_assets_with_volume) || candidate_assets_with_volume[1][2] == -Inf
+                @warn "No assets meet the minimum volume requirement or have valid close/volume data to determine top asset benchmark from the filtered set."
+                return Dict(), nothing, [], ""
+            end
+            benchmark_asset_name = candidate_assets_with_volume[1][1] # Set benchmark_asset_name directly
+            # Get benchmark df from the filtered set
+            benchmark_df = asset_dfs[benchmark_asset_name]
+
+        elseif benchmark == :top_5_percent
+            @warn "Top 5% benchmark aggregation in online mode is not fully implemented. Aggregating by averaging close prices." # Info about aggregation method
+
+            # Determine top assets based on cumulative quote volume from the *already volume-filtered* assets
+            candidate_assets_with_volume = [(asset, _calculate_quote_volume(asset_dfs[asset])) for asset in candidate_assets]
+            sort!(candidate_assets_with_volume, by=x->x[2], rev=true)
+
+            if isempty(candidate_assets_with_volume) || candidate_assets_with_volume[1][2] == -Inf
+                @warn "No assets meet the minimum volume requirement or have valid close/volume data to determine top 5% benchmark from the filtered set."
+                return Dict(), nothing, [], ""
+            end
+
+            local total_volume = sum(v for (a, v) in candidate_assets_with_volume if v > 0)
+            local cumulative_volume = 0.0
+            local top_5_percent_assets = String[]
+
+            for (asset, volume) in candidate_assets_with_volume
+                if volume > 0
+                    cumulative_volume += volume
+                    push!(top_5_percent_assets, asset)
+                    if cumulative_volume / total_volume >= 0.05
+                        break # Stop once 5% cumulative volume is reached
+                    end
+                end
+            end
+
+            if isempty(top_5_percent_assets)
+                @warn "Could not find enough assets with positive quote volume to reach 5% of total volume."
+                return Dict(), nothing, [], "" # Return empty if no assets selected
+            end
+
+            # Aggregate data for the top 5% assets
+            local aggregated_df::Option{DataFrame} = nothing
+            local first_asset = true
+
+            for asset_name in top_5_percent_assets
+                if haskey(asset_dfs, asset_name)
+                    df = asset_dfs[asset_name][!, [:timestamp, :close]] # Select only timestamp and close
+                    if first_asset
+                        aggregated_df = df
+                        first_asset = false
+                    else
+                        # Merge with existing aggregated_df on timestamp and add close prices
+                        # Need to rename columns to avoid conflicts before merging
+                        rename!(df, :close => Symbol("close_", asset_name))
+                        if !isnothing(aggregated_df)
+                            aggregated_df = outerjoin(aggregated_df, df, on=:timestamp)
+                        end
+                    end
+                end
+            end
+
+            if isnothing(aggregated_df) || isempty(aggregated_df)
+                @warn "Failed to aggregate data for top 5% assets."
+                return Dict(), nothing, [], "" # Return empty if aggregation fails
+            end
+
+            # Calculate the average close price for each timestamp in the aggregated DataFrame
+            local benchmark_close_prices = Vector{DFT}()
+            local timestamps = aggregated_df.timestamp
+
+            for row in eachrow(aggregated_df)
+                local sum_closes = DFT(0.0)
+                local count_closes = 0
+                for asset_name in top_5_percent_assets
+                    col_name = Symbol("close_", asset_name)
+                    if hasproperty(row, col_name) && !ismissing(row[col_name]) && !isnan(row[col_name])
+                        sum_closes += row[col_name]
+                        count_closes += 1
+                    end
+                end
+                if count_closes > 0
+                    push!(benchmark_close_prices, sum_closes / count_closes)
+                else
+                    push!(benchmark_close_prices, NaN)
+                end
+            end
+
+            # Create the final benchmark DataFrame with timestamp and the aggregated close price
+            benchmark_df = DataFrame(:timestamp => timestamps, :close => benchmark_close_prices)
+            benchmark_asset_name = "Top5PercentBenchmark" # Set a descriptive name directly
+
+            # Add the aggregated benchmark DataFrame to asset_dfs
+            asset_dfs[benchmark_asset_name] = benchmark_df
+
+            # Ensure all_relevant_assets includes the new benchmark asset name
+            if !(benchmark_asset_name in candidate_assets) # Check against initial candidate_assets before aggregation
+                 # This case should ideally not happen if we add it to asset_dfs, but as a safeguard
+                 push!(candidate_assets, benchmark_asset_name) # Add to candidate_assets temporarily for all_relevant_assets construction
+             end
+
+        else
+            @error "Invalid benchmark symbol: $(benchmark). Must be :top_asset or :top_5_percent."
+            return Dict(), nothing, [], ""
+        end
+
+    elseif typeof(benchmark) <: String
+        benchmark_asset_name = benchmark # Set benchmark_asset_name directly
+        # Check if the chosen benchmark asset exists in the *volume-filtered* data
+        if !haskey(asset_dfs, benchmark_asset_name)
+            @error "Specified benchmark asset \"$(benchmark_asset_name)\" is not available in the volume-filtered universe data for timeframe $(tf)."
+            return Dict(), nothing, [], "" # Return empty if benchmark data is missing after filtering
+        end
+        benchmark_df = asset_dfs[benchmark_asset_name] # Get benchmark df from the filtered set
+
+    else
+         @error "Invalid benchmark type: $(typeof(benchmark)). Must be Symbol, String, or DataFrame."
+         return Dict(), nothing, [], ""
+     end
+
+    # 4. Final list of all relevant assets for calculations
+    # This includes all assets in asset_dfs, which now consistently includes the benchmark
+    all_relevant_assets = collect(keys(asset_dfs))
+
+    # Set benchmark_name_str_ref for the cache initialization
+    benchmark_name_str_ref[] = benchmark_asset_name
 
     return asset_dfs, benchmark_df, all_relevant_assets, benchmark_asset_name
 end
