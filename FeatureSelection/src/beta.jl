@@ -269,7 +269,7 @@ function beta_indicator(s::st.Strategy, tf=s.timeframe; benchmark::Union{Symbol,
                          return DataFrame()
                     end
 
-                    benchmark_returns = mean(Matrix(centered_df[:, valid_benchmark_assets]); dims=2)[:, 1]
+                    benchmark_returns = mean(Matrix(@view centered_df[:, valid_benchmark_assets]); dims=2)[:, 1]
                     benchmark_name = "Top $(length(valid_benchmark_assets)) Assets Aggregate"
                     @debug "Using aggregate of top $(length(valid_benchmark_assets)) assets as benchmark: $(valid_benchmark_assets)"
                 end
