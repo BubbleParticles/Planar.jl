@@ -243,4 +243,86 @@ if cached_ohlcv! ∉ st.STRATEGY_LOAD_CALLBACKS.live
     push!(st.STRATEGY_LOAD_CALLBACKS.live, cached_ohlcv!)
 end
 
-export ohlcvmethod!, ohlcvmethod
+function sourceohlcv!(s::RTStrategy, from_strat::Strategy)
+    # Override this strategy ohlcv data with ohlcv data from the source strategy
+    @info "ohlcv: sourcing from strategy" from_strat
+    this_timeframes = s.timeframes
+    for ai in universe(s)
+        fs_ai = asset_bysym(from_strat, raw(ai))
+        if isnothing(fs_ai)
+            @warn "ohlcv: can't source for asset" ai from_strat
+        else
+            dict = ohlcv_dict(fs_ai)
+            for tf in this_timeframes
+                data = get(dict, tf, nothing)
+                if !isnothing(data)
+                    ohlcv_dict(ai)[tf] = data
+                else
+                    @warn "ohlcv: can't source for timeframe" ai tf from_strat
+                    if !haskey(ohlcv_dict(ai), tf)
+                        ohlcv_dict(ai)[tf] = Data.empty_ohlcv()
+                    end
+                end
+            end
+        end
+    end
+end
+
+@doc """
+Make sure additional timeframes are updated (since source strategy only updates its own timeframes)
+"""
+function ensure_propagate!(s::RTStrategy, from_strat::Strategy)
+    this_timeframes = s.timeframes
+    diff_timeframes = setdiff(this_timeframes, from_strat.timeframes)
+    if !isempty(diff_timeframes)
+        @info "ohlcv: ensuring propagation for additional timeframes" from_strat diff_timeframes
+        w = ohlcv_watchers(from_strat)
+        if w isa Watcher
+            addcallback!(w, s, stack_propagate_ohlcv_callback(s, w.callback))
+        elseif w isa Dict && valtype(w) <: Watcher
+            for ai in universe(s)
+                this_sym = raw(ai)
+                this_w = get(w, this_sym, nothing)
+                if !isnothing(this_w)
+                    addpropagatetask!(this_w, s, ai)
+                else
+                    @info "ohlcv: no source watcher for symbol" from_strat this_sym
+                end
+            end
+        end
+    end
+end
+
+function stack_propagate_ohlcv_callback(s, base_cb)
+    function propagate_ohlcv_callback(df, sym)
+        base_cb(df, sym)
+        asset_bysym(s, sym) |> ohlcv_dict |> Data.propagate_ohlcv!
+    end
+end
+
+function addcallback!(w::Watcher, s::RTStrategy, new_cb=nothing)
+    prev_cb = attr(w, :callback, nothing)
+    if isnothing(prev_cb)
+        @warn "watchers: no previous callback" w.name
+    end
+    w[:callback] = @something new_cb begin
+        stack_propagate_ohlcv_callback(s, prev_cb)
+    end
+    try
+        if isstarted(w)
+            stop!(w)
+        end
+        start!(w)
+        @info "watchers: subscribed to OHLCV updates" s
+    catch
+        @warn "watchers: callback update failed" w.name exception = (e, catch_backtrace())
+        if !isstarted(w)
+            try
+                start!(w)
+            catch
+            end
+        end
+    end
+end
+
+export ohlcvmethod!, ohlcvmethod, sourceohlcv!, ensure_propagate!, addcallback!, stack_propagate_ohlcv_callback, addpropagatetask!
