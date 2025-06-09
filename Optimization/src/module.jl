@@ -7,7 +7,7 @@ using .Instances.Data: zinstance, Zarr as za
 using .Instances.Data.Zarr: getattrs, writeattrs, writemetadata
 using .Instances.Exchanges: sb_exchanges
 using .st: Strategy, Sim, SimStrategy, WarmupPeriod
-using SimMode.Misc: DFT
+using SimMode.Misc: DFT, user_dir
 using SimMode.Lang: Option, splitkws, @debug_backtrace
 using Metrics.Statistics: median, mean
 using Metrics: Metrics
@@ -187,6 +187,18 @@ function zgroup_strategy(zi, s_name::String)
 end
 
 zgroup_strategy(zi, s::Strategy) = zgroup_strategy(zi, string(nameof(s)))
+_as_path(s::Strategy) = s.path
+_as_path(sess::OptSession) = sess.s.path
+_as_path(name::String) = joinpath(user_dir(), "strategies", name)
+get_zinstance(input::Union{String,Strategy,OptSession}) = let p = dirname(_as_path(input))
+    if isdir(p)
+        zinstance(p)
+    else
+        zinstance(user_dir())
+    end
+end
+
+
 
 @doc """ Save the optimization session over the provided zarr instance
 
@@ -196,7 +208,7 @@ $(TYPEDSIGNATURES)
 The function first ensures that the zgroup for the strategy exists. Then, it writes various session attributes to zarr if we're starting from the beginning (`from == 0`). Finally, it saves the result data for the specified range (`from` to `to`).
 
 """
-function save_session(sess::OptSession; from=0, to=nrow(sess.results), zi=zinstance())
+function save_session(sess::OptSession; from=0, to=nrow(sess.results), zi=get_zinstance(sess))
     k, parts = session_key(sess)
     # ensure zgroup
     zgroup_strategy(zi, sess.s)
@@ -261,11 +273,12 @@ function load_session(
     startstop=".*",
     params_k=".*",
     code="";
-    zi=zinstance(),
     as_z=false,
     results_only=false,
     s=nothing,
+    zi=nothing,
 )
+    zi = @something zi get_zinstance(@something s name)
     load(k) = begin
         load_data(zi, k; serialized=true, as_z=true)[1]
     end
@@ -623,7 +636,7 @@ function agg(sess::OptSession; reduce_func=mean, agg_func=median)
     )
 end
 
-function optsessions(s::Strategy; zi=zinstance())
+function optsessions(s::Strategy; zi=get_zinstance(s))
     optsessions(string(nameof(s)); zi)
 end
 
@@ -635,7 +648,7 @@ The function takes a strategy `s` as an argument.
 It retrieves the directory path for the strategy's log files and returns the full paths to all log files within this directory.
 
 """
-function optsessions(s_name::String; zi=zinstance())
+function optsessions(s_name::String; zi=get_zinstance(s_name))
     opt_group = zgroup_opt(zi)
     if s_name in keys(opt_group.groups)
         opt_group.groups[s_name].arrays
@@ -653,7 +666,7 @@ If `keep_by` is provided, sessions matching these attributes (`ctx`, `params`, o
 It checks each session, and deletes it if it doesn't match `keep_by` or if `keep_by` is empty.
 
 """
-function delete_sessions!(s_name::String; keep_by=Dict{String,Any}(), zi=zinstance())
+function delete_sessions!(s_name::String; keep_by=Dict{String,Any}(), zi=get_zinstance(s_name))
     delete_all = isempty(keep_by)
     @assert delete_all || all(k ∈ ("ctx", "params", "attrs") for k in keys(keep_by)) "`keep_by` only support ctx, params or attrs keys."
     for z in values(optsessions(s_name; zi))
