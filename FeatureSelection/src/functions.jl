@@ -9,8 +9,6 @@ using Strategies: DateTime
 using Strategies.Lang: @lget!
 using StatsBase: StatsBase
 
-include("pairs_trading.jl")
-
 function sort_col_byrowsum!(df)
     # first calculate row sum
     rowsums = sum.(abs.(v) for v in eachcol(df))

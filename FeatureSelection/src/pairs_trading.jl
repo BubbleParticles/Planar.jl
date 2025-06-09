@@ -10,8 +10,20 @@ mutable struct PairsTradingState{T<:AbstractFloat}
     sma::SMA{T}
     stddev::StdDev{T}
     df::DataFrame
-    function PairsTradingState(timestamp::DateTime, lookback::Int, df::DataFrame=DataFrame(timestamp=T[], spread=T[], spread_mean=T[], spread_std=T[], zscore=T[], signal=T[]))
-        new{T}(timestamp, SMA{T}(period=lookback), StdDev{T}(period=lookback), df)
+    function PairsTradingState(
+        timestamp::DateTime,
+        lookback::Int,
+        df::DataFrame=DataFrame(;
+            timestamp=DateTime[],
+            spread=DFT[],
+            spread_mean=DFT[],
+            spread_std=DFT[],
+            zscore=DFT[],
+            signal=DFT[],
+        );
+        T=DFT
+    )
+        new{T}(timestamp, SMA{T}(; period=lookback), StdDev{T}(; period=lookback), df)
     end
 end
 
@@ -38,13 +50,15 @@ for (p1, p2) in zip(prices1, prices2)
 end
 ```
 """
-function pairs_trading_signal_step(price1, price2, sma, std_dev; lookback=20, zscore_threshold=2.0)
+function pairs_trading_signal_step(
+    price1, price2, sma, std_dev; lookback=20, zscore_threshold=2.0
+)
     spread = price1 / price2
     fit!(sma, spread)
     fit!(std_dev, spread)
     if sma.n >= lookback && std_dev.n >= lookback && std_dev.value > 0
         z = (spread - sma.value) / std_dev.value
-        if abs(z) < zscore_threshold/2
+        if abs(z) < zscore_threshold / 2
             signal = 0
         elseif z > zscore_threshold
             signal = -1
@@ -75,36 +89,42 @@ Supports both batch and streaming (online) operation.
 # Returns
 - A DataFrame with signals (1 for long, -1 for short, 0 for neutral)
 """
-function pairs_trading_signals(prices::Tuple{AbstractVector,AbstractVector}, lookback::Int=20; 
-                              zscore_threshold::Float64=2.0, tail=nothing)
+function pairs_trading_signals(
+    prices::Tuple{AbstractVector,AbstractVector},
+    lookback::Int=20;
+    zscore_threshold::Float64=2.0,
+    tail=nothing,
+)
     p1, p2 = prices
     length(p1) != length(p2) && error("Price series must have the same length")
     if tail !== nothing
-        p1 = @view p1[end-tail+1:end]
-        p2 = @view p2[end-tail+1:end]
+        p1 = @view p1[(end - tail + 1):end]
+        p2 = @view p2[(end - tail + 1):end]
     end
     n = length(p1)
     # Initialize indicators
-    sma = SMA{DFT}(period=lookback)
-    std_dev = StdDev{DFT}(period=lookback)
+    sma = SMA{DFT}(; period=lookback)
+    std_dev = StdDev{DFT}(; period=lookback)
     spread_means = fill(NaN, n)
     spread_stds = fill(NaN, n)
     zscores = fill(NaN, n)
     signals = zeros(n)
     for i in 1:n
-        signal, z, m, s = pairs_trading_signal_step(p1[i], p2[i], sma, std_dev; lookback=lookback, zscore_threshold=zscore_threshold)
+        signal, z, m, s = pairs_trading_signal_step(
+            p1[i], p2[i], sma, std_dev; lookback=lookback, zscore_threshold=zscore_threshold
+        )
         signals[i] = signal
         zscores[i] = z
         spread_means[i] = m
         spread_stds[i] = s
     end
-    return DataFrame(
-        timestamp = 1:n,
-        spread = p1 ./ p2,
-        spread_mean = spread_means,
-        spread_std = spread_stds,
-        zscore = zscores,
-        signal = signals
+    return DataFrame(;
+        timestamp=1:n,
+        spread=p1 ./ p2,
+        spread_mean=spread_means,
+        spread_std=spread_stds,
+        zscore=zscores,
+        signal=signals,
     )
 end
 
@@ -126,8 +146,15 @@ Generate trading signals for a pairs trading strategy using Z-score, pulling dat
 # Returns
 - A DataFrame with signals (1 for long, -1 for short, 0 for neutral)
 """
-function pairs_trading_signals(s::st.Strategy, asset1_sym::AbstractString, asset2_sym::AbstractString; 
-                              lookback::Int=20, zscore_threshold::Float64=2.0, tf::TimeFrame=s.timeframe, tail=lagsbytf(tf))
+function pairs_trading_signals(
+    s::st.Strategy,
+    asset1_sym::AbstractString,
+    asset2_sym::AbstractString;
+    lookback::Int=20,
+    zscore_threshold::Float64=2.0,
+    tf::TimeFrame=s.timeframe,
+    tail=lagsbytf(tf),
+)
     # Get asset instances from strategy
     ai1 = asset_bysym(s, asset1_sym)
     ai2 = asset_bysym(s, asset2_sym)
@@ -139,8 +166,8 @@ function pairs_trading_signals(s::st.Strategy, asset1_sym::AbstractString, asset
     df2 = ai2.data[tf]
     # Apply tail if provided (before computing common_dates)
     if tail !== nothing
-        df1 = @view df1[end-tail+1:end, :]
-        df2 = @view df2[end-tail+1:end, :]
+        df1 = @view df1[(end - tail + 1):end, :]
+        df2 = @view df2[(end - tail + 1):end, :]
     end
     # Find common dates between both assets
     common_dates = intersect(df1.timestamp, df2.timestamp)
@@ -168,14 +195,16 @@ Streaming step for pairs trading signal generation. Updates indicators and appen
 - `lookback`: Lookback period for statistics
 - `zscore_threshold`: Z-score threshold for entering trades
 """
-function pairs_trading_signal_step!(state::PairsTradingState, ts_idx, price1, price2; lookback=20, zscore_threshold=2.0)
+function pairs_trading_signal_step!(
+    state::PairsTradingState, ts_idx, price1, price2; lookback=20, zscore_threshold=2.0
+)
     spread = price1 / price2
     fit!(state.sma, spread)
     fit!(state.stddev, spread)
     state.timestamp = ts_idx
     if state.sma.n >= lookback && state.stddev.n >= lookback && state.stddev.value > 0
         z = (spread - state.sma.value) / state.stddev.value
-        if abs(z) < zscore_threshold/2
+        if abs(z) < zscore_threshold / 2
             signal = 0
         elseif z > zscore_threshold
             signal = -1
@@ -191,8 +220,10 @@ function pairs_trading_signal_step!(state::PairsTradingState, ts_idx, price1, pr
     return state
 end
 
-function pairs_trading_state(s::st.Strategy, asset1_sym::AbstractString, asset2_sym::AbstractString)
-    pairs_dict = @lget! s :pairs_trading Dict{Tuple{String,String}, PairsTradingState}()
+function pairs_trading_state(
+    s::st.Strategy, asset1_sym::AbstractString, asset2_sym::AbstractString
+)
+    pairs_dict = @lget! s :pairs_trading Dict{Tuple{String,String},PairsTradingState}()
     key = (asset1_sym, asset2_sym)
     return get!(pairs_dict, key) do
         PairsTradingState(ts_idx, lookback)
@@ -200,7 +231,9 @@ function pairs_trading_state(s::st.Strategy, asset1_sym::AbstractString, asset2_
 end
 
 # Update the strategy-based step function to use the state
-function pairs_trading_signal_step!(s, asset1_sym, asset2_sym, ts_idx; lookback=20, zscore_threshold=2.0, tf=s.timeframe)
+function pairs_trading_signal_step!(
+    s, asset1_sym, asset2_sym, ts_idx; lookback=20, zscore_threshold=2.0, tf=s.timeframe
+)
     state = pairs_trading_state(s, asset1_sym, asset2_sym)
     ai1 = asset_bysym(s, asset1_sym)
     ai2 = asset_bysym(s, asset2_sym)
@@ -217,6 +250,8 @@ function pairs_trading_signal_step!(s, asset1_sym, asset2_sym, ts_idx; lookback=
     end
     price1 = idx1.close
     price2 = idx2.close
-    pairs_trading_signal_step!(state, ts_idx, price1, price2; lookback=lookback, zscore_threshold=zscore_threshold)
+    pairs_trading_signal_step!(
+        state, ts_idx, price1, price2; lookback=lookback, zscore_threshold=zscore_threshold
+    )
     return state
-end 
+end
