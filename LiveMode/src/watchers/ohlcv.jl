@@ -325,4 +325,17 @@ function addcallback!(w::Watcher, s::RTStrategy, new_cb=nothing)
     end
 end
 
+function addpropagatetask!(w::Watcher, s::RTStrategy, ai::AssetInstance)
+    n = 1
+    this_sym = Symbol(:propagate_task, string(n))
+    task::Union{Task,Nothing} = nothing
+    while true
+        task = attr(w, this_sym)
+        isnothing(task) && break
+        n += 1
+        this_sym = Symbol(:propagate_task, string(n))
+    end
+    w[this_sym] = @async propagate_loop(s, ai, w)
+end
+
 export ohlcvmethod!, ohlcvmethod, sourceohlcv!, ensure_propagate!, addcallback!, stack_propagate_ohlcv_callback, addpropagatetask!
