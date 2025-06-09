@@ -1470,7 +1470,7 @@ uuid = "73760f76-fbc4-59ce-8f25-708e95d2df96"
 version = "0.4.0"
 
 [[deps.SimMode]]
-deps = ["Executors", "Simulations"]
+deps = ["Executors", "Pbar", "Simulations"]
 path = "../SimMode"
 uuid = "70084082-5615-4098-a9f0-eda0197c0e82"
 version = "0.1.0"
