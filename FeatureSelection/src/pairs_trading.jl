@@ -21,7 +21,7 @@ mutable struct PairsTradingState{T<:AbstractFloat}
             zscore=DFT[],
             signal=DFT[],
         );
-        T=DFT
+        T=DFT,
     )
         new{T}(timestamp, SMA{T}(; period=lookback), StdDev{T}(; period=lookback), df)
     end
@@ -203,7 +203,7 @@ function pairs_trading_signal_step!(
     fit!(state.stddev, spread)
     state.timestamp = ts_idx
     if state.sma.n >= lookback && state.stddev.n >= lookback && state.stddev.value > 0
-        z = (spread - state.sma.value) / state.stddev.value
+        z = @coalesce ((spread - state.sma.value) / state.stddev.value) 0.0
         if abs(z) < zscore_threshold / 2
             signal = 0
         elseif z > zscore_threshold
@@ -213,7 +213,17 @@ function pairs_trading_signal_step!(
         else
             signal = 0
         end
-        push!(state.df, (ts_idx, spread, state.sma.value, state.stddev.value, z, signal))
+        push!(
+            state.df,
+            (
+                ts_idx,
+                spread,
+                @coalesce(state.sma.value, NaN),
+                @coalesce(state.stddev.value, NaN),
+                z,
+                signal,
+            ),
+        )
     else
         push!(state.df, (ts_idx, spread, NaN, NaN, NaN, 0.0))
     end
