@@ -64,6 +64,7 @@ _fetch!(w::Watcher, ::CcxtOHLCVCandlesVal; sym=nothing) = _tfunc(w)()
     isprocessed::Bool = false
     processed_time::DateTime = DateTime(0)
     nextcandle::Any = ()
+    is_resyncing::Bool = false
 end
 
 function _init!(w::Watcher, ::CcxtOHLCVCandlesVal)
@@ -87,6 +88,46 @@ _stop!(w::Watcher, ::CcxtOHLCVCandlesVal) = begin
         end
     elseif haskey(w.attrs, :handler)
         stop_handler_task!(w)
+    end
+end
+
+function _perform_locked_resync(w::Watcher, sym::String)
+    @debug "Watchers: _perform_locked_resync called for $sym. Attempting to acquire symbol lock."
+    start_time_overall = time_ns()
+    local resolve_successful = false # To track if _resolve itself succeeded
+    try
+        lock(w.symstates[sym].lock) do
+            @debug "Watchers: Symbol lock acquired for $sym."
+            start_time_resolve = time_ns()
+            try
+                # THE ACTUAL CALL TO _resolve:
+                Watchers.WatchersImpls._resolve(w, w.view[sym], Watchers.WatchersImpls._curdate(Watchers.WatchersImpls._tfr(w)), sym)
+
+                elapsed_ms_resolve = (time_ns() - start_time_resolve) / 1_000_000
+                @info "Watchers: _resolve completed for $sym in $(round(elapsed_ms_resolve, digits=2)) ms."
+                resolve_successful = true
+            catch err
+                elapsed_ms_resolve = (time_ns() - start_time_resolve) / 1_000_000
+                @error "Watchers: Error during _resolve for $sym after $(round(elapsed_ms_resolve, digits=2)) ms (within lock)" exception=(err, catch_backtrace())
+                rethrow()
+            end
+        end # Lock is released here
+
+        # Logs after lock is released
+        elapsed_ms_overall = (time_ns() - start_time_overall) / 1_000_000
+        if resolve_successful
+             @debug "Watchers: _perform_locked_resync successfully finished for $sym in $(round(elapsed_ms_overall, digits=2)) ms (lock was acquired and released)."
+        else
+             # This path would typically not be hit if _resolve errors and rethrows,
+             # as the exception would be caught by the outer try-catch.
+             # However, it's here for logical completeness if _resolve could error without rethrowing to here.
+             @warn "Watchers: _perform_locked_resync finished for $sym in $(round(elapsed_ms_overall, digits=2)) ms, but _resolve may have failed or did not run (lock was acquired and released)."
+        end
+
+    catch outer_err # Catches errors from lock acquisition or if rethrow() from _resolve's catch block propagates
+        elapsed_ms_overall = (time_ns() - start_time_overall) / 1_000_000
+        @error "Watchers: Error in _perform_locked_resync for $sym (e.g., lock acquisition failed or error propagated from _resolve) after $(round(elapsed_ms_overall, digits=2)) ms." exception=(outer_err, catch_backtrace())
+        rethrow() # Ensure the calling async task knows about the failure
     end
 end
 
@@ -182,7 +223,45 @@ function _update_ohlcv_func(w)
                 if isempty(this_df)
                     @debug "ohlcv (candles): waiting for startup fetch" _module =
                         LogOHLCVWatcher sym
-                    @acquire sem _ensure_ohlcv!(w, sym)
+                    # BEGIN MODIFIED SECTION 1
+                    state = symstates[sym]::CandleWatcherSymbolState4 # Ensure state is defined
+                    should_resync = false
+                    lock(state.lock) do
+                        if !state.is_resyncing
+                            state.is_resyncing = true
+                            should_resync = true
+                        end
+                    end
+
+                    if should_resync
+                        @info "Watchers: Scheduling async resync for $sym"
+                        @async begin
+                            @debug "Watchers: Async task for $sym attempting to acquire semaphore"
+                            try
+                                Base.acquire(w.attrs[k"sem"]) # Acquire global semaphore
+                                @debug "Watchers: Async task for $sym acquired semaphore"
+                                try
+                                    _perform_locked_resync(w, sym)
+                                finally
+                                    # Ensure symbol-specific resync flag is reset even if _perform_locked_resync errors
+                                    lock(w.symstates[sym].lock) do
+                                        w.symstates[sym].is_resyncing = false
+                                    end
+                                end
+                            catch err
+                                Watchers.logerror(w, err, catch_backtrace(), "Async OHLCV resync task manager failed for $sym")
+                                # Also reset the flag in case of error acquiring semaphore or other top-level async error
+                                lock(w.symstates[sym].lock) do # Attempt to lock and reset
+                                     if w.symstates[sym].is_resyncing # Check if it's still true
+                                        w.symstates[sym].is_resyncing = false
+                                     end
+                                end
+                            finally
+                                Base.release(w.attrs[k"sem"]) # Release global semaphore
+                            end
+                        end
+                    end
+                    # END MODIFIED SECTION 1
                     state.nextcandle = tf_candles
                     continue
                 end
@@ -204,7 +283,45 @@ function _update_ohlcv_func(w)
                         end
                         if next_ts + tf < latest_ts
                             @warn "ohlcv (candles): out of sync, resolving" sym next_ts tf latest_ts
-                            @acquire sem _ensure_ohlcv!(w, sym)
+                            # BEGIN MODIFIED SECTION 2
+                            state = symstates[sym]::CandleWatcherSymbolState4 # Ensure state is defined
+                            should_resync = false
+                            lock(state.lock) do
+                                if !state.is_resyncing
+                                    state.is_resyncing = true
+                                    should_resync = true
+                                end
+                            end
+
+                            if should_resync
+                                @info "Watchers: Scheduling async resync for $sym"
+                                @async begin
+                                    @debug "Watchers: Async task for $sym attempting to acquire semaphore"
+                                    try
+                                        Base.acquire(w.attrs[k"sem"]) # Acquire global semaphore
+                                        @debug "Watchers: Async task for $sym acquired semaphore"
+                                        try
+                                            _perform_locked_resync(w, sym)
+                                        finally
+                                            # Ensure symbol-specific resync flag is reset even if _perform_locked_resync errors
+                                            lock(w.symstates[sym].lock) do
+                                                w.symstates[sym].is_resyncing = false
+                                            end
+                                        end
+                                    catch err
+                                        Watchers.logerror(w, err, catch_backtrace(), "Async OHLCV resync task manager failed for $sym")
+                                        # Also reset the flag in case of error acquiring semaphore or other top-level async error
+                                        lock(w.symstates[sym].lock) do # Attempt to lock and reset
+                                             if w.symstates[sym].is_resyncing # Check if it's still true
+                                                w.symstates[sym].is_resyncing = false
+                                             end
+                                        end
+                                    finally
+                                        Base.release(w.attrs[k"sem"]) # Release global semaphore
+                                    end
+                                end
+                            end
+                            # END MODIFIED SECTION 2
                         end
                     end
                 end
@@ -233,7 +350,44 @@ function _update_ohlcv_func_single(w, sym)
         @lock state.lock begin
             df = get(view, sym, nothing)
             if isnothing(df) || isempty(df)
-                @acquire sem _ensure_ohlcv!(w, sym)
+                # BEGIN MODIFIED SECTION (1st call in _update_ohlcv_func_single)
+                should_resync = false
+                lock(state.lock) do # state.lock is already acquired by @lock state.lock begin
+                    if !state.is_resyncing
+                        state.is_resyncing = true
+                        should_resync = true
+                    end
+                end
+
+                if should_resync
+                    @info "Watchers: Scheduling async resync for $sym"
+                    @async begin
+                        @debug "Watchers: Async task for $sym attempting to acquire semaphore"
+                        try
+                            Base.acquire(w.attrs[k"sem"]) # Acquire global semaphore
+                            @debug "Watchers: Async task for $sym acquired semaphore"
+                            try
+                                _perform_locked_resync(w, sym)
+                            finally
+                                # Ensure symbol-specific resync flag is reset even if _perform_locked_resync errors
+                                lock(w.symstates[sym].lock) do # Use w.symstates[sym] to be explicit, state.lock is outer lock
+                                    w.symstates[sym].is_resyncing = false
+                                end
+                            end
+                        catch err
+                            Watchers.logerror(w, err, catch_backtrace(), "Async OHLCV resync task manager failed for $sym")
+                            # Also reset the flag in case of error acquiring semaphore or other top-level async error
+                            lock(w.symstates[sym].lock) do # Attempt to lock and reset
+                                if w.symstates[sym].is_resyncing # Check if it's still true
+                                    w.symstates[sym].is_resyncing = false
+                                end
+                            end
+                        finally
+                            Base.release(w.attrs[k"sem"]) # Release global semaphore
+                        end
+                    end
+                end
+                # END MODIFIED SECTION
                 state.nextcandle = snap
                 @debug "ohlcv (candles): waiting for startup fetch" _module =
                     LogOHLCVWatcher sym
@@ -257,7 +411,44 @@ function _update_ohlcv_func_single(w, sym)
             end
             if next_ts + tf < latest_ts && isempty(handlers[sym].buffer)
                 @warn "ohlcv (candles): out of sync, resolving" sym next_ts tf latest_ts
-                @acquire sem _ensure_ohlcv!(w, sym)
+                # BEGIN MODIFIED SECTION (2nd call in _update_ohlcv_func_single)
+                should_resync = false
+                lock(state.lock) do # state.lock is already acquired by @lock state.lock begin
+                    if !state.is_resyncing
+                        state.is_resyncing = true
+                        should_resync = true
+                    end
+                end
+
+                if should_resync
+                    @info "Watchers: Scheduling async resync for $sym"
+                    @async begin
+                        @debug "Watchers: Async task for $sym attempting to acquire semaphore"
+                        try
+                            Base.acquire(w.attrs[k"sem"]) # Acquire global semaphore
+                            @debug "Watchers: Async task for $sym acquired semaphore"
+                            try
+                                _perform_locked_resync(w, sym)
+                            finally
+                                # Ensure symbol-specific resync flag is reset even if _perform_locked_resync errors
+                                lock(w.symstates[sym].lock) do # Use w.symstates[sym] to be explicit, state.lock is outer lock
+                                    w.symstates[sym].is_resyncing = false
+                                end
+                            end
+                        catch err
+                            Watchers.logerror(w, err, catch_backtrace(), "Async OHLCV resync task manager failed for $sym")
+                            # Also reset the flag in case of error acquiring semaphore or other top-level async error
+                            lock(w.symstates[sym].lock) do # Attempt to lock and reset
+                                if w.symstates[sym].is_resyncing # Check if it's still true
+                                    w.symstates[sym].is_resyncing = false
+                                end
+                            end
+                        finally
+                            Base.release(w.attrs[k"sem"]) # Release global semaphore
+                        end
+                    end
+                end
+                # END MODIFIED SECTION
             end
             invokelatest(w[k"callback"], df, sym)
             state.nextcandle = snap
