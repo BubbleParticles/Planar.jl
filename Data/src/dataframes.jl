@@ -10,6 +10,40 @@ using ..Lang
 import Base: getindex
 import ..Data: contiguous_ts
 
+# --- oneAPI GPU Awareness Helpers ---
+
+function _is_oneapi_functional_for_dataframes()
+    if !isdefined(Main, :oneAPI)
+        return false
+    end
+    oneAPI_module = getfield(Main, :oneAPI)
+    if !isdefined(oneAPI_module, :functional) ||
+       !isdefined(oneAPI_module, :oneArray) ||
+       !isdefined(oneAPI_module, :Array)
+        return false
+    end
+    return oneAPI_module.functional()
+end
+
+function _ensure_cpu_array_for_search(arr::AbstractVector, oneapi_is_functional::Bool)
+    if oneapi_is_functional && isa(arr, getfield(Main, :oneAPI).oneArray)
+        return getfield(Main, :oneAPI).Array(arr)
+    end
+    return arr
+end
+
+function _searchsortedfirst_gpu_aware(arr::AbstractVector, val, oneapi_is_functional::Bool)
+    cpu_arr = _ensure_cpu_array_for_search(arr, oneapi_is_functional)
+    return searchsortedfirst(cpu_arr, val)
+end
+
+function _searchsortedlast_gpu_aware(arr::AbstractVector, val, oneapi_is_functional::Bool)
+    cpu_arr = _ensure_cpu_array_for_search(arr, oneapi_is_functional)
+    return searchsortedlast(cpu_arr, val)
+end
+
+# --- End oneAPI GPU Awareness Helpers ---
+
 @doc "Get the column names for dataframe as symbols.
 
 $(TYPEDSIGNATURES)
@@ -85,7 +119,8 @@ end
 # TODO: move dateindex to TimeTicks
 @doc "Same as [`dateindex`](@ref)"
 function dateindex(v::V, date::DateTime) where {V<:AbstractVector}
-    searchsortedlast(v, date)
+    # Pass the result of the check directly
+    return _searchsortedlast_gpu_aware(v, date, _is_oneapi_functional_for_dataframes())
 end
 
 @doc "Same [`dateindex(::AbstractVector, ::DateTime)`](@ref) but always returns the first index if the index is not found in the vector."
@@ -181,10 +216,11 @@ end
 function getindex(
     df::D, dr::Union{DateRange,StepRange{DateTime,<:Period}}, cols
 ) where {D<:AbstractDataFrame}
-    start_idx = searchsortedfirst(df.timestamp, dr.start)
-    stop_idx = searchsortedlast(df.timestamp, dr.stop)
+    oneapi_functional = _is_oneapi_functional_for_dataframes()
+    start_idx = _searchsortedfirst_gpu_aware(df.timestamp, dr.start, oneapi_functional)
+    stop_idx = _searchsortedlast_gpu_aware(df.timestamp, dr.stop, oneapi_functional)
     v = @view df[start_idx:stop_idx, cols]
-    @ifdebug @assert v == getdate(df, dr, cols)
+    @ifdebug @assert v == getdate(df, dr, cols) # getdate might also need awareness if it does its own searches
     v
 end
 

@@ -29,5 +29,13 @@ include("warmup.jl")
 include("checks.jl")
 include("cross.jl")
 include("gpu_indicators.jl")
+include("init_indicators.jl")
 
-export sma_gpu
+# Re-export symbols from included files that form the public API of StrategyTools
+export fit_gpu!, is_oneapi_functional # From gpu_indicators.jl
+export initema!, initrsi!         # From init_indicators.jl
+# Add other exports from other files if they are not already listed elsewhere.
+# For now, focusing on the ones related to the current subtask.
+# If sma_gpu was a typo and should have been fit_gpu earlier, this corrects it.
+# If there are other pre-existing exports, they should be preserved.
+# Assuming this is the main export block or needs to be consolidated.
