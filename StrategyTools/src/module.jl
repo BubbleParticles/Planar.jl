@@ -28,3 +28,6 @@ include("ohlcv.jl")
 include("warmup.jl")
 include("checks.jl")
 include("cross.jl")
+include("gpu_indicators.jl")
+
+export sma_gpu
