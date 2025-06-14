@@ -269,12 +269,14 @@ include("functions.jl")
 
 export Watcher, watcher, isstale, default_loader, default_flusher
 export default_process, default_init, default_get
-export pushnew!, pushstart!, start!, stop!, isstarted, isstopped, process!, load!, init!
+export pushnew!, pushstart!, start!, stop!, isstarted, isstopped, process!, load!, init!, average_ohlcv_watcher
 
 include("apis/coinmarketcap.jl")
 include("apis/coingecko.jl")
 include("apis/coinpaprika.jl")
+include("impls/average_ohlcv_watcher.jl")
 include("impls/impls.jl")
 
 using .WatchersImpls: iswatchfunc
+using .AverageOHLCVWatcherImpl: average_ohlcv_watcher
 export iswatchfunc
