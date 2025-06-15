@@ -92,12 +92,11 @@ function start!(
             end
             
             wp = call!(s, WarmupPeriod())
-            wp_steps = trunc(Int, wp / period(s.timeframe))
+            wp_steps = trunc(Int, wp / ctx.range.step)
             trimmed_start = min(ctx.range.stop, ctx.range.start + wp_steps * ctx.range.step)
             trimmed_range = trimmed_start:ctx.range.step:ctx.range.stop
             pbar!(; columns=mycols, columns_kwargs=cols_kwargs, width=140)
             balance[] = current_total(s)
-            Main.trimmed_range = trimmed_range
 
             # Define update function based on show_progress mode
             update_stats = if show_progress === :full
