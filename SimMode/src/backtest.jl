@@ -55,7 +55,7 @@ julia> t - tf"1m".period
 To avoid this mistake, use the function `available(::TimeFrame, ::DateTime)`, instead of apply.
 """
 function start!(
-    s::Strategy{Sim}, ctx::Context; trim_universe=false, doreset=true, resetctx=true, show_progress=false
+    s::Strategy{Sim}, ctx::Context; trim_universe=false, doreset=true, resetctx=true, show_progress=:off
 )
     # ensure that universe data start at the same time
     @ifdebug _resetglobals!(s)
@@ -78,20 +78,37 @@ function start!(
     end
     
     with_logger(logger) do
-        if show_progress
+        if show_progress !== :off
             # Create custom columns for the progress bar
-            mycols = [DescriptionColumn, CompletedColumn, SeparatorColumn, ProgressColumn, StatsColumn]
+            mycols = [DescriptionColumn, CompletedColumn, SeparatorColumn, ProgressColumn]
             trades = Ref{Int}()
             balance = Ref{DFT}()
-            cols_kwargs = Dict(
-                :StatsColumn => Dict(:style=>"blue bold", :trades=>trades, :balance=>balance)
-            )
+            cols_kwargs = Dict()
+            
+            # Add stats columns if show_progress is :full
+            if show_progress === :full
+                push!(mycols, StatsColumn)
+                cols_kwargs[:StatsColumn] = Dict(:style=>"blue bold", :trades=>trades, :balance=>balance)
+            end
             
             wp = call!(s, WarmupPeriod())
             wp_steps = trunc(Int, wp / period(s.timeframe))
-            trimmed_range = (ctx.range.start + wp_steps * ctx.range.step):ctx.range.step:ctx.range.stop
+            trimmed_start = min(ctx.range.stop, ctx.range.start + wp_steps * ctx.range.step)
+            trimmed_range = trimmed_start:ctx.range.step:ctx.range.stop
             pbar!(; columns=mycols, columns_kwargs=cols_kwargs, width=140)
             balance[] = current_total(s)
+            Main.trimmed_range = trimmed_range
+
+            # Define update function based on show_progress mode
+            update_stats = if show_progress === :full
+                () -> begin
+                    trades[] = trades_count(s)
+                    balance[] = current_total(s)
+                end
+            else
+                () -> nothing
+            end
+
             @withpbar! trimmed_range desc="Backtesting" begin
                 for date in ctx.range
                     isoutof_orders(s) && begin
@@ -100,9 +117,7 @@ function start!(
                     end
                     update!(s, date, update_mode)
                     call!(s, date, ctx)
-                    # Update stats
-                    trades[] = trades_count(s)
-                    balance[] = current_total(s)
+                    update_stats()
                     @debug "sim: iter" s.cash ltxzero(s.cash) isempty(s.holdings) orderscount(s)
                     @pbupdate!
                 end
