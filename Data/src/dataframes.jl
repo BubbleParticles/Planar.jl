@@ -32,14 +32,160 @@ function _ensure_cpu_array_for_search(arr::AbstractVector, oneapi_is_functional:
     return arr
 end
 
-function _searchsortedfirst_gpu_aware(arr::AbstractVector, val, oneapi_is_functional::Bool)
-    cpu_arr = _ensure_cpu_array_for_search(arr, oneapi_is_functional)
-    return searchsortedfirst(cpu_arr, val)
+# --- GPU Binary Search Kernels ---
+
+@doc """
+    gpu_searchsortedfirst_kernel!(arr, val, len, result_idx)
+
+A `oneAPI.jl` kernel to perform a binary search equivalent to `searchsortedfirst`
+on a sorted `oneAPI.oneDeviceArray`. It finds the first index `i` in `arr`
+such that `arr[i] >= val`.
+
+The kernel is intended to be launched with a single thread. The result (the found index)
+is written to the first element of `result_idx`.
+
+Parameters:
+- `arr::oneAPI.oneDeviceArray{T,N}`: The sorted device array (e.g., timestamps) to search within.
+- `val::T_val`: The value to search for. Must be comparable with elements of `arr`.
+- `len::Int`: The number of elements in `arr` to consider for the search.
+- `result_idx::oneAPI.oneDeviceArray{Int,M}`: A 1-element device array where the resulting index will be stored.
+                                           The caller should pre-initialize `result_idx[1]` to `len + 1`
+                                           to correctly handle cases where `val` is greater than all elements.
+"""
+function gpu_searchsortedfirst_kernel!(
+    arr::oneAPI.oneDeviceArray{T,N},
+    val::T_val,
+    len::Int,
+    result_idx::oneAPI.oneDeviceArray{Int,M}
+) where {T,N,T_val,M}
+    low = 1
+    high = len
+    # `low` will be the insertion point. If val is greater than all elements, low becomes len + 1.
+    # If val is less than all, low remains 1.
+    # This loop structure correctly finds the first index whose value is >= val.
+    while low <= high
+        mid = low + (high - low) ÷ 2 # Avoid overflow with (low+high)÷2
+        if arr[mid] < val
+            low = mid + 1
+        else # arr[mid] >= val
+            # Potential match, try to find an earlier one
+            high = mid - 1
+        end
+    end
+    result_idx[1] = low # `low` is the insertion point, matching searchsortedfirst
+    return nothing
 end
 
+@doc """
+    gpu_searchsortedlast_kernel!(arr, val, len, result_idx)
+
+A `oneAPI.jl` kernel to perform a binary search equivalent to `searchsortedlast`
+on a sorted `oneAPI.oneDeviceArray`. It finds the last index `i` in `arr`
+such that `arr[i] <= val`.
+
+The kernel is intended to be launched with a single thread. The result (the found index)
+is written to the first element of `result_idx`.
+
+Parameters:
+- `arr::oneAPI.oneDeviceArray{T,N}`: The sorted device array (e.g., timestamps) to search within.
+- `val::T_val`: The value to search for. Must be comparable with elements of `arr`.
+- `len::Int`: The number of elements in `arr` to consider for the search.
+- `result_idx::oneAPI.oneDeviceArray{Int,M}`: A 1-element device array where the resulting index will be stored.
+                                           The caller should pre-initialize `result_idx[1]` to `0`
+                                           to correctly handle cases where `val` is less than all elements.
+"""
+function gpu_searchsortedlast_kernel!(
+    arr::oneAPI.oneDeviceArray{T,N},
+    val::T_val,
+    len::Int,
+    result_idx::oneAPI.oneDeviceArray{Int,M}
+) where {T,N,T_val,M}
+    low = 1
+    high = len
+    # `high` will be the index of the last element <= val.
+    # If val is less than all elements, high becomes 0.
+    # If val is greater than all, high becomes len.
+    # This loop structure correctly finds the last index whose value is <= val.
+    while low <= high
+        mid = low + (high - low) ÷ 2 # Avoid overflow
+        if arr[mid] > val
+            high = mid - 1
+        else # arr[mid] <= val
+            # Potential match, try to find a later one (or this is it)
+            low = mid + 1
+        end
+    end
+    result_idx[1] = high # `high` is the index of the last element <= val
+    return nothing
+end
+
+# --- End GPU Binary Search Kernels ---
+
+@doc """
+    _searchsortedfirst_gpu_aware(arr::AbstractVector, val, oneapi_is_functional::Bool)
+
+Performs `searchsortedfirst` on `arr`. If `oneapi_is_functional` is true,
+`arr` is a `oneAPI.oneArray`, and `arr` is not empty, the search is performed on the GPU
+using `gpu_searchsortedfirst_kernel!`. Otherwise, it falls back to a CPU-based search
+(after ensuring `arr` is a CPU array if it was a `oneAPI.oneArray`).
+
+Returns the first index `i` in `arr` such that `arr[i] >= val`, or `length(arr) + 1`
+if `val` is greater than all elements in `arr`. Returns `1` if `arr` is empty.
+"""
+function _searchsortedfirst_gpu_aware(arr::AbstractVector, val, oneapi_is_functional::Bool)
+    if oneapi_is_functional && isa(arr, getfield(Main, :oneAPI).oneArray) && !isempty(arr)
+        oneAPI_module = getfield(Main, :oneAPI)
+        gpu_arr = arr # arr is already a oneArray
+
+        # Output array for the result index.
+        # Pre-initialize to length(arr) + 1, the standard return for searchsortedfirst
+        # if val is greater than all elements.
+        result_gpu = oneAPI_module.oneArray([length(gpu_arr) + 1]) # Initialize with value
+
+        # The kernel expects val to be comparable with elements of gpu_arr.
+        # DateTime and other basic types should be fine.
+        oneAPI_module.@oneapi items=1 groups=1 gpu_searchsortedfirst_kernel!(gpu_arr, val, length(gpu_arr), result_gpu)
+
+        return oneAPI_module.Array(result_gpu)[1] # Copy result from GPU to CPU
+    elseif isempty(arr) # Handle empty array case for both CPU and GPU paths
+        return 1 # searchsortedfirst on empty array returns 1
+    else
+        # Fallback for non-GPU path or if arr was already a CPU array.
+        cpu_arr = _ensure_cpu_array_for_search(arr, oneapi_is_functional)
+        return searchsortedfirst(cpu_arr, val)
+    end
+end
+
+@doc """
+    _searchsortedlast_gpu_aware(arr::AbstractVector, val, oneapi_is_functional::Bool)
+
+Performs `searchsortedlast` on `arr`. If `oneapi_is_functional` is true,
+`arr` is a `oneAPI.oneArray`, and `arr` is not empty, the search is performed on the GPU
+using `gpu_searchsortedlast_kernel!`. Otherwise, it falls back to a CPU-based search
+(after ensuring `arr` is a CPU array if it was a `oneAPI.oneArray`).
+
+Returns the last index `i` in `arr` such that `arr[i] <= val`, or `0`
+if `val` is less than all elements in `arr`. Returns `0` if `arr` is empty.
+"""
 function _searchsortedlast_gpu_aware(arr::AbstractVector, val, oneapi_is_functional::Bool)
-    cpu_arr = _ensure_cpu_array_for_search(arr, oneapi_is_functional)
-    return searchsortedlast(cpu_arr, val)
+    if oneapi_is_functional && isa(arr, getfield(Main, :oneAPI).oneArray) && !isempty(arr)
+        oneAPI_module = getfield(Main, :oneAPI)
+        gpu_arr = arr # arr is already a oneArray
+
+        # Output array for the result index.
+        # Pre-initialize to 0, the standard return for searchsortedlast
+        # if val is less than all elements.
+        result_gpu = oneAPI_module.oneArray([0]) # Initialize with value
+
+        oneAPI_module.@oneapi items=1 groups=1 gpu_searchsortedlast_kernel!(gpu_arr, val, length(gpu_arr), result_gpu)
+
+        return oneAPI_module.Array(result_gpu)[1] # Copy result from GPU to CPU
+    elseif isempty(arr) # Handle empty array case
+        return 0 # searchsortedlast on empty array returns 0
+    else
+        cpu_arr = _ensure_cpu_array_for_search(arr, oneapi_is_functional)
+        return searchsortedlast(cpu_arr, val)
+    end
 end
 
 # --- End oneAPI GPU Awareness Helpers ---

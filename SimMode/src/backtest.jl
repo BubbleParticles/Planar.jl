@@ -206,17 +206,31 @@ julia> t - tf"1m".period
 1999-12-31T23:58:00 # this is the correct candle timestamp that we can access
 ```
 To avoid this mistake, use the function `available(::TimeFrame, ::DateTime)`, instead of apply.
+
+This GPU-accelerated version of `start!` leverages `oneAPI.jl` to potentially speed up
+backtesting by utilizing a GPU. Key aspects of GPU acceleration are applied to
+internal operations where possible, such as data manipulation and indicator calculations
+if the underlying data structures (e.g., `DataFrame` columns, indicator buffers) are
+`oneAPI.oneArray`s.
+
+If `oneAPI.jl` is not functional or no compatible GPU is found, this function will
+automatically fall back to the CPU-based `start!` implementation, issuing a warning.
+
+The internal `update!` and `call!` functions are critical for strategy execution.
+Their GPU awareness (i.e., ability to operate efficiently on `oneAPI.oneArray`s without
+implicit full data transfers) is crucial for overall GPU backtesting performance. These
+are marked with `// TODO:` for further investigation.
 """
 function start_gpu!(
     s::Strategy{Sim}, ctx::Context; trim_universe=false, doreset=true, resetctx=true, show_progress=false
 )
+    # Check for oneAPI functionality. If not available, delegate to CPU execution.
     if !isdefined(Main, :oneAPI) || !Main.oneAPI.functional()
         @warn "oneAPI.jl is not available or no functional GPU found. Falling back to CPU execution."
-        # Delegate to the CPU version of start!
-        return Main.start!(s, ctx; trim_universe, doreset, resetctx, show_progress)
+        return Main.start!(s, ctx; trim_universe, doreset, resetctx, show_progress) # Ensure Main.start! is the CPU version
     end
 
-    # ensure that universe data start at the same time
+    # Ensure that universe data start at the same time
     @ifdebug _resetglobals!(s)
     if trim_universe
         let data = st.coll.flatten(st.universe(s))
@@ -258,6 +272,12 @@ function start_gpu!(
                         @deassert all(iszero(ai) for ai in universe(s))
                         break
                     end
+                    # // TODO: Investigate GPU awareness of these functions.
+                    # These calls are critical. If `s` (strategy object) or `ctx` (context)
+                    # contain fields that are oneAPI.oneArray, these functions must be
+                    # implemented to handle them efficiently (e.g., via custom kernels or
+                    # GPU-compatible operations) to avoid implicit, performance-degrading
+                    # data transfers between CPU and GPU on each iteration.
                     update!(s, date_val, update_mode) # Must be GPU-aware if s contains oneArrays
                     call!(s, date_val, ctx)          # Must be GPU-aware if s contains oneArrays
 
@@ -278,6 +298,8 @@ function start_gpu!(
                     @deassert all(iszero(ai) for ai in universe(s))
                         break
                     end
+                    # // TODO: Investigate GPU awareness of these functions.
+                    # See detailed comment in the show_progress=true block above.
                 update!(s, date_val, update_mode) # Must be GPU-aware
                 call!(s, date_val, ctx)          # Must be GPU-aware
                 @debug "sim: iter" s.cash ltxzero(s.cash) isempty(s.holdings) orderscount(s)
@@ -308,18 +330,37 @@ Otherwise, it sets the start and end timestamps based on the last timestamp in t
 
 """
 function start_gpu!(s::Strategy{Sim}, count::Integer; tf=s.timeframe, kwargs...)
-    # Helper for getting scalar timestamp values, aware of potential oneArrays
-    get_timestamp_scalar = (asset_instance_data, index_type) -> begin
-        # Assume ohlcv() is defined elsewhere and handles asset_instance_data
-        # and returns an object with a .timestamp field (which could be a oneArray).
-        ts_array = ohlcv(asset_instance_data).timestamp
+    """
+    Helper function to retrieve a single timestamp (first or last) from an asset instance's OHLCV data.
+    This function is GPU-aware: if the timestamp array is a `oneAPI.oneArray`, it efficiently copies
+    only the required single element to the CPU, minimizing GPU-CPU data transfer.
+    Otherwise, it performs a standard array access.
+
+    Args:
+    - `asset_instance_data`: The asset instance containing OHLCV data.
+    - `index_type`: Symbol, either `:first` to get the earliest timestamp or `:last` for the latest.
+
+    Returns:
+    - A `DateTime` scalar.
+    """
+    get_timestamp_scalar = (asset_instance_data, index_type::Symbol) -> begin
+        ts_array = ohlcv(asset_instance_data).timestamp # This is expected to be AbstractVector{DateTime}
+
         val = if isa(ts_array, oneAPI.oneArray)
-            # Copy the whole array to CPU then index.
-            # This is simpler than trying to copy a single element from GPU directly
-            # unless oneAPI provides a very easy way for single element access.
-            cpu_ts_array = Array(ts_array)
-            index_type == :first ? cpu_ts_array[begin] : cpu_ts_array[end]
+            # GPU Path: Efficiently copy only one element
+            len = length(ts_array)
+            if len == 0 # Should not happen in practice with valid OHLCV data
+                error("Timestamp array is empty")
+            end
+            # Create a host array (CPU) of size 1 to copy the single element
+            host_array = oneAPI.HostArray{eltype(ts_array)}(undef, 1)
+            idx_to_copy = index_type == :first ? 1 : len
+            # Copy single element from device (GPU) to host (CPU)
+            # copyto!(dest, dest_offset, src, src_offset, count)
+            oneAPI.copyto!(host_array, 1, ts_array, idx_to_copy, 1)
+            host_array[1] # Access the single copied element
         else
+            # Standard CPU array access
             index_type == :first ? ts_array[begin] : ts_array[end]
         end
         return val
@@ -348,20 +389,35 @@ function start_gpu!(s::Strategy{Sim}, from::DateTime, to::DateTime=_todate_gpu_a
     start_gpu!(s, ctx; kwargs...) # Delegates to the main start_gpu! which has the GPU check
 end
 
-# Renamed from _todate to make it specific for GPU context if needed,
-# or it can be the general version if _todate is removed/replaced.
-function _todate_gpu_aware(s)
+"""
+Calculates the latest timestamp present across all asset instances in the strategy's universe.
+This function is GPU-aware. If `lastdate(ai)` (where `ai` is an asset instance)
+returns a `oneAPI.oneArray` containing a single `DateTime` element, this function
+efficiently retrieves that element to the CPU. Otherwise, it assumes `lastdate(ai)`
+returns a standard `DateTime` object.
+
+Args:
+- `s`: The strategy object, containing the universe of asset instances.
+
+Returns:
+- The latest `DateTime` found across all asset instances.
+"""
+function _todate_gpu_aware(s::Strategy{Sim}) # Added type for s for clarity
     to_datetime = typemin(DateTime)
     for ai in s.universe # s.universe might hold AssetInstances with oneArray fields
-        # lastdate(ai) should return a DateTime object.
-        # If lastdate itself needs to access a oneArray (e.g., timestamps of ai),
-        # it must handle the copy to CPU internally to produce the DateTime.
-        # Or, if lastdate returns a 1-element oneArray(DateTime), we handle it here.
-        this_asset_last_date = lastdate(ai)
+        this_asset_last_date = lastdate(ai) # Expected to return DateTime or oneArray{DateTime,0} or oneArray{DateTime,1} of length 1
 
         current_scalar_date = if isa(this_asset_last_date, oneAPI.oneArray)
-            # If lastdate returns a oneArray containing a single DateTime
-            Array(this_asset_last_date)[]
+            # If lastdate returns a oneArray containing a single DateTime.
+            # oneAPI.Array(oneArray_scalar)[] is a common pattern to get the scalar value.
+            # Ensure it's a scalar or 1-element array before indexing [].
+            if length(this_asset_last_date) == 1
+                oneAPI.Array(this_asset_last_date)[1] # Use [1] for 1-element array
+            elseif ndims(this_asset_last_date) == 0 # 0-dimensional array (scalar)
+                oneAPI.Array(this_asset_last_date)[]
+            else
+                error("Unsupported oneArray format from lastdate(ai): expected scalar or 1-element array.")
+            end
         else
             # If lastdate returns a normal DateTime
             this_asset_last_date
