@@ -1,5 +1,6 @@
 using .OrderTypes: LiquidationTrade, LongTrade, ShortTrade
 using .Data: default_value
+using .Data.Misc: OrderedDict
 
 @doc """ Computes the average duration of trades for an asset instance.
 
@@ -157,21 +158,11 @@ function trades_pnl(ai::AssetInstance; returns=_returns_arr(@cumbal()), kwargs..
     trades_pnl(returns; kwargs...)
 end
 
-function asset_stats!(res::DataFrame, ai::AssetInstance)
+function asset_stats!(res::DataFrame, ai::AssetInstance; extended=false)
+    # Basic stats that are always computed
     avg_dur = trades_duration(ai; f=mean)
-    med_dur = trades_duration(ai; f=median)
-    min_dur = trades_duration(ai; f=minimum)
-    max_dur = trades_duration(ai; f=maximum)
-
     avg_size = trades_size(ai; f=mean)
-    med_size = trades_size(ai; f=median)
-    min_size = trades_size(ai; f=minimum)
-    max_size = trades_size(ai; f=maximum)
-
     avg_leverage = trades_leverage(ai; f=mean)
-    med_leverage = trades_leverage(ai; f=median)
-    min_leverage = trades_leverage(ai; f=minimum)
-    max_leverage = trades_leverage(ai; f=maximum)
 
     trades = length(ai.history)
     liquidations = count(x -> x isa LiquidationTrade, ai.history)
@@ -184,57 +175,93 @@ function asset_stats!(res::DataFrame, ai::AssetInstance)
     drawdown, atl, ATH = trades_drawdown(ai; cum_bal)
     returns = _returns_arr(cum_bal)
     avg_loss, avg_profit = trades_pnl(ai; returns, f=mean)
-    med_loss, med_profit = trades_pnl(ai; returns, f=median)
-    loss_ext, profit_ext = trades_pnl(ai; returns, f=extrema)
-    max_loss = loss_ext[1]
-    max_profit = profit_ext[2]
     end_balance = cum_bal[end]
 
-    push!(
-        res,
-        (;
-            asset=ai.asset.raw,
-            trades,
-            liquidations,
-            longs,
-            shorts,
-            avg_dur,
-            med_dur,
-            min_dur,
-            max_dur,
-            weekday,
-            monthday,
-            avg_size,
-            med_size,
-            min_size,
-            max_size,
-            avg_leverage,
-            med_leverage,
-            min_leverage,
-            max_leverage,
-            drawdown,
-            ATH,
-            avg_loss,
-            avg_profit,
-            med_loss,
-            med_profit,
-            max_loss,
-            max_profit,
-            end_balance,
-        );
-        promote=false,
+    # Create base stats dictionary with ordered keys
+    stats = OrderedDict(
+        :asset => ai.asset.raw,
+        :trades => trades,
+        :liquidations => liquidations,
+        :longs => longs,
+        :shorts => shorts,
+        :avg_dur => avg_dur,
+        :weekday => weekday,
+        :monthday => monthday,
+        :avg_size => avg_size,
+        :avg_leverage => avg_leverage,
+        :drawdown => drawdown,
+        :ATH => ATH,
+        :avg_loss => avg_loss,
+        :avg_profit => avg_profit,
+        :end_balance => end_balance,
     )
+
+    # Add extended stats if requested
+    if extended
+        med_dur = trades_duration(ai; f=median)
+        min_dur = trades_duration(ai; f=minimum)
+        max_dur = trades_duration(ai; f=maximum)
+
+        med_size = trades_size(ai; f=median)
+        min_size = trades_size(ai; f=minimum)
+        max_size = trades_size(ai; f=maximum)
+
+        med_leverage = trades_leverage(ai; f=median)
+        min_leverage = trades_leverage(ai; f=minimum)
+        max_leverage = trades_leverage(ai; f=maximum)
+
+        med_loss, med_profit = trades_pnl(ai; returns, f=median)
+        loss_ext, profit_ext = trades_pnl(ai; returns, f=extrema)
+        max_loss = loss_ext[1]
+        max_profit = profit_ext[2]
+
+        # Create new OrderedDict with all stats in the desired order
+        stats = OrderedDict(
+            :asset => ai.asset.raw,
+            :trades => trades,
+            :liquidations => liquidations,
+            :longs => longs,
+            :shorts => shorts,
+            :avg_dur => avg_dur,
+            :med_dur => med_dur,
+            :min_dur => min_dur,
+            :max_dur => max_dur,
+            :weekday => weekday,
+            :monthday => monthday,
+            :avg_size => avg_size,
+            :med_size => med_size,
+            :min_size => min_size,
+            :max_size => max_size,
+            :avg_leverage => avg_leverage,
+            :med_leverage => med_leverage,
+            :min_leverage => min_leverage,
+            :max_leverage => max_leverage,
+            :drawdown => drawdown,
+            :ATH => ATH,
+            :avg_loss => avg_loss,
+            :med_loss => med_loss,
+            :avg_profit => avg_profit,
+            :med_profit => med_profit,
+            :max_loss => max_loss,
+            :max_profit => max_profit,
+            :end_balance => end_balance,
+        )
+    end
+
+    push!(res, NamedTuple(stats); promote=false)
+    
     # upcast periods for pretty print
     if nrow(res) == 1
         for prop in (:avg, :med, :min, :max)
             prop = Symbol("$(prop)_dur")
+            haskey(stats, prop) || continue
             arr = getproperty(res, prop)
             setproperty!(res, prop, convert(Vector{Period}, arr))
         end
     end
 end
 
-function trades_stats(s::Strategy; since=DateTime(0))
+function trades_stats(s::Strategy; extended=false, since=DateTime(0))
     res = DataFrame()
     for ai in s.universe
         isempty(ai.history) && continue
@@ -243,13 +270,13 @@ function trades_stats(s::Strategy; since=DateTime(0))
             full_hist = copy(hist)
             try
                 filter!(x -> x.date >= since, hist)
-                asset_stats!(res, ai)
+                asset_stats!(res, ai; extended)
             finally
                 empty!(hist)
                 append!(hist, full_hist)
             end
         else
-            asset_stats!(res, ai)
+            asset_stats!(res, ai; extended)
         end
     end
     res
