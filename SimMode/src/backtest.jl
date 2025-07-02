@@ -233,6 +233,9 @@ function start_gpu!(
     # Ensure that universe data start at the same time
     @ifdebug _resetglobals!(s)
     if trim_universe
+        # // TODO: Ensure st.coll.flatten, check_alignment, and trim! are GPU-aware.
+        # If st.universe(s) contains oneAPI.oneArrays, these functions must operate
+        # efficiently on GPU data to avoid becoming a bottleneck.
         let data = st.coll.flatten(st.universe(s))
             !check_alignment(data) && trim!(data)
         end
@@ -272,14 +275,17 @@ function start_gpu!(
                         @deassert all(iszero(ai) for ai in universe(s))
                         break
                     end
-                    # // TODO: Investigate GPU awareness of these functions.
-                    # These calls are critical. If `s` (strategy object) or `ctx` (context)
-                    # contain fields that are oneAPI.oneArray, these functions must be
-                    # implemented to handle them efficiently (e.g., via custom kernels or
-                    # GPU-compatible operations) to avoid implicit, performance-degrading
-                    # data transfers between CPU and GPU on each iteration.
-                    update!(s, date_val, update_mode) # Must be GPU-aware if s contains oneArrays
-                    call!(s, date_val, ctx)          # Must be GPU-aware if s contains oneArrays
+                    # // TODO: CRITICAL: Ensure `update!` and `call!` are GPU-aware.
+                    # These functions are the core of the simulation loop.
+                    # If `s` (strategy object), its internal buffers (e.g., indicators),
+                    # or `ctx` (context) contain fields that are `oneAPI.oneArray`,
+                    # `update!` and `call!` *must* be implemented to handle them
+                    # efficiently on the GPU (e.g., using custom kernels, GPU-compatible
+                    # array operations via oneAPI.jl, or other GPU libraries).
+                    # Failure to do so will lead to significant performance degradation due to
+                    # implicit data transfers between CPU and GPU on each iteration.
+                    update!(s, date_val, update_mode) # Must be GPU-aware if s or its data are on GPU
+                    call!(s, date_val, ctx)          # Must be GPU-aware if s or its data are on GPU
 
                     # Update stats for progress bar - these need to be CPU values
                     trades_val = trades_count(s) # trades_count might return oneArray scalar
@@ -298,8 +304,10 @@ function start_gpu!(
                     @deassert all(iszero(ai) for ai in universe(s))
                         break
                     end
-                    # // TODO: Investigate GPU awareness of these functions.
+                    # // TODO: CRITICAL: Ensure `update!` and `call!` are GPU-aware.
                     # See detailed comment in the show_progress=true block above.
+                    # These functions must be GPU-aware to prevent performance bottlenecks
+                    # when operating with oneAPI.oneArray data within the strategy `s`.
                 update!(s, date_val, update_mode) # Must be GPU-aware
                 call!(s, date_val, ctx)          # Must be GPU-aware
                 @debug "sim: iter" s.cash ltxzero(s.cash) isempty(s.holdings) orderscount(s)

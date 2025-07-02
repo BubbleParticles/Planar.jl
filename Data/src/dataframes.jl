@@ -11,6 +11,29 @@ import Base: getindex
 import ..Data: contiguous_ts
 
 # --- oneAPI GPU Awareness Helpers ---
+# Note on GPU usage for DataFrame operations:
+# This module primarily focuses on accelerating timestamp-based searches, as these
+# are common bottlenecks and benefit from custom GPU kernels.
+#
+# For other common DataFrame operations on columns that are `oneAPI.oneArray`s:
+# - Element-wise operations (e.g., `df.colA .* df.colB`, `df.colA .+ scalar`):
+#   `oneAPI.jl` typically overloads these operators. If `df.colA` is a `oneAPI.oneArray`,
+#   such operations should automatically execute on the GPU and return a `oneAPI.oneArray`.
+# - Aggregations (e.g., `sum(df.colA)`, `minimum(df.colA)`):
+#   `oneAPI.jl` and associated GPU array libraries usually provide optimized reductions for
+#   `oneAPI.oneArray`s. Users can call these directly on GPU-backed columns.
+#   Whether `DataFrames.jl`'s own aggregation functions (e.g., in `combine`)
+#   automatically leverage these GPU versions depends on `DataFrames.jl` internals and
+#   its dispatch mechanisms for custom array types.
+# - Filtering (e.g., `df.colA .> value`):
+#   Creating boolean masks using comparisons on `oneAPI.oneArray` columns
+#   (e.g., `mask = df.gpu_colA .> some_value`) is typically GPU-accelerated by `oneAPI.jl`.
+#   Applying this mask to construct a new DataFrame (`df[mask, :]`) involves more complex
+#   `DataFrames.jl` logic to handle various column types and is not directly targeted
+#   for GPU acceleration within this utility module beyond what `DataFrames.jl` might offer.
+#
+# The functions below, particularly for search, are provided where specific GPU kernels
+# offer a clear advantage for common operations not trivially covered by standard library extensions.
 
 function _is_oneapi_functional_for_dataframes()
     if !isdefined(Main, :oneAPI)
@@ -129,10 +152,21 @@ Performs `searchsortedfirst` on `arr`. If `oneapi_is_functional` is true,
 using `gpu_searchsortedfirst_kernel!`. Otherwise, it falls back to a CPU-based search
 (after ensuring `arr` is a CPU array if it was a `oneAPI.oneArray`).
 
+For very small arrays, the overhead of GPU kernel launch and data transfer for the result
+might exceed the benefit of GPU parallelism. A future optimization could involve a
+length-based heuristic to switch to CPU search for tiny arrays, though the threshold
+would be hardware-dependent.
+
 Returns the first index `i` in `arr` such that `arr[i] >= val`, or `length(arr) + 1`
 if `val` is greater than all elements in `arr`. Returns `1` if `arr` is empty.
 """
 function _searchsortedfirst_gpu_aware(arr::AbstractVector, val, oneapi_is_functional::Bool)
+    # Potential future optimization: add a length check, e.g.,
+    # if length(arr) < SOME_THRESHOLD
+    #     cpu_arr = _ensure_cpu_array_for_search(arr, oneapi_is_functional)
+    #     return searchsortedfirst(cpu_arr, val)
+    # end
+
     if oneapi_is_functional && isa(arr, getfield(Main, :oneAPI).oneArray) && !isempty(arr)
         oneAPI_module = getfield(Main, :oneAPI)
         gpu_arr = arr # arr is already a oneArray
@@ -164,10 +198,15 @@ Performs `searchsortedlast` on `arr`. If `oneapi_is_functional` is true,
 using `gpu_searchsortedlast_kernel!`. Otherwise, it falls back to a CPU-based search
 (after ensuring `arr` is a CPU array if it was a `oneAPI.oneArray`).
 
+Similar to `_searchsortedfirst_gpu_aware`, a length-based heuristic could be a
+future optimization for very small arrays.
+
 Returns the last index `i` in `arr` such that `arr[i] <= val`, or `0`
 if `val` is less than all elements in `arr`. Returns `0` if `arr` is empty.
 """
 function _searchsortedlast_gpu_aware(arr::AbstractVector, val, oneapi_is_functional::Bool)
+    # Potential future optimization: add a length check here too.
+
     if oneapi_is_functional && isa(arr, getfield(Main, :oneAPI).oneArray) && !isempty(arr)
         oneAPI_module = getfield(Main, :oneAPI)
         gpu_arr = arr # arr is already a oneArray
