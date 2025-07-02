@@ -143,12 +143,23 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
         view_capacity = attr(
             s, :live_view_capacity, count(s.timeframe, tf"1d") + 1 + buffer_capacity
         )
-        n_jobs = attr(s, :live_ohlcv_jobs, 4)
+        n_jobs = attr(s, :live_ohlcv_jobs, 8)
         function propagate_callback(_, sym)
-            @debug "watchers: propagating" _module = LogWatchOHLCV sym
-            ai = asset_bysym(s, sym)
-            ohlcv_dict(ai) |> propagate_ohlcv!
-            cached_ohlcv!(ai, met)
+            @async begin
+                try
+                    start_time = time_ns()
+                    @debug "LiveMode: Async propagate_callback started for $sym" # Modified log
+                    ai = asset_bysym(s, sym)
+                    ohlcv_dict(ai) |> propagate_ohlcv!
+                    cached_ohlcv!(ai, met)
+                    elapsed_ms = (time_ns() - start_time) / 1_000_000
+                    @info "LiveMode: Async propagate_callback finished for $sym in $(round(elapsed_ms, digits=2)) ms" # New log
+                catch err
+                    @error "Error in async propagate_callback for symbol $sym" exception=(err, catch_backtrace())
+                    # Potentially rethrow if you want the async task to be marked as failed,
+                    # or handle specific errors as needed. For now, just logging.
+                end
+            end
         end
         watcher_func = if met == :tickers
             (exc; kwargs...) -> ccxt_ohlcv_tickers_watcher(exc; kwargs...)
