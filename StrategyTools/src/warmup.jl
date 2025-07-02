@@ -1,5 +1,6 @@
 import .egn: ExecAction, call!
 using .egn: WarmupPeriod
+using .egn: issandbox
 
 struct SimWarmup <: ExecAction end
 struct InitSimWarmup <: ExecAction end
@@ -73,7 +74,7 @@ function _warmup!(
             return nothing
         end
     end
-    s_sim = @lget! s.attrs :simstrat strategy(nameof(s), mode=Sim())
+    s_sim = @lget! s.attrs :simstrat strategy(nameof(s), mode=Sim(), sandbox=issandbox(s))
     ai_dict = @lget! s.attrs :siminstances Dict(raw(ai) => ai for ai in s_sim.universe)
     ai_sim = ai_dict[raw(ai)]
     copyohlcv!(ai_sim, ai)
