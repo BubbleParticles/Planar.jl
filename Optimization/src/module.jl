@@ -77,16 +77,16 @@ This structure stores all the evaluated parameters combinations during an optimi
 It contains fields for the strategy, context, parameters, attributes, results, best result, lock, and clones of the strategy and context for each thread.
 The constructor for `OptSession` also takes an offset and number of threads as optional parameters, with default values of 0 and the number of available threads, respectively.
 """
-struct OptSession{S<:SimStrategy,N}
-    s::S
+mutable struct OptSession{S<:SimStrategy,N}
+    const s::S
     ctx::Context{Sim}
-    params::T where {T<:NamedTuple}
-    attrs::Dict{Symbol,Any}
-    results::DataFrame
-    best::Ref{Any}
-    lock::ReentrantLock
-    s_clones::NTuple{N,Tuple{ReentrantLock,S}}
-    ctx_clones::NTuple{N,Context{Sim}}
+    const params::T where {T<:NamedTuple}
+    const attrs::Dict{Symbol,Any}
+    const results::DataFrame
+    const best::Ref{Any}
+    const lock::ReentrantLock
+    const s_clones::NTuple{N,Tuple{ReentrantLock,S}}
+    const ctx_clones::NTuple{N,Context{Sim}}
     function OptSession(
         s::Strategy; ctx, params, offset=0, attrs=Dict(), n_threads=Threads.nthreads()
     )

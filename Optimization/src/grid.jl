@@ -6,6 +6,7 @@ using SimMode.Lang: splitkws
 using Metrics.Data: Cache as ca, nrow, groupby, combine, DataFrame, DATA_PATH
 using SimMode.Misc: attr
 using Random: shuffle!
+using SimMode: Context, Sim
 
 using Printf: @sprintf
 using Base.Sys: free_memory
@@ -210,9 +211,13 @@ function gridsearch(
     zi=get_zinstance(s),
     grid_itr=nothing,
     offset=0,
+    ctx=nothing,
 )
     running!()
     sess = optsession(s; seed, splits, offset)
+    if !isnothing(ctx)
+        sess.ctx = ctx
+    end
     ctx = sess.ctx
     grid = gridfromparams(sess.params)
     resume && resume!(sess)
@@ -354,8 +359,7 @@ $(TYPEDSIGNATURES)
 After each search is completed, the results are filtered according to custom rules. The parameters from the results
 that match the filtering will be backtested again with a different `offset` which modifies the backtesting period.
 `rounds`: how many iterations (of grid searches) to perform
-`sess`: If a `Ref{<:OptSession}` is provided, search will resume from the session previous results
-`halve`: At each iteration
+`sess`: If a `Ref{<:OptSession>` is provided, search will resume from the session previous results
 
 Additional kwargs are forwarded to the grid search.
 "
@@ -389,6 +393,98 @@ function progsearch(
         end
         sess[] = gridsearch(s; offset, splits=1, grid_itr, fw_kwargs...)
     end
+    sess[]
+end
+
+@doc """Performs a broad search optimization that progressively moves through the context range.
+
+$(TYPEDSIGNATURES)
+
+- `slice_size`: Size of each slice in terms of strategy timeframe periods (default: 10000)
+- `sort_by`: Column to sort results by (:pnl or :obj, default: :pnl)
+
+The search starts with the first slice of the context and at each iteration:
+1. Moves to the next contiguous slice
+2. Filters parameters based on filter_func
+3. Continues until reaching the end of the context
+"""
+function broadsearch(
+    s::Strategy;
+    slice_size=10000,
+    sort_by=:pnl,
+    kwargs...
+)
+    # Initial setup
+    _, fw_kwargs = splitkws(:offset, :splits, :grid_itr; kwargs)
+    
+    # Get context and calculate total steps
+    ctx, params, _ = call!(s, OptSetup())
+    ctx_step = ctx.range.step
+    total_steps = trunc(Int, (ctx.range.stop - ctx.range.start) / ctx_step)
+    current_step = 0
+
+    local sess = Ref{OptSession}()
+    local results::DataFrame = DataFrame()
+    
+    # Create initial slice context
+    slice_start = ctx.range.start
+    slice_stop = min(slice_start + slice_size * ctx_step, ctx.range.stop)
+    slice_ctx = Context(Sim(), DateRange(slice_start, slice_stop, ctx_step))
+    
+    # Initialize session with first slice
+    
+    # Run initial grid search with all parameters
+    sess[] = gridsearch(s; ctx=slice_ctx, splits=1, fw_kwargs...)
+    return sess[]
+    # Get current results and apply filtering
+    results = filter_results(s, sess[])
+    
+    # Move to next slice
+    current_step += slice_size
+
+    try
+        while current_step < total_steps
+            # Calculate slice range
+            slice_start = ctx.range.start + current_step * ctx_step 
+            slice_stop = min(slice_start + slice_size * ctx_step, ctx.range.stop)
+            
+            # Create a new strategy with the slice context
+            slice_s = similar(s; mode=Sim())
+            slice_ctx = Context(Sim(), DateRange(slice_start, slice_stop, ctx_step))
+            
+            if isempty(results)
+                @info "No valid parameter combinations found for current slice, stopping search"
+                break
+            end
+            
+            # Sort results by specified column
+            sort!(results, [sort_by], rev=true)
+            
+            # Create new grid from filtered results
+            grid_itr = gridfromresults(sess[], results)
+            
+            # Perform next grid search with current slice
+            try
+                # Create new session with current slice
+                new_sess = optsession(slice_s; splits=1)
+                # Run grid search with filtered parameters on current slice
+                sess[] = gridsearch(slice_s; ctx=slice_ctx, splits=1, grid_itr, fw_kwargs...)
+                
+                # Get current results and apply filtering
+                results = filter_results(s, sess[])
+            catch e
+                @error "Error during grid search" exception=(e, catch_backtrace())
+                break
+            end
+            
+            # Move to next slice
+            current_step += slice_size
+        end
+    catch e
+        @error "Error during broad search" exception=(e, catch_backtrace())
+        rethrow(e)
+    end
+    
     sess[]
 end
 
