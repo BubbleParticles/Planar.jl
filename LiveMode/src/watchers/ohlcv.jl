@@ -68,15 +68,17 @@ values: `tickers`, `trades`, `candles`
 """
 ohlcvmethod(s::Strategy) = attr(s, :live_ohlcv_method, :candles)
 ohlcvmethod(ai::AssetInstance) = attr(ai, :live_ohlcv_method, :candles)
-function ohlcvmethod!(s::Strategy, k=:candles)
-    if k ∉ (:tickers, :candles, :trades)
+function ohlcvmethod!(s::Strategy, m=nothing)
+    if m ∉ (:tickers, :candles, :trades, nothing)
         error("ohlcv methods supported are `tickers`, `candles` and `trades`")
     end
-    s[:live_ohlcv_method] = k
+    k = :live_ohlcv_method
+    setfunc = isnothing(m) ? (d, m) -> attr!(d, k, m) : (d, m) -> setattr!(d, m, k)
+    setfunc(s, m)
     for ai in universe(s)
-        attr!(ai, :live_ohlcv_method, k)
+        setfunc(ai, m)
     end
-    k
+    m
 end
 
 @doc """ Returns the watchers for OHLCV data.
