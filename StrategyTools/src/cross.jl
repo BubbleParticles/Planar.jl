@@ -44,7 +44,7 @@ function iscrossed(s, ai, ats, sig_b, drc::Val)
 
         sig = strategy_signal(s, ai, sig_b)
         sig_val = signal_value(sig.state; sig)
-        prev_sig_val = signal_history(sig.state; sig)
+        prev_sig_val = signal_prev(sig.state; sig)
         if ismissingvalue(sig_val) || ismissingvalue(prev_sig_val)
             @debug "crossed: signal missing" ai sig_b
             return false
@@ -68,10 +68,10 @@ function iscrossed(s, ai, ats, sig_a_name, sig_b_name, drc::Val)
     tf_s = s.timeframe
     sig_a = strategy_signal(s, ai, sig_a_name)
     @assert sig_a.date >= ats
-    prev_sig_a_val = signal_history(sig_a.state; sig=sig_a)
+    prev_sig_a_val = signal_prev(sig_a.state; sig=sig_a)
     sig_b = strategy_signal(s, ai, sig_b_name)
     @assert sig_b.date >= ats
-    prev_sig_b_val = signal_history(sig_b.state; sig=sig_b)
+    prev_sig_b_val = signal_prev(sig_b.state; sig=sig_b)
     a = signal_value(sig_a.state; sig=sig_a)
     b = signal_value(sig_b.state; sig=sig_b)
     if ismissingvalue(a) ||
@@ -90,7 +90,7 @@ end
 
 function iscrossed(s, ai, ats, sig_name, field_a, field_b, drc::Val)
     sig = strategy_signal(s, ai, sig_name)
-    hist = signal_history(sig.state; sig)
+    hist = signal_prev(sig.state; sig)
     if ismissingvalue(sig.state.value)
         @debug "crossed: signal field missing" ai sig_name field_a field_b
         return false

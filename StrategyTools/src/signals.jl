@@ -49,7 +49,9 @@ end
 @kwdef mutable struct SignalState4{T,V}
     date::DateTime = DateTime(0)
     trend::Trend = Stationary
+    slope::DFT = 0.0
     prev::V
+    trace::CircularBuffer{V}
     const state::T
 end
 function Base.iterate(state::StrategyTools.SignalState4)
@@ -70,7 +72,11 @@ function signals_state!(s)
                     state = this.type(; this.params...)
                     state_tp = typeof(state)
                     prev_tp = fieldtype(state_tp, :value)
-                    name => SignalState4{state_tp,prev_tp}(; state, prev=state.value)
+                    name => SignalState4{state_tp,prev_tp}(; 
+                        state, 
+                        prev=state.value,
+                        trace=CircularBuffer{prev_tp}(10)  # Fixed size of 10 points
+                    )
                 end for (name, this) in sig_defs.defs
             )
         end for ai in s.universe
@@ -87,7 +93,45 @@ signal_value(s, ai, name) = begin
     signal_value(sig.state; sig)
 end
 signal_trend(s, ai, name) = strategy_signal(s, ai, name).trend
-signal_history(::Any; sig) = sig.prev
+signal_slope(s, ai, name) = strategy_signal(s, ai, name).slope
+signal_prev(::Any; sig) = sig.prev
+signal_trace(s, ai, name) = strategy_signal(s, ai, name).trace
+
+@doc """
+Calculate the slope of a signal based on its trace buffer.
+
+$(TYPEDSIGNATURES)
+
+Calculates the slope using simple rate of change between first and last valid values.
+"""
+function calculate_slope(sig)
+    trace = sig.trace
+    if length(trace) < 2
+        return 0.0
+    end
+    
+    # Use linear regression to calculate slope
+    n = length(trace)
+    x = collect(1:n)
+    
+    # Use signal_value to get numeric values from trace, filtering out missing values
+    y = DFT[]
+    sizehint!(y, length(trace))  # Pre-allocate for better performance
+    for val in trace
+        sig_val = signal_value(val; sig)
+        if !ismissing(sig_val)
+            push!(y, sig_val)
+        end
+    end
+    
+    if length(y) < 2
+        return 0.0
+    end
+    
+    # Calculate slope using simple rate of change
+    slope = (y[end] - y[1]) / (length(y) - 1)
+    return slope
+end
 
 @doc """
 Update or initialize mutable data related to asset information.
@@ -136,6 +180,11 @@ function update_signal!(ai, ats, ai_signals, sig_name; tf, count)
         end
         @deassert idx_stop == idx_start + count ats, tf, count
         oti.fit!(this.state, range)
+        # Add initial value to trace buffer if type matches
+        initial_value = this.state.value
+        if initial_value isa eltype(this.trace)
+            push!(this.trace, initial_value)
+        end
     elseif this.date < this_tf_ats
         # This ensures that we only compute the minimum necessary in case
         # the signals lags behind (only in live)
@@ -151,6 +200,13 @@ function update_signal!(ai, ats, ai_signals, sig_name; tf, count)
         if !isempty(range)
             this.prev = this.state.value
             oti.fit!(this.state, range)
+            # Add new value to trace buffer if type matches
+            new_value = this.state.value
+            if new_value isa eltype(this.trace)
+                push!(this.trace, new_value)
+                # Calculate and update slope from trace
+                this.slope = calculate_slope(this)
+            end
         else
             @warn "not enough data for the requested count" start_date this_tf_ats count maxlog =
                 1
@@ -172,7 +228,7 @@ function signals!(s::Strategy, ::Val{:warmup}; force=false, history=true)
     elseif get!(s.attrs, :signals_set, false)
         return nothing
     end
-    s[:signals] = signals_state!(s)
+    signals_state!(s)
     # Fill fresh ohlcv data at startup
     if ispaper(s) || islive(s)
         for ai in s.universe
