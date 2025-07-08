@@ -442,6 +442,10 @@ function liqprice!(po::Position{Short}, v)
     po.liquidation_price[] = v
 end
 
+function Base.abs(po::Position)
+    abs(cash(po))
+end
+
 function Base.print(io::IO, po::Position)
     write(io, "Position($(posside(po)), $(po.asset))\n")
     write(io, "entryprice: ")

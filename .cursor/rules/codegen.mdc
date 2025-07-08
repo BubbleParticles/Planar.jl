@@ -1,0 +1,6 @@
+---
+description: strategy and framework codegen
+alwaysApply: false
+---
+Always use the actual state or value from the relevant object, not a default or global value, when handling existing entities.
+If an action’s precondition (like minimum size) is not met but an entity is still active, perform the appropriate cleanup (e.g., close the position) instead of skipping the action.

@@ -96,6 +96,13 @@ signal_trend(s, ai, name) = strategy_signal(s, ai, name).trend
 signal_slope(s, ai, name) = strategy_signal(s, ai, name).slope
 signal_prev(::Any; sig) = sig.prev
 signal_trace(s, ai, name) = strategy_signal(s, ai, name).trace
+indicator_scalar(val) = let this = @coalesce val 0.0
+    if this isa Number
+        this
+    else
+        first(this)
+    end
+end
 
 @doc """
 Calculate the slope of a signal based on its trace buffer.
@@ -115,10 +122,10 @@ function calculate_slope(sig)
     x = collect(1:n)
     
     # Use signal_value to get numeric values from trace, filtering out missing values
-    y = DFT[]
+    y = typeof(indicator_scalar(first(trace)))[]
     sizehint!(y, length(trace))  # Pre-allocate for better performance
     for val in trace
-        sig_val = signal_value(val; sig)
+        sig_val = indicator_scalar(val)
         if !ismissing(sig_val)
             push!(y, sig_val)
         end
@@ -147,7 +154,7 @@ function update_data!(ai, tf)
 end
 
 @doc "Return the inputs for the `fit!` function of the signal."
-function signal_range(sig, data, range)
+function indicator_range(sig, data, range)
     view(data.close, range)
 end
 
@@ -173,7 +180,7 @@ function update_signal!(ai, ats, ai_signals, sig_name; tf, count)
             return nothing
         end
         idx_stop = dateindex(data, this_tf_ats)
-        range = signal_range(this.state, data, idx_start:idx_stop)
+        range = indicator_range(this.state, data, idx_start:idx_stop)
         if length(range) < count
             @warn "not enough data for the requested count" start_date this_tf_ats count maxlog =
                 1
@@ -196,7 +203,7 @@ function update_signal!(ai, ats, ai_signals, sig_name; tf, count)
         end
         idx_stop = dateindex(data, this_tf_ats)
         @deassert data.timestamp[idx_stop] < apply(tf, ats)
-        range = signal_range(this.state, data, idx_start:idx_stop)
+        range = indicator_range(this.state, data, idx_start:idx_stop)
         if !isempty(range)
             this.prev = this.state.value
             oti.fit!(this.state, range)

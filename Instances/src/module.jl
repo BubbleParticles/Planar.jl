@@ -212,7 +212,19 @@ Base.float(ai::AssetInstance) = nothing
 Base.float(ai::NoMarginInstance) = cash(ai).value
 Base.float(ai::MarginInstance) =
     let c = cash(ai)
-        @something c.value 0.0
+        if isnothing(c)
+            0.0
+        else
+            c.value
+        end
+    end
+Base.abs(ai::MarginInstance) =
+    let pos = position(ai)
+        if isnothing(pos)
+            0.0
+        else
+            abs(pos)
+        end
     end
 Base.getindex(ai::AssetInstance, k::Symbol) = attr(ai, k)
 Base.get(ai::AssetInstance, keys::Tuple{Vararg{Symbol}}) = attr(ai, keys...)

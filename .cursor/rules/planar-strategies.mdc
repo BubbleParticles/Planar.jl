@@ -1,6 +1,5 @@
 ---
-description: 
-globs: 
+globs: user/strategies/**/*.jl
 alwaysApply: false
 ---
 When editing strategies, remember that the main entry point is the function with signature:
