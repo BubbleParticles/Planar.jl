@@ -167,6 +167,8 @@ Updates the signal `sig_name` for asset `ai` based on new data up to timestamp `
 Uses a lookback window of `count` timeframes `tf`.
 """
 function update_signal!(ai, ats, ai_signals, sig_name; tf, count)
+    # Ensure count is always an Int
+    @assert count isa Int "Signal count must be Int, got $(typeof(count))"
     this = ai_signals[sig_name]
     data = ohlcv(ai, tf)
     this_tf_ats = available(tf, ats)

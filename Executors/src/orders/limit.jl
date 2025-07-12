@@ -1,5 +1,5 @@
 using .Instances
-import .Instances: committed, PositionOpen, PositionClose
+import .Instances: committed, PositionOpen, PositionClose, freecash
 using .OrderTypes:
     LimitOrderType, PositionSide, ExchangeID, ShortSellOrder, FOKOrderType, IOCOrderType
 using Strategies: NoMarginStrategy
@@ -62,7 +62,7 @@ function limitorder(
     comm = Ref(committment(type, ai, price, amount))
     @debug "create limitorder:" ai = raw(ai) price amount comm[] is_comm = iscommittable(
         s, type, comm, ai
-    )
+    ) free = freecash(ai, posside(ai))
     if skipcommit || iscommittable(s, type, comm, ai)
         basicorder(ai, price, amount, comm, SanitizeOff(); date, type, kwargs...)
     end
