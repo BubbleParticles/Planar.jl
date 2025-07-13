@@ -36,6 +36,7 @@ all_tests = [
     :paper,
     :live,
     :live_call,
+    :gpu_indicators,
 ]
 
 tests(selected=ARGS) = begin

@@ -247,6 +247,32 @@ function ema_update_kernel!(
 end
 
 @doc """
+    rsi_update_kernel!(new_rsi_out, avg_gain, avg_loss)
+
+GPU kernel to calculate RSI from average gain and average loss.
+`RSI = 100 - (100 / (1 + (avg_gain / avg_loss)))`
+Handles the case where `avg_loss` is zero to prevent division by zero.
+
+Parameters:
+- `new_rsi_out::oneAPI.oneDeviceArray{DFT, 1}`: Output for the new RSI value.
+- `avg_gain::DFT`: Average gain.
+- `avg_loss::DFT`: Average loss.
+"""
+function rsi_update_kernel!(
+    new_rsi_out::oneAPI.oneDeviceArray{DFT, 1},
+    avg_gain::DFT,
+    avg_loss::DFT
+)
+    if avg_loss == zero(DFT)
+        new_rsi_out[1] = DFT(100.0)
+    else
+        rs = avg_gain / avg_loss
+        new_rsi_out[1] = DFT(100.0) - (DFT(100.0) / (one(DFT) + rs))
+    end
+    return nothing
+end
+
+@doc """
     fit_gpu!(indicator::oti.EMA, new_value_any_type)
 
 Specialized `fit_gpu!` for `OnlineTechnicalIndicators.EMA`.
@@ -378,6 +404,70 @@ function fit_gpu!(indicator::oti.EMA, new_value_any_type)
     return indicator
 end
 
+@doc """
+    fit_gpu!(indicator::oti.RSI, new_value_any_type)
+
+Specialized `fit_gpu!` for `OnlineTechnicalIndicators.RSI`.
+
+Handles RSI calculation with GPU acceleration if `oneAPI.jl` is functional and
+the indicator is past its warm-up period (`indicator.n >= indicator.period`).
+
+Warm-up Phase (`indicator.n < indicator.period`):
+- Relies on `_fit_gpu_generic!`, which calls `oti.fit!` to handle the initial
+  data accumulation and calculation correctly on the CPU.
+
+GPU-Active Phase (`indicator.n >= indicator.period`):
+1.  `new_value` is converted to a `DFT` CPU scalar.
+2.  The gain and loss are calculated based on the new value and the previous value.
+3.  The `avg_gain` and `avg_loss` indicators (sub-components of RSI) are updated.
+    This implementation assumes they are `oti.EMA` or similar, and `fit_gpu!` is used
+    recursively on them.
+4.  After updating `avg_gain` and `avg_loss`, their new values are retrieved.
+5.  `rsi_update_kernel!` is launched on the GPU to calculate the final RSI value.
+6.  The new RSI value is stored back in `indicator.value`.
+7.  `indicator.n` and `indicator.last_value` are updated manually.
+
+If GPU is not active or during warm-up, it relies on `_fit_gpu_generic!`.
+"""
+function fit_gpu!(indicator::oti.RSI, new_value_any_type)
+    cpu_current_price = ensure_cpu_scalar(new_value_any_type, DFT)
+    oneAPI_module = is_oneapi_functional() ? getfield(Main, :oneAPI) : nothing
+
+    if !hasproperty(indicator, :n) || !hasproperty(indicator, :period) || !hasproperty(indicator, :avg_gain) || !hasproperty(indicator, :avg_loss) || !hasproperty(indicator, :last_value)
+        return _fit_gpu_generic!(indicator, cpu_current_price)
+    end
+
+    if indicator.n < indicator.period || oneAPI_module === nothing
+        return _fit_gpu_generic!(indicator, cpu_current_price)
+    else
+        # GPU Path
+        last_value = ensure_cpu_scalar(indicator.last_value, DFT)
+        change = cpu_current_price - last_value
+        gain = max(change, zero(DFT))
+        loss = max(-change, zero(DFT))
+
+        # Recursively call fit_gpu! on sub-indicators
+        fit_gpu!(indicator.avg_gain, gain)
+        fit_gpu!(indicator.avg_loss, loss)
+
+        avg_gain_val = ensure_cpu_scalar(oti.value(indicator.avg_gain), DFT)
+        avg_loss_val = ensure_cpu_scalar(oti.value(indicator.avg_loss), DFT)
+
+        new_rsi_gpu_scalar = oneAPI_module.oneArray{DFT}(undef, 1)
+
+        oneAPI_module.@oneapi items=1 groups=1 rsi_update_kernel!(
+            new_rsi_gpu_scalar,
+            avg_gain_val,
+            avg_loss_val
+        )
+
+        indicator.value = oneAPI_module.Array(new_rsi_gpu_scalar)[1]
+        indicator.n += 1
+        indicator.last_value = cpu_current_price
+    end
+    return indicator
+end
+
 
 # Generic fit_gpu! that dispatches
 function fit_gpu!(indicator::T, new_value) where {T <: oti.OnlineIndicator}
@@ -389,6 +479,8 @@ function fit_gpu!(indicator::T, new_value) where {T <: oti.OnlineIndicator}
         return fit_gpu!(indicator, new_value) # Calls the ::oti.SMA version
     elseif indicator isa oti.EMA
          return fit_gpu!(indicator, new_value) # Calls the ::oti.EMA version
+    elseif indicator isa oti.RSI
+        return fit_gpu!(indicator, new_value)
     else
         # Fallback for other indicator types
         cpu_new_value_dft = ensure_cpu_scalar(new_value, DFT)
