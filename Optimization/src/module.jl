@@ -221,7 +221,8 @@ function save_session(sess::OptSession; from=0, to=nrow(sess.results), zi=get_zi
     )
     # NOTE: set attributes *after* saving otherwise they do not persist
     z = load_data(zi, k; serialized=true, as_z=true)[1]
-    if from == 0 || pop!(z.attrs, "new", nothing) == "1"
+    # Save attributes if this is the initial save (from == 0) or if attributes are missing
+    if from == 0 || isempty(z.attrs) || pop!(z.attrs, "new", nothing) == "1"
         attrs = z.attrs
         attrs["name"] = parts.s_part
         attrs["startstop"] = parts.ctx_part

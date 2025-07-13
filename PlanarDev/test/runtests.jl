@@ -18,6 +18,7 @@ all_tests = [
     :positions,
     :instances,
     :strategies,
+    :session_attributes,
     #
     :ohlcv,
     :tradesohlcv,

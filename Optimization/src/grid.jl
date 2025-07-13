@@ -1,5 +1,5 @@
 using Pbar.Term.Progress: @track, ProgressJob, Progress
-using Pbar: pbar!, @withpbar!, @pbupdate!
+using Pbar: pbar!, @withpbar!, @pbupdate!, pbar, dorender
 using SimMode.Instruments: compactnum as cnum, Instruments
 using SimMode.Lang.Logging: SimpleLogger, with_logger, current_logger
 using SimMode.Lang: splitkws
@@ -84,27 +84,102 @@ function Progress.update!(col::BestColumn, args...)::String
     return seg.text
 end
 
+@doc """ A column in the progress bar representing the estimated time remaining.
+
+$(FIELDS)
+
+This struct represents a column in the progress bar that displays the estimated time remaining for the optimization job.
+It contains a `ProgressJob`, a vector of `Segment` objects, a `Measure` object, and references to track progress timing.
+The constructor creates a `Segment` with a string representation of the ETA and sets the width of the measure to 15.
+"""
+struct ETAColumn <: AbstractColumn
+    job::ProgressJob
+    segments::Vector{Segment}
+    measure::Measure
+    start_time::Ref{DateTime}
+    last_update::Ref{DateTime}
+    completed::Ref{Int}
+    total::Ref{Int}
+
+    function ETAColumn(job::ProgressJob; start_time=Ref(now()), last_update=Ref(now()), completed=Ref(0), total=Ref(0))
+        txt = Segment("ETA: --", "yellow")
+        txt.measure.w = 15
+        return new(job, [txt], txt.measure, start_time, last_update, completed, total)
+    end
+end
+
+function Progress.update!(col::ETAColumn, args...)::String
+    if col.completed[] > 0 && col.total[] > 0
+        elapsed = now() - col.start_time[]
+        if col.completed[] < col.total[]
+            # Calculate average time per item
+            avg_time_per_item = elapsed ÷ col.completed[]
+            # Calculate remaining items
+            remaining_items = col.total[] - col.completed[]
+            # Calculate estimated time remaining
+            eta_seconds = avg_time_per_item.value * remaining_items / 1000.0  # Convert from milliseconds to seconds
+            
+            if eta_seconds > 0
+                if eta_seconds >= 86400  # 24 hours
+                    days = trunc(Int, eta_seconds ÷ 86400)
+                    eta_str = @sprintf("ETA: %dd", days)
+                elseif eta_seconds >= 3600  # 1 hour
+                    hours = trunc(Int, eta_seconds ÷ 3600)
+                    eta_str = @sprintf("ETA: %dh", hours)
+                elseif eta_seconds >= 60  # 1 minute
+                    minutes = trunc(Int, eta_seconds ÷ 60)
+                    eta_str = @sprintf("ETA: %dm", minutes)
+                else
+                    eta_str = @sprintf("ETA: %ds", trunc(Int, eta_seconds))
+                end
+            else
+                eta_str = "ETA: --"
+            end
+        else
+            eta_str = "ETA: 0s"
+        end
+    else
+        eta_str = "ETA: --"
+    end
+    
+    seg = Segment(eta_str, "yellow")
+    return seg.text
+end
+
 @doc """ Initializes a progress bar for grid optimization.
 
 $(TYPEDSIGNATURES)
 
 This function sets up a progress bar for the grid optimization process.
-It creates a `ParamsColumn` and a `BestColumn` and adds them to the default columns.
-The function returns a reference to the current parameters.
+It creates a `ParamsColumn`, a `BestColumn`, and an `ETAColumn` and adds them to the default columns.
+The function returns a tuple of (current_params, eta_refs) where eta_refs contains the ETA column references.
 """
 function gridpbar!(sess, first_params)
     columns = get_columns(:default)
     push!(columns, ParamsColumn)
     push!(columns, BestColumn)
+    push!(columns, ETAColumn)
     current_params = Ref(first_params)
+    
+    # Create ETA references that will be shared
+    eta_start_time = Ref(now())
+    eta_completed = Ref(0)
+    eta_total = Ref(0)
+    
     pbar!(;
         columns,
         columns_kwargs=Dict(
             :ParamsColumn => Dict(:params => current_params),
             :BestColumn => Dict(:best => sess.best),
+            :ETAColumn => Dict(
+                :start_time => eta_start_time,
+                :last_update => Ref(now()),
+                :completed => eta_completed,
+                :total => eta_total
+            ),
         ),
     )
-    current_params
+    (current_params, (eta_start_time, eta_completed, eta_total))
 end
 
 @doc """ Generates a grid from the provided parameters.
@@ -248,8 +323,9 @@ function gridsearch(
         opt_func = define_opt_func(
             s; backtest_func, ismulti, splits, obj_type, isthreaded=false
         )
-        current_params = gridpbar!(sess, first(grid))
+        current_params, (eta_start_time, eta_completed, eta_total) = gridpbar!(sess, first(grid))
         best = sess.best
+        
         if isnothing(grid_itr)
             grid_itr = if isempty(sess.results)
                 collect(grid)
@@ -267,19 +343,31 @@ function gridsearch(
         if random_search
             shuffle!(grid_itr)
         end
+        
+        # Set total for ETA calculation (each parameter combination runs 'splits' times)
+        eta_total[] = length(grid_itr) * splits
+        eta_completed[] = 0
+        
         from[] = nrow(sess.results) + 1
         saved_last = Ref(now())
         grid_lock = ReentrantLock()
         with_logger(logger) do
             @withpbar! grid begin
                 if !isempty(sess.results)
-                    @pbupdate! sum(divrem(nrow(sess.results), splits))
+                    completed_combinations = sum(divrem(nrow(sess.results), splits))
+                    @pbupdate! completed_combinations
+                    eta_completed[] = completed_combinations * splits
+                    # Force ETA column update by triggering a render
+                    if !isnothing(pbar[]) && pbar[].running
+                        dorender(pbar[])
+                    end
                 end
                 function runner(cell)
                     @lock grid_lock Random.seed!(seed)
                     obj = opt_func(cell)
                     @lock grid_lock begin
                         current_params[] = cell
+                        eta_completed[] += splits
                         @pbupdate!
                         if obj > best[]
                             best[] = obj
@@ -526,4 +614,160 @@ function slidesearch(s::Strategy; multiplier=1)
     results
 end
 
-export gridsearch, progsearch, slidesearch
+@doc """ Selects the most different parameter combinations from optimization results.
+
+$(TYPEDSIGNATURES)
+
+- `sess`: The optimization session containing results
+- `n`: Number of parameter combinations to select (default: 10)
+- `metric`: Distance metric to use (:euclidean, :manhattan, :cosine, default: :euclidean)
+
+Returns a DataFrame with the most diverse parameter combinations.
+"""
+function select_diverse_params(sess::OptSession; n::Int=10, metric::Symbol=:euclidean)
+    if nrow(sess.results) <= n
+        return sess.results
+    end
+    
+    # Extract parameter columns
+    param_cols = [keys(sess.params)...]
+    param_data = Matrix{Float64}(undef, nrow(sess.results), length(param_cols))
+    
+    # Convert parameters to numeric matrix
+    for (i, col) in enumerate(param_cols)
+        for (j, row) in enumerate(eachrow(sess.results))
+            val = getproperty(row, col)
+            # Handle different parameter types
+            if val isa Period
+                param_data[j, i] = value(val)  # Convert to numeric value
+            elseif val isa AbstractFloat || val isa Integer
+                param_data[j, i] = Float64(val)
+            else
+                param_data[j, i] = 0.0  # Default for unsupported types
+            end
+        end
+    end
+    
+    # Normalize parameters to [0,1] range for fair comparison
+    for i in 1:size(param_data, 2)
+        col_min, col_max = extrema(param_data[:, i])
+        if col_max > col_min
+            param_data[:, i] = (param_data[:, i] .- col_min) ./ (col_max - col_min)
+        end
+    end
+    
+    # Calculate distance matrix
+    distances = Matrix{Float64}(undef, nrow(sess.results), nrow(sess.results))
+    for i in 1:nrow(sess.results)
+        for j in 1:nrow(sess.results)
+            if i == j
+                distances[i, j] = 0.0
+            else
+                if metric == :euclidean
+                    distances[i, j] = sqrt(sum((param_data[i, :] .- param_data[j, :]).^2))
+                elseif metric == :manhattan
+                    distances[i, j] = sum(abs.(param_data[i, :] .- param_data[j, :]))
+                elseif metric == :cosine
+                    dot_prod = sum(param_data[i, :] .* param_data[j, :])
+                    norm_i = sqrt(sum(param_data[i, :].^2))
+                    norm_j = sqrt(sum(param_data[j, :].^2))
+                    if norm_i > 0 && norm_j > 0
+                        distances[i, j] = 1 - dot_prod / (norm_i * norm_j)
+                    else
+                        distances[i, j] = 1.0
+                    end
+                else
+                    error("Unknown metric: $metric")
+                end
+            end
+        end
+    end
+    
+    # Greedy selection of most diverse points
+    selected = Int[]
+    remaining = collect(1:nrow(sess.results))
+    
+    # Start with the point that has maximum average distance to all others
+    avg_distances = vec(mean(distances, dims=2))
+    push!(selected, argmax(avg_distances))
+    deleteat!(remaining, findfirst(isequal(selected[1]), remaining))
+    
+    # Iteratively select points that maximize minimum distance to already selected points
+    for _ in 2:n
+        if isempty(remaining)
+            break
+        end
+        
+        min_distances = Float64[]
+        for idx in remaining
+            min_dist = minimum(distances[idx, selected])
+            push!(min_distances, min_dist)
+        end
+        
+        next_idx = remaining[argmax(min_distances)]
+        push!(selected, next_idx)
+        deleteat!(remaining, findfirst(isequal(next_idx), remaining))
+    end
+    
+    return sess.results[selected, :]
+end
+
+@doc """ Selects parameter combinations with the best performance.
+
+$(TYPEDSIGNATURES)
+
+- `sess`: The optimization session containing results
+- `n`: Number of parameter combinations to select (default: 10)
+- `sort_by`: Column to sort by (:pnl, :cash, :obj, default: :pnl)
+- `ascending`: Whether to sort in ascending order (default: false for best performance)
+
+Returns a DataFrame with the best performing parameter combinations.
+"""
+function select_best_params(sess::OptSession; n::Int=10, sort_by::Symbol=:pnl, ascending::Bool=false)
+    if nrow(sess.results) <= n
+        return sort(sess.results, [sort_by], rev=!ascending)
+    end
+    
+    sorted_results = sort(sess.results, [sort_by], rev=!ascending)
+    return sorted_results[1:n, :]
+end
+
+@doc """ Selects parameter combinations that are both diverse and performant.
+
+$(TYPEDSIGNATURES)
+
+- `sess`: The optimization session containing results
+- `n`: Number of parameter combinations to select (default: 10)
+- `diversity_weight`: Weight for diversity vs performance (0.0 = only performance, 1.0 = only diversity, default: 0.5)
+- `sort_by`: Column to sort by for performance (:pnl, :cash, :obj, default: :pnl)
+
+Returns a DataFrame with balanced diverse and performant parameter combinations.
+"""
+function select_balanced_params(sess::OptSession; n::Int=10, diversity_weight::Float64=0.5, sort_by::Symbol=:pnl)
+    if nrow(sess.results) <= n
+        return sess.results
+    end
+    
+    # Get diverse and best parameters
+    diverse_params = select_diverse_params(sess; n=div(n, 2))
+    best_params = select_best_params(sess; n=div(n, 2), sort_by)
+    
+    # Combine and remove duplicates
+    combined = vcat(diverse_params, best_params)
+    unique_indices = unique(i -> hash(combined[i, :]), 1:nrow(combined))
+    result = combined[unique_indices, :]
+    
+    # If we have fewer than n unique combinations, add more from the original
+    if nrow(result) < n
+        remaining = setdiff(1:nrow(sess.results), findall(in(sess.results[unique_indices, :]), eachrow(sess.results)))
+        if !isempty(remaining)
+            additional_needed = n - nrow(result)
+            additional = sess.results[remaining[1:min(additional_needed, length(remaining))], :]
+            result = vcat(result, additional)
+        end
+    end
+    
+    return result[1:min(n, nrow(result)), :]
+end
+
+export gridsearch, progsearch, slidesearch, select_diverse_params, select_best_params, select_balanced_params
