@@ -56,8 +56,11 @@ julia> t - tf"1m".period
 To avoid this mistake, use the function `available(::TimeFrame, ::DateTime)`, instead of apply.
 """
 function start!(
-    s::Strategy{Sim}, ctx::Context; trim_universe=false, doreset=true, resetctx=true, show_progress=false
+    s::Strategy{Sim}, ctx::Context; trim_universe=false, doreset=true, resetctx=true, show_progress=false, use_gpu=false
 )
+    if use_gpu
+        return start_gpu!(s, ctx; doreset=doreset, resetctx=resetctx, show_progress=show_progress)
+    end
     # ensure that universe data start at the same time
     @ifdebug _resetglobals!(s)
     if trim_universe
@@ -222,7 +225,7 @@ implicit full data transfers) is crucial for overall GPU backtesting performance
 are marked with `// TODO:` for further investigation.
 """
 function start_gpu!(
-    s::Strategy{Sim}, ctx::Context; doreset=true, resetctx=true, show_progress=false
+    s::Strategy{Sim}, ctx::Context; trim_universe=false, doreset=true, resetctx=true, show_progress=false
 )
     # Check for oneAPI functionality. If not available, delegate to CPU execution.
     if !isdefined(Main, :oneAPI) || !Main.oneAPI.functional()
@@ -334,7 +337,10 @@ If `count` is greater than 0, it sets the start and end timestamps based on the 
 Otherwise, it sets the start and end timestamps based on the last timestamp in the strategy's universe.
 
 """
-function start_gpu!(s::Strategy{Sim}, count::Integer; tf=s.timeframe, kwargs...)
+function start_gpu!(s::Strategy{Sim}, count::Integer; tf=s.timeframe, use_gpu=false, kwargs...)
+    if !use_gpu
+        return start!(s, count; tf=tf, kwargs...)
+    end
     """
     Helper function to retrieve a single timestamp (first or last) from an asset instance's OHLCV data.
     This function is GPU-aware: if the timestamp array is a `oneAPI.oneArray`, it efficiently copies
@@ -389,7 +395,10 @@ $(TYPEDSIGNATURES)
 This function initializes a simulation context with the given timeframe and date range, then starts the strategy with this context.
 
 """
-function start_gpu!(s::Strategy{Sim}, from::DateTime, to::DateTime=_todate_gpu_aware(s); kwargs...)
+function start_gpu!(s::Strategy{Sim}, from::DateTime, to::DateTime=_todate_gpu_aware(s); use_gpu=false, kwargs...)
+    if !use_gpu
+        return start!(s, from, to; kwargs...)
+    end
     ctx = Context(Sim(), s.timeframe, from, to)
     start_gpu!(s, ctx; kwargs...) # Delegates to the main start_gpu! which has the GPU check
 end

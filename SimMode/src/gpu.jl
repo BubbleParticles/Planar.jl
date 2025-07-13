@@ -13,42 +13,6 @@ using Pbar.Term.Progress: Progress
 
 import .Misc: start!, stop!
 
-# Helper function to check oneAPI availability and functionality
-function is_oneapi_functional()
-    if !isdefined(Main, :oneAPI)
-        return false
-    end
-    oneAPI_module = getfield(Main, :oneAPI)
-    # Check for core oneAPI components needed by this module
-    if !isdefined(oneAPI_module, :functional) ||
-       !isdefined(oneAPI_module, :oneArray) ||
-       !isdefined(oneAPI_module, :oneDeviceArray) || # Used in kernels
-       !isdefined(oneAPI_module, :Array) ||
-       !isdefined(oneAPI_module, Symbol("@oneapi"))
-        return false
-    end
-    return oneAPI_module.functional()
-end
-
-# Helper function to ensure a value is a CPU scalar of a specific type
-function ensure_cpu_scalar(val, target_type::Type{T}=DFT) where T
-    if is_oneapi_functional()
-        oneAPI_module = getfield(Main, :oneAPI)
-        if isa(val, oneAPI_module.oneArray)
-            # Assuming val is a 1-element oneArray if it's a scalar from GPU
-            return convert(T, oneAPI_module.Array(val)[])
-        end
-    end
-    return convert(T, val) # Assume it's already a CPU scalar or other compatible type
-end
-
-_lastupdate!(s, date) = s.attrs[:sim_last_orders_update] = date
-_lastupdate(s) = s.attrs[:sim_last_orders_update]
-function _check_update_date(s, date)
-    _lastupdate(s) >= date &&
-        error("Tried to update orders multiple times on the same date.")
-end
-
 using .Executors.Instances: leverage!, positionside, leverage
 using .Executors: hasorders
 using .Executors.OrderTypes: postoside
@@ -103,7 +67,6 @@ end
 positions_gpu!(args...; kwargs...) = nothing
 
 function update_gpu!(s::Strategy{Sim}, date, ::UpdateOrders)
-    _check_update_date(s, date)
     positions_gpu!(s, date)
     for (ai, ords) in s.sellorders
         @ifdebug prev_sell_price = 0.0
@@ -125,11 +88,9 @@ function update_gpu!(s::Strategy{Sim}, date, ::UpdateOrders)
             @ifdebug prev_buy_price = pt.price
         end
     end
-    _lastupdate!(s, date)
 end
 
 function update_gpu!(s::Strategy{Sim}, date, ::UpdateOrdersShuffled)
-    _check_update_date(s, date)
     positions_gpu!(s, date)
     let buys = orders(s, Buy), sells = orders(s, Sell)
         allorders = Tuple{eltype(s.holdings),Union{valtype(buys),valtype(sells)}}[]
@@ -138,7 +99,6 @@ function update_gpu!(s::Strategy{Sim}, date, ::UpdateOrdersShuffled)
         shuffle!(allorders)
         _doall!(s, allorders, date)
     end
-    _lastupdate!(s, date)
 end
 
 function strategy_call_kernel(s, universe, current_time, ctx)
