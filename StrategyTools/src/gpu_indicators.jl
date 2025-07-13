@@ -1,36 +1,22 @@
 # gpu_indicators.jl
 
 import OnlineTechnicalIndicators as oti
-# Assuming oneAPI might be available in Main, consistent with previous steps.
-# For robust package development, oneAPI should be a proper dependency.
+using oneAPI
 
 # Define DFT (Default Float Type) - adjust as needed (e.g., Float32 for more GPU benefit)
 const DFT = Float64 # Or Float32
 
 # Helper function to check oneAPI availability and functionality
 function is_oneapi_functional()
-    if !isdefined(Main, :oneAPI)
-        return false
-    end
-    oneAPI_module = getfield(Main, :oneAPI)
-    # Check for core oneAPI components needed by this module
-    if !isdefined(oneAPI_module, :functional) ||
-       !isdefined(oneAPI_module, :oneArray) ||
-       !isdefined(oneAPI_module, :oneDeviceArray) || # Used in kernels
-       !isdefined(oneAPI_module, :Array) ||
-       !isdefined(oneAPI_module, Symbol("@oneapi"))
-        return false
-    end
-    return oneAPI_module.functional()
+    return oneAPI.functional()
 end
 
 # Helper function to ensure a value is a CPU scalar of a specific type
 function ensure_cpu_scalar(val, target_type::Type{T}=DFT) where T
     if is_oneapi_functional()
-        oneAPI_module = getfield(Main, :oneAPI)
-        if isa(val, oneAPI_module.oneArray)
+        if isa(val, oneAPI.oneArray)
             # Assuming val is a 1-element oneArray if it's a scalar from GPU
-            return convert(T, oneAPI_module.Array(val)[])
+            return convert(T, oneAPI.Array(val)[])
         end
     end
     return convert(T, val) # Assume it's already a CPU scalar or other compatible type
@@ -65,9 +51,7 @@ function _fit_gpu_generic!(indicator::T, cpu_new_value::DFT) where {T <: oti.Onl
 
     buffer_accessor = indicator.input_values # This is a CircularBuffer
 
-    if is_oneapi_functional() && isa(buffer_accessor.buffer, getfield(Main, :oneAPI).oneArray)
-        oneAPI_module = getfield(Main, :oneAPI)
-
+    if is_oneapi_functional() && isa(buffer_accessor.buffer, oneAPI.oneArray)
         # Ensure the buffer on GPU is of the correct DFT if conversions are critical
         # For now, assume eltype(buffer_accessor.buffer) is compatible with DFT or handled by oti.fit!
         original_gpu_buffer = buffer_accessor.buffer
@@ -75,7 +59,7 @@ function _fit_gpu_generic!(indicator::T, cpu_new_value::DFT) where {T <: oti.Onl
         # though oti.fit! should handle standard numeric types.
         # Here, cpu_new_value is already DFT.
 
-        cpu_buffer_for_fit = oneAPI_module.Array(original_gpu_buffer)
+        cpu_buffer_for_fit = oneAPI.Array(original_gpu_buffer)
 
         # Temporarily replace GPU buffer with CPU buffer for oti.fit!
         # This is a critical section; ensure it's robust (e.g., try-finally)
@@ -89,9 +73,9 @@ function _fit_gpu_generic!(indicator::T, cpu_new_value::DFT) where {T <: oti.Onl
             # The buffer on CPU (buffer_accessor.buffer) might have changed size or type
             # if oti.fit! reallocates. Be mindful of this.
             # For safety, always create a new oneArray from the (potentially modified) cpu buffer.
-            buffer_accessor.buffer = oneAPI_module.oneArray(buffer_accessor.buffer)
+            buffer_accessor.buffer = oneAPI.oneArray(buffer_accessor.buffer)
             # Type assertion might be needed if OTI could change buffer's eltype fundamentally
-            # buffer_accessor.buffer = convert(original_buffer_type, oneAPI_module.oneArray(buffer_accessor.buffer))
+            # buffer_accessor.buffer = convert(original_buffer_type, oneAPI.oneArray(buffer_accessor.buffer))
         end
     else
         oti.fit!(indicator, cpu_new_value) # Fit with CPU buffer and DFT new value
@@ -131,6 +115,16 @@ function sma_update_kernel!(
     return nothing
 end
 
+function sma_update_sum_kernel!(
+    sum_out::oneAPI.oneDeviceArray{DFT, 1},
+    current_sum::DFT,
+    new_val::DFT,
+    old_val::DFT
+)
+    sum_out[1] = current_sum + new_val - old_val
+    return nothing
+end
+
 @doc """
     fit_gpu!(indicator::oti.SMA, new_value)
 
@@ -155,7 +149,6 @@ If the GPU path is not applicable, it falls back to `_fit_gpu_generic!`.
 """
 function fit_gpu!(indicator::oti.SMA, new_value_any_type) # Accept any numeric type for new_value
     cpu_new_value = ensure_cpu_scalar(new_value_any_type, DFT) # Convert to DFT for calculations
-    oneAPI_module = is_oneapi_functional() ? getfield(Main, :oneAPI) : nothing
 
     # Access CircularBuffer; OTI's SMA typically uses this.
     if !hasproperty(indicator, :input_values) || !hasproperty(indicator.input_values, :buffer) || !hasproperty(indicator, :sum)
@@ -165,8 +158,8 @@ function fit_gpu!(indicator::oti.SMA, new_value_any_type) # Accept any numeric t
 
     buffer_accessor = indicator.input_values
 
-    can_use_gpu_path = oneAPI_module !== nothing &&
-                       isa(buffer_accessor.buffer, oneAPI_module.oneArray)
+    can_use_gpu_path = is_oneapi_functional() &&
+                       isa(buffer_accessor.buffer, oneAPI.oneArray)
                        # `hasproperty(indicator, :sum)` checked above
 
     if can_use_gpu_path
@@ -179,9 +172,9 @@ function fit_gpu!(indicator::oti.SMA, new_value_any_type) # Accept any numeric t
         cb_isfull = buffer_accessor.isfull
         cb_period = indicator.period
 
-        old_val_gpu = oneAPI_module.oneArray{T_buffer_eltype}(undef, 1)
+        old_val_gpu = oneAPI.oneArray{T_buffer_eltype}(undef, 1)
 
-        oneAPI_module.@oneapi items=1 groups=1 sma_update_kernel!(
+        @oneapi items=1 groups=1 sma_update_kernel!(
             gpu_buffer,            # Device array
             cpu_new_value,         # New value (will be converted to T_buffer_eltype by kernel)
             old_val_gpu,           # Output for old value
@@ -191,15 +184,20 @@ function fit_gpu!(indicator::oti.SMA, new_value_any_type) # Accept any numeric t
 
         # old_val_cpu must be of the same type as elements in indicator.sum for correct arithmetic.
         # Assuming indicator.sum is DFT, or T_buffer_eltype can be safely converted to DFT.
-        old_val_cpu = convert(DFT, oneAPI_module.Array(old_val_gpu)[1])
+        old_val_cpu = convert(DFT, oneAPI.Array(old_val_gpu)[1])
 
         # Update sum and value on CPU.
         # Ensure cpu_new_value (already DFT) and old_val_cpu (converted to DFT) are used.
-        if cb_isfull
-            indicator.sum = indicator.sum - old_val_cpu + cpu_new_value
-        else
-            indicator.sum = indicator.sum + cpu_new_value
+        if !(indicator.sum isa oneAPI.oneArray)
+            indicator.sum = oneAPI.oneArray([indicator.sum])
         end
+
+        @oneapi items=1 groups=1 sma_update_sum_kernel!(
+            indicator.sum,
+            indicator.sum[1],
+            cpu_new_value,
+            old_val_cpu
+        )
 
         # Update CircularBuffer state on CPU side
         buffer_accessor.idx = (cb_idx == cb_period) ? 1 : cb_idx + 1
@@ -212,7 +210,7 @@ function fit_gpu!(indicator::oti.SMA, new_value_any_type) # Accept any numeric t
 
         # Update indicator value, ensuring division is with DFT types if sum and length are compatible
         if buffer_accessor.length > 0
-            indicator.value = DFT(indicator.sum / buffer_accessor.length)
+            indicator.value = DFT(oneAPI.Array(indicator.sum)[1] / buffer_accessor.length)
         else
             indicator.value = zero(DFT) # Or appropriate initial value
         end
@@ -311,7 +309,6 @@ If GPU is not active or during warm-up, it relies on `_fit_gpu_generic!`.
 """
 function fit_gpu!(indicator::oti.EMA, new_value_any_type)
     cpu_current_price = ensure_cpu_scalar(new_value_any_type, DFT)
-    oneAPI_module = is_oneapi_functional() ? getfield(Main, :oneAPI) : nothing
 
     # Properties needed for EMA logic
     if !hasproperty(indicator, :value) || !hasproperty(indicator, :alpha) ||
@@ -329,7 +326,7 @@ function fit_gpu!(indicator::oti.EMA, new_value_any_type)
     # 1. Check warmup: if indicator.n < indicator.period, use _fit_gpu_generic! and return.
     # 2. If past warmup: then we can take over.
 
-    if indicator.n < indicator.period || oneAPI_module === nothing
+    if indicator.n < indicator.period || !is_oneapi_functional()
         # During warm-up or if no GPU, use OTI's standard logic via _fit_gpu_generic!
         # This will correctly update indicator.n, indicator.value, etc.
         return _fit_gpu_generic!(indicator, cpu_current_price)
@@ -350,9 +347,9 @@ function fit_gpu!(indicator::oti.EMA, new_value_any_type)
 
         # Prepare GPU scalar for the output.
         # We will write the new EMA to this, then copy it to indicator.value.
-        new_ema_gpu_scalar = oneAPI_module.oneArray{DFT}(undef, 1)
+        new_ema_gpu_scalar = oneAPI.oneArray{DFT}(undef, 1)
 
-        oneAPI_module.@oneapi items=1 groups=1 ema_update_kernel!(
+        @oneapi items=1 groups=1 ema_update_kernel!(
             new_ema_gpu_scalar,
             cpu_current_price, # Current price P_t
             prev_ema_val_cpu,  # Previous EMA, EMA_{t-1}
@@ -363,8 +360,10 @@ function fit_gpu!(indicator::oti.EMA, new_value_any_type)
         # 1. The new EMA value is on new_ema_gpu_scalar.
         #    We need to store this back into indicator.value.
         #    If indicator.value is to be kept on GPU, it should be a oneArray scalar.
-        #    For now, let's assume indicator.value is updated with the CPU value from GPU.
-        indicator.value = oneAPI_module.Array(new_ema_gpu_scalar)[1]
+        if !(indicator.value isa oneAPI.oneArray)
+            indicator.value = oneAPI.oneArray([indicator.value])
+        end
+        copyto!(indicator.value, new_ema_gpu_scalar)
 
         # 2. Increment `n` (number of observations seen)
         #    OTI's `fit!` normally does this. We must do it manually here.
@@ -431,13 +430,12 @@ If GPU is not active or during warm-up, it relies on `_fit_gpu_generic!`.
 """
 function fit_gpu!(indicator::oti.RSI, new_value_any_type)
     cpu_current_price = ensure_cpu_scalar(new_value_any_type, DFT)
-    oneAPI_module = is_oneapi_functional() ? getfield(Main, :oneAPI) : nothing
 
     if !hasproperty(indicator, :n) || !hasproperty(indicator, :period) || !hasproperty(indicator, :avg_gain) || !hasproperty(indicator, :avg_loss) || !hasproperty(indicator, :last_value)
         return _fit_gpu_generic!(indicator, cpu_current_price)
     end
 
-    if indicator.n < indicator.period || oneAPI_module === nothing
+    if indicator.n < indicator.period || !is_oneapi_functional()
         return _fit_gpu_generic!(indicator, cpu_current_price)
     else
         # GPU Path
@@ -453,15 +451,18 @@ function fit_gpu!(indicator::oti.RSI, new_value_any_type)
         avg_gain_val = ensure_cpu_scalar(oti.value(indicator.avg_gain), DFT)
         avg_loss_val = ensure_cpu_scalar(oti.value(indicator.avg_loss), DFT)
 
-        new_rsi_gpu_scalar = oneAPI_module.oneArray{DFT}(undef, 1)
+        new_rsi_gpu_scalar = oneAPI.oneArray{DFT}(undef, 1)
 
-        oneAPI_module.@oneapi items=1 groups=1 rsi_update_kernel!(
+        @oneapi items=1 groups=1 rsi_update_kernel!(
             new_rsi_gpu_scalar,
             avg_gain_val,
             avg_loss_val
         )
 
-        indicator.value = oneAPI_module.Array(new_rsi_gpu_scalar)[1]
+        if !(indicator.value isa oneAPI.oneArray)
+            indicator.value = oneAPI.oneArray([indicator.value])
+        end
+        copyto!(indicator.value, new_rsi_gpu_scalar)
         indicator.n += 1
         indicator.last_value = cpu_current_price
     end

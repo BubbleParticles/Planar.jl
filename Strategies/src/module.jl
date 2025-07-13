@@ -87,6 +87,10 @@ struct Strategy{X<:ExecMode,N,E<:ExchangeID,M<:MarginMode,C} <: AbstractStrategy
     universe::AssetCollection
     "A lock for thread safety"
     lock::SafeLock
+    "Cached oneAPI array for holdings"
+    holdings_oneapi::Union{Some{oneAPI.oneArray},Nothing}
+    "Cached oneAPI array for universe"
+    universe_oneapi::Union{Some{oneAPI.oneArray},Nothing}
     @doc """ Initializes a new `Strategy` object
 
     $(TYPEDSIGNATURES)
@@ -135,6 +139,8 @@ struct Strategy{X<:ExecMode,N,E<:ExchangeID,M<:MarginMode,C} <: AbstractStrategy
             holdings,
             uni,
             SafeLock(),
+            nothing,
+            nothing
         )
     end
 end

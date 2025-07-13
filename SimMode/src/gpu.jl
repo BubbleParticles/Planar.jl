@@ -45,7 +45,10 @@ end
 function positions_gpu!(s::IsolatedStrategy{<:Union{Paper,Sim}}, date::DateTime)
     @ifdebug _checkorders(s)
 
-    holdings_oneapi = oneAPI.oneArray(s.holdings)
+    if isnothing(s.holdings_oneapi)
+        s.holdings_oneapi = Some(oneAPI.oneArray(s.holdings))
+    end
+    holdings_oneapi = something(s.holdings_oneapi)
 
     oneAPI.@oneapi items=length(holdings_oneapi) groups=256 positions_kernel(s, holdings_oneapi, date)
 
@@ -108,6 +111,9 @@ function strategy_call_kernel(s, universe, current_time, ctx)
 end
 
 function call_gpu!(s::Strategy, current_time::DateTime, ctx)
-    universe_oneapi = oneAPI.oneArray(s.universe)
+    if isnothing(s.universe_oneapi)
+        s.universe_oneapi = Some(oneAPI.oneArray(s.universe))
+    end
+    universe_oneapi = something(s.universe_oneapi)
     oneAPI.@oneapi items=length(universe_oneapi) groups=256 strategy_call_kernel(s, universe_oneapi, current_time, ctx)
 end
