@@ -222,20 +222,17 @@ implicit full data transfers) is crucial for overall GPU backtesting performance
 are marked with `// TODO:` for further investigation.
 """
 function start_gpu!(
-    s::Strategy{Sim}, ctx::Context; trim_universe=false, doreset=true, resetctx=true, show_progress=false
+    s::Strategy{Sim}, ctx::Context; doreset=true, resetctx=true, show_progress=false
 )
     # Check for oneAPI functionality. If not available, delegate to CPU execution.
     if !isdefined(Main, :oneAPI) || !Main.oneAPI.functional()
         @warn "oneAPI.jl is not available or no functional GPU found. Falling back to CPU execution."
-        return Main.start!(s, ctx; trim_universe, doreset, resetctx, show_progress) # Ensure Main.start! is the CPU version
+        return Main.start!(s, ctx; doreset, resetctx, show_progress) # Ensure Main.start! is the CPU version
     end
 
     # Ensure that universe data start at the same time
     @ifdebug _resetglobals!(s)
     if trim_universe
-        # // TODO: Ensure st.coll.flatten, check_alignment, and trim! are GPU-aware.
-        # If st.universe(s) contains oneAPI.oneArrays, these functions must operate
-        # efficiently on GPU data to avoid becoming a bottleneck.
         let data = st.coll.flatten(st.universe(s))
             !check_alignment(data) && trim!(data)
         end
@@ -284,8 +281,8 @@ function start_gpu!(
                     # array operations via oneAPI.jl, or other GPU libraries).
                     # Failure to do so will lead to significant performance degradation due to
                     # implicit data transfers between CPU and GPU on each iteration.
-                    update!(s, date_val, update_mode) # Must be GPU-aware if s or its data are on GPU
-                    call!(s, date_val, ctx)          # Must be GPU-aware if s or its data are on GPU
+                    update_gpu!(s, date_val, update_mode) # Must be GPU-aware if s or its data are on GPU
+                    call_gpu!(s, date_val, ctx)          # Must be GPU-aware if s or its data are on GPU
 
                     # Update stats for progress bar - these need to be CPU values
                     trades_val = trades_count(s) # trades_count might return oneArray scalar
@@ -308,8 +305,8 @@ function start_gpu!(
                     # See detailed comment in the show_progress=true block above.
                     # These functions must be GPU-aware to prevent performance bottlenecks
                     # when operating with oneAPI.oneArray data within the strategy `s`.
-                update!(s, date_val, update_mode) # Must be GPU-aware
-                call!(s, date_val, ctx)          # Must be GPU-aware
+                update_gpu!(s, date_val, update_mode) # Must be GPU-aware
+                call_gpu!(s, date_val, ctx)          # Must be GPU-aware
                 @debug "sim: iter" s.cash ltxzero(s.cash) isempty(s.holdings) orderscount(s)
             end
         end

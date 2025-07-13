@@ -38,4 +38,6 @@ include("call.jl")
 include("s_call.jl")
 @ifdebug include("debug.jl")
 
-export start!
+include("gpu.jl")
+
+export start!, start_gpu!
