@@ -9,6 +9,18 @@ Main features:
 - Support for precompilation and dynamic loading
 - Extensible design for custom optimization algorithms
 
+# Comparison of Search Methods
+
+| Function      | Data Segmentation         | Parameter Selection         | Main Use Case                                  |
+|---------------|--------------------------|----------------------------|------------------------------------------------|
+| progsearch    | Segments by offset       | Filters after each round   | Robustness across data segments                |
+| broadsearch   | Slices by fixed size     | Filters after each slice   | Adapting to changing regimes over time         |
+| slidesearch   | Slides by timeframe      | No parameter search        | Granular, rolling/walk-forward backtesting     |
+
+- `progsearch`: Progressive grid search with filtering and offsetting for robustness.
+- `broadsearch`: Sequential grid search over contiguous slices, filtering at each step.
+- `slidesearch`: Sliding window backtest, moving by the smallest timeframe increment.
+
 # User-facing Optimization/Search Functions
 
 - `gridsearch(s::Strategy; ...)`: Grid search over parameter combinations for a strategy.

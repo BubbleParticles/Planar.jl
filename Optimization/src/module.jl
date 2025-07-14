@@ -739,3 +739,4 @@ export OptSession, extbayes!
 
 include("bbopt.jl")
 include("grid.jl")
+include("params_selection.jl")
