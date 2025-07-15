@@ -488,7 +488,7 @@ end
 
 $(TYPEDSIGNATURES)
 
-- `slice_size`: Size of each slice in terms of strategy timeframe periods (default: 10000)
+- `slice_size`: Size of each slice in terms of strategy timeframe periods. If a float between 0 and 1, it is interpreted as a fraction of the total steps (default: 0.2, i.e., 1/5 of the total steps)
 - `sort_by`: Column to sort results by (:pnl or :obj, default: :pnl)
 
 The search starts with the first slice of the context and at each iteration:
@@ -498,7 +498,7 @@ The search starts with the first slice of the context and at each iteration:
 """
 function broadsearch(
     s::Strategy;
-    slice_size=10000,
+    slice_size=0.2,  # Default to 1/5 of total_steps
     sort_by=:pnl,
     kwargs...
 )
@@ -511,30 +511,35 @@ function broadsearch(
     total_steps = trunc(Int, (ctx.range.stop - ctx.range.start) / ctx_step)
     current_step = 0
 
+    # Always interpret the default (0.2) as a fraction, but if the user passes >=1, use as absolute
+    actual_slice_size =
+        ((isa(slice_size, Number) && 0 < slice_size < 1)) ?
+            max(1, trunc(Int, total_steps * slice_size)) :
+            slice_size
+
     local sess = Ref{OptSession}()
     local results::DataFrame = DataFrame()
     
     # Create initial slice context
     slice_start = ctx.range.start
-    slice_stop = min(slice_start + slice_size * ctx_step, ctx.range.stop)
+    slice_stop = min(slice_start + actual_slice_size * ctx_step, ctx.range.stop)
     slice_ctx = Context(Sim(), DateRange(slice_start, slice_stop, ctx_step))
     
     # Initialize session with first slice
     
     # Run initial grid search with all parameters
     sess[] = gridsearch(s; ctx=slice_ctx, splits=1, fw_kwargs...)
-    return sess[]
     # Get current results and apply filtering
     results = filter_results(s, sess[])
     
     # Move to next slice
-    current_step += slice_size
+    current_step += actual_slice_size
 
     try
         while current_step < total_steps
             # Calculate slice range
             slice_start = ctx.range.start + current_step * ctx_step 
-            slice_stop = min(slice_start + slice_size * ctx_step, ctx.range.stop)
+            slice_stop = min(slice_start + actual_slice_size * ctx_step, ctx.range.stop)
             
             # Create a new strategy with the slice context
             slice_s = similar(s; mode=Sim())
@@ -566,7 +571,7 @@ function broadsearch(
             end
             
             # Move to next slice
-            current_step += slice_size
+            current_step += actual_slice_size
         end
     catch e
         @error "Error during broad search" exception=(e, catch_backtrace())
@@ -587,11 +592,11 @@ Until a full range of timeframes is reached between the strategy timeframe and b
 function slidesearch(s::Strategy; multiplier=nothing)
     ctx, _, _ = call!(s, OptSetup())
     inc = period(s.timeframe)
-    step_mult = trunc(Int, ctx.range.step / inc)
-    if step_mult == 1
+    step_ratio = max(1, trunc(Int, ctx.range.step / inc))
+    if step_ratio == 1 && isnothing(multiplier)
         multiplier = 10
     end
-    steps = multiplier * max(1, trunc(Int, ctx.range.step / period(s.timeframe)))
+    steps = multiplier * step_ratio
     wp = call!(s, WarmupPeriod())
     results = DataFrame()
     initial_cash = s.initial_cash
@@ -605,7 +610,7 @@ function slidesearch(s::Strategy; multiplier=nothing)
             let id = Threads.threadid(), (l, s) = s_clones[id], ctx = ctx_clones[id]
                 lock(l) do
                     st.reset!(s, true)
-                    current!(ctx.range, ctx.range.start + wp + n * inc)
+                    current!(ctx.range, ctx.range.start + n * inc)
                     start!(s, ctx; doreset=false)
                 end
                 lock(rlock) do
