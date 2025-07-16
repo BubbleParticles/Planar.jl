@@ -19,6 +19,7 @@ using Statistics: mean
 
 using OnlineTechnicalIndicators: OnlineTechnicalIndicators as oti
 
+include("oti.jl")
 include("utils.jl")
 include("extrema.jl")
 include("orders.jl")
@@ -28,4 +29,3 @@ include("ohlcv.jl")
 include("warmup.jl")
 include("checks.jl")
 include("cross.jl")
-include("oti.jl")
