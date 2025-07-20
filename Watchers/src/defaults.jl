@@ -122,7 +122,7 @@ $(TYPEDSIGNATURES)
 
 The function takes a watcher and optional dataview and serialized arguments. It sets the view, last_processed, checks, and serialized attributes of the watcher. If a logfile attribute is present, it writes an empty string to the logfile.
 """
-function default_init(w::Watcher, dataview=default_view(w, empty_ohlcv), serialized=true)
+function default_init(w::Watcher, dataview=default_view(w, Data.empty_ohlcv), serialized=true)
     a = attrs(w)
     a[:view] = dataview
     a[:last_processed] = nothing

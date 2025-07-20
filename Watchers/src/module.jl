@@ -200,7 +200,7 @@ function _watcher(
     flush_interval=Second(360),
     buffer_capacity=100,
     view_capacity=1000,
-    attrs=Dict(),
+    attrs=Dict{Symbol,Any}(),
 )
     flush && _check_flush_interval(flush_interval, fetch_interval, buffer_capacity)
     @debug "new watcher: $name"
@@ -274,9 +274,7 @@ export pushnew!, pushstart!, start!, stop!, isstarted, isstopped, process!, load
 include("apis/coinmarketcap.jl")
 include("apis/coingecko.jl")
 include("apis/coinpaprika.jl")
-include("impls/average_ohlcv_watcher.jl")
 include("impls/impls.jl")
 
 using .WatchersImpls: iswatchfunc
-using .AverageOHLCVWatcherImpl: average_ohlcv_watcher
 export iswatchfunc

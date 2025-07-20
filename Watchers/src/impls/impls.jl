@@ -53,5 +53,6 @@ include("ccxt_ohlcv_trades.jl")
 include("ccxt_ohlcv_tickers.jl")
 include("ccxt_ohlcv_candles.jl")
 include("ccxt_orderbook.jl")
+include("ccxt_average_ohlcv_watcher.jl")
 
 end
