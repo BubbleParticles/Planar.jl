@@ -164,3 +164,61 @@ macro resample(params, mkts, timeframe, args...)
 end
 
 export resample, @resample
+
+"""
+Upsample OHLCV DataFrame from a larger timeframe to a smaller one.
+
+Arguments:
+- df: DataFrame with OHLCV columns and a regular, contiguous timeframe (large_tf)
+- large_tf: TimeFrame of the input DataFrame
+- small_tf: TimeFrame to upsample to (must be a divisor of large_tf)
+
+Returns:
+- DataFrame with OHLCV columns at the smaller timeframe, where each large candle is expanded into N small candles (N = large_tf.period ÷ small_tf.period),
+  with open/high/low/close flat-filled, and volume divided equally.
+"""
+function upsample(df::AbstractDataFrame, large_tf::TimeFrame, small_tf::TimeFrame)
+    @assert timefloat(large_tf.period) > timefloat(small_tf.period) "upsample: large_tf must be greater than small_tf"
+    @assert timefloat(large_tf.period) % timefloat(small_tf.period) == 0 "upsample: large_tf ($(large_tf.period)) must be a multiple of small_tf ($(small_tf.period)))"
+    n = Int(timefloat(large_tf.period) ÷ timefloat(small_tf.period))
+    n_large = nrow(df)
+    n_small = n_large * n
+
+    ts = Vector{DateTime}(undef, n_small)
+    open = Vector{Float64}(undef, n_small)
+    high = Vector{Float64}(undef, n_small)
+    low = Vector{Float64}(undef, n_small)
+    close = Vector{Float64}(undef, n_small)
+    volume = Vector{Float64}(undef, n_small)
+
+    # Assign columns to local variables for performance
+    df_timestamp = df.timestamp
+    df_open = df.open
+    df_high = df.high
+    df_low = df.low
+    df_close = df.close
+    df_volume = df.volume
+
+    for i in 1:n_large
+        t0 = df_timestamp[i] - large_tf.period + small_tf.period
+        v_per = df_volume[i] / n
+        o = df_open[i]
+        h = df_high[i]
+        l = df_low[i]
+        c = df_close[i]
+        for j in 0:(n-1)
+            idx = (i-1)*n + j + 1
+            ts[idx] = t0 + j * small_tf.period
+            open[idx] = o
+            high[idx] = h
+            low[idx] = l
+            close[idx] = c
+            volume[idx] = v_per
+        end
+    end
+    out = DataFrame(timestamp=ts, open=open, high=high, low=low, close=close, volume=volume)
+    timeframe!(out, small_tf)
+    out
+end
+
+export upsample

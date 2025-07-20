@@ -8,10 +8,12 @@ all_tests = [
     :aqua,
     :time,
     :data,
+    :processing,
     #
     :derivatives,
     :exchanges,
     :markets,
+    #
     :collections,
     :orders,
     :orders2,
