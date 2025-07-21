@@ -45,6 +45,7 @@ function ccxt_average_ohlcv_watcher(
         :symbols => symbols,
         :input_source => input_source,
         :symbol_mapping => symbol_mapping,
+        :all_source_symbols => all_source_symbols,
         :source_watchers => LittleDict{String,Watcher}(),
         :aggregated_ohlcv => Dict{String,DataFrame}(),
     )
@@ -227,14 +228,19 @@ function _fetch!(w::Watcher, ::CcxtAverageOHLCVVal; syms=nothing)
             continue
         end
         # Check for new data after fetch by comparing with aggregated data
-        for sym in keys(source_w.view)
-            df = source_w.view[sym]
-            if !isempty(df)
-                agg_df = w.view[sym]
-                last_processed_ts = isempty(agg_df) ? DateTime(0) : agg_df[end, :timestamp]
-                new_data_range = Data.DFUtils.after(df, last_processed_ts)
-                if !isempty(new_data_range)
-                    has_new_data = true
+        for sym in attrs[:symbols]
+            agg_df = w.view[sym]
+            last_processed_ts = isempty(agg_df) ? DateTime(0) : agg_df[end, :timestamp]
+            all_syms = w[:all_source_symbols]
+            for this_sym in all_syms
+                if haskey(source_w.view, this_sym)
+                    df = source_w.view[this_sym]
+                    if !isempty(df)
+                        new_data_range = Data.DFUtils.after(df, last_processed_ts)
+                        if !isempty(new_data_range)
+                            has_new_data = true
+                        end
+                    end
                 end
             end
         end
