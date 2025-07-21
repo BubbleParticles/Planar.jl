@@ -1,5 +1,5 @@
 using Watchers.WatchersImpls:
-    ccxt_ohlcv_watcher, ccxt_ohlcv_tickers_watcher, ccxt_ohlcv_candles_watcher
+    ccxt_ohlcv_watcher, ccxt_ohlcv_tickers_watcher, ccxt_ohlcv_candles_watcher, ccxt_average_ohlcv_watcher
 import Watchers.WatchersImpls: cached_ohlcv!
 using .st: logpath
 using .Data: DataFrame, propagate_ohlcv!
@@ -69,8 +69,8 @@ values: `tickers`, `trades`, `candles`
 ohlcvmethod(s::Strategy) = attr(s, :live_ohlcv_method, :candles)
 ohlcvmethod(ai::AssetInstance) = attr(ai, :live_ohlcv_method, :candles)
 function ohlcvmethod!(s::Strategy, m=nothing)
-    if m ∉ (:tickers, :candles, :trades, nothing)
-        error("ohlcv methods supported are `tickers`, `candles` and `trades`")
+    if m ∉ (:tickers, :candles, :trades, :average, nothing)
+        error("ohlcv methods supported are `tickers`, `candles`, `trades` and `average`")
     end
     k = :live_ohlcv_method
     setfunc = isnothing(m) ? (d, m) -> attr!(d, k, m) : (d, m) -> setattr!(d, m, k)
@@ -157,6 +157,23 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
             (exc; kwargs...) -> ccxt_ohlcv_tickers_watcher(exc; kwargs...)
         elseif met == :candles
             (exc; syms, kwargs...) -> ccxt_ohlcv_candles_watcher(exc, syms; kwargs...)
+        elseif met == :average
+            exchanges = attr(s, :watcher_exchanges, nothing)
+            if exchanges === nothing
+                @warn "No watcher_exchanges specified in strategy attributes for average ohlcv method"
+            end
+            input_source = attr(s, :watcher_ohlcvmethod, nothing)
+            valid_sources = (:tickers, :candles, :trades)
+            if input_source ∉ valid_sources
+                @warn "Invalid watcher_ohlcvmethod for average ohlcv method, defaulting to :tickers" input_source
+                input_source = :tickers
+            end
+            (exc; syms, kwargs...) -> ccxt_average_ohlcv_watcher(
+                exchanges, syms;
+                timeframe=timeframe,
+                input_source=input_source,
+                kwargs...
+            )
         else
             error("call: invalid ohlcv method $met")
         end

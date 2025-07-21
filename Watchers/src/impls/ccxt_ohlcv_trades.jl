@@ -65,6 +65,7 @@ function ccxt_ohlcv_watcher(
     quiet=true,
     start=false,
     iswatch=nothing,
+    load_timeframe=default_load_timeframe(timeframe),
 )
     check_timeout(exc, interval)
     attrs = Dict{Symbol,Any}()
@@ -80,6 +81,7 @@ function ccxt_ohlcv_watcher(
     attrs[:issandbox] = issandbox(exc)
     attrs[:excparams] = params(exc)
     attrs[:excaccount] = account(exc)
+    attrs[k"load_timeframe"] = load_timeframe
     watcher_type = Vector{CcxtTrade}
     wid = string(CcxtOHLCVVal.parameters[1], "-", hash((exc.id, attrs[:issandbox], sym)))
     w = watcher(

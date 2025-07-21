@@ -23,7 +23,8 @@ function ccxt_average_ohlcv_watcher(
     symbols::Vector{String};
     timeframe::TimeFrame,
     input_source::Symbol=:tickers, # :trades, :klines, or :tickers
-    # other kwargs for Watcher constructor
+    symbol_mapping=Dict{String,Vector{String}}(),
+    load_timeframe=default_load_timeframe(timeframe),
     kwargs...,
 )
     if !(input_source in (:trades, :klines, :tickers))
@@ -32,25 +33,34 @@ function ccxt_average_ohlcv_watcher(
         )
     end
 
+    # Expand symbols with mapped symbols for source watchers
+    all_source_symbols = copy(symbols)
+    for mapped_syms in values(symbol_mapping)
+        append!(all_source_symbols, mapped_syms)
+    end
+    all_source_symbols = unique(all_source_symbols)
+
     a = Dict{Symbol,Any}(
         :exchanges => exchanges,
         :symbols => symbols,
         :input_source => input_source,
+        :symbol_mapping => symbol_mapping,
         :source_watchers => LittleDict{String,Watcher}(),
         :aggregated_ohlcv => Dict{String,DataFrame}(),
     )
     @setkey! a timeframe
-    a[k"ids"] = [string(v) for v in symbols]
+    a[k"ids"] = [string(v) for v in all_source_symbols]
     val = CcxtAverageOHLCVVal()
     wid =
         a[k"key"] = string(
             typeof(val).parameters[1], "-",
-            hash((exchanges, issandbox.(exchanges), symbols, input_source)),
+            hash((exchanges, issandbox.(exchanges), all_source_symbols, input_source)),
         )  # Watcher ID
     watcher_type = Dict{String,DataFrame}
 
     aggregated_ohlcv = Dict{String,DataFrame}()
     a[:aggregated_ohlcv] = aggregated_ohlcv
+    a[k"load_timeframe"] = load_timeframe
     # Do NOT set a[:view] or watcher_obj.view here; let _init! handle it via default_init
 
     watcher_obj = watcher(
@@ -77,6 +87,14 @@ function _init!(w::Watcher, ::CcxtAverageOHLCVVal)
     input_source = attrs[:input_source]
     source_watchers = attrs[:source_watchers]
     aggregated_ohlcv = attrs[:aggregated_ohlcv]
+    symbol_mapping = get(attrs, :symbol_mapping, Dict{String,Vector{String}}())
+
+    # Build the full set of source symbols (symbols + mapped symbols)
+    all_source_symbols = copy(symbols)
+    for mapped_syms in values(symbol_mapping)
+        append!(all_source_symbols, mapped_syms)
+    end
+    all_source_symbols = unique(all_source_symbols)
 
     for exc in exchanges
         source_watcher_key = string(exc.id)
@@ -87,19 +105,19 @@ function _init!(w::Watcher, ::CcxtAverageOHLCVVal)
         try
             if input_source == :trades
                 source_watcher = ccxt_ohlcv_watcher(
-                    exc, symbols; timeframe=timeframe, start=false
+                    exc, all_source_symbols; timeframe=timeframe, start=false
                 )
             elseif input_source == :klines
                 source_watcher = ccxt_ohlcv_candles_watcher(
                     exc,
-                    symbols; # pass all symbols for this exchange
+                    all_source_symbols; # pass all symbols for this exchange
                     timeframe=timeframe,
                     start=false,
                 )
             elseif input_source == :tickers
                 source_watcher = ccxt_ohlcv_tickers_watcher(
                     exc;
-                    syms=symbols, # pass all symbols for this exchange
+                    syms=all_source_symbols, # pass all symbols for this exchange
                     timeframe=timeframe,
                     start=false,
                 )
@@ -115,6 +133,7 @@ function _init!(w::Watcher, ::CcxtAverageOHLCVVal)
             LogAverageOHLCV
     end
 
+    # Only initialize aggregated_ohlcv for the target symbols (not mapped ones)
     for sym in symbols
         aggregated_ohlcv[sym] = DataFrame(
             :timestamp => DateTime[],
@@ -227,39 +246,41 @@ function _process!(w::Watcher, ::CcxtAverageOHLCVVal)
     @debug "CcxAverageOHLCVWatcher._process! called for watcher ID: $(w.name)" _module =
         LogAverageOHLCV
     attrs = w.attrs
+    symbol_mapping = get(attrs, :symbol_mapping, Dict{String,Vector{String}}())
 
     for sym in attrs[:symbols]
         agg_df = attrs[:aggregated_ohlcv][sym]
         last_processed_ts = isempty(agg_df) ? DateTime(0) : last(agg_df.timestamp)
 
-        # Temp storage for all new OHLCV rows from all sources for the current symbol
-        all_new_source_rows = DataFrame() # Start with an empty DataFrame with flexible schema initially
+        # Gather all source symbols: the main symbol plus any mapped symbols
+        mapped_syms = get(symbol_mapping, sym, String[])
+        all_syms = [sym; mapped_syms...]
+
+        # Temp storage for all new OHLCV rows from all sources for the current symbol and mapped symbols
+        all_new_source_rows = DataFrame()
 
         for (source_key, source_w) in attrs[:source_watchers]
-            # Always use the watcher interface: source_w.view[sym]
-            if haskey(source_w.view, sym)
-                source_df_view = source_w.view[sym]
-            else
-                continue
-            end
-
-            if isempty(source_df_view)
-                continue
-            end
-
-            # Use date indexing utility to get new rows after last_processed_ts
-            new_rows_from_source = DFUtils.after(source_df_view, last_processed_ts)
-
-            if !isempty(new_rows_from_source)
-                @debug "Found $(nrow(new_rows_from_source)) new rows from source $(source_key) for symbol $(sym) after $(last_processed_ts)" _module =
-                    LogAverageOHLCV
-                # Append to our collection of all new rows for this symbol
-                if isempty(all_new_source_rows)
-                    all_new_source_rows = new_rows_from_source
+            for this_sym in all_syms
+                if haskey(source_w.view, this_sym)
+                    source_df_view = source_w.view[this_sym]
                 else
-                    all_new_source_rows = vcat(
-                        all_new_source_rows, new_rows_from_source; cols=:union
-                    )
+                    continue
+                end
+                if isempty(source_df_view)
+                    continue
+                end
+                # Use date indexing utility to get new rows after last_processed_ts
+                new_rows_from_source = DFUtils.after(source_df_view, last_processed_ts)
+                if !isempty(new_rows_from_source)
+                    @debug "Found $(nrow(new_rows_from_source)) new rows from source $(source_key) for symbol $(this_sym) after $(last_processed_ts)" _module =
+                        LogAverageOHLCV
+                    if isempty(all_new_source_rows)
+                        all_new_source_rows = new_rows_from_source
+                    else
+                        all_new_source_rows = vcat(
+                            all_new_source_rows, new_rows_from_source; cols=:union
+                        )
+                    end
                 end
             end
         end
@@ -269,18 +290,14 @@ function _process!(w::Watcher, ::CcxtAverageOHLCVVal)
             continue
         end
 
-        # Sort by timestamp to ensure correct processing order, then by other fields if needed for tie-breaking 'open'
-        sort!(all_new_source_rows, [:timestamp]) # Add other columns for stable sort if open selection depends on it
+        # Sort by timestamp to ensure correct processing order
+        sort!(all_new_source_rows, [:timestamp])
 
         # Group by timestamp and aggregate
         grouped_by_ts = groupby(all_new_source_rows, :timestamp)
 
         for group in grouped_by_ts
-            current_ts = group.timestamp[1] # Timestamp for this group
-
-            # Skip if this timestamp is already processed (e.g. if last_processed_ts was middle of a set of same-ts rows)
-            # This check is particularly important if source data might have multiple entries for the exact same timestamp
-            # that were partially processed. However, standard OHLCV should have unique TS per source.
+            current_ts = group.timestamp[1]
             if current_ts <= last_processed_ts &&
                 !isempty(agg_df) &&
                 current_ts in agg_df.timestamp
@@ -288,40 +305,25 @@ function _process!(w::Watcher, ::CcxtAverageOHLCVVal)
                     LogAverageOHLCV
                 continue
             end
-
-            # Aggregate Open: first encountered (after sorting by timestamp, this is from the earliest data for that TS)
-            # If multiple exchanges report at the exact same ms, this is arbitrary unless sort is stabilized.
-            # For klines, 'open' is meaningful.
             agg_open = first(group.open)
-
-            # Aggregate High, Low
             agg_high = maximum(group.high)
             agg_low = minimum(group.low)
-
-            # Aggregate Volume
             total_volume = sum(group.volume)
-
-            # Calculate VWAP for Close
             agg_vwap_close = NaN
             if total_volume > 0.0
-                vwap_numerator = sum(filter(!isnan, group.close .* group.volume)) # Ensure NaNs in calc don't break sum
+                vwap_numerator = sum(filter(!isnan, group.close .* group.volume))
                 if !isnan(vwap_numerator)
                     agg_vwap_close = vwap_numerator / total_volume
-                else # All contributing products were NaN
-                    agg_vwap_close = mean(filter(!isnan, group.close)) # Fallback, or just NaN
+                else
+                    agg_vwap_close = mean(filter(!isnan, group.close))
                 end
             else
-                # Handle zero total volume case: e.g., average of close prices or NaN
                 non_nan_closes = filter(!isnan, group.close)
                 agg_vwap_close = !isempty(non_nan_closes) ? mean(non_nan_closes) : NaN
             end
-
-            # Handle cases where agg_vwap_close might still be NaN (e.g. all inputs were NaN)
             if isnan(agg_vwap_close) && !isempty(group.close)
-                # Fallback: use the last close price from the group (after sorting)
                 agg_vwap_close = last(group.close)
-            end # Corrected the `endif` to `end`
-
+            end
             new_agg_row = (
                 timestamp=current_ts,
                 open=agg_open,
@@ -330,20 +332,14 @@ function _process!(w::Watcher, ::CcxtAverageOHLCVVal)
                 close=agg_vwap_close,
                 volume=total_volume,
             )
-
-            # Append to the main aggregated DataFrame for the symbol
-            # Consider checking for duplicates if there's a risk, though groupby should handle distinct timestamps.
             push!(agg_df, new_agg_row)
             @debug "Processed and appended: $(new_agg_row) for $(sym)" _module =
                 LogAverageOHLCV
         end
-
-        # Optional: sort agg_df again if pushes didn't maintain order or if deduplication is needed.
-        # For unique timestamps, sorting after loop is fine. If many appends, could sort once at end of symbol processing.
         if !isempty(agg_df) &&
             nrow(agg_df) > 1 &&
             agg_df.timestamp[end] < agg_df.timestamp[end - 1]
-            sort!(agg_df, :timestamp) # Ensure sorted if appends messed order
+            sort!(agg_df, :timestamp)
         end
     end
     @debug "CcxtAverageOHLCVWatcher._process! completed for watcher ID: $(w.name)" _module =

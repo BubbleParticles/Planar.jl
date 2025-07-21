@@ -40,7 +40,24 @@ using ..CoinPaprika: CoinPaprika as cp
     process_tasks
     excparams
     excaccount
+    load_timeframe
+    ohlcv_method
 end
+
+# Add default_load_timeframe function
+function default_load_timeframe(tf::TimeFrame)
+    p = period(tf)
+    pf = timefloat(p)
+    if pf < timefloat(Hour(1))
+        return tf"1h"
+    elseif pf < timefloat(Day(1))
+        return tf"1d"
+    else
+        return tf"1d"
+    end
+end
+
+export default_load_timeframe
 
 include("utils.jl")
 include("caching.jl")

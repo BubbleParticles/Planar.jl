@@ -54,6 +54,7 @@ function ccxt_ohlcv_tickers_watcher(
     default_view=nothing,
     n_jobs=ratelimit_njobs(exc),
     callback=Returns(nothing),
+    load_timeframe=default_load_timeframe(timeframe),
     kwargs...,
 )
     w = ccxt_tickers_watcher(
@@ -85,6 +86,7 @@ function ccxt_ohlcv_tickers_watcher(
     a[k"key"] = string(
         "ccxt_", exc.name, issandbox(exc), "_ohlcv_tickers_", join(a[k"ids"], "_")
     )
+    a[k"load_timeframe"] = load_timeframe
     if !isnothing(logfile)
         @setkey! a logfile
     end
@@ -404,29 +406,28 @@ function _ensure_ohlcv!(w, sym)
     tf = _tfr(w)
     min_rows = w.capacity.view - w.capacity.buffer
     df = @lget! w.view sym ohlcv_cached!(w; sym)
+    load_tf = get(w.attrs, k"load_timeframe", tf)
+    use_upsample = (load_tf != tf) && (timefloat(load_tf.period) % timefloat(tf.period) == 0)
     if isempty(df)
         local this, from, to
-        # fetch in excess
         this = now()
         from = this - (w.capacity.view + 1) * tf
         to = _nextdate(tf)
-        _fetchto!(w, df, sym, tf, Val(:append); from, to)
-        _do_check_contig(w, df, _checks(w))
+        _fetchto!(w, df, sym, tf, Val(:append); from, to, allow_upsample=false)
     else
         (from, to) = (lastdate(df), _nextdate(tf))
         if length(from:(period(tf)):to) > min_rows
             from = to - period(tf) * w.capacity.view
         end
-        _fetchto!(w, df, sym, tf, Val(:append); from, to)
+        _fetchto!(w, df, sym, tf, Val(:append); from, to, allow_upsample=false)
         _do_check_contig(w, df, _checks(w))
         if nrow(df) < min_rows
             to = _firstdate(df) + period(tf)
-            _fetchto!(w, df, sym, tf, Val(:prepend); to)
+            _fetchto!(w, df, sym, tf, Val(:prepend); to, allow_upsample=false)
             _do_check_contig(w, df, _checks(w))
         end
     end
     if nrow(df) < min_rows && !w[k"minrows_warned"]
-        # TODO: provide support of upsampling with interpolation
         @warn "ohlcv tickers watcher: can't fill view with enough data" sym nrow(df) min_rows
         w[k"minrows_warned"] = true
     end

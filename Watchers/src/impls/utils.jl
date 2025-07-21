@@ -9,7 +9,7 @@ using ..Fetch: fetch_candles
 using ..Lang
 using ..Lang: safenotify, safewait
 using ..Misc: rangeafter, rangebetween
-using ..Fetch.Processing: cleanup_ohlcv_data, iscomplete, isincomplete
+using ..Fetch.Processing: cleanup_ohlcv_data, iscomplete, isincomplete, upsample
 using ..Watchers: logerror
 using ..Watchers: JSON3
 
@@ -335,7 +335,7 @@ If the fetched data is empty, it returns `false`.
 If the difference between the target date and the starting date is less than or equal to the period of the time frame, it also returns `true`.
 
 """
-function _fetchto!(w, df, sym, tf, op=Val(:append); to, from=nothing)
+function _fetchto!(w, df, sym, tf, op=Val(:append); to, from=nothing, allow_upsample::Bool=true)
     rows = nrow(df)
     prd = period(tf)
     rows > 0 && try
@@ -343,7 +343,6 @@ function _fetchto!(w, df, sym, tf, op=Val(:append); to, from=nothing)
     catch e
         logerror(w, e, catch_backtrace())
         if attr(w, :resync_noncontig, false)
-            # df can have immutable vectors which can't be emptied
             try
                 empty!(df)
             catch
@@ -354,8 +353,15 @@ function _fetchto!(w, df, sym, tf, op=Val(:append); to, from=nothing)
     end
     from = @something from _from(df, to, tf, w.capacity.view, op)
     diff = (to - from)
-    if diff > prd || (diff == prd && to < _curdate(tf)) # the second case would fetch only the last incomplete candle
-        candles = _fetch_candles(w, from, to, sym; tf=nrow(df) < 2 ? tf : timeframe!(df))
+    if diff > prd || (diff == prd && to < _curdate(tf))
+        load_tf = attr(w, k"load_timeframe", tf)
+        use_upsample = allow_upsample && (load_tf != tf) && (timefloat(load_tf.period) % timefloat(tf.period) == 0)
+        candles = if use_upsample
+            raw_candles = _fetch_candles(w, from, to, sym; tf=load_tf)
+            upsample(raw_candles, load_tf, tf)
+        else
+            _fetch_candles(w, from, to, sym; tf=nrow(df) < 2 ? tf : timeframe!(df))
+        end
         from_to_range = rangebetween(candles.timestamp, from, to)
         isempty(from_to_range) && _fetch_error(w, from, to, sym)
         @debug "watchers fetchto!: " to _lastdate(candles) from _firstdate(candles) length(

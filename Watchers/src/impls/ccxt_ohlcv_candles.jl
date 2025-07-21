@@ -19,6 +19,7 @@ function ccxt_ohlcv_candles_watcher(
     default_view=nothing,
     n_jobs=ratelimit_njobs(exc),
     callback=Returns(nothing),
+    load_timeframe=default_load_timeframe(timeframe),
     kwargs...,
 )
     a = Dict{Symbol,Any}()
@@ -37,6 +38,7 @@ function ccxt_ohlcv_candles_watcher(
     a[k"key"] = string(
         "ccxt_", exc.name, issandbox(exc), "_ohlcv_candles_", join(a[k"ids"], "_")
     )
+    a[k"load_timeframe"] = load_timeframe
     if !isnothing(logfile)
         @setkey! a logfile
     end
