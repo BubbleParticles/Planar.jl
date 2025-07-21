@@ -79,6 +79,25 @@ function _w_balance_func(s, w, attrs)
     tasks = w[:process_tasks] = Vector{Task}()
     errors = w[:errors_count] = Ref(0)
     if attrs[:iswatch]
+        # Stop any existing stall_guard_task using stop_task
+        if haskey(w, :stall_guard_task)
+            stop_task(w[:stall_guard_task])
+            delete!(w, :stall_guard_task)
+        end
+        w[:stall_guard_task] = @start_task IdDict() begin
+            while isstarted(w)
+                try
+                    last = _lastprocessed(w)
+                    if now() - last > Second(60)
+                        @warn "balance watcher: forcing fetch due to stall" last now() s
+                        _force_fetchbal(s; fallback_kwargs=attrs[:func_kwargs])
+                    end
+                catch e
+                    @warn "balance watcher: stall guard error" exception=e
+                end
+                sleep(10)
+            end
+        end
         init = Ref(true)
         function process_bal!(w, v)
             if !isnothing(v)
@@ -165,6 +184,10 @@ function Watchers._stop!(w::Watcher, ::CcxtBalanceVal)
     handler = attr(w, :balance_handler, nothing)
     if !isnothing(handler)
         stop_handler!(handler)
+    end
+    if haskey(w, :stall_guard_task)
+        stop_task(w[:stall_guard_task])
+        delete!(w, :stall_guard_task)
     end
     notify(w.buf_notify)
     nothing

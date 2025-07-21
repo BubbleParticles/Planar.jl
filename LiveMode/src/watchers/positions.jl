@@ -110,6 +110,31 @@ function _w_positions_func(s, w, interval; iswatch, kwargs)
     s[:positions_notify] = w[:buf_notify] = buf_notify = Condition()
     sizehint!(buf, buffer_size)
     if iswatch
+        # Stop any existing stall_guard_task using stop_task
+        if haskey(w, :stall_guard_task)
+            stop_task(w[:stall_guard_task])
+            delete!(w, :stall_guard_task)
+        end
+        w[:stall_guard_task] = @start_task IdDict() begin
+            while isstarted(w)
+                try
+                    last = _lastprocessed(w)
+                    if now() - last > Second(60)
+                        @warn "positions watcher: forcing fetch due to stall" last now() s
+                        for ai in s.universe
+                            try
+                                _force_fetchpos(s, ai, get_position_side(s, ai); fallback_kwargs=kwargs)
+                            catch e
+                                @warn "positions watcher: stall guard error (per asset)" exception=e ai
+                            end
+                        end
+                    end
+                catch e
+                    @warn "positions watcher: stall guard error" exception=e
+                end
+                sleep(10)
+            end
+        end
         init = Ref(true)
         function process_pos!(w, v, fetched=false)
             if !isnothing(v)
@@ -277,6 +302,10 @@ function Watchers._stop!(w::Watcher, ::CcxtPositionsVal)
     pt = attr(w, :positions_task, nothing)
     if istaskrunning(pt)
         kill_task(pt)
+    end
+    if haskey(w, :stall_guard_task)
+        stop_task(w[:stall_guard_task])
+        delete!(w, :stall_guard_task)
     end
     nothing
 end
