@@ -17,7 +17,7 @@ using Fetch.Data.DFUtils # Added for DataFrames.after
 
 const CcxtAverageOHLCVVal = Val{:ccxt_average_ohlcv}
 
-"""
+@doc """
     ccxt_average_ohlcv_watcher(
         exchanges::Vector{<:Exchange},
         symbols::Vector{String};
