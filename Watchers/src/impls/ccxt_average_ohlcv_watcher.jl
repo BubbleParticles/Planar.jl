@@ -17,7 +17,44 @@ using Fetch.Data.DFUtils # Added for DataFrames.after
 
 const CcxtAverageOHLCVVal = Val{:ccxt_average_ohlcv}
 
-# Main constructor
+"""
+    ccxt_average_ohlcv_watcher(
+        exchanges::Vector{<:Exchange},
+        symbols::Vector{String};
+        timeframe::TimeFrame,
+        input_source::Symbol = :tickers,
+        symbol_mapping = Dict{String,Vector{String}}(),
+        load_timeframe = default_load_timeframe(timeframe),
+        kwargs...
+    )
+
+Constructs a watcher that aggregates OHLCV (Open, High, Low, Close, Volume) data across multiple exchanges and symbols, averaging or combining the data as specified.
+
+# Arguments
+- `exchanges::Vector{<:Exchange}`: List of exchange objects to aggregate data from.
+- `symbols::Vector{String}`: List of target symbols (e.g., trading pairs) to aggregate.
+
+# Keyword Arguments
+- `timeframe::TimeFrame`: The time interval for OHLCV aggregation (e.g., 1m, 5m, 1h).
+- `input_source::Symbol = :tickers`: Source of OHLCV data. Must be one of `:trades`, `:klines`, or `:tickers`.
+- `symbol_mapping = Dict{String,Vector{String}}()`: Optional mapping from each target symbol to a list of additional source symbols whose OHLCV data should be included in the aggregation for that target symbol. This is useful when you want to aggregate or average data from related instruments or trading pairs. For example, if you want the aggregated OHLCV for `BTC/USDT` to also include data from `BTC/USD` and `BTC/USDC`, you can specify:
+
+    symbol_mapping = Dict("BTC/USDT" => ["BTC/USD", "BTC/USDC"])
+
+  In this case, the OHLCV for `BTC/USDT` will be computed by combining data from all three symbols.
+- `load_timeframe = default_load_timeframe(timeframe)`: Timeframe to use for initial data loading.
+- `kwargs...`: Additional keyword arguments passed to the underlying watcher constructor.
+
+# Returns
+- `Watcher{Dict{String,DataFrame}}`: A watcher object whose view contains aggregated OHLCV DataFrames for each target symbol.
+
+# Notes
+- The watcher internally manages source watchers for each exchange and input source, and aggregates their OHLCV data by timestamp.
+- Supports streaming/online updates and is suitable for both historical and live data aggregation.
+- Aggregation logic computes open, high, low, volume, and a volume-weighted average close (VWAP) per timestamp.
+- If `symbol_mapping` is provided, the OHLCV for each target symbol will include data from both the symbol itself and any mapped symbols listed in `symbol_mapping` for that symbol.
+- The resulting watcher can be started, stopped, loaded, and fetched like other Watchers.
+"""
 function ccxt_average_ohlcv_watcher(
     exchanges::Vector{<:Exchange},
     symbols::Vector{String};
