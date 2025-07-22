@@ -159,8 +159,11 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
             (exc; syms, kwargs...) -> ccxt_ohlcv_candles_watcher(exc, syms; kwargs...)
         elseif met == :average
             exchanges = attr(s, :watcher_exchanges, nothing)
-            if exchanges === nothing
-                @warn "No watcher_exchanges specified in strategy attributes for average ohlcv method"
+            if exchanges isa Vector{Symbol}
+                exchanges = getexchange!.(exchanges; sandbox=issandbox(exc))
+            elseif !(exchanges isa Vector{Exchange})
+                @warn "watcher_exchanges is not a Vector{Exchange}; defaulting to strategy exchange" exchanges
+                exchanges = Exchange[exc]
             end
             input_source = attr(s, :watcher_ohlcvmethod, nothing)
             valid_sources = (:tickers, :candles, :trades)
