@@ -70,8 +70,8 @@ function ccxt_average_ohlcv_watcher(
         )
     end
 
-    symbols = if !(symbols isa Vector{String})
-        collect(symbols)
+    symbols = if !(input_symbols isa Vector{String})
+        collect(input_symbols)
     else
         input_symbols
     end
