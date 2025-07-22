@@ -43,7 +43,9 @@ Constructs a watcher that aggregates OHLCV (Open, High, Low, Close, Volume) data
 
   In this case, the OHLCV for `BTC/USDT` will be computed by combining data from all three symbols.
 - `load_timeframe = default_load_timeframe(timeframe)`: Timeframe to use for initial data loading.
-- `kwargs...`: Additional keyword arguments passed to the underlying watcher constructor.
+- **Standard watcher keyword arguments are supported and passed through:**
+    - `flush`, `logfile`, `buffer_capacity`, `view_capacity`, `n_jobs`, `default_view`, `callback`, etc.
+    - These are forwarded to the underlying watcher constructor and available as fields or in the watcher `attrs`.
 
 # Returns
 - `Watcher{Dict{String,DataFrame}}`: A watcher object whose view contains aggregated OHLCV DataFrames for each target symbol.
@@ -57,32 +59,32 @@ Constructs a watcher that aggregates OHLCV (Open, High, Low, Close, Volume) data
 """
 function ccxt_average_ohlcv_watcher(
     exchanges::Vector{<:Exchange},
-    input_symbols;
-    timeframe::TimeFrame,
-    input_source::Symbol=:tickers, # :trades, :klines, or :tickers
-    symbol_mapping=Dict{String,Vector{String}}(),
+    syms;
+    timeframe=tf"1m",
+    logfile=nothing,
+    buffer_capacity=100,
+    view_capacity=count(timeframe, tf"1d") + 1 + buffer_capacity,
+    default_view=nothing,
+    n_jobs=8,
+    callback=Returns(nothing),
     load_timeframe=default_load_timeframe(timeframe),
+    input_source::Symbol=:tickers,
+    symbol_mapping=Dict{String,Vector{String}}(),
     kwargs...,
 )
     if !(input_source in (:trades, :klines, :tickers))
-        error(
-            "Invalid input_source: $(input_source). Must be :trades, :klines, or :tickers."
-        )
+        error("Invalid input_source: $(input_source). Must be :trades, :klines, or :tickers.")
     end
-
-    symbols = if !(input_symbols isa Vector{String})
-        collect(input_symbols)
+    symbols = if !(syms isa Vector{String})
+        collect(syms)
     else
-        input_symbols
+        syms
     end
-
-    # Expand symbols with mapped symbols for source watchers
     all_source_symbols = copy(symbols)
     for mapped_syms in values(symbol_mapping)
         append!(all_source_symbols, mapped_syms)
     end
     all_source_symbols = unique(all_source_symbols)
-
     a = Dict{Symbol,Any}(
         :exchanges => exchanges,
         :symbols => symbols,
@@ -94,25 +96,38 @@ function ccxt_average_ohlcv_watcher(
     )
     @setkey! a timeframe
     a[k"ids"] = [string(v) for v in all_source_symbols]
+    a[k"load_timeframe"] = load_timeframe
+    a[k"default_view"] = default_view
+    a[k"n_jobs"] = n_jobs
+    a[k"callback"] = callback
+    if !isnothing(logfile)
+        @setkey! a logfile
+    end
+    for k in (:flush, :buffer_capacity, :view_capacity)
+        if haskey(kwargs, k)
+            a[k] = kwargs[k]
+        end
+    end
     val = CcxtAverageOHLCVVal()
-    wid =
-        a[k"key"] = string(
-            typeof(val).parameters[1], "-",
-            hash((exchanges, issandbox.(exchanges), all_source_symbols, input_source)),
-        )  # Watcher ID
+    wid = a[k"key"] = string(
+        typeof(val).parameters[1], "-",
+        hash((exchanges, issandbox.(exchanges), all_source_symbols, input_source)),
+    )
     watcher_type = Dict{String,DataFrame}
-
     aggregated_ohlcv = Dict{String,DataFrame}()
     a[:aggregated_ohlcv] = aggregated_ohlcv
-    a[k"load_timeframe"] = load_timeframe
-    # Do NOT set a[:view] or watcher_obj.view here; let _init! handle it via default_init
-
     watcher_obj = watcher(
-        watcher_type, # Use Dict{String, DataFrame} as watcher data type
-        wid, # Watcher ID
-        val; # Watcher Val (with parentheses)
+        watcher_type,
+        wid,
+        val;
         attrs=a,
         process=true,
+        buffer_capacity=0,  # Average watcher does not buffer
+        view_capacity=view_capacity,
+        default_view=default_view,
+        n_jobs=n_jobs,
+        callback=callback,
+        logfile=logfile,
         kwargs...,
     )
     return watcher_obj
@@ -147,23 +162,38 @@ function _init!(w::Watcher, ::CcxtAverageOHLCVVal)
 
         local source_watcher::Watcher # Type assertion
         try
+            # Forward buffer_capacity, view_capacity, n_jobs from attrs if present, else use defaults
+            bufcap = get(attrs, :buffer_capacity, 100)
+            viewcap = get(attrs, :view_capacity, count(timeframe, tf"1d") + 1 + bufcap)
+            njobs = get(attrs, :n_jobs, 8)
             if input_source == :trades
                 source_watcher = ccxt_ohlcv_watcher(
-                    exc, all_source_symbols; timeframe=timeframe, start=false
+                    exc, all_source_symbols;
+                    timeframe=timeframe,
+                    start=false,
+                    buffer_capacity=bufcap,
+                    view_capacity=viewcap,
+                    n_jobs=njobs,
                 )
             elseif input_source == :klines
                 source_watcher = ccxt_ohlcv_candles_watcher(
                     exc,
-                    all_source_symbols; # pass all symbols for this exchange
+                    all_source_symbols;
                     timeframe=timeframe,
                     start=false,
+                    buffer_capacity=bufcap,
+                    view_capacity=viewcap,
+                    n_jobs=njobs,
                 )
             elseif input_source == :tickers
                 source_watcher = ccxt_ohlcv_tickers_watcher(
                     exc;
-                    syms=all_source_symbols, # pass all symbols for this exchange
+                    syms=all_source_symbols,
                     timeframe=timeframe,
                     start=false,
+                    buffer_capacity=bufcap,
+                    view_capacity=viewcap,
+                    n_jobs=njobs,
                 )
             else
                 error("Unsupported input_source: $(input_source) for watcher $(w.name)")
@@ -389,6 +419,15 @@ function _process!(w::Watcher, ::CcxtAverageOHLCVVal)
             nrow(agg_df) > 1 &&
             agg_df.timestamp[end] < agg_df.timestamp[end - 1]
             sort!(agg_df, :timestamp)
+        end
+    end
+    # Execute callback if present
+    cb = get(attrs, :callback, nothing)
+    if cb !== nothing
+        try
+            cb(w)
+        catch e
+            @warn "CcxtAverageOHLCVWatcher callback error" watcher_id=w.name exception=e _module=LogAverageOHLCV
         end
     end
     @debug "CcxtAverageOHLCVWatcher._process! completed for watcher ID: $(w.name)" _module =
