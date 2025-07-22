@@ -57,7 +57,7 @@ Constructs a watcher that aggregates OHLCV (Open, High, Low, Close, Volume) data
 """
 function ccxt_average_ohlcv_watcher(
     exchanges::Vector{<:Exchange},
-    symbols::Vector{String};
+    input_symbols;
     timeframe::TimeFrame,
     input_source::Symbol=:tickers, # :trades, :klines, or :tickers
     symbol_mapping=Dict{String,Vector{String}}(),
@@ -68,6 +68,12 @@ function ccxt_average_ohlcv_watcher(
         error(
             "Invalid input_source: $(input_source). Must be :trades, :klines, or :tickers."
         )
+    end
+
+    symbols = if !(symbols isa Vector{String})
+        collect(symbols)
+    else
+        input_symbols
     end
 
     # Expand symbols with mapped symbols for source watchers
