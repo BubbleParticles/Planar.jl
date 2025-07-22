@@ -36,6 +36,10 @@ function Base.deleteat!(w::Watcher, range::DateTuple)
     _deleteat!(w, _val(w); from=range.start, to=range.stop)
 end
 
+function Base.haskey(w::Watcher, k)
+    haskey(attrs(w), k)
+end
+
 @doc """ Executes the flush function of the watcher (defaults to [`default_flusher`](@ref)).
 
 $(TYPEDSIGNATURES)
