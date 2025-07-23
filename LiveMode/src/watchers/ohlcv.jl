@@ -73,12 +73,12 @@ function ohlcvmethod!(s::Strategy, m=nothing)
         error("ohlcv methods supported are `tickers`, `candles`, `trades` and `average`")
     end
     k = :live_ohlcv_method
-    setfunc = isnothing(m) ? (d, m) -> attr!(d, k, m) : (d, m) -> setattr!(d, m, k)
+    setfunc = isnothing(m) ? (d, _) -> attr!(d, k, :candles) : (d, m) -> setattr!(d, m, k)
     setfunc(s, m)
     for ai in universe(s)
         setfunc(ai, m)
     end
-    m
+    @something m :tickers
 end
 
 @doc """ Returns the watchers for OHLCV data.
