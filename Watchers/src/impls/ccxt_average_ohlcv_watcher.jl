@@ -123,6 +123,7 @@ function ccxt_average_ohlcv_watcher(
         wid,
         val;
         attrs=a,
+        start=false,
         process=true,
         buffer_capacity=0,  # Average watcher does not buffer
         view_capacity,
