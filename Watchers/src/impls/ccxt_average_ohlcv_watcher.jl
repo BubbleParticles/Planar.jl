@@ -331,8 +331,10 @@ function _process!(w::Watcher, ::CcxtAverageOHLCVVal)
     attrs = w.attrs
     symbol_mapping = get(attrs, :symbol_mapping, Dict{String,Vector{String}}())
 
+    cb = get(attrs, :callback, nothing)
     for sym in attrs[:symbols]
         agg_df = attrs[:aggregated_ohlcv][sym]
+        ts_before = isempty(agg_df) ? DateTime(0) : maximum(agg_df.timestamp)
         last_processed_ts = isempty(agg_df) ? DateTime(0) : last(agg_df.timestamp)
 
         # Gather all source symbols: the main symbol plus any mapped symbols
@@ -424,14 +426,13 @@ function _process!(w::Watcher, ::CcxtAverageOHLCVVal)
             agg_df.timestamp[end] < agg_df.timestamp[end - 1]
             sort!(agg_df, :timestamp)
         end
-    end
-    # Execute callback if present
-    cb = get(attrs, :callback, nothing)
-    if cb !== nothing
-        try
-            cb(w)
-        catch e
-            @warn "CcxtAverageOHLCVWatcher callback error" watcher_id=w.name exception=e _module=LogAverageOHLCV
+        ts_after = isempty(agg_df) ? DateTime(0) : maximum(agg_df.timestamp)
+        if cb !== nothing && ts_after > ts_before
+            try
+                invokelatest(cb, agg_df, sym)
+            catch e
+                @warn "CcxtAverageOHLCVWatcher callback error" watcher_id=w.name exception=e _module=LogAverageOHLCV
+            end
         end
     end
     @debug "CcxtAverageOHLCVWatcher._process! completed for watcher ID: $(w.name)" _module =
