@@ -68,6 +68,7 @@ function ccxt_average_ohlcv_watcher(
     n_jobs=8,
     callback=Returns(nothing),
     load_timeframe=default_load_timeframe(timeframe),
+    load_path=nothing,
     input_source::Symbol=:tickers,
     symbol_mapping=Dict{String,Vector{String}}(),
     kwargs...,
@@ -94,12 +95,13 @@ function ccxt_average_ohlcv_watcher(
         :source_watchers => LittleDict{String,Watcher}(),
         :aggregated_ohlcv => Dict{String,DataFrame}(),
     )
-    @setkey! a timeframe
+    a[:load_path] = load_path
     a[k"ids"] = [string(v) for v in all_source_symbols]
     a[k"load_timeframe"] = load_timeframe
-    a[k"default_view"] = default_view
-    a[k"n_jobs"] = n_jobs
-    a[k"callback"] = callback
+    @setkey! a default_view
+    @setkey! a timeframe
+    @setkey! a n_jobs
+    @setkey! a callback
     if !isnothing(logfile)
         @setkey! a logfile
     end
@@ -123,11 +125,8 @@ function ccxt_average_ohlcv_watcher(
         attrs=a,
         process=true,
         buffer_capacity=0,  # Average watcher does not buffer
-        view_capacity=view_capacity,
-        default_view=default_view,
-        n_jobs=n_jobs,
-        callback=callback,
-        logfile=logfile,
+        view_capacity,
+        fetch_interval=Second(5),
         kwargs...,
     )
     return watcher_obj
@@ -166,10 +165,12 @@ function _init!(w::Watcher, ::CcxtAverageOHLCVVal)
             bufcap = get(attrs, :buffer_capacity, 100)
             viewcap = get(attrs, :view_capacity, count(timeframe, tf"1d") + 1 + bufcap)
             njobs = get(attrs, :n_jobs, 8)
+            load_path = get(attrs, :load_path, nothing)
             if input_source == :trades
                 source_watcher = ccxt_ohlcv_watcher(
                     exc, all_source_symbols;
                     timeframe=timeframe,
+                    load_path=load_path,
                     start=false,
                     buffer_capacity=bufcap,
                     view_capacity=viewcap,
@@ -180,6 +181,7 @@ function _init!(w::Watcher, ::CcxtAverageOHLCVVal)
                     exc,
                     all_source_symbols;
                     timeframe=timeframe,
+                    load_path=load_path,
                     start=false,
                     buffer_capacity=bufcap,
                     view_capacity=viewcap,
@@ -190,6 +192,7 @@ function _init!(w::Watcher, ::CcxtAverageOHLCVVal)
                     exc;
                     syms=all_source_symbols,
                     timeframe=timeframe,
+                    load_path=load_path,
                     start=false,
                     buffer_capacity=bufcap,
                     view_capacity=viewcap,

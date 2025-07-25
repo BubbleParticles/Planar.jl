@@ -55,6 +55,7 @@ function ccxt_ohlcv_tickers_watcher(
     n_jobs=ratelimit_njobs(exc),
     callback=Returns(nothing),
     load_timeframe=default_load_timeframe(timeframe),
+    load_path=nothing,
     kwargs...,
 )
     w = ccxt_tickers_watcher(
@@ -87,6 +88,7 @@ function ccxt_ohlcv_tickers_watcher(
         "ccxt_", exc.name, issandbox(exc), "_ohlcv_tickers_", join(a[k"ids"], "_")
     )
     a[k"load_timeframe"] = load_timeframe
+    a[:load_path] = load_path
     if !isnothing(logfile)
         @setkey! a logfile
     end
@@ -405,15 +407,15 @@ function _ensure_ohlcv!(w, sym)
     @debug "ohlcv tickers watcher: ensure" _module = LogOHLCVTickers sym
     tf = _tfr(w)
     min_rows = w.capacity.view - w.capacity.buffer
-    df = @lget! w.view sym ohlcv_cached!(w; sym)
-    load_tf = get(w.attrs, k"load_timeframe", tf)
-    use_upsample = (load_tf != tf) && (timefloat(load_tf.period) % timefloat(tf.period) == 0)
+    df = @lget! w.view sym begin
+        cached_ohlcv(w; sym)
+    end
     if isempty(df)
         local this, from, to
         this = now()
         from = this - (w.capacity.view + 1) * tf
         to = _nextdate(tf)
-        _fetchto!(w, df, sym, tf, Val(:append); from, to, allow_upsample=false)
+        _fetchto!(w, df, sym, tf, Val(:append); from, to, allow_upsample=true)
     else
         (from, to) = (lastdate(df), _nextdate(tf))
         if length(from:(period(tf)):to) > min_rows
@@ -423,7 +425,7 @@ function _ensure_ohlcv!(w, sym)
         _do_check_contig(w, df, _checks(w))
         if nrow(df) < min_rows
             to = _firstdate(df) + period(tf)
-            _fetchto!(w, df, sym, tf, Val(:prepend); to, allow_upsample=false)
+            _fetchto!(w, df, sym, tf, Val(:prepend); to, allow_upsample=true)
             _do_check_contig(w, df, _checks(w))
         end
     end

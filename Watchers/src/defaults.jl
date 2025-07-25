@@ -72,10 +72,20 @@ The function takes a watcher and a key as arguments. If the watcher data is not 
 """
 function default_loader(w::Watcher, key)
     attr!(w, :loaded, false) && return nothing
-    v = load_data(zinstance(), key; serialized=_isserialized(w))
-    !isnothing(v) && pushstart!(w, v)
-    w.has.process && process!(w)
-    setattr!(w, true, :loaded)
+    load_path = attr(w, :load_path, nothing)
+    zi = if !isnothing(load_path)
+        zinstance(load_path)
+    else
+        zinstance()
+    end
+    try
+        v = load_data(zi, key; serialized=_isserialized(w))
+        !isnothing(v) && pushstart!(w, v)
+        w.has.process && process!(w)
+        setattr!(w, true, :loaded)
+    catch e
+        @error "$(w.name): failed to load $key" exception = e
+    end
 end
 default_loader(w::Watcher) = default_loader(w, w.name)
 

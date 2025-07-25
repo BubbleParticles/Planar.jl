@@ -180,13 +180,15 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
         else
             error("call: invalid ohlcv method $met")
         end
+        load_path = attr(s, :watcher_load_path, dirname(s.path))
         s[:live_ohlcv_watcher] =
             w = watcher_func(
                 exc;
                 timeframe=s.timeframe,
                 syms=(raw(ai) for ai in s.universe),
                 flush=false,
-                logfile=logpath(s; name="tickers_watcher_$(nameof(s))"),
+                logfile=logpath(s; name="ohlcv_watcher_$(nameof(s))"),
+                load_path=load_path,
                 buffer_capacity,
                 view_capacity,
                 n_jobs,
