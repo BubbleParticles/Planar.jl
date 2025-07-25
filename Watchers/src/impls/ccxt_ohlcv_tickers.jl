@@ -85,7 +85,12 @@ function ccxt_ohlcv_tickers_watcher(
     a[k"volume_divisor"] = Day(1) / period(timeframe)
     a[k"status"] = Pending()
     a[k"key"] = string(
-        "ccxt_", exc.name, issandbox(exc), "_ohlcv_tickers_", join(a[k"ids"], "_")
+        "ccxt_",
+        exc.name,
+        "_",
+        issandbox(exc) ? "sb" : "",
+        "_ohlcv_tickers_",
+        hash(a[k"ids"]),
     )
     a[k"load_timeframe"] = load_timeframe
     a[:load_path] = load_path

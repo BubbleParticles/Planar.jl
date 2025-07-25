@@ -1,4 +1,15 @@
-using Watchers.WatchersImpls: _resolve, _curdate, _tfr, _ids, Watcher, handler_task!, check_task!, stop_handler_task!, getexchange!, _exc!, _check_ids
+using Watchers.WatchersImpls:
+    _resolve,
+    _curdate,
+    _tfr,
+    _ids,
+    Watcher,
+    handler_task!,
+    check_task!,
+    stop_handler_task!,
+    getexchange!,
+    _exc!,
+    _check_ids
 using Watchers: logerror
 using Base: Semaphore, acquire, release, ReentrantLock, current_task
 using .Data: DataFrame
@@ -37,7 +48,12 @@ function ccxt_ohlcv_candles_watcher(
     a[k"minrows_warned"] = false
     a[k"sem"] = Base.Semaphore(n_jobs)
     a[k"key"] = string(
-        "ccxt_", exc.name, issandbox(exc), "_ohlcv_candles_", join(a[k"ids"], "_")
+        "ccxt_",
+        exc.name,
+        "_",
+        issandbox(exc) ? "sb" : "",
+        "_ohlcv_candles_",
+        hash(a[k"ids"]),
     )
     a[k"load_timeframe"] = load_timeframe
     a[:load_path] = load_path
@@ -118,7 +134,9 @@ function _perform_locked_resync(w::Watcher, sym::String)
                 resolve_successful = true
             catch err
                 elapsed_ms_resolve = (time_ns() - start_time_resolve) / 1_000_000
-                @error "Watchers: Error during _resolve for $sym after $(round(elapsed_ms_resolve, digits=2)) ms (within lock)" exception=(err, catch_backtrace())
+                @error "Watchers: Error during _resolve for $sym after $(round(elapsed_ms_resolve, digits=2)) ms (within lock)" exception = (
+                    err, catch_backtrace()
+                )
                 rethrow()
             end
         end # Lock is released here
@@ -126,17 +144,19 @@ function _perform_locked_resync(w::Watcher, sym::String)
         # Logs after lock is released
         elapsed_ms_overall = (time_ns() - start_time_overall) / 1_000_000
         if resolve_successful
-             @debug "Watchers: _perform_locked_resync successfully finished for $sym in $(round(elapsed_ms_overall, digits=2)) ms (lock was acquired and released)."
+            @debug "Watchers: _perform_locked_resync successfully finished for $sym in $(round(elapsed_ms_overall, digits=2)) ms (lock was acquired and released)."
         else
-             # This path would typically not be hit if _resolve errors and rethrows,
-             # as the exception would be caught by the outer try-catch.
-             # However, it's here for logical completeness if _resolve could error without rethrowing to here.
-             @warn "Watchers: _perform_locked_resync finished for $sym in $(round(elapsed_ms_overall, digits=2)) ms, but _resolve may have failed or did not run (lock was acquired and released)."
+            # This path would typically not be hit if _resolve errors and rethrows,
+            # as the exception would be caught by the outer try-catch.
+            # However, it's here for logical completeness if _resolve could error without rethrowing to here.
+            @warn "Watchers: _perform_locked_resync finished for $sym in $(round(elapsed_ms_overall, digits=2)) ms, but _resolve may have failed or did not run (lock was acquired and released)."
         end
 
     catch outer_err # Catches errors from lock acquisition or if rethrow() from _resolve's catch block propagates
         elapsed_ms_overall = (time_ns() - start_time_overall) / 1_000_000
-        @error "Watchers: Error in _perform_locked_resync for $sym (e.g., lock acquisition failed or error propagated from _resolve) after $(round(elapsed_ms_overall, digits=2)) ms." exception=(outer_err, catch_backtrace())
+        @error "Watchers: Error in _perform_locked_resync for $sym (e.g., lock acquisition failed or error propagated from _resolve) after $(round(elapsed_ms_overall, digits=2)) ms." exception = (
+            outer_err, catch_backtrace()
+        )
         rethrow() # Ensure the calling async task knows about the failure
     end
 end
@@ -237,7 +257,12 @@ function maybe_schedule_resync!(w, sym, state, snap=nothing)
                     end
                 end
             catch err
-                logerror(w, err, catch_backtrace(), "Async OHLCV resync task manager failed for $sym")
+                logerror(
+                    w,
+                    err,
+                    catch_backtrace(),
+                    "Async OHLCV resync task manager failed for $sym",
+                )
                 # Also reset the flag in case of error acquiring semaphore or other top-level async error
                 lock(w.symstates[sym].lock) do # Attempt to lock and reset
                     if w.symstates[sym].is_resyncing # Check if it's still true
