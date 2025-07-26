@@ -431,7 +431,7 @@ function _process!(w::Watcher, ::CcxtAverageOHLCVVal)
             try
                 invokelatest(cb, agg_df, sym)
             catch e
-                @warn "CcxtAverageOHLCVWatcher callback error" watcher_id=w.name exception=e _module=LogAverageOHLCV
+                @warn "CcxtAverageOHLCVWatcher callback error" watcher_id=w.name sym exception=e _module=LogAverageOHLCV
             end
         end
     end
