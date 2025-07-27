@@ -544,6 +544,8 @@ function st.default!(s::LiveStrategy; skip_sync=nothing)
     set_exc_funcs!(s)
     # if `true` watchers will start even if strategy is stopped
     a[:live_force_watch] = false
+    # default warmup time
+    a[:warmup_period] = call!(s, WarmupPeriod())
     # The number of entries in watchers channels buffers
     a[:live_buffer_size] = 1000
     s isa MarginStrategy ? a[:positions_base_timeout] = Ref(Second(5)) : nothing

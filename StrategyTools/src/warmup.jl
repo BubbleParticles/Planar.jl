@@ -10,12 +10,17 @@ Initializes warmup attributes for a strategy.
 
 $(TYPEDSIGNATURES)
 """
-function call!(s::Strategy, ::InitSimWarmup; timeout=Minute(15), n_candles=999)
+function call!(
+    s::Strategy,
+    ::InitSimWarmup;
+    timeout=Minute(15),
+    warmup_period=attr!(s, :warmup_period, Day(1)),
+)
     attrs = s.attrs
     attrs[:warmup] = Dict(ai => false for ai in s.universe)
     attrs[:warmup_lock] = ReentrantLock()
     attrs[:warmup_timeout] = timeout
-    attrs[:warmup_candles] = n_candles
+    attrs[:warmup_candles] = max(100, count(s.timeframe, TimeFrame(warmup_period)))
     attrs[:warmup_running] = false
 end
 
