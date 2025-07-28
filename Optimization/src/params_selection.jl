@@ -9,20 +9,28 @@ $(TYPEDSIGNATURES)
 - `n`: Number of parameter combinations to select (default: 10)
 - `metric`: Distance metric to use (:euclidean, :manhattan, :cosine, default: :euclidean)
 
-Returns a DataFrame with the most diverse parameter combinations.
+Returns a DataFrame with the most diverse parameter combinations that have at least 1 trade.
 """
 function select_diverse_params(sess::OptSession; n::Int=10, metric::Symbol=:euclidean)
-    if nrow(sess.results) <= n
-        return sess.results
+    # Filter results to only include those with at least 1 trade
+    filtered_results = filter([:trades] => trades -> trades > 0, sess.results)
+    
+    if nrow(filtered_results) == 0
+        @warn "No results with trades found. Returning empty DataFrame."
+        return DataFrame()
+    end
+    
+    if nrow(filtered_results) <= n
+        return filtered_results
     end
     
     # Extract parameter columns
     param_cols = [keys(sess.params)...]
-    param_data = Matrix{Float64}(undef, nrow(sess.results), length(param_cols))
+    param_data = Matrix{Float64}(undef, nrow(filtered_results), length(param_cols))
     
     # Convert parameters to numeric matrix
     for (i, col) in enumerate(param_cols)
-        for (j, row) in enumerate(eachrow(sess.results))
+        for (j, row) in enumerate(eachrow(filtered_results))
             val = getproperty(row, col)
             # Handle different parameter types
             if val isa Period
@@ -44,9 +52,9 @@ function select_diverse_params(sess::OptSession; n::Int=10, metric::Symbol=:eucl
     end
     
     # Calculate distance matrix
-    distances = Matrix{Float64}(undef, nrow(sess.results), nrow(sess.results))
-    for i in 1:nrow(sess.results)
-        for j in 1:nrow(sess.results)
+    distances = Matrix{Float64}(undef, nrow(filtered_results), nrow(filtered_results))
+    for i in 1:nrow(filtered_results)
+        for j in 1:nrow(filtered_results)
             if i == j
                 distances[i, j] = 0.0
             else
@@ -72,7 +80,7 @@ function select_diverse_params(sess::OptSession; n::Int=10, metric::Symbol=:eucl
     
     # Greedy selection of most diverse points
     selected = Int[]
-    remaining = collect(1:nrow(sess.results))
+    remaining = collect(1:nrow(filtered_results))
     
     # Start with the point that has maximum average distance to all others
     avg_distances = vec(mean(distances, dims=2))
@@ -96,7 +104,7 @@ function select_diverse_params(sess::OptSession; n::Int=10, metric::Symbol=:eucl
         deleteat!(remaining, findfirst(isequal(next_idx), remaining))
     end
     
-    return sess.results[selected, :]
+    return filtered_results[selected, :]
 end
 
 @doc """ Selects parameter combinations with the best performance.
@@ -108,14 +116,22 @@ $(TYPEDSIGNATURES)
 - `sort_by`: Column to sort by (:pnl, :cash, :obj, default: :pnl)
 - `ascending`: Whether to sort in ascending order (default: false for best performance)
 
-Returns a DataFrame with the best performing parameter combinations.
+Returns a DataFrame with the best performing parameter combinations that have at least 1 trade.
 """
 function select_best_params(sess::OptSession; n::Int=10, sort_by::Symbol=:pnl, ascending::Bool=false)
-    if nrow(sess.results) <= n
-        return sort(sess.results, [sort_by], rev=!ascending)
+    # Filter results to only include those with at least 1 trade
+    filtered_results = filter([:trades] => trades -> trades > 0, sess.results)
+    
+    if nrow(filtered_results) == 0
+        @warn "No results with trades found. Returning empty DataFrame."
+        return DataFrame()
     end
     
-    sorted_results = sort(sess.results, [sort_by], rev=!ascending)
+    if nrow(filtered_results) <= n
+        return sort(filtered_results, [sort_by], rev=!ascending)
+    end
+    
+    sorted_results = sort(filtered_results, [sort_by], rev=!ascending)
     return sorted_results[1:n, :]
 end
 
@@ -127,11 +143,19 @@ $(TYPEDSIGNATURES)
 - `n`: Number of parameter combinations to select (default: 10)
 - `sort_by`: Column to sort by for performance (:pnl, :cash, :obj, default: :pnl)
 
-Returns a DataFrame with balanced diverse and performant parameter combinations.
+Returns a DataFrame with balanced diverse and performant parameter combinations that have at least 1 trade.
 """
 function select_balanced_params(sess::OptSession; n::Int=10, sort_by::Symbol=:pnl)
-    if nrow(sess.results) <= n
-        return sess.results
+    # Filter results to only include those with at least 1 trade
+    filtered_results = filter([:trades] => trades -> trades > 0, sess.results)
+    
+    if nrow(filtered_results) == 0
+        @warn "No results with trades found. Returning empty DataFrame."
+        return DataFrame()
+    end
+    
+    if nrow(filtered_results) <= n
+        return filtered_results
     end
     
     # Get diverse and best parameters
@@ -143,11 +167,11 @@ function select_balanced_params(sess::OptSession; n::Int=10, sort_by::Symbol=:pn
     unique_indices = unique(i -> hash(combined[i, :]), 1:nrow(combined))
     result = combined[unique_indices, :]
     
-    # If we have fewer than n unique combinations, add more from the original
+    # If we have fewer than n unique combinations, add more from the filtered results
     if nrow(result) < n
         # Get the indices of rows that are already in our result
         used_indices = Int[]
-        for (i, orig_row) in enumerate(eachrow(sess.results))
+        for (i, orig_row) in enumerate(eachrow(filtered_results))
             for result_row in eachrow(result)
                 if all(collect(orig_row) .== collect(result_row))
                     push!(used_indices, i)
@@ -156,10 +180,10 @@ function select_balanced_params(sess::OptSession; n::Int=10, sort_by::Symbol=:pn
             end
         end
         
-        remaining = setdiff(1:nrow(sess.results), used_indices)
+        remaining = setdiff(1:nrow(filtered_results), used_indices)
         if !isempty(remaining)
             additional_needed = n - nrow(result)
-            additional = sess.results[remaining[1:min(additional_needed, length(remaining))], :]
+            additional = filtered_results[remaining[1:min(additional_needed, length(remaining))], :]
             result = vcat(result, additional)
         end
     end
