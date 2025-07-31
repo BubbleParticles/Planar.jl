@@ -126,12 +126,12 @@ function bboptimize(
 )
     running!()
     Random.seed!(seed)
-    let n_jobs = get(kwargs, :NThreads, 1)
-        @assert n_jobs == 1 "Multithreaded mode not supported."
-        # @assert isthreadsafe(s) || n_jobs == 1 "Optimization is multi-threaded. Ensure the strategy $(nameof(s)) is thread safe and set the global constant `THREADSAFE` to `Ref(true)` in the strategy module or set `n_jobs` to 1"
-        @assert n_jobs <= max(1, Threads.nthreads() - 1) "Should not use more threads than logical cores $(Threads.nthreads())."
-        @assert :Workers ∉ keys(kwargs) "Multiprocess evaluation using `Distributed` not supported because of python."
-    end
+    # let n_jobs = get(kwargs, :NThreads, 1)
+    #     @assert n_jobs == 1 "Multithreaded mode not supported."
+    #     # @assert isthreadsafe(s) || n_jobs == 1 "Optimization is multi-threaded. Ensure the strategy $(nameof(s)) is thread safe and set the global constant `THREADSAFE` to `Ref(true)` in the strategy module or set `n_jobs` to 1"
+    #     @assert n_jobs <= max(1, Threads.nthreads() - 1) "Should not use more threads than logical cores $(Threads.nthreads())."
+    #     @assert :Workers ∉ keys(kwargs) "Multiprocess evaluation using `Distributed` not supported because of python."
+    # end
     local ctx, params, s_space, space, sess
     try
         ctx, params, s_space, space = ctxfromstrat(s)
