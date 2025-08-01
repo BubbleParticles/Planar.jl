@@ -59,7 +59,7 @@ get(ENV, "PLANAR_DOCS_LOADED", "false") == "true" || begin
     use(:Watchers, "Watchers")
     use(:Pbar, "Pbar")
     use(:Metrics, "Metrics")
-    use(:Optimization, "Optimization")
+    use(:Optim, "Optim")
     use(:Ccxt, "Ccxt")
     use(:Python, "Python")
     use(:StrategyTools, "StrategyTools")
@@ -107,7 +107,7 @@ makedocs(;
             ],
         ],
         "Metrics" => "metrics.md",
-        "Optimization" => "optimization.md",
+        "Optim" => "optimization.md",
         "Plotting" => "plotting.md",
         "Misc" => [
             "Config" => "config.md",

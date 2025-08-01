@@ -27,7 +27,7 @@ It can:
 - track live data like tickers, trades, ohlcv, see [Watchers](watchers/watchers.md).
 - compute statistics about backtest runs, see [Metrics](metrics.md)
 - generate interactive and fully browsable plots for ohlcv data, indicators and backtesting runs, see [Plotting](plotting.md)
-- Optimize strategy parameters [Optimization](optimization.md)
+- Optimize strategy parameters [Optim](optimization.md)
 
 ## Install (docker)
 Recommended installation is through docker. There are 4 images:

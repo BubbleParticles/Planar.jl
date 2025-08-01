@@ -1,7 +1,7 @@
 using SimMode.Misc.Lang: @precomp, @preset, @ignore
 using Metrics: sharpe
 
-function _precomp_strat(mod=Optimization)
+function _precomp_strat(mod=Optim)
     @eval mod begin
         using .SimMode: Executors as ect, sml
         using .SimMode.Misc: ZERO

@@ -1,9 +1,9 @@
 # Optimization
 
-Planar provides tools to optimize strategy parameters. Optimzations are managed through the [`Optimization.OptSession`](@ref) type. Which is a structure that holds informations about the optimization parameters, configuration and previous runs.
+Planar provides tools to optimize strategy parameters. Optimzations are managed through the [`Optim.OptSession`](@ref) type. Which is a structure that holds informations about the optimization parameters, configuration and previous runs.
 Optimization sessions can be periodically saved, and therefore can be reloaded at a later time to explore previous results or continue the optimization from where it left off.
 
-There are currently 3 different optimization methods: [`Optimization.gridsearch`](@ref), [`Optimization.bboptimize`](@ref), `boptimize!`(when using `BayesianOptimization`).
+There are currently 3 different optimization methods: [`Optim.gridsearch`](@ref), [`Optim.bboptimize`](@ref), `boptimize!`(when using `BayesianOptimization`).
 Configuration is done by defining three `call!` functions.
 
 - `call!(::S, ::OptSetup)`: returns a named tuples with:
@@ -18,7 +18,7 @@ Configuration is done by defining three `call!` functions.
 ### Grid search
 This is the recommended approach, useful if the strategy has a small set of parameters (<5).
 ```julia
-using Optimization
+using Optim
 gridsearch(s, splits=1, save_freq=Minute(1), resume=false)
 ```
 Will perform an search from scratch, saving every minute.
@@ -28,12 +28,12 @@ Will perform an search from scratch, saving every minute.
 The `BlackBoxOptim` offers multiple methods for searching, also also offers multi objective optimization. You can pass any arg supported by the upstream `bboptimze` function.
 
 ```julia
-Optimization.bboptimize(s, splits=3, MaxTime=240.0, Method=:borg_moea)
+Optim.bboptimize(s, splits=3, MaxTime=240.0, Method=:borg_moea)
 ```
 We exclude some optimization methods because they are slow or for some other quirks. Get the list of methods by calling `bbomethods`.
 ```julia
-Optimization.bbomethods()
-Optimization.bbomethods(true) # multi obj methods
+Optim.bbomethods()
+Optim.bbomethods(true) # multi obj methods
 ```
 `@doc bboptimize` shows some common argument you might want to pass to the optimization function like `MaxTime` or `MaxSteps`. For the full list refer to the `BlackBoxOptimi` package.
 
@@ -71,10 +71,10 @@ Visualizing the outcomes of an optimization can be accomplished with the `Plotti
     using PlanarInteractive
     # Now you can call Plotting.plot_results(...)
     ```
-    Alternatively, activate and load the `Plotting` package first, followed by the `Optimization` package. The `Planar` framework provides convenience functions to streamline this process:
+    Alternatively, activate and load the `Plotting` package first, followed by the `Optim` package. The `Planar` framework provides convenience functions to streamline this process:
     ```
     julia
     using Planar
     plots!() # This loads the Plotting package.
-    using Optimization
+    using Optim
     ```

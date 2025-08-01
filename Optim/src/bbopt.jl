@@ -1,9 +1,13 @@
 using SimMode.TimeTicks: current!
 using SimMode: start!
 using Random
-using BlackBoxOptim
-import BlackBoxOptim: bboptimize
 using SimMode.Lang: @debug_backtrace
+
+# Add Optimization.jl imports
+using Optimization
+using OptimizationBBO
+using OptimizationCMAEvolutionStrategy
+using OptimizationNLopt
 
 ## kwargs: @doc Optimization.BlackBoxOptim.OptRunController
 ## all BBO methods: `BlackBoxOptim.SingleObjectiveMethods`
@@ -99,17 +103,21 @@ function fitness_scheme(s::Strategy, n_obj)
     end
 end
 
-@doc """ Optimize parameters using the BlackBoxOptim package.
+@doc """ Optimize parameters using the Optimization.jl framework with BlackBoxOptim backend.
 
 $(TYPEDSIGNATURES)
 
 - `splits`: how many times to run the backtest for each step
 - `seed`: random seed
-- `kwargs`: The arguments to pass to the underlying BBO function. See the docs for the BlackBoxOptim package. Here are some most common parameters:
+- `method`: optimization method (defaults to BBO_adaptive_de_rand_1_bin())
+- `maxiters`: maximum number of iterations
+- `kwargs`: The arguments to pass to the underlying Optimization.jl solve function and BlackBoxOptim. 
+  Common BlackBoxOptim parameters include:
   - `MaxTime`: max evaluation time for the optimization
   - `MaxFuncEvals`: max number of function (backtest) evaluations
+  - `MaxStepsWithoutProgress`: max steps without improvement
   - `TraceMode`: (:silent, :compact, :verbose) controls the logging
-  - `MaxSteps`, `MaxStepsWithoutProgress`
+  - `MaxSteps`: maximum number of steps
 
 From within your strategy, define four `call!` functions:
 - `call!(::Strategy, ::OptSetup)`: for the period of time to evaluate and the parameters space for the optimization.
@@ -122,16 +130,13 @@ function bboptimize(
     resume=true,
     save_freq=nothing,
     zi=get_zinstance(s),
+    method=BBO_adaptive_de_rand_1_bin(),
+    maxiters=1000,
     kwargs...,
 )
     running!()
     Random.seed!(seed)
-    # let n_jobs = get(kwargs, :NThreads, 1)
-    #     @assert n_jobs == 1 "Multithreaded mode not supported."
-    #     # @assert isthreadsafe(s) || n_jobs == 1 "Optimization is multi-threaded. Ensure the strategy $(nameof(s)) is thread safe and set the global constant `THREADSAFE` to `Ref(true)` in the strategy module or set `n_jobs` to 1"
-    #     @assert n_jobs <= max(1, Threads.nthreads() - 1) "Should not use more threads than logical cores $(Threads.nthreads())."
-    #     @assert :Workers ∉ keys(kwargs) "Multiprocess evaluation using `Distributed` not supported because of python."
-    # end
+    
     local ctx, params, s_space, space, sess
     try
         ctx, params, s_space, space = ctxfromstrat(s)
@@ -151,6 +156,7 @@ function bboptimize(
         ctx, params, s_space, space = ctxfromstrat(s)
         sess = OptSession(s; ctx, params, attrs=Dict{Symbol,Any}(pairs((; s_space))))
     end
+    
     from = Ref(nrow(sess.results) + 1)
     save_args = if !isnothing(save_freq)
         resume || save_session(sess; zi)
@@ -164,57 +170,100 @@ function bboptimize(
     else
         ()
     end
+    
     backtest_func = define_backtest_func(sess, ctxsteps(ctx, splits)...)
     obj_type, n_obj = objectives(s)
-
-    filtered, rest = let (filtered, rest) = splitkws(:MaxStepsWithoutProgress; kwargs)
-        filtered, Dict{Symbol,Any}(rest)
+    
+    # Define the optimization function for Optimization.jl
+    function opt_function(u, p)
+        # Apply parameters to strategy
+        call!(s, u, OptRun())
+        
+        # Run backtest
+        result = backtest_func()
+        
+        # Return objective value(s)
+        if n_obj == 1
+            return result[1]
+        else
+            return result
+        end
     end
-    ismulti = let mt = get(rest, :Method, :xnes)
-        flag = n_obj > 1
-        @assert mt ∈ bbomethods(flag) "Optimization method incompatible."
-        flag
+    
+    # Get bounds from search space
+    lower, upper = lowerupper(params)
+    
+    # Create OptimizationProblem
+    optf = OptimizationFunction(opt_function, Optimization.AutoForwardDiff())
+    prob = OptimizationProblem(optf, lower, lb=lower, ub=upper, maxiters=maxiters)
+    
+    # Filter kwargs for BlackBoxOptim-specific parameters
+    bbo_kwargs = Dict{Symbol, Any}()
+    opt_kwargs = Dict{Symbol, Any}()
+    
+    for (key, value) in kwargs
+        if key in [:MaxTime, :MaxFuncEvals, :MaxStepsWithoutProgress, :TraceMode, :MaxSteps, 
+                   :PopulationSize, :FitnessTolerance, :FitnessScheme, :SearchSpace, 
+                   :CallbackFunction, :CallbackInterval, :RngSeed, :TargetFitness]
+            bbo_kwargs[key] = value
+        else
+            opt_kwargs[key] = value
+        end
     end
-    opt_func = define_opt_func(s; backtest_func, ismulti, splits, obj_type)
-    r = opt = nothing
+    
+    # Set default MaxStepsWithoutProgress if not provided
+    if !haskey(bbo_kwargs, :MaxStepsWithoutProgress)
+        bbo_kwargs[:MaxStepsWithoutProgress] = max(10, Threads.nthreads() * 10)
+    end
+    
+    # Solve with Optimization.jl, passing BlackBoxOptim kwargs
+    r = nothing
     try
-        rest[:MaxStepsWithoutProgress] = if isempty(filtered)
-            max(10, Threads.nthreads() * 10)
-        else
-            first(filtered)[2]
-        end
-        if ismulti
-            rest[:FitnessScheme] = fitness_scheme(s, n_obj)
-        end
-        initials = if isempty(sess.results)
-            ()
-        else
-            (
-                let df = sort(sess.results, :obj)
-                    # :borg_mea only supports one initial comb
-                    cols = collect(keys(sess.params))
-                    if ismulti
-                        row = @view df[end, cols]
-                        collect(row)
-                    else
-                        rows = @view df[(end - 9):end, cols]
-                        collect.(eachrow(rows))
-                    end
-                end,
-            )
-        end
-        runner(args...; kwargs...) = opt_func(args...; kwargs...)
-        opt = bbsetup(runner; SearchSpace=space, save_args..., rest...)
-        r = bboptimize(opt, initials...)
-        sess.best[] = best_candidate(r)
+        r = solve(prob, method; bbo_kwargs..., opt_kwargs...)
+        sess.best[] = r.u
     catch e
         stopcall!()
         Base.show_backtrace(stdout, catch_backtrace())
         save_session(sess; from=from[], zi)
         e isa InterruptException || showerror(stdout, e)
     end
+    
     stopcall!()
-    sess, (; opt, r)
+    sess, (; opt=r, r)
 end
 
-export bboptimize, best_fitness, best_candidate
+export bboptimize, @bboptimize, best_fitness, best_candidate
+
+"""
+    @bboptimize strategy [options...]
+
+Macro for optimizing strategy parameters using Optimization.jl framework with BlackBoxOptim backend.
+
+# Arguments
+- `strategy`: The strategy to optimize
+- `options`: Optional keyword arguments for the optimization
+
+# Examples
+```julia
+@bboptimize my_strategy maxiters=500
+@bboptimize my_strategy method=BBO_adaptive_de_rand_1_bin() maxiters=1000
+```
+"""
+macro bboptimize(strategy, args...)
+    # Parse arguments
+    kwargs = []
+    for arg in args
+        if arg isa Expr && arg.head == :(=)
+            push!(kwargs, Expr(:kw, arg.args[1], arg.args[2]))
+        else
+            push!(kwargs, arg)
+        end
+    end
+    
+    # Create the function call
+    if isempty(kwargs)
+        return :(bboptimize($(esc(strategy))))
+    else
+        return :(bboptimize($(esc(strategy)); $(kwargs...)))
+    end
+end

@@ -30,7 +30,7 @@ Main features:
 - `bboptimize(s::Strategy; ...)`: Black-box optimization using the BlackBoxOptim package (supports global optimization algorithms).
 - `boptimize!(s::Strategy; ...)`: Bayesian optimization using Gaussian Processes (requires BayesExt and BayesianOptimization.jl).
 """
-module Optimization
+module Optim
 
 if get(ENV, "JULIA_NOPRECOMP", "") == "all"
     __init__() = begin

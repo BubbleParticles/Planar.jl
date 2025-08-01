@@ -19,14 +19,12 @@ using .Planar.Engine.Simulations: Simulations as sml
 using .Planar.Engine.Data: Data as da
 using .Planar.Engine.Strategies: Strategies as st
 using .Planar.Engine.Executors: Executors as ex
-using .Planar.Engine.Optimization: Optimization as opt
 using .Planar.Engine.Misc: Misc as ms
 using .Planar.Engine.Lang: Lang as lg
 
 function test_<functionality>()
     @eval begin
         using PlanarDev.Planar.Engine: Engine as egn
-        using .egn.Optimization: Optimization as opt
         using .egn.Strategies: Strategies as st
         using .egn.Executors: Executors as ex
         using .egn.Data: Data as da

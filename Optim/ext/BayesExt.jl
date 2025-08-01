@@ -1,6 +1,6 @@
 module BayesExt
-using Optimization
-using Optimization:
+using Optim
+using Optim:
     running!,
     stopcall!,
     isrunning,
@@ -15,17 +15,17 @@ using .SimMode.Executors: st, Instances, OptSetup, OptRun, OptScore, Context
 using .SimMode.Misc.Lang: @preset, @precomp
 using .SimMode.TimeTicks
 using .SimMode.Misc
-using BayesianOptimization
-using BayesianOptimization.GaussianProcesses
+using BayesianOptim
+using BayesianOptim.GaussianProcesses
 using .GaussianProcesses.Distributions
 using Random
-import BayesianOptimization: boptimize!
+import BayesianOptim: boptimize!
 
 @doc """ Constructs a Gaussian Process model with ElasticGPE.
 
 $(TYPEDSIGNATURES)
 
-The function `gpmodel` constructs a Gaussian Process model using the ElasticGPE function from the BayesianOptimization.GaussianProcesses module. 
+The function `gpmodel` constructs a Gaussian Process model using the ElasticGPE function from the BayesianOptim.GaussianProcesses module.
 It sets the mean, kernel, logNoise, and capacity of the model. 
 The function also sets priors for the mean of the model. 
 The number of dimensions (`ndims`) is passed as an argument to the function.
@@ -67,7 +67,7 @@ end
 $(TYPEDSIGNATURES)
 
 The `boptimize!` function optimizes a given strategy `s` using Bayesian optimization. 
-It allows for customization of the Gaussian Process model, the model optimizer, and the acquisition function through the `BayesianOptimization` package. 
+It allows for customization of the Gaussian Process model, the model optimizer, and the acquisition function through the `BayesianOptim` package.
 The function also supports specification of a random seed, the number of splits in the optimization process, the maximum number of iterations, and the maximum duration of the optimization process. 
 The function initializes an optimization session, defines a backtest function and an optimization function, and finally carries out the optimization, returning the optimization session and results.
 
@@ -121,10 +121,10 @@ end
 
 export boptimize!
 
-if occursin("Optimization", get(ENV, "JULIA_PRECOMP", ""))
+if occursin("Optim", get(ENV, "JULIA_PRECOMP", ""))
     @preset begin
         st.Instances.Exchanges.Python.py_start_loop()
-        s = Optimization._precomp_strat(BayesExt)
+        s = Optim._precomp_strat(BayesExt)
 
         @precomp boptimize!(s, maxiterations=10)
         st.Instances.Exchanges.Python.py_stop_loop()

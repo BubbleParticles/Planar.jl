@@ -24,10 +24,10 @@ end
 using Planar
 using WGLMakie
 using Plotting
-using Optimization
+using Optim
 using Watchers
 using Scrapers
 
-export Plotting, Optimization, Watchers, Scrapers
+export Plotting, Optim, Watchers, Scrapers
 
 end # module IPlanar
