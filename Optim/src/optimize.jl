@@ -104,6 +104,322 @@ end
 
 inc!(s::Strategy) = s[:strategy] += 1
 
+#############################
+# Internal helper functions #
+#############################
+
+# Session and space setup
+function _create_session_and_space(s::Strategy{Sim}; disabled_params, resume::Bool, zi)
+    ctx, params, s_space, space = ctxfromstrat(s; disabled_params)
+    sess = OptSession(s; ctx, params, attrs=Dict{Symbol,Any}(pairs((; s_space))))
+    resume && resume!(sess; zi)
+    return sess, ctx, params, space
+end
+
+# Build save callback args
+function _build_save_args(sess; save_freq, zi, resume::Bool)
+    from = Ref(nrow(sess.results) + 1)
+    if isnothing(save_freq)
+        return (), from
+    end
+    resume || save_session(sess; zi)
+    return (
+        CallbackFunction=(_...) -> begin
+            save_session(sess; from=from[], zi)
+            from[] = nrow(sess.results) + 1
+        end,
+        CallbackInterval=Millisecond(save_freq).value / 1000.0,
+    ), from
+end
+
+# Propagate precision/categorical/bounds to thread clones
+function _propagate_clone_attrs!(sess::OptSession, s::Strategy)
+    for (lock, strategy_clone) in sess.s_clones
+        if haskey(s, :opt_precision)
+            strategy_clone[:opt_precision] = s[:opt_precision]
+        end
+        if haskey(s, :opt_categorical)
+            strategy_clone[:opt_categorical] = s[:opt_categorical]
+        end
+        if haskey(s, :opt_bounds)
+            strategy_clone[:opt_bounds] = s[:opt_bounds]
+        end
+    end
+    return nothing
+end
+
+# Build the objective used by Optimization.jl
+function _make_opt_function(sess::OptSession, s::Strategy, backtest_func, n_obj::Int)
+    evaluation_cache = Dict{Vector{Float64}, Float64}()
+    cache_lock = ReentrantLock()
+    counter = (; lock = ReentrantLock(), n = Ref(0))
+
+    function opt_function(u, p)
+        u_rounded = apply_precision(u, s)
+        @lock cache_lock begin
+            if haskey(evaluation_cache, u_rounded)
+                return evaluation_cache[u_rounded]
+            end
+        end
+        thread_id = Threads.threadid()
+        current_strategy = sess.s_clones[thread_id][2]
+        call!(current_strategy, u_rounded, OptRun())
+        this_n = counter.n[] + 1
+        @lock counter.lock counter.n[] = this_n
+        result = backtest_func(u_rounded, this_n)
+        objective_value = n_obj == 1 ? result[1] : result
+        @lock cache_lock evaluation_cache[u_rounded] = objective_value
+        return objective_value
+    end
+
+    return opt_function
+end
+
+# Extract lower/upper bounds
+function _bounds_from_space(space)
+    if space isa Tuple && length(space) == 2
+        return space[1], space[2]
+    else
+        error("Expected space to be a tuple (lower, upper), got $(typeof(space))")
+    end
+end
+
+# Build OptimizationProblem
+function _build_problem(optf, initial_guess, lower_float, upper_float, integer_mask, maxiters)
+    if any(integer_mask)
+        return OptimizationProblem(
+            optf, initial_guess; lb=lower_float, ub=upper_float, int=integer_mask, maxiters=maxiters,
+        )
+    else
+        return OptimizationProblem(
+            optf, initial_guess; lb=lower_float, ub=upper_float, maxiters=maxiters,
+        )
+    end
+end
+
+# Build early-termination callback
+function _build_callback(solve_kwargs::Dict{Symbol,Any})
+    early_termination_kwargs = Dict{Symbol, Any}()
+    for (key, value) in solve_kwargs
+        if key in [:early_termination_threshold, :max_consecutive_failures]
+            early_termination_kwargs[key] = value
+        end
+    end
+    if isempty(early_termination_kwargs)
+        return nothing
+    end
+    return (u, p) -> begin
+        threshold = get(early_termination_kwargs, :early_termination_threshold, -Inf)
+        if p < threshold
+            return true
+        end
+        return false
+    end
+end
+
+# Single-job solve
+function _run_single(prob, method, callback, solve_kwargs)
+    if isnothing(callback)
+        return solve(prob, method; solve_kwargs...)
+    else
+        return solve(prob, method; callback=callback, solve_kwargs...)
+    end
+end
+
+# Multi-start concurrent solves
+function _run_multi_start(optf, initial_guess, lower_float, upper_float, integer_mask, n_jobs::Int, method, callback, solve_kwargs, s::Strategy, maxiters)
+    # Generate initial guesses (first is midpoint)
+    function random_initial_guess()
+        ig = similar(initial_guess)
+        @inbounds for i in eachindex(ig)
+            ig[i] = rand() * (upper_float[i] - lower_float[i]) + lower_float[i]
+        end
+        apply_precision(ig, s)
+    end
+    initial_guesses = Vector{typeof(initial_guess)}(undef, n_jobs)
+    initial_guesses[1] = initial_guess
+    for j in 2:n_jobs
+        initial_guesses[j] = random_initial_guess()
+    end
+
+    # Problems per job
+    probs = Vector{OptimizationProblem}(undef, n_jobs)
+    for j in 1:n_jobs
+        probs[j] = _build_problem(optf, initial_guesses[j], lower_float, upper_float, integer_mask, maxiters)
+    end
+
+    # Spawn tasks
+    tasks = Vector{Task}(undef, n_jobs)
+    for j in 1:n_jobs
+        if isnothing(callback)
+            tasks[j] = Threads.@spawn solve(probs[j], method; solve_kwargs...)
+        else
+            tasks[j] = Threads.@spawn solve(probs[j], method; callback=callback, solve_kwargs...)
+        end
+    end
+    solutions = map(fetch, tasks)
+    best_idx = argmin([sol.f for sol in solutions])
+    return solutions[best_idx]
+end
+
+#############################
+# Internal helper functions #
+#############################
+
+# Session and space setup
+function _create_session_and_space(s::Strategy{Sim}; disabled_params, resume::Bool, zi)
+    ctx, params, s_space, space = ctxfromstrat(s; disabled_params)
+    sess = OptSession(s; ctx, params, attrs=Dict{Symbol,Any}(pairs((; s_space))))
+    resume && resume!(sess; zi)
+    return sess, ctx, params, space
+end
+
+# Build save callback args
+function _build_save_args(sess; save_freq, zi, resume::Bool)
+    from = Ref(nrow(sess.results) + 1)
+    if isnothing(save_freq)
+        return (), from
+    end
+    resume || save_session(sess; zi)
+    return (
+        CallbackFunction=(_...) -> begin
+            save_session(sess; from=from[], zi)
+            from[] = nrow(sess.results) + 1
+        end,
+        CallbackInterval=Millisecond(save_freq).value / 1000.0,
+    ), from
+end
+
+# Propagate precision/categorical/bounds to thread clones
+function _propagate_clone_attrs!(sess::OptSession, s::Strategy)
+    for (lock, strategy_clone) in sess.s_clones
+        if haskey(s, :opt_precision)
+            strategy_clone[:opt_precision] = s[:opt_precision]
+        end
+        if haskey(s, :opt_categorical)
+            strategy_clone[:opt_categorical] = s[:opt_categorical]
+        end
+        if haskey(s, :opt_bounds)
+            strategy_clone[:opt_bounds] = s[:opt_bounds]
+        end
+    end
+    return nothing
+end
+
+# Build the objective used by Optimization.jl
+function _make_opt_function(sess::OptSession, s::Strategy, backtest_func, n_obj::Int)
+    evaluation_cache = Dict{Vector{Float64}, Float64}()
+    cache_lock = ReentrantLock()
+    counter = (; lock = ReentrantLock(), n = Ref(0))
+
+    function opt_function(u, p)
+        u_rounded = apply_precision(u, s)
+        @lock cache_lock begin
+            if haskey(evaluation_cache, u_rounded)
+                return evaluation_cache[u_rounded]
+            end
+        end
+        thread_id = Threads.threadid()
+        current_strategy = sess.s_clones[thread_id][2]
+        call!(current_strategy, u_rounded, OptRun())
+        this_n = counter.n[] + 1
+        @lock counter.lock counter.n[] = this_n
+        result = backtest_func(u_rounded, this_n)
+        objective_value = n_obj == 1 ? result[1] : result
+        @lock cache_lock evaluation_cache[u_rounded] = objective_value
+        return objective_value
+    end
+
+    return opt_function
+end
+
+# Extract lower/upper bounds
+function _bounds_from_space(space)
+    if space isa Tuple && length(space) == 2
+        return space[1], space[2]
+    else
+        error("Expected space to be a tuple (lower, upper), got $(typeof(space))")
+    end
+end
+
+# Build OptimizationProblem
+function _build_problem(optf, initial_guess, lower_float, upper_float, integer_mask, maxiters)
+    if any(integer_mask)
+        return OptimizationProblem(
+            optf, initial_guess; lb=lower_float, ub=upper_float, int=integer_mask, maxiters=maxiters,
+        )
+    else
+        return OptimizationProblem(
+            optf, initial_guess; lb=lower_float, ub=upper_float, maxiters=maxiters,
+        )
+    end
+end
+
+# Build early-termination callback
+function _build_callback(solve_kwargs::Dict{Symbol,Any})
+    early_termination_kwargs = Dict{Symbol, Any}()
+    for (key, value) in solve_kwargs
+        if key in [:early_termination_threshold, :max_consecutive_failures]
+            early_termination_kwargs[key] = value
+        end
+    end
+    if isempty(early_termination_kwargs)
+        return nothing
+    end
+    return (u, p) -> begin
+        threshold = get(early_termination_kwargs, :early_termination_threshold, -Inf)
+        if p < threshold
+            return true
+        end
+        return false
+    end
+end
+
+# Single-job solve
+function _run_single(prob, method, callback, solve_kwargs)
+    if isnothing(callback)
+        return solve(prob, method; solve_kwargs...)
+    else
+        return solve(prob, method; callback=callback, solve_kwargs...)
+    end
+end
+
+# Multi-start concurrent solves
+function _run_multi_start(optf, initial_guess, lower_float, upper_float, integer_mask, n_jobs::Int, method, callback, solve_kwargs, s::Strategy, maxiters)
+    # Generate initial guesses (first is midpoint)
+    function random_initial_guess()
+        ig = similar(initial_guess)
+        @inbounds for i in eachindex(ig)
+            ig[i] = rand() * (upper_float[i] - lower_float[i]) + lower_float[i]
+        end
+        apply_precision(ig, s)
+    end
+    initial_guesses = Vector{typeof(initial_guess)}(undef, n_jobs)
+    initial_guesses[1] = initial_guess
+    for j in 2:n_jobs
+        initial_guesses[j] = random_initial_guess()
+    end
+
+    # Problems per job
+    probs = Vector{OptimizationProblem}(undef, n_jobs)
+    for j in 1:n_jobs
+        probs[j] = _build_problem(optf, initial_guesses[j], lower_float, upper_float, integer_mask, maxiters)
+    end
+
+    # Spawn tasks
+    tasks = Vector{Task}(undef, n_jobs)
+    for j in 1:n_jobs
+        if isnothing(callback)
+            tasks[j] = Threads.@spawn solve(probs[j], method; solve_kwargs...)
+        else
+            tasks[j] = Threads.@spawn solve(probs[j], method; callback=callback, solve_kwargs...)
+        end
+    end
+    solutions = map(fetch, tasks)
+    best_idx = argmin([sol.f for sol in solutions])
+    return solutions[best_idx]
+end
+
 @doc """ Optimize parameters using the Optimization.jl framework.
 
 $(TYPEDSIGNATURES)
@@ -151,11 +467,9 @@ function optimize(
     Random.seed!(seed)
     method = opt_method(method)
     
-    local ctx, params, s_space, space, sess
+    local ctx, params, s_space, space, sess, callback
     try
-        ctx, params, s_space, space = ctxfromstrat(s; disabled_params)
-        sess = OptSession(s; ctx, params, attrs=Dict{Symbol,Any}(pairs((; s_space))))
-        resume && resume!(sess; zi)
+        sess, ctx, params, space = _create_session_and_space(s; disabled_params, resume, zi)
     catch
         @debug_backtrace
         if isinteractive()
@@ -167,84 +481,20 @@ function optimize(
                 end
             end
         end
-        ctx, params, s_space, space = ctxfromstrat(s; disabled_params)
-        sess = OptSession(s; ctx, params, attrs=Dict{Symbol,Any}(pairs((; s_space))))
+        sess, ctx, params, space = _create_session_and_space(s; disabled_params, resume=false, zi)
     end
     
-    from = Ref(nrow(sess.results) + 1)
-    save_args = if !isnothing(save_freq)
-        resume || save_session(sess; zi)
-        (;
-            CallbackFunction=(_...) -> begin
-                save_session(sess; from=from[], zi)
-                from[] = nrow(sess.results) + 1
-            end,
-            CallbackInterval=Millisecond(save_freq).value / 1000.0,
-        )
-    else
-        ()
-    end
+    save_args, from = _build_save_args(sess; save_freq, zi, resume)
     
-    counter = (; lock = ReentrantLock(), n = Ref(0))
     backtest_func = define_backtest_func(sess, ctxsteps(ctx, splits)...)
     obj_type, n_obj = objectives(s)
-    
-    # Cache for avoiding duplicate evaluations of the same rounded parameters
-    evaluation_cache = Dict{Vector{Float64}, Float64}()
-    cache_lock = ReentrantLock()
-    
-    # Copy precision and categorical info to session strategy clones
-    for (lock, strategy_clone) in sess.s_clones
-        if haskey(s, :opt_precision)
-            strategy_clone[:opt_precision] = s[:opt_precision]
-        end
-        if haskey(s, :opt_categorical)
-            strategy_clone[:opt_categorical] = s[:opt_categorical]
-        end
-        if haskey(s, :opt_bounds)
-            strategy_clone[:opt_bounds] = s[:opt_bounds]
-        end
-    end
+    _propagate_clone_attrs!(sess, s)
     
     # Define the optimization function for Optimization.jl
-    function opt_function(u, p)
-        # Apply precision if specified
-        u_rounded = apply_precision(u, s)
-        
-        # Check cache for existing result
-        @lock cache_lock begin
-            if haskey(evaluation_cache, u_rounded)
-                return evaluation_cache[u_rounded]
-            end
-        end
-        
-        # Use session strategy clone for thread safety
-        thread_id = Threads.threadid()
-        current_strategy = sess.s_clones[thread_id][2]  # Get the strategy from (lock, strategy) tuple
-        
-        # Apply parameters to strategy
-        call!(current_strategy, u_rounded, OptRun())
-        
-        # Run backtest
-        this_n = counter.n[] + 1
-        @lock counter.lock counter.n[] = this_n
-        result = backtest_func(u_rounded, this_n)
-        
-        # Cache the result
-        objective_value = n_obj == 1 ? result[1] : result
-        @lock cache_lock begin
-            evaluation_cache[u_rounded] = objective_value
-        end
-        
-        return objective_value
-    end
+    opt_function = _make_opt_function(sess, s, backtest_func, n_obj)
     
     # Get bounds from the strategy setup
-    if space isa Tuple && length(space) == 2
-        lower, upper = space
-    else
-        error("Expected space to be a tuple (lower, upper), got $(typeof(space))")
-    end
+    lower, upper = _bounds_from_space(space)
     
     # Store bounds for later use in parameter clamping
     s[:opt_bounds] = (copy(lower), copy(upper))
@@ -267,12 +517,7 @@ function optimize(
     end
     
     # Create problem with integer constraints if needed
-    if any(integer_mask)
-        prob = OptimizationProblem(optf, initial_guess, lb=lower_float, ub=upper_float, 
-                                 int=integer_mask, maxiters=maxiters)
-    else
-        prob = OptimizationProblem(optf, initial_guess, lb=lower_float, ub=upper_float, maxiters=maxiters)
-    end
+    prob = _build_problem(optf, initial_guess, lower_float, upper_float, integer_mask, maxiters)
     
     # Configure parallel evaluation if requested
     solve_kwargs = Dict{Symbol, Any}(kwargs...)
@@ -280,87 +525,22 @@ function optimize(
         # Check if strategy is thread-safe
         if !isthreadsafe(s)
             @warn "Parallel optimization requested but strategy is not thread-safe. Disabling parallel mode."
+            n_jobs = 1
         end
     end
     
     # Solve with Optimization.jl
     r = nothing
     try
-        # Add early termination callback if specified
-        early_termination_kwargs = Dict{Symbol, Any}()
-        for (key, value) in solve_kwargs
-            if key in [:early_termination_threshold, :max_consecutive_failures]
-                early_termination_kwargs[key] = value
-            end
-        end
-        
         # Create callback for early termination
-        local callback
-        if !isempty(early_termination_kwargs)
-            callback = (u, p) -> begin
-                threshold = get(early_termination_kwargs, :early_termination_threshold, -Inf)
-                if p < threshold
-                    return true
-                end
-                return false
-            end
-        end
+        callback = _build_callback(solve_kwargs)
 
         if n_jobs > 1 && isthreadsafe(s)
-            # Multi-start: run multiple solves in parallel with different initial guesses
-            # Generate n_jobs initial guesses within bounds (first is midpoint)
-            function random_initial_guess()
-                ig = similar(initial_guess)
-                @inbounds for i in eachindex(ig)
-                    ig[i] = rand() * (upper_float[i] - lower_float[i]) + lower_float[i]
-                end
-                apply_precision(ig, s)
-            end
-
-            initial_guesses = Vector{typeof(initial_guess)}(undef, n_jobs)
-            initial_guesses[1] = initial_guess
-            for j in 2:n_jobs
-                initial_guesses[j] = random_initial_guess()
-            end
-
-            # Build problems per job
-            probs = Vector{OptimizationProblem}(undef, n_jobs)
-            for j in 1:n_jobs
-                if any(integer_mask)
-                    probs[j] = OptimizationProblem(
-                        optf, initial_guesses[j]; lb=lower_float, ub=upper_float, int=integer_mask, maxiters=maxiters,
-                    )
-                else
-                    probs[j] = OptimizationProblem(
-                        optf, initial_guesses[j]; lb=lower_float, ub=upper_float, maxiters=maxiters,
-                    )
-                end
-            end
-
-            # Launch solves concurrently
-            tasks = Vector{Task}(undef, n_jobs)
-            for j in 1:n_jobs
-                if isnothing(callback)
-                    tasks[j] = Threads.@spawn solve(probs[j], method; solve_kwargs...)
-                else
-                    tasks[j] = Threads.@spawn solve(probs[j], method; callback=callback, solve_kwargs...)
-                end
-            end
-
-            # Gather and select best by minimum objective value
-            solutions = map(fetch, tasks)
-            best_idx = argmin([sol.f for sol in solutions])
-            r = solutions[best_idx]
-            sess.best[] = r.u
+            r = _run_multi_start(optf, initial_guess, lower_float, upper_float, integer_mask, n_jobs, method, callback, solve_kwargs, s, maxiters)
         else
-            # Single job
-            if isnothing(callback)
-                r = solve(prob, method; solve_kwargs...)
-            else
-                r = solve(prob, method; callback=callback, solve_kwargs...)
-            end
-            sess.best[] = r.u
+            r = _run_single(prob, method, callback, solve_kwargs)
         end
+        sess.best[] = r.u
     catch e
         stopcall!()
         Base.show_backtrace(stdout, catch_backtrace())
