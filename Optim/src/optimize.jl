@@ -258,7 +258,7 @@ function _run_multi_start(optf, initial_guess, lower_float, upper_float, integer
         end
     end
     solutions = map(fetch, tasks)
-    best_idx = argmin([sol.f for sol in solutions])
+    best_idx = argmin([sol.objective isa Number ? sol.objective : sol.objective[1] for sol in solutions])
     return solutions[best_idx]
 end
 
@@ -416,7 +416,7 @@ function _run_multi_start(optf, initial_guess, lower_float, upper_float, integer
         end
     end
     solutions = map(fetch, tasks)
-    best_idx = argmin([sol.f for sol in solutions])
+    best_idx = argmin([sol.objective isa Number ? sol.objective : sol.objective[1] for sol in solutions])
     return solutions[best_idx]
 end
 
@@ -521,12 +521,8 @@ function optimize(
     
     # Configure parallel evaluation if requested
     solve_kwargs = Dict{Symbol, Any}(kwargs...)
-    if n_jobs > 1
-        # Check if strategy is thread-safe
-        if !isthreadsafe(s)
-            @warn "Parallel optimization requested but strategy is not thread-safe. Disabling parallel mode."
-            n_jobs = 1
-        end
+    if n_jobs > 1 && !isthreadsafe(s)
+        @warn "Parallel optimization requested but strategy is not thread-safe. Disabling parallel mode."
     end
     
     # Solve with Optimization.jl

@@ -25,7 +25,7 @@ end
         (;
             ctx=Context(Sim(), tf"1d", dt"2020-", now()),
             params=(x=1:2, y=0.0:0.5:1.0),
-            space=(kind=:MixedPrecisionRectSearchSpace, precision=Int[0, 1]),
+            bounds=([1.0, 0.0], [2.0, 1.0]),
         )
     end
     function st.call!(s::typeof(s), params, ::OptRun)
@@ -56,7 +56,7 @@ end
         gridsearch(s; resume=true)
         progsearch(s)
         slidesearch(s)
-        bboptimize(s; MaxSteps=2)
+        optimize(s; MaxSteps=2)
     end
 
     st.Instances.Exchanges.Python.py_stop_loop()

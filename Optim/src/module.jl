@@ -59,7 +59,7 @@ isrunning() = @atomic RUNNING.value
 
 $(TYPEDSIGNATURES)
 
-The `ctx` field (`Executors.Context`) specifies the backtest time period, while `space` is either an already built `BlackBoxOptim.SearchSpace` subtype or a tuple (`Symbol`, args...) for a pre-defined BBO package search space.
+The `ctx` field (`Executors.Context`) specifies the backtest time period, while `bounds` is a tuple of (lower, upper) bounds for the optimization parameters.
 """
 call!(::Strategy, ::OptSetup)::ContextSpace = error("not implemented")
 
@@ -697,10 +697,17 @@ It returns two arrays, `lower` and `upper`, containing the first and last values
 
 """
 lowerupper(params) = begin
-    lower, upper = [], []
+    lower, upper = Float64[], Float64[]
     for p in values(params)
-        push!(lower, first(p))
-        push!(upper, last(p))
+        if p isa AbstractVector && eltype(p) <: Symbol
+            # Categorical parameter - use indices
+            push!(lower, 1.0)
+            push!(upper, Float64(length(p)))
+        else
+            # Numeric parameter - use first and last values
+            push!(lower, Float64(first(p)))
+            push!(upper, Float64(last(p)))
+        end
     end
     lower, upper
 end
@@ -737,6 +744,7 @@ end
 
 export OptSession, extbayes!
 
-include("bbopt.jl")
+include("optimize.jl")
 include("grid.jl")
 include("params_selection.jl")
+include("bbo.jl")

@@ -156,6 +156,7 @@ It prepares the environment for working with simulation modes and statistics.
 macro optenv!()
     quote
         using Planar.Engine.SimMode: SimMode as sm
+        using Optim
         using Optim.Metrics: Metrics as mt
     end
 end

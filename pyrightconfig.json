@@ -1,4 +1,4 @@
 {
-    "venvPath": "~/.julia/conda",
-    "venv": "3"
+    "venvPath": ".conda",
+    "venv": "."
 }

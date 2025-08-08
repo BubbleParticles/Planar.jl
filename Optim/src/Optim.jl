@@ -27,7 +27,7 @@ Main features:
 - `progsearch(s::Strategy; ...)`: Progressive search, running multiple grid searches with filtering and resampling.
 - `slidesearch(s::Strategy; ...)`: Slides a window over the backtesting period, running optimizations at each step.
 - `broadsearch(s::Strategy; ...)`: Performs a broad search by slicing the context and optimizing in each slice.
-- `bboptimize(s::Strategy; ...)`: Black-box optimization using the BlackBoxOptim package (supports global optimization algorithms).
+- `optimize(s::Strategy; ...)`: Black-box optimization using the Optimization.jl framework (supports global optimization algorithms).
 - `boptimize!(s::Strategy; ...)`: Bayesian optimization using Gaussian Processes (requires BayesExt and BayesianOptimization.jl).
 """
 module Optim
