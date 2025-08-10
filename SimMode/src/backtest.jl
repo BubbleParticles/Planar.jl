@@ -109,7 +109,8 @@ function start!(
             end
 
             @withpbar! trimmed_range desc="Backtesting" begin
-                for date in ctx.range
+                # Iterate over the trimmed_range to respect warmup trimming when showing progress
+                for date in trimmed_range
                     isoutof_orders(s) && begin
                         @deassert all(iszero(ai) for ai in universe(s))
                         break

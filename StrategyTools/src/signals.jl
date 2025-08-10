@@ -175,7 +175,8 @@ function update_signal!(ai, ats, ai_signals, sig_name; tf, count)
     @debug "update_signal!" raw(ai) iscontig = isempty(data) ? nothing : contiguous_ts(data) maxlog =
         1
     if ismissing(this.state.value)
-        start_date = ats - tf * count
+        # Align start date to timeframe boundaries to ensure indexes exist
+        start_date = available(tf, ats) - tf * count
         idx_start = dateindex(data, start_date)
         if iszero(idx_start)
             @warn "can't update stat" ai = raw(ai) sig_name start_date maxlog = 1
@@ -197,7 +198,8 @@ function update_signal!(ai, ats, ai_signals, sig_name; tf, count)
     elseif this.date < this_tf_ats
         # This ensures that we only compute the minimum necessary in case
         # the signals lags behind (only in live)
-        start_date = max(this.date + tf, ats - tf * count)
+        # Align incremental updates to timeframe boundaries as well
+        start_date = max(this.date + tf, available(tf, ats) - tf * count)
         idx_start = dateindex(data, start_date)
         if iszero(idx_start)
             @warn "can't update stat" ai = raw(ai) sig_name start_date maxlog = 1

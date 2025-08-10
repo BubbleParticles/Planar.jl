@@ -17,11 +17,18 @@ function call!(
     warmup_period=attr!(s, :warmup_period, Day(1)),
 )
     attrs = s.attrs
-    attrs[:warmup] = Dict(ai => false for ai in s.universe)
     attrs[:warmup_lock] = ReentrantLock()
     attrs[:warmup_timeout] = timeout
-    attrs[:warmup_candles] = max(100, count(s.timeframe, TimeFrame(warmup_period)))
     attrs[:warmup_running] = false
+    # If this strategy instance is itself the temporary warmup simulator,
+    # don't trigger nested warmups. Mark as warm and skip.
+    if get(attrs, :is_warmup_sim, false)
+        attrs[:warmup] = Dict(ai => true for ai in s.universe)
+        attrs[:warmup_candles] = 0
+        return nothing
+    end
+    attrs[:warmup] = Dict(ai => false for ai in s.universe)
+    attrs[:warmup_candles] = max(100, count(s.timeframe, TimeFrame(warmup_period)))
 end
 
 function call!(
@@ -79,7 +86,9 @@ function _warmup!(
             return nothing
         end
     end
+    # Build a dedicated sim strategy and flag it as a warmup simulator
     s_sim = @lget! s.attrs :simstrat strategy(nameof(s), mode=Sim(), sandbox=issandbox(s))
+    s_sim[:is_warmup_sim] = true
     ai_dict = @lget! s.attrs :siminstances Dict(raw(ai) => ai for ai in s_sim.universe)
     ai_sim = ai_dict[raw(ai)]
     copyohlcv!(ai_sim, ai)

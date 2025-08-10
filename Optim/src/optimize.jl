@@ -150,17 +150,16 @@ end
 
 # Build the objective used by Optimization.jl
 function _make_opt_function(sess::OptSession, s::Strategy, backtest_func, n_obj::Int)
-    evaluation_cache = Dict{Vector{Float64}, Float64}()
+    # Use content-based tuple keys so identical parameter combinations across solver tasks share results.
+    # Use Tuple of Float64 values to normalize ints/bools to floats for stable keys.
+    evaluation_cache = Dict{Tuple, Any}()
     cache_lock = ReentrantLock()
     counter = (; lock = ReentrantLock(), n = Ref(0))
 
     function opt_function(u, p)
         u_rounded = apply_precision(u, s)
-        @lock cache_lock begin
-            if haskey(evaluation_cache, u_rounded)
-                return evaluation_cache[u_rounded]
-            end
-        end
+        key = Tuple(float.(u_rounded))
+        @lock cache_lock if haskey(evaluation_cache, key); return evaluation_cache[key]; end
         thread_id = Threads.threadid()
         current_strategy = sess.s_clones[thread_id][2]
         call!(current_strategy, u_rounded, OptRun())
@@ -168,7 +167,7 @@ function _make_opt_function(sess::OptSession, s::Strategy, backtest_func, n_obj:
         @lock counter.lock counter.n[] = this_n
         result = backtest_func(u_rounded, this_n)
         objective_value = n_obj == 1 ? result[1] : result
-        @lock cache_lock evaluation_cache[u_rounded] = objective_value
+        @lock cache_lock evaluation_cache[key] = objective_value
         return objective_value
     end
 
@@ -308,17 +307,15 @@ end
 
 # Build the objective used by Optimization.jl
 function _make_opt_function(sess::OptSession, s::Strategy, backtest_func, n_obj::Int)
-    evaluation_cache = Dict{Vector{Float64}, Float64}()
+    # Shared cache across all multi-start tasks; use tuple keys for content-based equality
+    evaluation_cache = Dict{Tuple, Any}()
     cache_lock = ReentrantLock()
     counter = (; lock = ReentrantLock(), n = Ref(0))
 
     function opt_function(u, p)
         u_rounded = apply_precision(u, s)
-        @lock cache_lock begin
-            if haskey(evaluation_cache, u_rounded)
-                return evaluation_cache[u_rounded]
-            end
-        end
+        key = Tuple(float.(u_rounded))
+        @lock cache_lock if haskey(evaluation_cache, key); return evaluation_cache[key]; end
         thread_id = Threads.threadid()
         current_strategy = sess.s_clones[thread_id][2]
         call!(current_strategy, u_rounded, OptRun())
@@ -326,7 +323,7 @@ function _make_opt_function(sess::OptSession, s::Strategy, backtest_func, n_obj:
         @lock counter.lock counter.n[] = this_n
         result = backtest_func(u_rounded, this_n)
         objective_value = n_obj == 1 ? result[1] : result
-        @lock cache_lock evaluation_cache[u_rounded] = objective_value
+        @lock cache_lock evaluation_cache[key] = objective_value
         return objective_value
     end
 
@@ -408,12 +405,11 @@ function _run_multi_start(optf, initial_guess, lower_float, upper_float, integer
 
     # Spawn tasks
     tasks = Vector{Task}(undef, n_jobs)
+    if !isnothing(callback)
+        solve_kwargs[:callback] = callback
+    end
     for j in 1:n_jobs
-        if isnothing(callback)
-            tasks[j] = Threads.@spawn solve(probs[j], method; solve_kwargs...)
-        else
-            tasks[j] = Threads.@spawn solve(probs[j], method; callback=callback, solve_kwargs...)
-        end
+        tasks[j] = Threads.@spawn solve(probs[j], method; solve_kwargs...)
     end
     solutions = map(fetch, tasks)
     best_idx = argmin([sol.objective isa Number ? sol.objective : sol.objective[1] for sol in solutions])
@@ -537,6 +533,8 @@ function optimize(
             r = _run_single(prob, method, callback, solve_kwargs)
         end
         sess.best[] = r.u
+        # Persist all results gathered during this run
+        save_session(sess; from=from[], zi)
     catch e
         stopcall!()
         Base.show_backtrace(stdout, catch_backtrace())
