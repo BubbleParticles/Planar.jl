@@ -294,6 +294,7 @@ function gridsearch(
         sess.ctx = ctx
     end
     ctx = sess.ctx
+    sess.attrs[:splits] = splits
     grid = gridfromparams(sess.params)
     resume && resume!(sess)
     from = Ref(0)
@@ -312,7 +313,7 @@ function gridsearch(
         IOBuffer()
     end
     try
-        backtest_func = define_backtest_func(sess, ctxsteps(ctx, splits)...)
+        backtest_func = define_backtest_func(sess, ctxsteps(ctx, splits, call!(s, WarmupPeriod()))...)
         obj_type, n_obj = objectives(s)
         sess.best[] = if isone(n_obj)
             zero(eltype(obj_type))

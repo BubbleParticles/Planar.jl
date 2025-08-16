@@ -190,15 +190,14 @@ zgroup_strategy(zi, s::Strategy) = zgroup_strategy(zi, string(nameof(s)))
 _as_path(s::Strategy) = s.path
 _as_path(sess::OptSession) = sess.s.path
 _as_path(name::String) = joinpath(user_dir(), "strategies", name)
-get_zinstance(input::Union{String,Strategy,OptSession}) = let p = dirname(_as_path(input))
-    if isdir(p)
-        zinstance(p)
-    else
-        zinstance(user_dir())
+get_zinstance(input::Union{String,Strategy,OptSession}) =
+    let p = dirname(_as_path(input))
+        if isdir(p)
+            zinstance(p)
+        else
+            zinstance(user_dir())
+        end
     end
-end
-
-
 
 @doc """ Save the optimization session over the provided zarr instance
 
@@ -208,7 +207,9 @@ $(TYPEDSIGNATURES)
 The function first ensures that the zgroup for the strategy exists. Then, it writes various session attributes to zarr if we're starting from the beginning (`from == 0`). Finally, it saves the result data for the specified range (`from` to `to`).
 
 """
-function save_session(sess::OptSession; from=0, to=nrow(sess.results), zi=get_zinstance(sess))
+function save_session(
+    sess::OptSession; from=0, to=nrow(sess.results), zi=get_zinstance(sess)
+)
     k, parts = session_key(sess)
     # ensure zgroup
     zgroup_strategy(zi, sess.s)
@@ -321,9 +322,7 @@ function load_session(
         z = ensure_attrs(z, retry_f)
         attrs = z.attrs
         sess = OptSession(
-            @something s st.strategy(
-                Symbol(attrs["name"]); exchange=_anyexc(), mode=Sim()
-            );
+            @something s st.strategy(Symbol(attrs["name"]); exchange=_anyexc(), mode=Sim());
             ctx=_deserattrs(attrs, "ctx"),
             params=_deserattrs(attrs, "params"),
             attrs=_deserattrs(attrs, "attrs"),
@@ -382,11 +381,16 @@ The function takes two arguments: `ctx` and `splits`.
 `ctx` is the optimization context and `splits` is the number of splits for the optimization process.
 The function returns a named tuple with `small_step` and `big_step` which represent the step size for the optimization process.
 """
-function ctxsteps(ctx, splits)
+function ctxsteps(ctx, splits, wp)
     small_step = Millisecond(ctx.range.step).value
-    big_step = let timespan = Millisecond(ctx.range.stop - ctx.range.start).value
-        Millisecond(round(Int, timespan / max(1, splits - 1)))
-    end
+    big_step =
+        let timespan = Millisecond(ctx.range.stop - ctx.range.start).value - Millisecond(wp).value
+            if timespan < 0
+                timespan = 0
+            end
+            round(Int, timespan / max(1, splits - 1))
+
+        end
     (; small_step, big_step)
 end
 
@@ -415,7 +419,7 @@ The function takes three arguments: `sess`, `small_step`, and `big_step`.
 `sess` is the optimization session, `small_step` is the small step size for the optimization process, and `big_step` is the big step size for the optimization process.
 The function returns a function that performs a backtest for a given set of parameters and a given iteration number.
 """
-function define_backtest_func(sess, small_step, big_step)
+function define_backtest_func(sess, small_step, big_step, step=nothing, wp_remainder_ms=0)
     function opt_backtest_func(params, n)
         tid = Threads.threadid()
         slot = sess.s_clones[tid]
@@ -431,10 +435,11 @@ function define_backtest_func(sess, small_step, big_step)
             # Pre backtest hook
             call!(s, params, OptRun())
             # randomize strategy startup time
-            let wp = call!(s, WarmupPeriod()),
-                inc = Millisecond(round(Int, small_step / ofs)) + big_step * (n - 1)
-
-                current!(ctx.range, ctx.range.start + wp + inc)
+            let wp = call!(s, WarmupPeriod())
+                cycle = (n - 1) % sess.attrs[:splits]
+                start_at =
+                    ctx.range.start + wp + Millisecond(small_step) + Millisecond(big_step) * cycle
+                current!(ctx.range, start_at)
             end
             # backtest and score
             initial_cash = value(s.cash)
@@ -667,7 +672,9 @@ If `keep_by` is provided, sessions matching these attributes (`ctx`, `params`, o
 It checks each session, and deletes it if it doesn't match `keep_by` or if `keep_by` is empty.
 
 """
-function delete_sessions!(s_name::String; keep_by=Dict{String,Any}(), zi=get_zinstance(s_name))
+function delete_sessions!(
+    s_name::String; keep_by=Dict{String,Any}(), zi=get_zinstance(s_name)
+)
     delete_all = isempty(keep_by)
     @assert delete_all || all(k ∈ ("ctx", "params", "attrs") for k in keys(keep_by)) "`keep_by` only support ctx, params or attrs keys."
     for z in values(optsessions(s_name; zi))

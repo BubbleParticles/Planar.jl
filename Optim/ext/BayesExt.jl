@@ -85,7 +85,9 @@ function boptimize!(
     # Optimize the hyperparameters of the GP using maximum a posteriori (MAP) estimates every 20 steps
     modeloptimizer = modelopt(s)
 
-    backtest_func = define_backtest_func(sess, ctxsteps(ctx, splits)...)
+    # Assume one job per thread in this mode; spread across all slots for uniqueness
+    total_slots = Threads.nthreads() * splits
+    backtest_func = define_backtest_func(sess, ctxsteps(ctx, total_slots, call!(s, WarmupPeriod()))...)
     obj_type, n_obj = objectives(s)
     @assert isone(n_obj) "Found $n_obj scores, expected one (check stratety `OptScore`)."
     sess.best[] = zero(eltype(obj_type))
