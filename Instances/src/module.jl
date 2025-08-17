@@ -747,8 +747,14 @@ reset!(ai::MarginInstance, p::PositionSide) = begin
         end
     end
 end
-Data.DFUtils.firstdate(ai::AssetInstance) = first(ohlcv(ai).timestamp)
-Data.DFUtils.lastdate(ai::AssetInstance) = last(ohlcv(ai).timestamp)
+Data.DFUtils.firstdate(ai::AssetInstance) = begin
+    df = ohlcv(ai)
+    isempty(df) ? DateTime(0) : first(df.timestamp)
+end
+Data.DFUtils.lastdate(ai::AssetInstance) = begin
+    df = ohlcv(ai)
+    isempty(df) ? DateTime(0) : last(df.timestamp)
+end
 
 function Base.print(io::IO, ai::NoMarginInstance)
     write(io, raw(ai), "~[", compactnum(ai.cash.value), "]{", ai.exchange.name, "}")
