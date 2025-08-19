@@ -55,8 +55,8 @@ end
         gridsearch(s; resume=false)
         gridsearch(s; resume=true)
         progsearch(s)
-        slidesearch(s)
-        optimize(s; MaxSteps=2)
+        slidetest(s)
+        optimize(s, maxiters=2)
     end
 
     st.Instances.Exchanges.Python.py_stop_loop()

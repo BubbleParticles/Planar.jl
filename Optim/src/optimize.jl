@@ -33,8 +33,8 @@ The bounds can be specified as:
 - A function that returns bounds
 - A NamedTuple with :bounds and optional :precision and :categorical fields
 """
-function ctxfromstrat(s; disabled_params=Symbol[])
-    ctx, params, s_space = call!(s, OptSetup(); disabled_params)
+function ctxfromstrat(s)
+    ctx, params, s_space = call!(s, OptSetup())
     ctx,
     params,
     s_space,
@@ -109,8 +109,8 @@ inc!(s::Strategy) = s[:strategy] += 1
 #############################
 
 # Session and space setup
-function _create_session_and_space(s::Strategy{Sim}; disabled_params, resume::Bool, zi)
-    ctx, params, s_space, space = ctxfromstrat(s; disabled_params)
+function _create_session_and_space(s::Strategy{Sim}; resume::Bool, zi)
+    ctx, params, s_space, space = ctxfromstrat(s)
     sess = OptSession(s; ctx, params, attrs=Dict{Symbol,Any}(pairs((; s_space))))
     resume && resume!(sess; zi)
     return sess, ctx, params, space
@@ -125,8 +125,10 @@ function _build_save_args(sess; save_freq, zi, resume::Bool)
     resume || save_session(sess; zi)
     return (
         CallbackFunction=(_...) -> begin
-            save_session(sess; from=from[], zi)
-            from[] = nrow(sess.results) + 1
+            lock(sess.lock) do
+                save_session(sess; from=from[], zi)
+                from[] = nrow(sess.results) + 1
+            end
         end,
         CallbackInterval=Millisecond(save_freq).value / 1000.0,
     ), from
@@ -353,7 +355,7 @@ function optimize(
 
     local ctx, params, s_space, space, sess, callback
     try
-        sess, ctx, params, space = _create_session_and_space(s; disabled_params, resume, zi)
+        sess, ctx, params, space = _create_session_and_space(s; resume, zi)
     catch
         @debug_backtrace
         if isinteractive()
@@ -415,8 +417,27 @@ function optimize(
     r = nothing
     try
         # Create callback for early termination
-        callback = _build_callback(solve_kwargs)
-
+        early_term_callback = _build_callback(solve_kwargs)
+        # Combine with periodic save callback if present
+        periodic_save_callback = nothing
+        callback_interval = nothing
+        if !isempty(save_args)
+            periodic_save_callback = get(save_args[1], :CallbackFunction, nothing)
+            callback_interval = get(save_args[1], :CallbackInterval, nothing)
+        end
+        # Compose callbacks if both exist
+        callback = nothing
+        if !isnothing(early_term_callback) && !isnothing(periodic_save_callback)
+            callback = (u, p) -> begin
+                early_stop = early_term_callback(u, p)
+                periodic_save_callback(u, p)
+                return early_stop
+            end
+        elseif !isnothing(early_term_callback)
+            callback = early_term_callback
+        elseif !isnothing(periodic_save_callback)
+            callback = periodic_save_callback
+        end
         if n_jobs > 1 && isthreadsafe(s)
             r = _run_multi_start(sess, s, backtest_func, n_obj, initial_guess, lower_float, upper_float, integer_mask, n_jobs, method, callback, solve_kwargs, maxiters)
         else

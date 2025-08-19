@@ -15,17 +15,17 @@ Main features:
 |---------------|--------------------------|----------------------------|------------------------------------------------|
 | progsearch    | Segments by offset       | Filters after each round   | Robustness across data segments                |
 | broadsearch   | Slices by fixed size     | Filters after each slice   | Adapting to changing regimes over time         |
-| slidesearch   | Slides by timeframe      | No parameter search        | Granular, rolling/walk-forward backtesting     |
+| slidetest     | Slides by timeframe      | No parameter search        | Granular, rolling/walk-forward backtesting     |
 
 - `progsearch`: Progressive grid search with filtering and offsetting for robustness.
 - `broadsearch`: Sequential grid search over contiguous slices, filtering at each step.
-- `slidesearch`: Sliding window backtest, moving by the smallest timeframe increment.
+- `slidetest`: Sliding window backtest, moving by the smallest timeframe increment.
 
 # User-facing Optimization/Search Functions
 
 - `gridsearch(s::Strategy; ...)`: Grid search over parameter combinations for a strategy.
 - `progsearch(s::Strategy; ...)`: Progressive search, running multiple grid searches with filtering and resampling.
-- `slidesearch(s::Strategy; ...)`: Slides a window over the backtesting period, running optimizations at each step.
+- `slidetest(s::Strategy; ...)`: Slides a window over the backtesting period, running optimizations at each step.
 - `broadsearch(s::Strategy; ...)`: Performs a broad search by slicing the context and optimizing in each slice.
 - `optimize(s::Strategy; ...)`: Black-box optimization using the Optimization.jl framework (supports global optimization algorithms).
 - `boptimize!(s::Strategy; ...)`: Bayesian optimization using Gaussian Processes (requires BayesExt and BayesianOptimization.jl).

@@ -590,7 +590,7 @@ Until a full range of timeframes is reached between the strategy timeframe and b
 
 - `multiplier`: the steps count (total stepps will be `multiplier * context_timeframe / s.timeframe` )
 "
-function slidesearch(s::Strategy; multiplier=nothing)
+function slidetest(s::Strategy; multiplier=nothing)
     ctx, _, _ = call!(s, OptSetup())
     inc = period(s.timeframe)
     step_ratio = max(1, trunc(Int, ctx.range.step / inc))
@@ -624,4 +624,4 @@ function slidesearch(s::Strategy; multiplier=nothing)
     results
 end
 
-export gridsearch, progsearch, slidesearch
+export gridsearch, progsearch, slidetest
