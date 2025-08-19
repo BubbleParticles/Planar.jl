@@ -240,10 +240,12 @@ function TimeTicks.DateRange(ac::AssetCollection, tf=nothing; skip_empty=false)
         if skip_empty && isempty(df)
             continue
         end
-        d_min = firstdate(df)
-        d_min > m && (m = d_min)
-        d_max = lastdate(last(ai.data).second)
-        d_max < M && (M = d_max)
+        if !isempty(df)
+            d_min = firstdate(df)
+            d_min > m && (m = d_min)
+            d_max = lastdate(last(ai.data).second)
+            d_max < M && (M = d_max)
+        end
     end
     tf = @something tf first(ac.data[begin, :instance].data).first
     DateRange(m, M, tf)
