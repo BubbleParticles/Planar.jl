@@ -101,7 +101,13 @@ struct ETAColumn <: AbstractColumn
     completed::Ref{Int}
     total::Ref{Int}
 
-    function ETAColumn(job::ProgressJob; start_time=Ref(now()), last_update=Ref(now()), completed=Ref(0), total=Ref(0))
+    function ETAColumn(
+        job::ProgressJob;
+        start_time=Ref(now()),
+        last_update=Ref(now()),
+        completed=Ref(0),
+        total=Ref(0),
+    )
         txt = Segment("ETA: --", "yellow")
         txt.measure.w = 15
         return new(job, [txt], txt.measure, start_time, last_update, completed, total)
@@ -118,7 +124,7 @@ function Progress.update!(col::ETAColumn, args...)::String
             remaining_items = col.total[] - col.completed[]
             # Calculate estimated time remaining
             eta_seconds = avg_time_per_item.value * remaining_items / 1000.0  # Convert from milliseconds to seconds
-            
+
             if eta_seconds > 0
                 if eta_seconds >= 86400  # 24 hours
                     days = trunc(Int, eta_seconds ÷ 86400)
@@ -141,7 +147,7 @@ function Progress.update!(col::ETAColumn, args...)::String
     else
         eta_str = "ETA: --"
     end
-    
+
     seg = Segment(eta_str, "yellow")
     return seg.text
 end
@@ -160,12 +166,12 @@ function gridpbar!(sess, first_params)
     push!(columns, BestColumn)
     push!(columns, ETAColumn)
     current_params = Ref(first_params)
-    
+
     # Create ETA references that will be shared
     eta_start_time = Ref(now())
     eta_completed = Ref(0)
     eta_total = Ref(0)
-    
+
     pbar!(;
         columns,
         columns_kwargs=Dict(
@@ -175,7 +181,7 @@ function gridpbar!(sess, first_params)
                 :start_time => eta_start_time,
                 :last_update => Ref(now()),
                 :completed => eta_completed,
-                :total => eta_total
+                :total => eta_total,
             ),
         ),
     )
@@ -313,7 +319,9 @@ function gridsearch(
         IOBuffer()
     end
     try
-        backtest_func = define_backtest_func(sess, ctxsteps(ctx, splits, call!(s, WarmupPeriod()))...)
+        backtest_func = define_backtest_func(
+            sess, ctxsteps(ctx, splits, call!(s, WarmupPeriod()))...
+        )
         obj_type, n_obj = objectives(s)
         sess.best[] = if isone(n_obj)
             zero(eltype(obj_type))
@@ -324,9 +332,11 @@ function gridsearch(
         opt_func = define_opt_func(
             s; backtest_func, ismulti, splits, obj_type, isthreaded=false
         )
-        current_params, (eta_start_time, eta_completed, eta_total) = gridpbar!(sess, first(grid))
+        current_params, (eta_start_time, eta_completed, eta_total) = gridpbar!(
+            sess, first(grid)
+        )
         best = sess.best
-        
+
         if isnothing(grid_itr)
             grid_itr = if isempty(sess.results)
                 collect(grid)
@@ -344,11 +354,11 @@ function gridsearch(
         if random_search
             shuffle!(grid_itr)
         end
-        
+
         # Set total for ETA calculation (each parameter combination runs 'splits' times)
         eta_total[] = length(grid_itr) * splits
         eta_completed[] = 0
-        
+
         from[] = nrow(sess.results) + 1
         saved_last = Ref(now())
         grid_lock = ReentrantLock()
@@ -501,11 +511,11 @@ function broadsearch(
     s::Strategy;
     slice_size=0.2,  # Default to 1/5 of total_steps
     sort_by=:pnl,
-    kwargs...
+    kwargs...,
 )
     # Initial setup
     _, fw_kwargs = splitkws(:offset, :splits, :grid_itr; kwargs)
-    
+
     # Get context and calculate total steps
     ctx, params, _ = call!(s, OptSetup())
     ctx_step = ctx.range.step
@@ -513,72 +523,75 @@ function broadsearch(
     current_step = 0
 
     # Always interpret the default (0.2) as a fraction, but if the user passes >=1, use as absolute
-    actual_slice_size =
-        ((isa(slice_size, Number) && 0 < slice_size < 1)) ?
-            max(1, trunc(Int, total_steps * slice_size)) :
-            slice_size
+    actual_slice_size = if ((isa(slice_size, Number) && 0 < slice_size < 1))
+        max(1, trunc(Int, total_steps * slice_size))
+    else
+        slice_size
+    end
 
     local sess = Ref{OptSession}()
     local results::DataFrame = DataFrame()
-    
+
     # Create initial slice context
     slice_start = ctx.range.start
     slice_stop = min(slice_start + actual_slice_size * ctx_step, ctx.range.stop)
     slice_ctx = Context(Sim(), DateRange(slice_start, slice_stop, ctx_step))
-    
+
     # Initialize session with first slice
-    
+
     # Run initial grid search with all parameters
     sess[] = gridsearch(s; ctx=slice_ctx, splits=1, fw_kwargs...)
     # Get current results and apply filtering
     results = filter_results(s, sess[])
-    
+
     # Move to next slice
     current_step += actual_slice_size
 
     try
         while current_step < total_steps
             # Calculate slice range
-            slice_start = ctx.range.start + current_step * ctx_step 
+            slice_start = ctx.range.start + current_step * ctx_step
             slice_stop = min(slice_start + actual_slice_size * ctx_step, ctx.range.stop)
-            
+
             # Create a new strategy with the slice context
             slice_s = similar(s; mode=Sim())
             slice_ctx = Context(Sim(), DateRange(slice_start, slice_stop, ctx_step))
-            
+
             if isempty(results)
                 @info "No valid parameter combinations found for current slice, stopping search"
                 break
             end
-            
+
             # Sort results by specified column
-            sort!(results, [sort_by], rev=true)
-            
+            sort!(results, [sort_by]; rev=true)
+
             # Create new grid from filtered results
             grid_itr = gridfromresults(sess[], results)
-            
+
             # Perform next grid search with current slice
             try
                 # Create new session with current slice
                 new_sess = optsession(slice_s; splits=1)
                 # Run grid search with filtered parameters on current slice
-                sess[] = gridsearch(slice_s; ctx=slice_ctx, splits=1, grid_itr, fw_kwargs...)
-                
+                sess[] = gridsearch(
+                    slice_s; ctx=slice_ctx, splits=1, grid_itr, fw_kwargs...
+                )
+
                 # Get current results and apply filtering
                 results = filter_results(s, sess[])
             catch e
-                @error "Error during grid search" exception=(e, catch_backtrace())
+                @error "Error during grid search" exception = (e, catch_backtrace())
                 break
             end
-            
+
             # Move to next slice
             current_step += actual_slice_size
         end
     catch e
-        @error "Error during broad search" exception=(e, catch_backtrace())
+        @error "Error during broad search" exception = (e, catch_backtrace())
         rethrow(e)
     end
-    
+
     sess[]
 end
 
@@ -590,29 +603,40 @@ Until a full range of timeframes is reached between the strategy timeframe and b
 
 - `multiplier`: the steps count (total stepps will be `multiplier * context_timeframe / s.timeframe` )
 "
-function slidetest(s::Strategy; multiplier=nothing)
+function slidetest(
+    s::Strategy; n_jobs=Threads.nthreads(), step_ratio=1 / n_jobs, params=nothing
+)
     ctx, _, _ = call!(s, OptSetup())
-    inc = period(s.timeframe)
-    step_ratio = max(1, trunc(Int, ctx.range.step / inc))
-    if step_ratio == 1 && isnothing(multiplier)
-        multiplier = 10
-    end
-    steps = multiplier * step_ratio
+    inc = ctx.range.step
+    @assert 0 < step_ratio < 1 "step_ratio must be between 0 and 1"
+    split_len = round(Int, length(ctx.range) * step_ratio)
+    n_iters = length(ctx.range) ÷ split_len
     wp = call!(s, WarmupPeriod())
     results = DataFrame()
     initial_cash = s.initial_cash
     rlock = ReentrantLock()
-    n_threads = Threads.nthreads()
-    s_clones = tuple(((ReentrantLock(), similar(s)) for _ in 1:n_threads)...)
-    ctx_clones = tuple((similar(ctx) for _ in 1:n_threads)...)
+    s_clones = tuple(((ReentrantLock(), similar(s)) for _ in 1:n_jobs)...)
+    ctx_mode = typeof(ctx).parameters[1]()
+    if !isnothing(params)
+        for (l, s_c) in s_clones
+            attrs = s_c.attrs
+            for (k, p) in pairs(params)
+                attrs[k] = p
+            end
+            call!(s_c, params, OptRun())
+        end
+    end
 
-    @withpbar! 1:steps begin
-        Threads.@threads for n in 1:steps
-            let id = Threads.threadid(), (l, s) = s_clones[id], ctx = ctx_clones[id]
+    @withpbar! 1:n_iters begin
+        Threads.@threads for n in 1:n_iters
+            let id = Threads.threadid(), (l, s) = s_clones[id]
                 lock(l) do
                     st.reset!(s, true)
-                    current!(ctx.range, ctx.range.start + n * inc)
-                    start!(s, ctx; doreset=false)
+                    range_start = ctx.range.start + wp + (n - 1) * split_len * inc
+                    range_stop = range_start + split_len * inc
+                    this_range = DateRange(range_start, range_stop, inc)
+                    this_ctx = Context(ctx_mode, this_range)
+                    start!(s, this_ctx; doreset=false)
                 end
                 lock(rlock) do
                     push!(results, (; step=n, metrics_func(s; initial_cash)...))
@@ -620,6 +644,24 @@ function slidetest(s::Strategy; multiplier=nothing)
                 end
             end
         end
+    end
+    results
+end
+
+function slidetest(s::Strategy, params_df::DataFrame; kwargs...)
+    remove_keys = (:repeat, :obj, :cash, :pnl, :trades)
+    results = DataFrame()
+    try
+        @withpbar! 1:nrow(params_df) begin
+            for n in 1:nrow(params_df) - 1
+                params = NamedTuple(k => v for (k, v) in pairs(params_df[n, :]) if !(k in remove_keys))
+                ans = slidetest(s; params, kwargs...)
+                append!(results, ans)
+                @pbupdate!
+            end
+        end
+    catch e
+        @error "Error during slide test" exception = (e, catch_backtrace())
     end
     results
 end
