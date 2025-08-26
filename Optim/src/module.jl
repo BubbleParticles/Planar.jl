@@ -384,12 +384,12 @@ The function returns a named tuple with `small_step` and `big_step` which repres
 function ctxsteps(ctx, splits, wp)
     small_step = Millisecond(ctx.range.step).value
     big_step =
-        let timespan = Millisecond(ctx.range.stop - ctx.range.start).value - Millisecond(wp).value
+        let timespan =
+                Millisecond(ctx.range.stop - ctx.range.start).value - Millisecond(wp).value
             if timespan < 0
                 timespan = 0
             end
             round(Int, timespan / max(1, splits - 1))
-
         end
     (; small_step, big_step)
 end
@@ -411,6 +411,31 @@ metrics_func(s; initial_cash) = begin
     (; obj, cash, pnl, trades)
 end
 
+function ms_mult(ms, mult::DFT)
+    round(Int, Millisecond(ms).value * mult) |> Millisecond
+end
+
+function random_ctx_length(ctx, splits, big_step, small_step)
+    split = round(Int, length(ctx) / splits)
+    pad_qt_1 = 0.5 + rand(1:splits) / splits
+    pad_qt_2 = 0.5 + rand(1:splits) / splits
+    pad_qt_3 = 0.5 + rand(1:splits) / splits
+    split * ctx.range.step * pad_qt_1 +
+    ms_mult(big_step, pad_qt_2) +
+    ms_mult(small_step, pad_qt_3)
+end
+
+function random_ctx_start(ctx, splits, cycle, wp, big_step, small_step)
+    pad_qt_1 = 0.5 + rand(1:splits) / splits
+    pad_qt_2 = 0.5 + rand(1:splits) / splits
+    pad_qt_3 = 0.5 + rand(1:splits) / splits
+    ctx.range.start +
+    wp +
+    ms_mult(ctx.range.step, pad_qt_1) +
+    ms_mult(big_step, pad_qt_2) * cycle +
+    ms_mult(small_step, pad_qt_3)
+end
+
 @doc """ Defines the backtest function for an optimization session.
 
 $(TYPEDSIGNATURES)
@@ -419,7 +444,7 @@ The function takes three arguments: `sess`, `small_step`, and `big_step`.
 `sess` is the optimization session, `small_step` is the small step size for the optimization process, and `big_step` is the big step size for the optimization process.
 The function returns a function that performs a backtest for a given set of parameters and a given iteration number.
 """
-function define_backtest_func(sess, small_step, big_step, step=nothing, wp_remainder_ms=0)
+function define_backtest_func(sess, small_step, big_step)
     function opt_backtest_func(params, n)
         tid = Threads.threadid()
         slot = sess.s_clones[tid]
@@ -436,10 +461,19 @@ function define_backtest_func(sess, small_step, big_step, step=nothing, wp_remai
             call!(s, params, OptRun())
             # randomize strategy startup time
             let wp = call!(s, WarmupPeriod())
-                cycle = (n - 1) % sess.attrs[:splits]
-                start_at =
-                    ctx.range.start + wp + Millisecond(small_step) + Millisecond(big_step) * cycle
+                splits = sess.attrs[:splits]
+                cycle = (n - 1) % splits
+                start_at = random_ctx_start(ctx, splits, cycle, wp, big_step, small_step)
                 current!(ctx.range, start_at)
+                stop_at = start_at + random_ctx_length(ctx, splits, big_step, small_step)
+                if stop_at < ctx.range.stop
+                    ctx.range.stop = stop_at
+                end
+                @debug "optim backtest range" cycle compact(ms(small_step)) compact(
+                    ms(big_step)
+                ) start_at stop_at duration = compact(stop_at - start_at) source_duration = compact(
+                    ctx.range.stop - ctx.range.start
+                ) source_start = ctx.range.start
             end
             # backtest and score
             initial_cash = value(s.cash)
@@ -470,14 +504,15 @@ The function takes four arguments: `splits`, `backtest_func`, `median_func`, and
 The function returns a function that performs a multi-threaded optimization for a given set of parameters.
 """
 function _multi_opt_func(splits, backtest_func, median_func, obj_type)
-    (params) -> begin
-        job(n) = backtest_func(params, n)
+    function parallel_backtest_func(params, n)
         scores = Vector{obj_type}(undef, splits)
-        Threads.@threads for n in 1:splits
+        Threads.@threads for i in 1:splits
             if isrunning()
-                scores[n] = job(n)
+                scores[i] = backtest_func(params, n + i)
+                @debug "paralel backtest job finished" i n
             end
         end
+        @debug "paralel backtest batch finished" n
 
         mapreduce(permutedims, vcat, scores) |> median_func
     end
@@ -492,7 +527,7 @@ The function takes four arguments: `splits`, `backtest_func`, `median_func`, and
 The function returns a function that performs a single-threaded optimization for a given set of parameters.
 """
 function _single_opt_func(splits, backtest_func, median_func, args...)
-    (params) -> begin
+    (params, n=0) -> begin
         mapreduce(permutedims, vcat, [(backtest_func(params, n) for n in 1:splits)...]) |> median_func
     end
 end
@@ -505,8 +540,8 @@ The function takes a boolean argument `ismulti` which indicates if the optimizat
 If `ismulti` is `true`, the function returns a function that calculates the median over all the repeated iterations.
 Otherwise, it returns a function that calculates the median of a given array.
 """
-function define_median_func(ismulti)
-    if ismulti
+function define_median_func(split_test)
+    if split_test
         (x) -> tuple(median(x; dims=1)...)
     else
         (x) -> median(x)
@@ -522,11 +557,18 @@ The function takes several arguments: `s`, `backtest_func`, `ismulti`, `splits`,
 The function returns the appropriate optimization function based on these parameters.
 """
 function define_opt_func(
-    s::Strategy; backtest_func, ismulti, splits, obj_type, isthreaded=isthreadsafe(s)
+    s::Strategy;
+    backtest_func,
+    split_test,
+    splits,
+    n_jobs,
+    obj_type,
+    isthreaded=isthreadsafe(s),
 )
-    median_func = define_median_func(ismulti)
-    opt_func = isthreaded ? _multi_opt_func : _single_opt_func
-    opt_func(splits, backtest_func, median_func, obj_type)
+    median_func = define_median_func(split_test)
+    opt_func = isthreaded && split_test ? _multi_opt_func : _single_opt_func
+    epoch_splits = split_test ? n_jobs * splits : splits
+    opt_func(epoch_splits, backtest_func, median_func, obj_type)
 end
 
 @doc """ Returns the number of objectives and their type.

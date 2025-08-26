@@ -70,7 +70,9 @@ function ctxfromstrat(s)
         end
         (lower, upper)
     else
-        error("Wrong optimization parameters. Pass either bounds as (lower, upper) tuple, a function that returns bounds, or a NamedTuple with :bounds field.")
+        error(
+            "Wrong optimization parameters. Pass either bounds as (lower, upper) tuple, a function that returns bounds, or a NamedTuple with :bounds field.",
+        )
     end
 end
 
@@ -131,7 +133,8 @@ function _build_save_args(sess; save_freq, zi, resume::Bool)
             end
         end,
         CallbackInterval=Millisecond(save_freq).value / 1000.0,
-    ), from
+    ),
+    from
 end
 
 # Propagate precision/categorical/bounds to thread clones
@@ -151,25 +154,33 @@ function _propagate_clone_attrs!(sess::OptSession, s::Strategy)
 end
 
 # Build the objective used by Optimization.jl
-function _make_opt_function(sess::OptSession, s::Strategy, backtest_func, n_obj::Int)
+function _make_opt_function(
+    sess::OptSession,
+    s::Strategy,
+    backtest_func,
+    n_obj::Int,
+    split_test::Bool,
+    splits::Int,
+    n_jobs::Int,
+    obj_type,
+)
     # Shared cache across all multi-start tasks; use tuple keys for content-based equality
-    evaluation_cache = Dict{Tuple, Any}()
+    evaluation_cache = Dict{Tuple,Any}()
     cache_lock = ReentrantLock()
-    counter = (; lock = ReentrantLock(), n = Ref(0))
+    counter = (; lock=ReentrantLock(), n=Ref(0))
+
+    run_func = define_opt_func(s; backtest_func, split_test, splits, n_jobs, obj_type)
 
     function opt_function(u, p)
         u_rounded = apply_precision(u, s)
         key = Tuple(float.(u_rounded))
-        @lock cache_lock if haskey(evaluation_cache, key); return evaluation_cache[key]; end
-        thread_id = Threads.threadid()
-        current_strategy = sess.s_clones[thread_id][2]
+        @lock cache_lock if haskey(evaluation_cache, key)
+            return evaluation_cache[key]
+        end
         # Reset strategy and re-init context
-        SimMode.reset!(current_strategy)
-        call!(current_strategy, OptSetup())
-        call!(current_strategy, u_rounded, OptRun())
         this_n = counter.n[] + 1
         @lock counter.lock counter.n[] = this_n
-        result = backtest_func(u_rounded, this_n)
+        result = run_func(u_rounded, this_n)
         objective_value = n_obj == 1 ? result[1] : result
         @lock cache_lock evaluation_cache[key] = objective_value
         return objective_value
@@ -188,21 +199,28 @@ function _bounds_from_space(space)
 end
 
 # Build OptimizationProblem
-function _build_problem(optf, initial_guess, lower_float, upper_float, integer_mask, maxiters)
+function _build_problem(
+    optf, initial_guess, lower_float, upper_float, integer_mask, maxiters
+)
     if any(integer_mask)
         return OptimizationProblem(
-            optf, initial_guess; lb=lower_float, ub=upper_float, int=integer_mask, maxiters=maxiters,
+            optf,
+            initial_guess;
+            lb=lower_float,
+            ub=upper_float,
+            int=integer_mask,
+            maxiters=maxiters,
         )
     else
         return OptimizationProblem(
-            optf, initial_guess; lb=lower_float, ub=upper_float, maxiters=maxiters,
+            optf, initial_guess; lb=lower_float, ub=upper_float, maxiters=maxiters
         )
     end
 end
 
 # Build early-termination callback
 function _build_callback(solve_kwargs::Dict{Symbol,Any})
-    early_termination_kwargs = Dict{Symbol, Any}()
+    early_termination_kwargs = Dict{Symbol,Any}()
     for (key, value) in solve_kwargs
         if key in [:early_termination_threshold, :max_consecutive_failures]
             early_termination_kwargs[key] = value
@@ -229,52 +247,32 @@ function _run_single(prob, method, callback, solve_kwargs)
     end
 end
 
-# Multi-start concurrent solves with thread-safe exchange access
-function _run_multi_start(sess::OptSession, s::Strategy, backtest_func, n_obj::Int, initial_guess, lower_float, upper_float, integer_mask, n_jobs::Int, method, callback, solve_kwargs, maxiters)
-    # Local lock to synchronize getexchange! calls
-    exchange_lock = ReentrantLock()
-    # Generate initial guesses (first is midpoint)
-    function random_initial_guess()
-        ig = similar(initial_guess)
-        @inbounds for i in eachindex(ig)
-            ig[i] = rand() * (upper_float[i] - lower_float[i]) + lower_float[i]
-        end
-        apply_precision(ig, s)
-    end
-    initial_guesses = Vector{typeof(initial_guess)}(undef, n_jobs)
-    initial_guesses[1] = initial_guess
-    for j in 2:n_jobs
-        initial_guesses[j] = random_initial_guess()
-    end
-
-    # Pre-initialize all exchanges to avoid race conditions during parallel execution
-    # This ensures getexchange! is called safely before multithreading begins
-    @lock exchange_lock begin
-        for thread_id in 1:min(Threads.nthreads(), length(sess.s_clones))
-            try
-                strategy_clone = sess.s_clones[thread_id][2]
-                # Force exchange initialization by accessing the exchange
-                exc_id = st.exchangeid(strategy_clone)
-                sandbox = get(strategy_clone.config, :sandbox, true)
-                account = get(strategy_clone.config, :account, "")
-                # This will populate the cache safely through Instances
-                Instances.getexchange!(exc_id; sandbox, account)
-            catch e
-                # Exchange initialization might fail, continue anyway
-                @debug "Exchange pre-initialization failed for thread $thread_id: $e"
-            end
+# Pre-initialize all exchanges to avoid race conditions during parallel execution
+# This ensures getexchange! is called safely before multithreading begins
+function preinitialize_exchanges(sess::OptSession)
+    for thread_id in 1:min(Threads.nthreads(), length(sess.s_clones))
+        try
+            strategy_clone = sess.s_clones[thread_id][2]
+            # Force exchange initialization by accessing the exchange
+            exc_id = st.exchangeid(strategy_clone)
+            sandbox = get(strategy_clone.config, :sandbox, true)
+            account = get(strategy_clone.config, :account, "")
+            # This will populate the cache safely through Instances
+            Instances.getexchange!(exc_id; sandbox, account)
+        catch e
+            # Exchange initialization might fail, continue anyway
+            @debug "Exchange pre-initialization failed for thread $thread_id: $e"
         end
     end
+end
 
-    # Create thread-safe optimization function
+# Build a thread-safe OptimizationFunction wrapper around the backtest
+function build_safe_optimization_function(s::Strategy, n_obj::Int, backtest_func)
     counter = Ref(0)
     counter_lock = ReentrantLock()
 
     function safe_opt_function(u, p)
         u_rounded = apply_precision(u, s)
-        thread_id = Threads.threadid()
-        current_strategy = sess.s_clones[thread_id][2]
-        call!(current_strategy, u_rounded, OptRun())
 
         # Thread-safe counter increment
         this_n = @lock counter_lock begin
@@ -285,13 +283,69 @@ function _run_multi_start(sess::OptSession, s::Strategy, backtest_func, n_obj::I
         return n_obj == 1 ? result[1] : result
     end
 
-    safe_optf = OptimizationFunction(safe_opt_function, Optimization.AutoForwardDiff())
+    return OptimizationFunction(safe_opt_function, Optimization.AutoForwardDiff())
+end
+
+# Build the collection of initial guesses for multi-start optimization
+function build_initial_guesses(
+    s::Strategy, n_jobs::Int, initial_guess, lower_float, upper_float
+)
+    function random_initial_guess()
+        ig = similar(initial_guess)
+        @inbounds for i in eachindex(ig)
+            ig[i] = rand() * (upper_float[i] - lower_float[i]) + lower_float[i]
+        end
+        apply_precision(ig, s)
+    end
+
+    initial_guesses = Vector{typeof(initial_guess)}(undef, n_jobs)
+    initial_guesses[1] = initial_guess
+    for j in 2:n_jobs
+        initial_guesses[j] = random_initial_guess()
+    end
+    return initial_guesses
+end
+
+# Multi-start concurrent solves with thread-safe exchange access
+function _run_multi_start(
+    sess::OptSession,
+    s::Strategy,
+    backtest_func,
+    n_obj::Int,
+    initial_guess,
+    lower_float,
+    upper_float,
+    integer_mask,
+    n_jobs::Int,
+    method,
+    callback,
+    solve_kwargs,
+    maxiters,
+)
+    # Generate initial guesses (first is provided initial)
+    initial_guesses = build_initial_guesses(
+        s, n_jobs, initial_guess, lower_float, upper_float
+    )
+
+    # Pre-initialize all exchanges to avoid race conditions during parallel execution
+    # This ensures getexchange! is called safely before multithreading begins
+    preinitialize_exchanges(sess)
+
+    # Create thread-safe optimization function
+    safe_optf = build_safe_optimization_function(s, n_obj, backtest_func)
 
     # Now run concurrent optimization jobs - exchanges are pre-cached
     tasks = Vector{Task}(undef, n_jobs)
     for j in 1:n_jobs
         tasks[j] = Threads.@spawn begin
-            prob = _build_problem(safe_optf, initial_guesses[j], lower_float, upper_float, integer_mask, maxiters)
+            prob = _build_problem(
+                safe_optf,
+                initial_guesses[j],
+                lower_float,
+                upper_float,
+                integer_mask,
+                maxiters,
+            )
             local_solve_kwargs = copy(solve_kwargs)
             if !isnothing(callback)
                 local_solve_kwargs[:callback] = callback
@@ -302,7 +356,9 @@ function _run_multi_start(sess::OptSession, s::Strategy, backtest_func, n_obj::I
 
     solutions = map(fetch, tasks)
 
-    best_idx = argmin([sol.objective isa Number ? sol.objective : sol.objective[1] for sol in solutions])
+    best_idx = argmin([
+        sol.objective isa Number ? sol.objective : sol.objective[1] for sol in solutions
+    ])
     return solutions[best_idx]
 end
 
@@ -317,7 +373,6 @@ $(TYPEDSIGNATURES)
 - `kwargs`: The arguments to pass to the underlying Optimization.jl solve function.
 - `parallel`: if true, enables parallel evaluation of multiple parameter combinations (default: false)
 - `early_termination_threshold`: if specified, terminates evaluation early if objective is below this threshold
-- `disabled_params`: array of parameter symbols to exclude from optimization (e.g., `[:signal_lifetime, :trade_cooldown]`)
 
 From within your strategy, define three `call!` functions:
 - `call!(::Strategy, ::OptSetup)`: for the period of time to evaluate and the bounds for the optimization.
@@ -330,10 +385,10 @@ From within your strategy, define three `call!` functions:
 optimize(s)
 
 # Exclude signal_lifetime and trade_cooldown from optimization
-optimize(s; disabled_params=[:signal_lifetime, :trade_cooldown])
+optimize(s)
 
 # Exclude multiple parameters
-optimize(s; disabled_params=[:buy_trigger, :sell_trigger, :ordertype])
+optimize(s)
 ```
 """
 function optimize(
@@ -345,8 +400,9 @@ function optimize(
     zi=get_zinstance(s),
     method=:evo_ga,
     maxiters=1000,
+    split_test=true,
+    multistart=false,
     n_jobs=1,
-    disabled_params=Symbol[],
     kwargs...,
 )
     running!()
@@ -367,19 +423,22 @@ function optimize(
                 end
             end
         end
-        sess, ctx, params, space = _create_session_and_space(s; disabled_params, resume=false, zi)
+        sess, ctx, params, space = _create_session_and_space(s; resume=false, zi)
     end
 
     save_args, from = _build_save_args(sess; save_freq, zi, resume)
     # record total slots (n_jobs * splits) to space out runs without collisions
     sess.attrs[:splits] = n_jobs * splits
 
-    backtest_func = define_backtest_func(sess, ctxsteps(ctx, n_jobs * splits, call!(s, WarmupPeriod()))...)
+    steps_args = ctxsteps(ctx, n_jobs * splits, call!(s, WarmupPeriod()))
+    backtest_func = define_backtest_func(sess, steps_args...)
     obj_type, n_obj = objectives(s)
     _propagate_clone_attrs!(sess, s)
 
     # Define the optimization function for Optimization.jl
-    opt_function = _make_opt_function(sess, s, backtest_func, n_obj)
+    opt_function = _make_opt_function(
+        sess, s, backtest_func, n_obj, split_test && !multistart, splits, n_jobs, obj_type
+    )
 
     # Get bounds from the strategy setup
     lower, upper = _bounds_from_space(space)
@@ -405,10 +464,12 @@ function optimize(
     end
 
     # Create problem with integer constraints if needed
-    prob = _build_problem(optf, initial_guess, lower_float, upper_float, integer_mask, maxiters)
+    prob = _build_problem(
+        optf, initial_guess, lower_float, upper_float, integer_mask, maxiters
+    )
 
     # Configure parallel evaluation if requested
-    solve_kwargs = Dict{Symbol, Any}(kwargs...)
+    solve_kwargs = Dict{Symbol,Any}(kwargs...)
     if n_jobs > 1 && !isthreadsafe(s)
         @warn "Parallel optimization requested but strategy is not thread-safe. Disabling parallel mode."
     end
@@ -438,11 +499,27 @@ function optimize(
         elseif !isnothing(periodic_save_callback)
             callback = periodic_save_callback
         end
-        if n_jobs > 1 && isthreadsafe(s)
-            r = _run_multi_start(sess, s, backtest_func, n_obj, initial_guess, lower_float, upper_float, integer_mask, n_jobs, method, callback, solve_kwargs, maxiters)
+        if multistart && n_jobs > 1
+            r = _run_multi_start(
+                sess,
+                s,
+                backtest_func,
+                n_obj,
+                initial_guess,
+                lower_float,
+                upper_float,
+                integer_mask,
+                n_jobs,
+                method,
+                callback,
+                solve_kwargs,
+                maxiters,
+            )
         else
+            @info "optimize: running single optimization"
             r = _run_single(prob, method, callback, solve_kwargs)
         end
+        @info "optimize: optimization complete"
         sess.best[] = r.u
         # Persist all results gathered during this run
         save_session(sess; from=from[], zi)
@@ -488,7 +565,7 @@ function apply_precision(u, s::Strategy)
 
             if prec >= 0
                 # Round to specified number of decimal places
-                u_rounded[i] = round(u[i], digits=prec)
+                u_rounded[i] = round(u[i]; digits=prec)
             elseif prec == -1
                 # Integer parameter
                 u_rounded[i] = round(Int, u[i])
@@ -515,8 +592,6 @@ function apply_precision(u, s::Strategy)
 
     return u_rounded
 end
-
-
 
 @doc """ Checks if a strategy supports parallel optimization.
 

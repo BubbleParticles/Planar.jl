@@ -7,16 +7,16 @@ $(FIELDS)
 This type is used to store information about a range of dates, including the current date within the range, the start and stop dates, and the step size between dates.
 
 """
-struct DateRange
-    current_date::Vector{OptDate}
-    start::OptDate
+mutable struct DateRange
+    current_date::OptDate
+    const start::OptDate
     stop::OptDate
-    step::Union{Nothing,Period}
+    const step::Union{Nothing,Period}
     function DateRange(start::OptDate=nothing, stop::OptDate=nothing, step=nothing)
-        new([start], start, stop, step)
+        new(start, start, stop, step)
     end
     function DateRange(start::OptDate, stop::OptDate, tf::TimeFrame)
-        new([start], start, stop, tf.period)
+        new(start, start, stop, tf.period)
     end
 end
 
@@ -47,15 +47,15 @@ end
 Base.display(dr::DateRange) = Base.print(dr)
 iterate(dr::DateRange) = begin
     @assert !isnothing(dr.start) && !isnothing(dr.stop)
-    this = @something dr.current_date[1] dr.start
-    dr.current_date[1] = this + dr.step
+    this = @something dr.current_date dr.start
+    dr.current_date = this + dr.step
     (this, dr)
 end
 
 iterate(dr::DateRange, ::DateRange) = begin
-    now = dr.current_date[1]
-    dr.current_date[1] += dr.step
-    dr.current_date[1] > dr.stop && return nothing
+    now = dr.current_date
+    dr.current_date += dr.step
+    dr.current_date > dr.stop && return nothing
     (now, dr)
 end
 
@@ -72,7 +72,7 @@ collect(dr::DateRange) = begin
 end
 
 @doc "Starts the current date of the DateRange (defaults to `start` value.)"
-current!(dr::DateRange, d=dr.start) = dr.current_date[1] = d
+current!(dr::DateRange, d=dr.start) = dr.current_date = d
 function Base.isequal(dr1::DateRange, dr2::DateRange)
     dr1.start === dr2.start && dr1.stop === dr2.stop
 end

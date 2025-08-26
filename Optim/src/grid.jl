@@ -285,6 +285,7 @@ function gridsearch(
     s::Strategy{Sim};
     seed=1,
     splits=1,
+    n_jobs=Threads.nthreads(),
     save_freq=nothing,
     resume=true,
     logging=true,
@@ -319,18 +320,17 @@ function gridsearch(
         IOBuffer()
     end
     try
-        backtest_func = define_backtest_func(
-            sess, ctxsteps(ctx, splits, call!(s, WarmupPeriod()))...
-        )
+        steps_args = ctxsteps(ctx, splits, call!(s, WarmupPeriod()))
+        backtest_func = define_backtest_func(sess, steps_args...)
         obj_type, n_obj = objectives(s)
         sess.best[] = if isone(n_obj)
             zero(eltype(obj_type))
         else
             ((zero(eltype(obj_type)) for _ in 1:n_obj)...,)
         end
-        ismulti = n_obj > 1
+
         opt_func = define_opt_func(
-            s; backtest_func, ismulti, splits, obj_type, isthreaded=false
+            s; backtest_func, split_test=false, splits, n_jobs, obj_type
         )
         current_params, (eta_start_time, eta_completed, eta_total) = gridpbar!(
             sess, first(grid)
@@ -649,13 +649,13 @@ function slidetest(
 end
 
 function slidetest(s::Strategy, params_df::DataFrame; kwargs...)
-    remove_keys = (:repeat, :obj, :cash, :pnl, :trades)
     results = DataFrame()
     try
         @withpbar! 1:nrow(params_df) begin
-            for n in 1:nrow(params_df) - 1
-                params = NamedTuple(k => v for (k, v) in pairs(params_df[n, :]) if !(k in remove_keys))
+            for n in 1:(nrow(params_df) - 1)
+                params = NamedTuple(params_df[n, :])
                 ans = slidetest(s; params, kwargs...)
+                ans[!, :n] .= n
                 append!(results, ans)
                 @pbupdate!
             end

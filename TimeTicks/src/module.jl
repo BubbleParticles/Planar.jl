@@ -337,7 +337,7 @@ result = compact(s)  # returns Minute(1) since 90 seconds can be compacted to 1 
 ```
 """
 function compact(s::Period)
-    millis = Millisecond(s)
+    millis = Millisecond(abs(s))
     ms = millis.value
     if ms < 1000
         millis
@@ -349,7 +349,7 @@ function compact(s::Period)
         round(s, Hour)
     else
         round(s, Day)
-    end
+    end * sign(s)
 end
 
 @doc """Compute the number of tf1 timeframes that are contained within tf2 timeframes.
