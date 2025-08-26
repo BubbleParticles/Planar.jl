@@ -416,19 +416,21 @@ function ms_mult(ms, mult::DFT)
 end
 
 function random_ctx_length(ctx, splits, big_step, small_step)
-    split = round(Int, length(ctx) / splits)
-    pad_qt_1 = 0.5 + rand(1:splits) / splits
-    pad_qt_2 = 0.5 + rand(1:splits) / splits
-    pad_qt_3 = 0.5 + rand(1:splits) / splits
-    split * ctx.range.step * pad_qt_1 +
+    split = max(1, round(Int, length(ctx) / splits))
+    pad_qt_1 = rand(1:splits) / splits
+    pad_qt_2 = rand(1:splits) / splits
+    pad_qt_3 = rand(1:splits) / splits
+    step_type = typeof(ctx.range.step)
+    step_type(round(Int, split * ctx.range.step.value * pad_qt_1)) +
     ms_mult(big_step, pad_qt_2) +
     ms_mult(small_step, pad_qt_3)
 end
 
 function random_ctx_start(ctx, splits, cycle, wp, big_step, small_step)
-    pad_qt_1 = 0.5 + rand(1:splits) / splits
-    pad_qt_2 = 0.5 + rand(1:splits) / splits
-    pad_qt_3 = 0.5 + rand(1:splits) / splits
+    Random.seed!() # NOTE: this is to affect random_ctx_length
+    pad_qt_1 = rand(1:splits) / splits
+    pad_qt_2 = rand(1:splits) / splits
+    pad_qt_3 = rand(1:splits) / splits
     ctx.range.start +
     wp +
     ms_mult(ctx.range.step, pad_qt_1) +
