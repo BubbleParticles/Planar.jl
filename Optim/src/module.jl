@@ -447,6 +447,7 @@ The function takes three arguments: `sess`, `small_step`, and `big_step`.
 The function returns a function that performs a backtest for a given set of parameters and a given iteration number.
 """
 function define_backtest_func(sess, small_step, big_step)
+    splits = sess.attrs[:splits]
     function opt_backtest_func(params, n)
         tid = Threads.threadid()
         slot = sess.s_clones[tid]
@@ -463,7 +464,6 @@ function define_backtest_func(sess, small_step, big_step)
             call!(s, params, OptRun())
             # randomize strategy startup time
             let wp = call!(s, WarmupPeriod())
-                splits = sess.attrs[:splits]
                 cycle = (n - 1) % splits
                 start_at = random_ctx_start(ctx, splits, cycle, wp, big_step, small_step)
                 current!(ctx.range, start_at)
@@ -486,7 +486,7 @@ function define_backtest_func(sess, small_step, big_step)
                 push!(
                     sess.results,
                     (;
-                        repeat=ofs,
+                        repeat=(n - 1) % splits,
                         metrics...,
                         (pname => p for (pname, p) in zip(keys(sess.params), params))...,
                     ),

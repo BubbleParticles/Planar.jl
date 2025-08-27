@@ -549,6 +549,10 @@ function optimize(
 
     # Configure parallel evaluation if requested
     solve_kwargs = Dict{Symbol,Any}(kwargs...)
+    # Ensure iteration limits are honored across different solver backends
+    # Some read :maxiters while others (e.g., Evolutionary/CMAES wrappers) read :iterations
+    solve_kwargs[:maxiters] = maxiters
+    solve_kwargs[:iterations] = maxiters
     # Add early termination parameters to solve_kwargs
     solve_kwargs[:early_threshold] = early_threshold
     solve_kwargs[:max_failures] = max_failures
