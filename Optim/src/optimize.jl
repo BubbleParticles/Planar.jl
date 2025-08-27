@@ -2,6 +2,7 @@ using SimMode.TimeTicks: current!
 using SimMode: start!
 using Random
 using SimMode.Lang: @debug_backtrace
+using Base.Threads: ReentrantLock
 
 # Add Optimization.jl imports
 using Optimization
@@ -218,24 +219,128 @@ function _build_problem(
     end
 end
 
+# Prepare bounds, initial guess, integer mask and build the OptimizationProblem
+function _setup_problem_and_bounds(
+    s::Strategy, space, opt_function_or_optf, maxiters; initial_guess_override=nothing
+)
+    # Get bounds from the strategy setup or stored bounds
+    lower, upper = if space === nothing
+        bounds = get(s, :opt_bounds, nothing)
+        isnothing(bounds) && error("opt_bounds not set on strategy; call _setup_problem_and_bounds earlier")
+        bounds
+    elseif space isa Tuple
+        space
+    else
+        _bounds_from_space(space)
+    end
+
+    # Store bounds for later use in parameter clamping
+    s[:opt_bounds] = (copy(lower), copy(upper))
+
+    # Ensure bounds are Float arrays for Optimization.jl compatibility
+    lower_float = lower
+    upper_float = upper
+
+    # Create or accept OptimizationFunction
+    optf = if opt_function_or_optf isa Function
+        OptimizationFunction(opt_function_or_optf, Optimization.AutoForwardDiff())
+    else
+        opt_function_or_optf
+    end
+
+    # Use the midpoint of bounds as initial guess unless overridden
+    initial_guess = if isnothing(initial_guess_override)
+        (lower_float .+ upper_float) ./ 2.0
+    else
+        initial_guess_override
+    end
+
+    # Check if we have integer parameters
+    precision = get(s, :opt_precision, nothing)
+    integer_mask = if !isnothing(precision)
+        [prec == -1 for prec in precision]
+    else
+        falses(length(lower_float))
+    end
+
+    # Create problem with integer constraints if needed
+    prob = _build_problem(
+        optf, initial_guess, lower_float, upper_float, integer_mask, maxiters
+    )
+
+    return prob
+end
+
 # Build early-termination callback
 function _build_callback(solve_kwargs::Dict{Symbol,Any})
     early_termination_kwargs = Dict{Symbol,Any}()
     for (key, value) in solve_kwargs
-        if key in [:early_termination_threshold, :max_consecutive_failures]
+        if key in [:early_threshold, :max_failures]
             early_termination_kwargs[key] = value
         end
     end
     if isempty(early_termination_kwargs)
         return nothing
     end
+
+    # Track consecutive failures
+    consecutive_failures = Ref(0)
+    max_failures = get(early_termination_kwargs, :max_failures, Inf)
+
     return (u, p) -> begin
-        threshold = get(early_termination_kwargs, :early_termination_threshold, -Inf)
+        threshold = get(early_termination_kwargs, :early_threshold, -Inf)
+
+        # Check early termination threshold
         if p < threshold
             return true
         end
+
+        # Check for consecutive failures
+        if max_failures < Inf
+            if p == Inf || isnan(p)
+                consecutive_failures[] += 1
+                if consecutive_failures[] >= max_failures
+                    return true
+                end
+            else
+                consecutive_failures[] = 0
+            end
+        end
+
         return false
     end
+end
+
+# Compose early termination and periodic save callbacks
+function _compose_callbacks(save_args, solve_kwargs)
+    # Create callback for early termination
+    early_term_callback = _build_callback(solve_kwargs)
+    # Combine with periodic save callback if present
+    periodic_save_callback = nothing
+    callback_interval = nothing
+    if !isempty(save_args)
+        periodic_save_callback = get(save_args[1], :CallbackFunction, nothing)
+        callback_interval = get(save_args[1], :CallbackInterval, nothing)
+    end
+    # Compose callbacks if both exist
+    callback = nothing
+    if !isnothing(early_term_callback) && !isnothing(periodic_save_callback)
+        @debug "callback: combining early termination and periodic save callbacks"
+        callback = (u, p) -> begin
+            early_stop = early_term_callback(u, p)
+            periodic_save_callback(u, p)
+            return early_stop
+        end
+    elseif !isnothing(early_term_callback)
+        @debug "callback: using early termination callback"
+        callback = early_term_callback
+    elseif !isnothing(periodic_save_callback)
+        @debug "callback: using periodic save callback"
+        callback = periodic_save_callback
+    else
+        @debug "callback: no callback provided"
+    end
+    return callback
 end
 
 # Single-job solve
@@ -287,9 +392,12 @@ function build_safe_optimization_function(s::Strategy, n_obj::Int, backtest_func
 end
 
 # Build the collection of initial guesses for multi-start optimization
-function build_initial_guesses(
-    s::Strategy, n_jobs::Int, initial_guess, lower_float, upper_float
-)
+function build_initial_guesses(s::Strategy, n_jobs::Int)
+    bounds = get(s, :opt_bounds, nothing)
+    isnothing(bounds) && error("opt_bounds not set on strategy; call _setup_problem_and_bounds first")
+    lower_float, upper_float = bounds
+    # Midpoint of bounds as baseline
+    initial_guess = (lower_float .+ upper_float) ./ 2.0
     function random_initial_guess()
         ig = similar(initial_guess)
         @inbounds for i in eachindex(ig)
@@ -312,10 +420,6 @@ function _run_multi_start(
     s::Strategy,
     backtest_func,
     n_obj::Int,
-    initial_guess,
-    lower_float,
-    upper_float,
-    integer_mask,
     n_jobs::Int,
     method,
     callback,
@@ -323,9 +427,7 @@ function _run_multi_start(
     maxiters,
 )
     # Generate initial guesses (first is provided initial)
-    initial_guesses = build_initial_guesses(
-        s, n_jobs, initial_guess, lower_float, upper_float
-    )
+    initial_guesses = build_initial_guesses(s, n_jobs)
 
     # Pre-initialize all exchanges to avoid race conditions during parallel execution
     # This ensures getexchange! is called safely before multithreading begins
@@ -338,13 +440,12 @@ function _run_multi_start(
     tasks = Vector{Task}(undef, n_jobs)
     for j in 1:n_jobs
         tasks[j] = Threads.@spawn begin
-            prob = _build_problem(
+            prob = _setup_problem_and_bounds(
+                s,
+                nothing,
                 safe_optf,
-                initial_guesses[j],
-                lower_float,
-                upper_float,
-                integer_mask,
-                maxiters,
+                maxiters;
+                initial_guess_override=initial_guesses[j],
             )
             local_solve_kwargs = copy(solve_kwargs)
             if !isnothing(callback)
@@ -372,7 +473,8 @@ $(TYPEDSIGNATURES)
 - `maxiters`: maximum number of iterations
 - `kwargs`: The arguments to pass to the underlying Optimization.jl solve function.
 - `parallel`: if true, enables parallel evaluation of multiple parameter combinations (default: false)
-- `early_termination_threshold`: if specified, terminates evaluation early if objective is below this threshold
+- `early_threshold`: if specified, terminates evaluation early if objective is below this threshold (default: -Inf)
+- `max_failures`: maximum number of consecutive failures before stopping (default: Inf)
 
 From within your strategy, define three `call!` functions:
 - `call!(::Strategy, ::OptSetup)`: for the period of time to evaluate and the bounds for the optimization.
@@ -403,6 +505,8 @@ function optimize(
     split_test=true,
     multistart=false,
     n_jobs=1,
+    early_threshold=-Inf,
+    max_failures=Inf,
     kwargs...,
 )
     running!()
@@ -440,36 +544,14 @@ function optimize(
         sess, s, backtest_func, n_obj, split_test && !multistart, splits, n_jobs, obj_type
     )
 
-    # Get bounds from the strategy setup
-    lower, upper = _bounds_from_space(space)
-
-    # Store bounds for later use in parameter clamping
-    s[:opt_bounds] = (copy(lower), copy(upper))
-
-    # Ensure bounds are Float64 arrays for Optimization.jl compatibility
-    lower_float = lower  # Already Float64 from lowerupper function
-    upper_float = upper  # Already Float64 from lowerupper function
-
-    # Create OptimizationProblem
-    optf = OptimizationFunction(opt_function, Optimization.AutoForwardDiff())
-    # Use the midpoint of bounds as initial guess
-    initial_guess = (lower_float .+ upper_float) ./ 2.0
-
-    # Check if we have integer parameters
-    precision = get(s, :opt_precision, nothing)
-    integer_mask = if !isnothing(precision)
-        [prec == -1 for prec in precision]
-    else
-        falses(length(lower_float))
-    end
-
-    # Create problem with integer constraints if needed
-    prob = _build_problem(
-        optf, initial_guess, lower_float, upper_float, integer_mask, maxiters
-    )
+    # Prepare problem and helpers
+    prob = _setup_problem_and_bounds(s, space, opt_function, maxiters)
 
     # Configure parallel evaluation if requested
     solve_kwargs = Dict{Symbol,Any}(kwargs...)
+    # Add early termination parameters to solve_kwargs
+    solve_kwargs[:early_threshold] = early_threshold
+    solve_kwargs[:max_failures] = max_failures
     if n_jobs > 1 && !isthreadsafe(s)
         @warn "Parallel optimization requested but strategy is not thread-safe. Disabling parallel mode."
     end
@@ -477,38 +559,13 @@ function optimize(
     # Solve with Optimization.jl
     r = nothing
     try
-        # Create callback for early termination
-        early_term_callback = _build_callback(solve_kwargs)
-        # Combine with periodic save callback if present
-        periodic_save_callback = nothing
-        callback_interval = nothing
-        if !isempty(save_args)
-            periodic_save_callback = get(save_args[1], :CallbackFunction, nothing)
-            callback_interval = get(save_args[1], :CallbackInterval, nothing)
-        end
-        # Compose callbacks if both exist
-        callback = nothing
-        if !isnothing(early_term_callback) && !isnothing(periodic_save_callback)
-            callback = (u, p) -> begin
-                early_stop = early_term_callback(u, p)
-                periodic_save_callback(u, p)
-                return early_stop
-            end
-        elseif !isnothing(early_term_callback)
-            callback = early_term_callback
-        elseif !isnothing(periodic_save_callback)
-            callback = periodic_save_callback
-        end
+        callback = _compose_callbacks(save_args, solve_kwargs)
         if multistart && n_jobs > 1
             r = _run_multi_start(
                 sess,
                 s,
                 backtest_func,
                 n_obj,
-                initial_guess,
-                lower_float,
-                upper_float,
-                integer_mask,
                 n_jobs,
                 method,
                 callback,
