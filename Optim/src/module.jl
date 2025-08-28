@@ -3,7 +3,7 @@ using SimMode.Executors: st, Instances, OptSetup, OptRun, OptScore, Context
 using SimMode.TimeTicks
 using .Instances: value
 using .Instances.Data: DataFrame, Not, save_data, load_data, nrow, todata, tobytes
-using .Instances.Data: zinstance, Zarr as za
+using .Instances.Data: zinstance, Zarr as za, default_value
 using .Instances.Data.Zarr: getattrs, writeattrs, writemetadata
 using .Instances.Exchanges: sb_exchanges
 using .st: Strategy, Sim, SimStrategy, WarmupPeriod
@@ -515,7 +515,7 @@ function _multi_opt_func(splits, backtest_func, median_func, obj_type)
         scores = Vector{obj_type}(undef, splits)
         Threads.@threads for i in 1:splits
             if isrunning()
-                scores[i] = backtest_func(params, n)
+                scores[i] = @something backtest_func(params, n) default_value(obj_type)
                 @debug "parallel backtest job finished" i n
             end
         end
