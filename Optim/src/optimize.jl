@@ -7,9 +7,11 @@ using Base.Threads: ReentrantLock
 # Add Optimization.jl imports
 using Optimization
 using OptimizationBBO
-using OptimizationCMAEvolutionStrategy
-using OptimizationEvolutionary
+using OptimizationCMAEvolutionStrategy: CMAEvolutionStrategy
+using OptimizationEvolutionary: DE, GA
+using OptimizationOptimJL: LBFGS
 using Optimization: OptimizationProblem, OptimizationFunction, solve
+using ForwardDiff
 
 # Optimization.jl provides various optimization algorithms through different packages
 # such as OptimizationBBO, OptimizationCMAEvolutionStrategy, etc.
@@ -91,16 +93,22 @@ function _spacedims(params)
     length(lower)
 end
 
-function opt_method(v)
+function get_method(v, method_kwargs)
     if v == :bbo
-        BBO_adaptive_de_rand_1_bin()
+        # BBO is a solve method, not an opt method; return the constructor
+        BBO_adaptive_de_rand_1_bin(; method_kwargs...)
     elseif v == :evo_cma
-        CMAEvolutionStrategyOpt()
+        CMAEvolutionStrategyOpt() # no args
     elseif v == :evo_ga
-        GA()
+        GA(; method_kwargs...)
     elseif v == :evo_de
-        DE()
+        DE(; method_kwargs...)
+    elseif v == :lbfgs
+        LBFGS()
+    elseif v == :afd
+        AutoForwardDiff(; method_kwargs...)
     else
+        @assert !(v isa DataType) "Expected an instance of an Optimization.jl method, got $(v)"
         v
     end
 end
@@ -201,32 +209,31 @@ end
 
 # Build OptimizationProblem
 function _build_problem(
-    optf, initial_guess, lower_float, upper_float, integer_mask, maxiters
+    optf, initial_guess, lower_float, upper_float, integer_mask, solve_method_instance
 )
-    if any(integer_mask)
-        return OptimizationProblem(
-            optf,
-            initial_guess;
-            lb=lower_float,
-            ub=upper_float,
-            int=integer_mask,
-            maxiters=maxiters,
-        )
-    else
-        return OptimizationProblem(
-            optf, initial_guess; lb=lower_float, ub=upper_float, maxiters=maxiters
-        )
-    end
+    # Always provide bounds; some algorithms require them
+    kwargs = Dict{Symbol,Any}()
+    kwargs[:lb] = lower_float
+    kwargs[:ub] = upper_float
+    any(integer_mask) && (kwargs[:int] = integer_mask)
+    return OptimizationProblem(optf, solve_method_instance, initial_guess; kwargs...)
 end
 
 # Prepare bounds, initial guess, integer mask and build the OptimizationProblem
 function _setup_problem_and_bounds(
-    s::Strategy, space, opt_function_or_optf, maxiters; initial_guess_override=nothing
+    s::Strategy,
+    space,
+    opt_function_or_optf;
+    solve_method_instance,
+    opt_method_instance=nothing,
+    initial_guess_override=nothing,
 )
     # Get bounds from the strategy setup or stored bounds
     lower, upper = if space === nothing
         bounds = get(s, :opt_bounds, nothing)
-        isnothing(bounds) && error("opt_bounds not set on strategy; call _setup_problem_and_bounds earlier")
+        isnothing(bounds) && error(
+            "opt_bounds not set on strategy; call _setup_problem_and_bounds earlier"
+        )
         bounds
     elseif space isa Tuple
         space
@@ -243,7 +250,7 @@ function _setup_problem_and_bounds(
 
     # Create or accept OptimizationFunction
     optf = if opt_function_or_optf isa Function
-        OptimizationFunction(opt_function_or_optf, Optimization.AutoForwardDiff())
+        OptimizationFunction(opt_function_or_optf, opt_method_instance)
     else
         opt_function_or_optf
     end
@@ -265,39 +272,42 @@ function _setup_problem_and_bounds(
 
     # Create problem with integer constraints if needed
     prob = _build_problem(
-        optf, initial_guess, lower_float, upper_float, integer_mask, maxiters
+        optf, initial_guess, lower_float, upper_float, integer_mask, solve_method_instance
     )
 
     return prob
 end
 
 # Build early-termination callback
-function _build_callback(solve_kwargs::Dict{Symbol,Any})
-    early_termination_kwargs = Dict{Symbol,Any}()
-    for (key, value) in solve_kwargs
-        if key in [:early_threshold, :max_failures]
-            early_termination_kwargs[key] = value
-        end
-    end
-    if isempty(early_termination_kwargs)
-        return nothing
-    end
-
+function _build_callback(early_threshold, max_failures)
     # Track consecutive failures
     consecutive_failures = Ref(0)
-    max_failures = get(early_termination_kwargs, :max_failures, Inf)
 
     return (u, p) -> begin
-        threshold = get(early_termination_kwargs, :early_threshold, -Inf)
+        # Normalize objective value possibly being a vector/tuple
+        objective_value = p isa Number ? p : (p isa AbstractArray || p isa Tuple ? p[1] : p)
 
         # Check early termination threshold
-        if p < threshold
+        if objective_value isa Number && objective_value < early_threshold
             return true
         end
 
         # Check for consecutive failures
         if max_failures < Inf
-            if p == Inf || isnan(p)
+            is_bad = false
+            if p isa Number
+                is_bad = (p == Inf || isnan(p))
+            elseif p isa AbstractArray || p isa Tuple
+                # consider any bad component as a failure
+                @inbounds for v in p
+                    if v == Inf || isnan(v)
+                        is_bad = true
+                        break
+                    end
+                end
+            end
+
+            if is_bad
                 consecutive_failures[] += 1
                 if consecutive_failures[] >= max_failures
                     return true
@@ -312,15 +322,20 @@ function _build_callback(solve_kwargs::Dict{Symbol,Any})
 end
 
 # Compose early termination and periodic save callbacks
-function _compose_callbacks(save_args, solve_kwargs)
+function _compose_callbacks(save_args, early_threshold, max_failures)
     # Create callback for early termination
-    early_term_callback = _build_callback(solve_kwargs)
+    early_term_callback = _build_callback(early_threshold, max_failures)
     # Combine with periodic save callback if present
     periodic_save_callback = nothing
     callback_interval = nothing
     if !isempty(save_args)
-        periodic_save_callback = get(save_args[1], :CallbackFunction, nothing)
-        callback_interval = get(save_args[1], :CallbackInterval, nothing)
+        nt = save_args[1]
+        if hasproperty(nt, :CallbackFunction)
+            periodic_save_callback = getproperty(nt, :CallbackFunction)
+        end
+        if hasproperty(nt, :CallbackInterval)
+            callback_interval = getproperty(nt, :CallbackInterval)
+        end
     end
     # Compose callbacks if both exist
     callback = nothing
@@ -336,7 +351,11 @@ function _compose_callbacks(save_args, solve_kwargs)
         callback = early_term_callback
     elseif !isnothing(periodic_save_callback)
         @debug "callback: using periodic save callback"
-        callback = periodic_save_callback
+        # Ensure boolean return value expected by solver callbacks
+        callback = (u, p) -> begin
+            periodic_save_callback(u, p)
+            return false
+        end
     else
         @debug "callback: no callback provided"
     end
@@ -344,11 +363,12 @@ function _compose_callbacks(save_args, solve_kwargs)
 end
 
 # Single-job solve
-function _run_single(prob, method, callback, solve_kwargs)
+function _run_single(prob, solve_method_instance, callback, solve_kwargs)
     if isnothing(callback)
-        return solve(prob, method; solve_kwargs...)
+        return solve(prob, solve_method_instance; solve_kwargs...)
     else
-        return solve(prob, method; callback=callback, solve_kwargs...)
+        # merge callback into kwargs for a single call site
+        return solve(prob, solve_method_instance; callback=callback, solve_kwargs...)
     end
 end
 
@@ -372,7 +392,9 @@ function preinitialize_exchanges(sess::OptSession)
 end
 
 # Build a thread-safe OptimizationFunction wrapper around the backtest
-function build_safe_optimization_function(s::Strategy, n_obj::Int, backtest_func)
+function build_safe_optimization_function(
+    s::Strategy, n_obj::Int, backtest_func, opt_method_instance
+)
     counter = Ref(0)
     counter_lock = ReentrantLock()
 
@@ -388,13 +410,14 @@ function build_safe_optimization_function(s::Strategy, n_obj::Int, backtest_func
         return n_obj == 1 ? result[1] : result
     end
 
-    return OptimizationFunction(safe_opt_function, Optimization.AutoForwardDiff())
+    return OptimizationFunction(safe_opt_function, opt_method_instance)
 end
 
 # Build the collection of initial guesses for multi-start optimization
 function build_initial_guesses(s::Strategy, n_jobs::Int)
     bounds = get(s, :opt_bounds, nothing)
-    isnothing(bounds) && error("opt_bounds not set on strategy; call _setup_problem_and_bounds first")
+    isnothing(bounds) &&
+        error("opt_bounds not set on strategy; call _setup_problem_and_bounds first")
     lower_float, upper_float = bounds
     # Midpoint of bounds as baseline
     initial_guess = (lower_float .+ upper_float) ./ 2.0
@@ -418,13 +441,13 @@ end
 function _run_multi_start(
     sess::OptSession,
     s::Strategy,
-    backtest_func,
+    backtest_func;
     n_obj::Int,
     n_jobs::Int,
-    method,
+    solve_method_instance,
+    opt_method_instance,
     callback,
     solve_kwargs,
-    maxiters,
 )
     # Generate initial guesses (first is provided initial)
     initial_guesses = build_initial_guesses(s, n_jobs)
@@ -434,7 +457,9 @@ function _run_multi_start(
     preinitialize_exchanges(sess)
 
     # Create thread-safe optimization function
-    safe_optf = build_safe_optimization_function(s, n_obj, backtest_func)
+    safe_optf = build_safe_optimization_function(
+        s, n_obj, backtest_func, opt_method_instance
+    )
 
     # Now run concurrent optimization jobs - exchanges are pre-cached
     tasks = Vector{Task}(undef, n_jobs)
@@ -443,15 +468,15 @@ function _run_multi_start(
             prob = _setup_problem_and_bounds(
                 s,
                 nothing,
-                safe_optf,
-                maxiters;
+                safe_optf;
+                solve_method_instance,
                 initial_guess_override=initial_guesses[j],
             )
-            local_solve_kwargs = copy(solve_kwargs)
-            if !isnothing(callback)
-                local_solve_kwargs[:callback] = callback
+            if isnothing(callback)
+                solve(prob, solve_method_instance; solve_kwargs...)
+            else
+                solve(prob, solve_method_instance; callback=callback, solve_kwargs...)
             end
-            solve(prob, method; local_solve_kwargs...)
         end
     end
 
@@ -500,8 +525,11 @@ function optimize(
     resume=true,
     save_freq=nothing,
     zi=get_zinstance(s),
-    method=:evo_ga,
     maxiters=1000,
+    opt_method=:afd,
+    opt_method_kwargs=(;),
+    solve_method=:bbo,
+    solve_method_kwargs=(;),
     split_test=true,
     multistart=false,
     n_jobs=1,
@@ -511,9 +539,8 @@ function optimize(
 )
     running!()
     Random.seed!(seed)
-    method = opt_method(method)
 
-    local ctx, params, s_space, space, sess, callback
+    local ctx, params, space, sess, callback
     try
         sess, ctx, params, space = _create_session_and_space(s; resume, zi)
     catch
@@ -537,21 +564,31 @@ function optimize(
     steps_args = ctxsteps(ctx, n_jobs * splits, call!(s, WarmupPeriod()))
     backtest_func = define_backtest_func(sess, steps_args...)
     obj_type, n_obj = objectives(s)
-    _propagate_clone_attrs!(sess, s)
 
+    opt_method_instance = get_method(opt_method, opt_method_kwargs)
+    solve_method_instance = get_method(solve_method, solve_method_kwargs)
+    if n_obj > 1 && (solve_method_instance isa LBFGS)
+        @warn "BFGS does not support multi-objective optimization. Switching to GA."
+        solve_method_instance = get_method(:evo_ga, solve_method_kwargs)
+    end
+
+    _propagate_clone_attrs!(sess, s)
     # Define the optimization function for Optimization.jl
     opt_function = _make_opt_function(
         sess, s, backtest_func, n_obj, split_test && !multistart, splits, n_jobs, obj_type
     )
 
     # Prepare problem and helpers
-    prob = _setup_problem_and_bounds(s, space, opt_function, maxiters)
+    prob = _setup_problem_and_bounds(
+        s, space, opt_function; opt_method_instance, solve_method_instance
+    )
 
     # Configure parallel evaluation if requested
-    solve_kwargs = Dict{Symbol,Any}(kwargs...)
+    # collect keyword arguments as a NamedTuple for splatting
+    solve_kwargs = (; kwargs...)
     # Ensure iteration limits are honored across different solver backends
     # Some read :maxiters while others (e.g., Evolutionary/CMAES wrappers) read :iterations
-    solve_kwargs[:maxiters] = maxiters
+    solve_kwargs = merge(solve_kwargs, (maxiters=maxiters,))
     if n_jobs > 1 && !isthreadsafe(s)
         @warn "Parallel optimization requested but strategy is not thread-safe. Disabling parallel mode."
     end
@@ -559,22 +596,22 @@ function optimize(
     # Solve with Optimization.jl
     r = nothing
     try
-        callback = _compose_callbacks(save_args, solve_kwargs)
+        callback = _compose_callbacks(save_args, early_threshold, max_failures)
         if multistart && n_jobs > 1
             r = _run_multi_start(
                 sess,
                 s,
-                backtest_func,
+                backtest_func;
                 n_obj,
                 n_jobs,
-                method,
+                solve_method_instance,
+                opt_method_instance,
                 callback,
                 solve_kwargs,
-                maxiters,
             )
         else
             @info "optimize: running single optimization"
-            r = _run_single(prob, method, callback, solve_kwargs)
+            r = _run_single(prob, solve_method_instance, callback, solve_kwargs)
         end
         @info "optimize: optimization complete"
         sess.best[] = r.u
