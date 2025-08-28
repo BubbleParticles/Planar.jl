@@ -7,9 +7,9 @@ using Base.Threads: ReentrantLock
 # Add Optimization.jl imports
 using Optimization
 using OptimizationBBO
-using OptimizationCMAEvolutionStrategy: CMAEvolutionStrategy
-using OptimizationEvolutionary: DE, GA
-using OptimizationOptimJL: LBFGS
+using OptimizationCMAEvolutionStrategy
+using OptimizationEvolutionary
+using OptimizationOptimJL
 using Optimization: OptimizationProblem, OptimizationFunction, solve
 using ForwardDiff
 
@@ -209,14 +209,14 @@ end
 
 # Build OptimizationProblem
 function _build_problem(
-    optf, initial_guess, lower_float, upper_float, integer_mask, solve_method_instance
+    optf, initial_guess, lower_float, upper_float, integer_mask
 )
     # Always provide bounds; some algorithms require them
     kwargs = Dict{Symbol,Any}()
     kwargs[:lb] = lower_float
     kwargs[:ub] = upper_float
     any(integer_mask) && (kwargs[:int] = integer_mask)
-    return OptimizationProblem(optf, solve_method_instance, initial_guess; kwargs...)
+    return OptimizationProblem(optf, initial_guess; kwargs...)
 end
 
 # Prepare bounds, initial guess, integer mask and build the OptimizationProblem
@@ -272,7 +272,7 @@ function _setup_problem_and_bounds(
 
     # Create problem with integer constraints if needed
     prob = _build_problem(
-        optf, initial_guess, lower_float, upper_float, integer_mask, solve_method_instance
+        optf, initial_guess, lower_float, upper_float, integer_mask
     )
 
     return prob

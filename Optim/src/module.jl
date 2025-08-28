@@ -466,9 +466,12 @@ function define_backtest_func(sess, small_step, big_step)
                 # randomize strategy startup time
                 let wp = call!(s, WarmupPeriod())
                     cycle = (n - 1) % splits
-                    start_at = random_ctx_start(ctx, splits, cycle, wp, big_step, small_step)
+                    start_at = random_ctx_start(
+                        ctx, splits, cycle, wp, big_step, small_step
+                    )
                     current!(ctx.range, start_at)
-                    stop_at = start_at + random_ctx_length(ctx, splits, big_step, small_step)
+                    stop_at =
+                        start_at + random_ctx_length(ctx, splits, big_step, small_step)
                     if stop_at < ctx.range.stop
                         ctx.range.stop = stop_at
                     end
@@ -489,7 +492,9 @@ function define_backtest_func(sess, small_step, big_step)
                         (;
                             repeat=n,
                             metrics...,
-                            (pname => p for (pname, p) in zip(keys(sess.params), params))...,
+                            (
+                                pname => p for (pname, p) in zip(keys(sess.params), params)
+                            )...,
                         ),
                     )
                     @debug "number of results: $(nrow(sess.results))"
@@ -534,8 +539,9 @@ The function takes four arguments: `splits`, `backtest_func`, `median_func`, and
 The function returns a function that performs a single-threaded optimization for a given set of parameters.
 """
 function _single_opt_func(splits, backtest_func, median_func, args...)
-    (params, n=0) -> begin
-        mapreduce(permutedims, vcat, [(backtest_func(params, n) for n in 1:splits)...]) |> median_func
+    function single_backtest_func(params, n=0)
+        mapreduce(permutedims, vcat, [(backtest_func(params, n) for n in 1:splits)...]) |>
+        median_func
     end
 end
 
@@ -549,9 +555,9 @@ Otherwise, it returns a function that calculates the median of a given array.
 """
 function define_median_func(split_test)
     if split_test
-        (x) -> tuple(median(x; dims=1)...)
+        median_tuple(x) = tuple(median(x; dims=1)...)
     else
-        (x) -> median(x)
+        median
     end
 end
 
