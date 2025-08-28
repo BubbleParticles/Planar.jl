@@ -552,10 +552,6 @@ function optimize(
     # Ensure iteration limits are honored across different solver backends
     # Some read :maxiters while others (e.g., Evolutionary/CMAES wrappers) read :iterations
     solve_kwargs[:maxiters] = maxiters
-    solve_kwargs[:iterations] = maxiters
-    # Add early termination parameters to solve_kwargs
-    solve_kwargs[:early_threshold] = early_threshold
-    solve_kwargs[:max_failures] = max_failures
     if n_jobs > 1 && !isthreadsafe(s)
         @warn "Parallel optimization requested but strategy is not thread-safe. Disabling parallel mode."
     end

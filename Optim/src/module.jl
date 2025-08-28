@@ -451,49 +451,53 @@ function define_backtest_func(sess, small_step, big_step)
     function opt_backtest_func(params, n)
         tid = Threads.threadid()
         slot = sess.s_clones[tid]
-        @lock slot[1] begin
-            # `ofs` is used as custom input source of randomness
-            s = slot[2]
-            ctx = sess.ctx_clones[tid]
-            ofs = sess.attrs[:offset] + n
-            # clear strat
-            st.reset!(s, true)
-            # set params as strategy attributes
-            setparams!(s, sess, params)
-            # Pre backtest hook
-            call!(s, params, OptRun())
-            # randomize strategy startup time
-            let wp = call!(s, WarmupPeriod())
-                cycle = (n - 1) % splits
-                start_at = random_ctx_start(ctx, splits, cycle, wp, big_step, small_step)
-                current!(ctx.range, start_at)
-                stop_at = start_at + random_ctx_length(ctx, splits, big_step, small_step)
-                if stop_at < ctx.range.stop
-                    ctx.range.stop = stop_at
+        try
+            @lock slot[1] begin
+                # `ofs` is used as custom input source of randomness
+                s = slot[2]
+                ctx = sess.ctx_clones[tid]
+                ofs = sess.attrs[:offset] + n
+                # clear strat
+                st.reset!(s, true)
+                # set params as strategy attributes
+                setparams!(s, sess, params)
+                # Pre backtest hook
+                call!(s, params, OptRun())
+                # randomize strategy startup time
+                let wp = call!(s, WarmupPeriod())
+                    cycle = (n - 1) % splits
+                    start_at = random_ctx_start(ctx, splits, cycle, wp, big_step, small_step)
+                    current!(ctx.range, start_at)
+                    stop_at = start_at + random_ctx_length(ctx, splits, big_step, small_step)
+                    if stop_at < ctx.range.stop
+                        ctx.range.stop = stop_at
+                    end
+                    # @debug "optim backtest range" cycle compact(ms(small_step)) compact(
+                    #     ms(big_step)
+                    # ) start_at stop_at duration = compact(stop_at - start_at) source_duration = compact(
+                    #     ctx.range.stop - ctx.range.start
+                    # ) source_start = ctx.range.start
                 end
-                # @debug "optim backtest range" cycle compact(ms(small_step)) compact(
-                #     ms(big_step)
-                # ) start_at stop_at duration = compact(stop_at - start_at) source_duration = compact(
-                #     ctx.range.stop - ctx.range.start
-                # ) source_start = ctx.range.start
+                # backtest and score
+                initial_cash = value(s.cash)
+                start!(s, ctx; doreset=false, resetctx=false)
+                st.sizehint!(s) # avoid deallocations
+                metrics = metrics_func(s; initial_cash)
+                lock(sess.lock) do
+                    push!(
+                        sess.results,
+                        (;
+                            repeat=n,
+                            metrics...,
+                            (pname => p for (pname, p) in zip(keys(sess.params), params))...,
+                        ),
+                    )
+                    @debug "number of results: $(nrow(sess.results))"
+                end
+                metrics.obj
             end
-            # backtest and score
-            initial_cash = value(s.cash)
-            start!(s, ctx; doreset=false, resetctx=false)
-            st.sizehint!(s) # avoid deallocations
-            metrics = metrics_func(s; initial_cash)
-            lock(sess.lock) do
-                push!(
-                    sess.results,
-                    (;
-                        repeat=(n - 1) % splits,
-                        metrics...,
-                        (pname => p for (pname, p) in zip(keys(sess.params), params))...,
-                    ),
-                )
-                @debug "number of results: $(nrow(sess.results))"
-            end
-            metrics.obj
+        catch e
+            @error "backtest run" exception = (e, catch_backtrace())
         end
     end
 end
@@ -511,7 +515,7 @@ function _multi_opt_func(splits, backtest_func, median_func, obj_type)
         scores = Vector{obj_type}(undef, splits)
         Threads.@threads for i in 1:splits
             if isrunning()
-                scores[i] = backtest_func(params, n + i)
+                scores[i] = backtest_func(params, n)
                 @debug "parallel backtest job finished" i n
             end
         end
