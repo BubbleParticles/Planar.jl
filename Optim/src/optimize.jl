@@ -208,9 +208,7 @@ function _bounds_from_space(space)
 end
 
 # Build OptimizationProblem
-function _build_problem(
-    optf, initial_guess, lower_float, upper_float, integer_mask
-)
+function _build_problem(optf, initial_guess, lower_float, upper_float, integer_mask)
     # Always provide bounds; some algorithms require them
     kwargs = Dict{Symbol,Any}()
     kwargs[:lb] = lower_float
@@ -271,9 +269,7 @@ function _setup_problem_and_bounds(
     end
 
     # Create problem with integer constraints if needed
-    prob = _build_problem(
-        optf, initial_guess, lower_float, upper_float, integer_mask
-    )
+    prob = _build_problem(optf, initial_guess, lower_float, upper_float, integer_mask)
 
     return prob
 end
@@ -496,6 +492,7 @@ $(TYPEDSIGNATURES)
 - `seed`: random seed
 - `method`: optimization method (defaults to BBO_adaptive_de_rand_1_bin())
 - `maxiters`: maximum number of iterations
+ - `maxtime`: maximum time budget for the optimization
 - `kwargs`: The arguments to pass to the underlying Optimization.jl solve function.
 - `parallel`: if true, enables parallel evaluation of multiple parameter combinations (default: false)
 - `early_threshold`: if specified, terminates evaluation early if objective is below this threshold (default: -Inf)
@@ -525,7 +522,8 @@ function optimize(
     resume=true,
     save_freq=nothing,
     zi=get_zinstance(s),
-    maxiters=1000,
+    maxiters=nothing,
+    maxtime=nothing,
     opt_method=:afd,
     opt_method_kwargs=(;),
     solve_method=:bbo,
@@ -588,7 +586,7 @@ function optimize(
     solve_kwargs = (; kwargs...)
     # Ensure iteration limits are honored across different solver backends
     # Some read :maxiters while others (e.g., Evolutionary/CMAES wrappers) read :iterations
-    solve_kwargs = merge(solve_kwargs, (maxiters=maxiters,))
+    solve_kwargs = merge(solve_kwargs, (maxiters=maxiters, maxtime=maxtime))
     if n_jobs > 1 && !isthreadsafe(s)
         @warn "Parallel optimization requested but strategy is not thread-safe. Disabling parallel mode."
     end
@@ -610,7 +608,9 @@ function optimize(
                 solve_kwargs,
             )
         else
-            @info "optimize: running single optimization"
+            @info "optimize: running single optimization" n_params = length(space) n_jobs maxiters maxtime = compact(
+                Second(maxtime)
+            ) s = nameof(s)
             r = _run_single(prob, solve_method_instance, callback, solve_kwargs)
         end
         @info "optimize: optimization complete"

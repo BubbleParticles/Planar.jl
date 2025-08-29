@@ -553,8 +553,8 @@ The function takes a boolean argument `ismulti` which indicates if the optimizat
 If `ismulti` is `true`, the function returns a function that calculates the median over all the repeated iterations.
 Otherwise, it returns a function that calculates the median of a given array.
 """
-function define_median_func(split_test)
-    if split_test
+function define_median_func(splits)
+    if splits > 1
         median_tuple(x) = tuple(median(x; dims=1)...)
     else
         median
@@ -578,7 +578,7 @@ function define_opt_func(
     obj_type,
     isthreaded=isthreadsafe(s),
 )
-    median_func = define_median_func(split_test)
+    median_func = define_median_func(splits)
     opt_func = isthreaded && split_test ? _multi_opt_func : _single_opt_func
     epoch_splits = split_test ? n_jobs * splits : splits
     opt_func(epoch_splits, backtest_func, median_func, obj_type)
