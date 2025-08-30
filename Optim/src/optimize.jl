@@ -101,7 +101,9 @@ function _spacedims(params)
 end
 
 function get_method(v, method_kwargs)
-    if v == :bbo
+    if isnothing(v)
+        return nothing
+    elseif v == :bbo
         # BBO is a solve method, not an opt method; return the constructor
         BBO_adaptive_de_rand_1_bin(; method_kwargs...)
     elseif v == :evo_cma
@@ -297,7 +299,8 @@ function _setup_problem_and_bounds(
 
     # Create or accept OptimizationFunction
     optf = if opt_function_or_optf isa Function
-        OptimizationFunction(opt_function_or_optf, opt_method_instance)
+        opt_func_args = isnothing(opt_method_instance) ? () : (opt_method_instance,)
+        OptimizationFunction(opt_function_or_optf, opt_func_args...)
     else
         opt_function_or_optf
     end
@@ -335,6 +338,7 @@ function _build_callback(early_threshold, max_failures)
 
         # Check early termination threshold
         if objective_value isa Number && objective_value < early_threshold
+            @info "Early termination: objective value below threshold" objective_value=objective_value early_threshold=early_threshold
             return true
         end
 
@@ -356,6 +360,7 @@ function _build_callback(early_threshold, max_failures)
             if is_bad
                 consecutive_failures[] += 1
                 if consecutive_failures[] >= max_failures
+                    @info "Early termination: maximum consecutive failures reached" consecutive_failures=consecutive_failures[] max_failures=max_failures
                     return true
                 end
             else
@@ -456,7 +461,8 @@ function build_safe_optimization_function(
         return n_obj == 1 ? result[1] : result
     end
 
-    return OptimizationFunction(safe_opt_function, opt_method_instance)
+    opt_func_args = isnothing(opt_method_instance) ? () : (opt_method_instance,)
+    return OptimizationFunction(safe_opt_function, opt_func_args...)
 end
 
 # Build the collection of initial guesses for multi-start optimization

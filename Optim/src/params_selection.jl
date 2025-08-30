@@ -1,6 +1,12 @@
 using Metrics.Data: DataFrame
 using SimMode.Misc: attr
 
+function _filter_results(os::OptSession)
+    results = filter([:trades] => trades -> trades > 0, os.results)
+    unique(results, [pnames...])
+end
+
+
 @doc """ Selects the most different parameter combinations from optimization results.
 
 $(TYPEDSIGNATURES)
@@ -13,7 +19,7 @@ Returns a DataFrame with the most diverse parameter combinations that have at le
 """
 function select_diverse_params(sess::OptSession; n::Int=10, metric::Symbol=:euclidean)
     # Filter results to only include those with at least 1 trade
-    filtered_results = filter([:trades] => trades -> trades > 0, sess.results)
+    filtered_results = _filter_results(sess)
 
     if nrow(filtered_results) == 0
         @warn "No results with trades found. Returning empty DataFrame."
@@ -122,7 +128,7 @@ function select_best_params(
     sess::OptSession; n::Int=10, sort_by::Symbol=:pnl, ascending::Bool=false
 )
     # Filter results to only include those with at least 1 trade
-    filtered_results = filter([:trades] => trades -> trades > 0, sess.results)
+    filtered_results = _filter_results(sess)
 
     if nrow(filtered_results) == 0
         @warn "No results with trades found. Returning empty DataFrame."
@@ -149,7 +155,7 @@ Returns a DataFrame with balanced diverse and performant parameter combinations 
 """
 function select_balanced_params(sess::OptSession; n::Int=10, sort_by::Symbol=:pnl)
     # Filter results to only include those with at least 1 trade
-    filtered_results = filter([:trades] => trades -> trades > 0, sess.results)
+    filtered_results = _filter_results(sess)
 
     if nrow(filtered_results) == 0
         @warn "No results with trades found. Returning empty DataFrame."
