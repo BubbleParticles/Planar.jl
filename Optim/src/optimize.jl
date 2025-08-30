@@ -11,8 +11,9 @@ using OptimizationBBO
 using OptimizationCMAEvolutionStrategy
 using OptimizationEvolutionary
 using OptimizationOptimJL
+using OptimizationSpeedMapping
 using Optimization: OptimizationProblem, OptimizationFunction, solve
-using ForwardDiff
+using Zygote
 
 # Optimization.jl provides various optimization algorithms through different packages
 # such as OptimizationBBO, OptimizationCMAEvolutionStrategy, etc.
@@ -100,6 +101,14 @@ function _spacedims(params)
     length(lower)
 end
 
+function default_opt_method(solve_method)
+    if solve_method in (:lbfgs, :sophia)
+        :zygote
+    elseif solve_method in (:poly, :prima, :speed)
+        :afd
+    end
+end
+
 function get_method(v, method_kwargs)
     if isnothing(v)
         return nothing
@@ -108,14 +117,22 @@ function get_method(v, method_kwargs)
         BBO_adaptive_de_rand_1_bin(; method_kwargs...)
     elseif v == :evo_cma
         CMAEvolutionStrategyOpt() # no args
+    elseif v == :evo_cmaes
+        CMAES(; method_kwargs...)
     elseif v == :evo_ga
         GA(; method_kwargs...)
     elseif v == :evo_de
         DE(; method_kwargs...)
+    elseif v == :evo_tree
+        TreeGP(; method_kwargs...)
     elseif v == :lbfgs
         LBFGS()
     elseif v == :afd
         AutoForwardDiff(; method_kwargs...)
+    elseif v == :speed
+        SpeedMappingOpt()
+    elseif v == :zygote
+        AutoZygote()
     else
         @assert !(v isa DataType) "Expected an instance of an Optimization.jl method, got $(v)"
         v
@@ -220,8 +237,8 @@ end
 function _build_problem(optf, initial_guess, lower_float, upper_float, integer_mask)
     # Always provide bounds; some algorithms require them
     kwargs = Dict{Symbol,Any}()
-    kwargs[:lb] = lower_float
-    kwargs[:ub] = upper_float
+    # kwargs[:lb] = lower_float
+    # kwargs[:ub] = upper_float
     any(integer_mask) && (kwargs[:int] = integer_mask)
     return OptimizationProblem(optf, initial_guess; kwargs...)
 end
@@ -581,7 +598,7 @@ function optimize(
     zi=get_zinstance(s),
     maxiters=nothing,
     maxtime=nothing,
-    opt_method=:afd,
+    opt_method=nothing,
     opt_method_kwargs=(;),
     solve_method=:bbo,
     solve_method_kwargs=(;),
@@ -620,11 +637,14 @@ function optimize(
     backtest_func = define_backtest_func(sess, steps_args...)
     obj_type, n_obj = objectives(s)
 
-    opt_method_instance = get_method(opt_method, opt_method_kwargs)
+    if isnothing(opt_method)
+        opt_method = default_opt_method(solve_method)
+    end
     solve_method_instance = get_method(solve_method, solve_method_kwargs)
+    opt_method_instance = get_method(opt_method, opt_method_kwargs)
     if n_obj > 1 && (solve_method_instance isa LBFGS)
         @warn "BFGS does not support multi-objective optimization. Switching to GA."
-        solve_method_instance = get_method(:evo_ga, solve_method_kwargs)
+        solve_method_instance = get_method(:bbo, solve_method_kwargs)
     end
 
     _propagate_clone_attrs!(sess, s)
