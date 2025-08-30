@@ -3,6 +3,7 @@ using SimMode.Misc: attr
 
 function _filter_results(os::OptSession)
     results = filter([:trades] => trades -> trades > 0, os.results)
+    pnames = keys(os.params)
     unique(results, [pnames...])
 end
 
