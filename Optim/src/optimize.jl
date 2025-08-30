@@ -1,8 +1,9 @@
-using SimMode.TimeTicks: current!
+using SimMode.TimeTicks: current!, compact, Second, Millisecond
 using SimMode: start!
 using Random
 using SimMode.Lang: @debug_backtrace
 using Base.Threads: ReentrantLock
+using SimMode.Dates: Second
 
 # Add Optimization.jl imports
 using Optimization
@@ -38,6 +39,12 @@ The bounds can be specified as:
 """
 function ctxfromstrat(s)
     ctx, params, s_space = call!(s, OptSetup())
+    # Record parameter names order for later value extraction/conversions
+    try
+        s[:opt_param_names] = keys(params)
+    catch
+        # ignore if params is not a NamedTuple
+    end
     ctx,
     params,
     s_space,
@@ -217,6 +224,48 @@ function _build_problem(optf, initial_guess, lower_float, upper_float, integer_m
     return OptimizationProblem(optf, initial_guess; kwargs...)
 end
 
+# Try to build an initial guess vector from the strategy's current defaults
+function _initial_guess_from_strategy(s::Strategy, lower::AbstractVector, upper::AbstractVector)
+    names = get(s, :opt_param_names, nothing)
+    isnothing(names) && return nothing
+    categorical_info = get(s, :opt_categorical, nothing)
+    ig = Vector{DFT}(undef, length(lower))
+    i = 0
+    for pname in names
+        i += 1
+        v = get(s, pname, nothing)
+        v === nothing && return nothing
+        # Map categoricals to index if applicable
+        if !isnothing(categorical_info) && i <= length(categorical_info)
+            cats = categorical_info[i]
+            if !(cats === nothing)
+                idx = findfirst(==(v), cats)
+                idx === nothing && return nothing
+                ig[i] = DFT(idx)
+                # proceed to clamp later
+                continue
+            end
+        end
+        # Map time periods (Minute/Second/etc.) and numbers to DFT
+        if v isa Dates.Period
+            ig[i] = DFT(Dates.value(v))
+        elseif v isa Integer
+            ig[i] = DFT(v)
+        elseif v isa AbstractFloat
+            ig[i] = DFT(v)
+        else
+            # Unsupported type for numeric optimization
+            return nothing
+        end
+    end
+    # Clamp and apply precision if available
+    @inbounds for j in eachindex(ig)
+        ig[j] = clamp(ig[j], lower[j], upper[j])
+    end
+    ig = apply_precision(ig, s)
+    return ig
+end
+
 # Prepare bounds, initial guess, integer mask and build the OptimizationProblem
 function _setup_problem_and_bounds(
     s::Strategy,
@@ -243,8 +292,8 @@ function _setup_problem_and_bounds(
     s[:opt_bounds] = (copy(lower), copy(upper))
 
     # Ensure bounds are Float arrays for Optimization.jl compatibility
-    lower_float = lower
-    upper_float = upper
+    lower_float = DFT.(lower)
+    upper_float = DFT.(upper)
 
     # Create or accept OptimizationFunction
     optf = if opt_function_or_optf isa Function
@@ -253,11 +302,12 @@ function _setup_problem_and_bounds(
         opt_function_or_optf
     end
 
-    # Use the midpoint of bounds as initial guess unless overridden
-    initial_guess = if isnothing(initial_guess_override)
-        (lower_float .+ upper_float) ./ 2.0
-    else
+    # Use provided override, otherwise attempt strategy defaults, otherwise midpoint
+    initial_guess = if !isnothing(initial_guess_override)
         initial_guess_override
+    else
+        strategy_guess = _initial_guess_from_strategy(s, lower_float, upper_float)
+        isnothing(strategy_guess) ? ((lower_float .+ upper_float) ./ 2.0) : strategy_guess
     end
 
     # Check if we have integer parameters
@@ -414,9 +464,10 @@ function build_initial_guesses(s::Strategy, n_jobs::Int)
     bounds = get(s, :opt_bounds, nothing)
     isnothing(bounds) &&
         error("opt_bounds not set on strategy; call _setup_problem_and_bounds first")
-    lower_float, upper_float = bounds
-    # Midpoint of bounds as baseline
-    initial_guess = (lower_float .+ upper_float) ./ 2.0
+    lower_float, upper_float = DFT.(bounds[1]), DFT.(bounds[2])
+    # Baseline guess: use strategy defaults if available, else midpoint
+    strategy_guess = _initial_guess_from_strategy(s, lower_float, upper_float)
+    initial_guess = isnothing(strategy_guess) ? ((lower_float .+ upper_float) ./ 2.0) : strategy_guess
     function random_initial_guess()
         ig = similar(initial_guess)
         @inbounds for i in eachindex(ig)
@@ -586,7 +637,13 @@ function optimize(
     solve_kwargs = (; kwargs...)
     # Ensure iteration limits are honored across different solver backends
     # Some read :maxiters while others (e.g., Evolutionary/CMAES wrappers) read :iterations
-    solve_kwargs = merge(solve_kwargs, (maxiters=maxiters, maxtime=maxtime))
+    # Only add maxiters or maxtime if they are not nothing
+    if maxiters !== nothing
+        solve_kwargs = merge(solve_kwargs, (maxiters=maxiters,))
+    end
+    if maxtime !== nothing
+        solve_kwargs = merge(solve_kwargs, (maxtime=maxtime,))
+    end
     if n_jobs > 1 && !isthreadsafe(s)
         @warn "Parallel optimization requested but strategy is not thread-safe. Disabling parallel mode."
     end
@@ -609,7 +666,7 @@ function optimize(
             )
         else
             @info "optimize: running single optimization" n_params = length(space) n_jobs maxiters maxtime = compact(
-                Second(maxtime)
+                Second(isnothing(maxtime) ? 0 : maxtime)
             ) s = nameof(s)
             r = _run_single(prob, solve_method_instance, callback, solve_kwargs)
         end

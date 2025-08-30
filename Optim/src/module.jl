@@ -475,11 +475,11 @@ function define_backtest_func(sess, small_step, big_step)
                     if stop_at < ctx.range.stop
                         ctx.range.stop = stop_at
                     end
-                    # @debug "optim backtest range" cycle compact(ms(small_step)) compact(
-                    #     ms(big_step)
-                    # ) start_at stop_at duration = compact(stop_at - start_at) source_duration = compact(
-                    #     ctx.range.stop - ctx.range.start
-                    # ) source_start = ctx.range.start
+                    @debug "optim backtest range" cycle compact(ms(small_step)) compact(
+                        ms(big_step)
+                    ) start_at stop_at duration = compact(stop_at - start_at) source_duration = compact(
+                        ctx.range.stop - ctx.range.start
+                    ) source_start = ctx.range.start
                 end
                 # backtest and score
                 initial_cash = value(s.cash)
