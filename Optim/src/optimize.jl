@@ -11,9 +11,10 @@ using OptimizationBBO
 using OptimizationCMAEvolutionStrategy
 using OptimizationEvolutionary
 using OptimizationOptimJL
-using OptimizationSpeedMapping
+using OptimizationNOMAD
+# using OptimizationSpeedMapping
+# using Zygote
 using Optimization: OptimizationProblem, OptimizationFunction, solve
-using Zygote
 
 # Optimization.jl provides various optimization algorithms through different packages
 # such as OptimizationBBO, OptimizationCMAEvolutionStrategy, etc.
@@ -133,6 +134,8 @@ function get_method(v, method_kwargs)
         SpeedMappingOpt()
     elseif v == :zygote
         AutoZygote()
+    elseif v == :nomad
+        NOMADOpt()
     else
         @assert !(v isa DataType) "Expected an instance of an Optimization.jl method, got $(v)"
         v
@@ -390,7 +393,11 @@ function _build_callback(early_threshold, max_failures)
 end
 
 # Compose early termination and periodic save callbacks
-function _compose_callbacks(save_args, early_threshold, max_failures)
+function _compose_callbacks(solve_method, save_args, early_threshold, max_failures)
+    # speedmapping does not support callbacks
+    if solve_method in (:speed, :nomad)
+        return nothing
+    end
     # Create callback for early termination
     early_term_callback = _build_callback(early_threshold, max_failures)
     # Combine with periodic save callback if present
@@ -677,7 +684,7 @@ function optimize(
     # Solve with Optimization.jl
     r = nothing
     try
-        callback = _compose_callbacks(save_args, early_threshold, max_failures)
+        callback = _compose_callbacks(solve_method, save_args, early_threshold, max_failures)
         if multistart && n_jobs > 1
             r = _run_multi_start(
                 sess,
