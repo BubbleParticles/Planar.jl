@@ -11,7 +11,8 @@ using OptimizationBBO
 using OptimizationCMAEvolutionStrategy
 using OptimizationEvolutionary
 using OptimizationOptimJL
-using OptimizationNOMAD
+using OptimizationManopt
+# using OptimizationNOMAD
 # using OptimizationSpeedMapping
 # using Zygote
 using Optimization: OptimizationProblem, OptimizationFunction, solve
@@ -136,6 +137,30 @@ function get_method(v, method_kwargs)
         AutoZygote()
     elseif v == :nomad
         NOMADOpt()
+    elseif v == :nelder
+        Optim.NelderMead()
+    elseif v == :ann
+        Optim.SimulatedAnnealing()
+    elseif v == :swarm
+        Optim.ParticleSwarm()
+    elseif v == :cgradient
+        Optim.ConjugateGradient()
+    elseif v == :gradientd
+        Optim.GradientDescent()
+    elseif v == :opt_bfgs
+        Optim.BFGS()
+    elseif v == :opt_lbfgs
+        Optim.LBFGS()
+    elseif v == :ngm
+        Optim.NGMRES()
+    elseif v == :oaccel
+        Optim.OACCEL()
+    elseif v == :newton_trust
+        Optim.NewtonTrustRegion()
+    elseif v == :newton
+        Optim.Newton()
+    elseif v == :krylov
+        Optim.KrylovTrustRegion()
     else
         @assert !(v isa DataType) "Expected an instance of an Optimization.jl method, got $(v)"
         v
