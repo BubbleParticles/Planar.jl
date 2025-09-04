@@ -563,13 +563,18 @@ function _print_aggregated_metrics(sess, metrics_list, n)
     pnl_max = round(maximum(pnls) * 100, digits=2)
     
     cash_avg = round(mean(cashs), digits=2)
+    cash_min = round(minimum(cashs), digits=2)
+    cash_max = round(maximum(cashs), digits=2)
+    
     trades_avg = round(mean(trades), digits=1)
+    trades_min = round(minimum(trades), digits=1)
+    trades_max = round(maximum(trades), digits=1)
     
     # Get color and update best
     color, reset = _get_color_and_update_best(sess, obj_avg, mean(pnls))
     
     obj_avg_str = round(obj_avg, digits=4)
-    println("$(color)run: $(n) | obj: $(obj_avg_str) [$(obj_min)-$(obj_max)] | pnl: $(pnl_avg)% [$(pnl_min)-$(pnl_max)] | cash: $(cash_avg) | trades: $(trades_avg)$(reset)")
+    println("$(color)run: $(n) | obj: $(obj_avg_str) [$(obj_min)-$(obj_max)] | pnl: $(pnl_avg)% [$(pnl_min)-$(pnl_max)] | cash: $(cash_avg) [$(cash_min)-$(cash_max)] | trades: $(trades_avg) [$(trades_min)-$(trades_max)]$(reset)")
 end
 
 function _print_metrics(sess, n=nothing)
