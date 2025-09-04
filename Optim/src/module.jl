@@ -523,6 +523,55 @@ The function takes four arguments: `splits`, `backtest_func`, `median_func`, and
 `splits` is the number of splits for the optimization process, `backtest_func` is the backtest function, `median_func` is the function to calculate the median, and `obj_type` is the type of the objective.
 The function returns a function that performs a multi-threaded optimization for a given set of parameters.
 """
+function _get_color_and_update_best(sess, obj, pnl)
+    # Check if this is the best objective yet
+    best = sess.best[]
+    is_best = best isa Ref{Nothing} || obj > best
+    if is_best
+        sess.best[] = obj
+    end
+    
+    # Color formatting
+    if is_best
+        color = "\033[1;32m"  # bold green
+    elseif pnl > 0
+        color = "\033[32m"    # green
+    else
+        color = "\033[0m"     # default
+    end
+    reset = "\033[0m"
+    
+    return color, reset
+end
+
+function _print_aggregated_metrics(sess, metrics_list, n)
+    # Skip if all runs have no trades
+    all(m -> m.trades == 0, metrics_list) && return
+    
+    # Calculate aggregated statistics
+    objs = [length(m.obj) > 1 ? m.obj : m.obj[1] for m in metrics_list]
+    pnls = [m.pnl for m in metrics_list]
+    cashs = [m.cash for m in metrics_list]
+    trades = [m.trades for m in metrics_list]
+    
+    obj_avg = mean(objs)
+    obj_min = round(minimum(objs), digits=4)
+    obj_max = round(maximum(objs), digits=4)
+    
+    pnl_avg = round(mean(pnls) * 100, digits=2)
+    pnl_min = round(minimum(pnls) * 100, digits=2)
+    pnl_max = round(maximum(pnls) * 100, digits=2)
+    
+    cash_avg = round(mean(cashs), digits=2)
+    trades_avg = round(mean(trades), digits=1)
+    
+    # Get color and update best
+    color, reset = _get_color_and_update_best(sess, obj_avg, mean(pnls))
+    
+    obj_avg_str = round(obj_avg, digits=4)
+    println("$(color)run: $(n) | obj: $(obj_avg_str) [$(obj_min)-$(obj_max)] | pnl: $(pnl_avg)% [$(pnl_min)-$(pnl_max)] | cash: $(cash_avg) | trades: $(trades_avg)$(reset)")
+end
+
 function _print_metrics(sess, n=nothing)
     if "print" ∈ metadatakeys(sess.results)
         lock(sess.lock) do
@@ -532,23 +581,9 @@ function _print_metrics(sess, n=nothing)
                     # Skip runs with no trades
                     m.trades == 0 && continue
                     
-                    # Check if this is the best objective yet
+                    # Get color and update best
                     obj = length(m.obj) > 1 ? m.obj : m.obj[1]
-                    best = sess.best[]
-                    is_best = best isa Ref{Nothing} || obj > best
-                    if is_best
-                        sess.best[] = obj
-                    end
-                    
-                    # Color formatting
-                    if is_best
-                        color = "\033[1;32m"  # bold green
-                    elseif m.pnl > 0
-                        color = "\033[32m"    # green
-                    else
-                        color = "\033[0m"     # default
-                    end
-                    reset = "\033[0m"
+                    color, reset = _get_color_and_update_best(sess, obj, m.pnl)
                     
                     # Format as table
                     pnl_pct = round(m.pnl * 100, digits=2)
@@ -567,14 +602,29 @@ end
 function _multi_opt_func(sess, splits, backtest_func, median_func, obj_type)
     function parallel_backtest_func(params, n)
         scores = Vector{obj_type}(undef, splits)
+        metrics_collected = Vector{Any}(undef, splits)
         Threads.@threads for i in 1:splits
             if isrunning()
                 scores[i] = @something backtest_func(params, n) default_value(obj_type)
                 @debug "parallel backtest job finished" i n
-                _print_metrics(sess, n)
+                # Collect metrics instead of printing immediately
+                if "print" ∈ metadatakeys(sess.results)
+                    lock(sess.lock) do
+                        prints = metadata(sess.results, "print")
+                        if !isempty(prints)
+                            metrics_collected[i] = popfirst!(prints)
+                        end
+                    end
+                end
             end
         end
         @debug "parallel backtest batch finished" n
+
+        # Print aggregated metrics
+        valid_metrics = filter(!isnothing, metrics_collected)
+        if !isempty(valid_metrics)
+            _print_aggregated_metrics(sess, valid_metrics, n)
+        end
 
         mapreduce(permutedims, vcat, scores) |> median_func
     end
