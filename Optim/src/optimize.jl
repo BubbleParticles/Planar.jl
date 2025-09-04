@@ -232,7 +232,7 @@ function _make_opt_function(
     cache_lock = ReentrantLock()
     counter = (; lock=ReentrantLock(), n=Ref(0))
 
-    run_func = define_opt_func(s; backtest_func, split_test, splits, n_jobs, obj_type)
+    run_func = define_opt_func(s; sess, backtest_func, split_test, splits, n_jobs, obj_type)
 
     function opt_function(u, p)
         u_rounded = apply_precision(u, s)
@@ -261,18 +261,30 @@ function _bounds_from_space(space)
     end
 end
 
+function is_not_subtype_of_any(T, supertypes)
+    return nothing
+end
+
 # Build OptimizationProblem
-function _build_problem(optf, initial_guess, lower_float, upper_float, integer_mask)
+function _build_problem(
+    optf, initial_guess, lower_float, upper_float, integer_mask; solve_method_instance
+)
     # Always provide bounds; some algorithms require them
     kwargs = Dict{Symbol,Any}()
-    # kwargs[:lb] = lower_float
-    # kwargs[:ub] = upper_float
+    solve_method = typeof(solve_method_instance)
+    no_box_constraints = (Optim.SimulatedAnnealing,)
+    if !any(s -> solve_method <: s, no_box_constraints)
+        kwargs[:lb] = lower_float
+        kwargs[:ub] = upper_float
+    end
     any(integer_mask) && (kwargs[:int] = integer_mask)
     return OptimizationProblem(optf, initial_guess; kwargs...)
 end
 
 # Try to build an initial guess vector from the strategy's current defaults
-function _initial_guess_from_strategy(s::Strategy, lower::AbstractVector, upper::AbstractVector)
+function _initial_guess_from_strategy(
+    s::Strategy, lower::AbstractVector, upper::AbstractVector
+)
     names = get(s, :opt_param_names, nothing)
     isnothing(names) && return nothing
     categorical_info = get(s, :opt_categorical, nothing)
@@ -318,8 +330,8 @@ function _setup_problem_and_bounds(
     s::Strategy,
     space,
     opt_function_or_optf;
-    solve_method_instance,
     opt_method_instance=nothing,
+    solve_method_instance=nothing,
     initial_guess_override=nothing,
 )
     # Get bounds from the strategy setup or stored bounds
@@ -355,7 +367,11 @@ function _setup_problem_and_bounds(
         initial_guess_override
     else
         strategy_guess = _initial_guess_from_strategy(s, lower_float, upper_float)
-        isnothing(strategy_guess) ? ((lower_float .+ upper_float) ./ 2.0) : strategy_guess
+        if isnothing(strategy_guess)
+            ((lower_float .+ upper_float) ./ 2.0)
+        else
+            strategy_guess
+        end
     end
 
     # Check if we have integer parameters
@@ -367,7 +383,9 @@ function _setup_problem_and_bounds(
     end
 
     # Create problem with integer constraints if needed
-    prob = _build_problem(optf, initial_guess, lower_float, upper_float, integer_mask)
+    prob = _build_problem(
+        optf, initial_guess, lower_float, upper_float, integer_mask; solve_method_instance
+    )
 
     return prob
 end
@@ -383,7 +401,8 @@ function _build_callback(early_threshold, max_failures)
 
         # Check early termination threshold
         if objective_value isa Number && objective_value < early_threshold
-            @info "Early termination: objective value below threshold" objective_value=objective_value early_threshold=early_threshold
+            @info "Early termination: objective value below threshold" objective_value =
+                objective_value early_threshold = early_threshold
             return true
         end
 
@@ -405,7 +424,8 @@ function _build_callback(early_threshold, max_failures)
             if is_bad
                 consecutive_failures[] += 1
                 if consecutive_failures[] >= max_failures
-                    @info "Early termination: maximum consecutive failures reached" consecutive_failures=consecutive_failures[] max_failures=max_failures
+                    @info "Early termination: maximum consecutive failures reached" consecutive_failures = consecutive_failures[] max_failures =
+                        max_failures
                     return true
                 end
             else
@@ -522,7 +542,8 @@ function build_initial_guesses(s::Strategy, n_jobs::Int)
     lower_float, upper_float = DFT.(bounds[1]), DFT.(bounds[2])
     # Baseline guess: use strategy defaults if available, else midpoint
     strategy_guess = _initial_guess_from_strategy(s, lower_float, upper_float)
-    initial_guess = isnothing(strategy_guess) ? ((lower_float .+ upper_float) ./ 2.0) : strategy_guess
+    initial_guess =
+        isnothing(strategy_guess) ? ((lower_float .+ upper_float) ./ 2.0) : strategy_guess
     function random_initial_guess()
         ig = similar(initial_guess)
         @inbounds for i in eachindex(ig)
@@ -571,8 +592,7 @@ function _run_multi_start(
                 s,
                 nothing,
                 safe_optf;
-                solve_method_instance,
-                initial_guess_override=initial_guesses[j],
+                initial_guess_override=initial_guesses[j, solve_method_instance],
             )
             if isnothing(callback)
                 solve(prob, solve_method_instance; solve_kwargs...)
@@ -666,7 +686,7 @@ function optimize(
     sess.attrs[:splits] = n_jobs * splits
 
     steps_args = ctxsteps(ctx, n_jobs * splits, call!(s, WarmupPeriod()))
-    backtest_func = define_backtest_func(sess, steps_args...)
+    backtest_func = define_backtest_func(sess, steps_args...; verbose=true)
     obj_type, n_obj = objectives(s)
 
     if isnothing(opt_method)
@@ -709,7 +729,9 @@ function optimize(
     # Solve with Optimization.jl
     r = nothing
     try
-        callback = _compose_callbacks(solve_method, save_args, early_threshold, max_failures)
+        callback = _compose_callbacks(
+            solve_method, save_args, early_threshold, max_failures
+        )
         if multistart && n_jobs > 1
             r = _run_multi_start(
                 sess,

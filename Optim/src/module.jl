@@ -16,6 +16,7 @@ using Pkg: Pkg
 using Base.Threads: threadid
 using SimMode.Misc.DocStringExtensions
 import .st: call!
+using .Instances.Data.DataFrames: metadata, metadata!, metadatakeys
 
 include("utils.jl")
 
@@ -446,7 +447,7 @@ The function takes three arguments: `sess`, `small_step`, and `big_step`.
 `sess` is the optimization session, `small_step` is the small step size for the optimization process, and `big_step` is the big step size for the optimization process.
 The function returns a function that performs a backtest for a given set of parameters and a given iteration number.
 """
-function define_backtest_func(sess, small_step, big_step)
+function define_backtest_func(sess, small_step, big_step; verbose=false)
     splits = sess.attrs[:splits]
     function opt_backtest_func(params, n)
         tid = Threads.threadid()
@@ -497,6 +498,13 @@ function define_backtest_func(sess, small_step, big_step)
                             )...,
                         ),
                     )
+                    if verbose
+                        if "print" ∈ metadatakeys(sess.results)
+                            push!(metadata(sess.results, "print"), metrics)
+                        else
+                            metadata!(sess.results, "print", Any[metrics]; style=:note)
+                        end
+                    end
                     @debug "number of results: $(nrow(sess.results))"
                 end
                 metrics.obj
@@ -515,13 +523,55 @@ The function takes four arguments: `splits`, `backtest_func`, `median_func`, and
 `splits` is the number of splits for the optimization process, `backtest_func` is the backtest function, `median_func` is the function to calculate the median, and `obj_type` is the type of the objective.
 The function returns a function that performs a multi-threaded optimization for a given set of parameters.
 """
-function _multi_opt_func(splits, backtest_func, median_func, obj_type)
+function _print_metrics(sess, n=nothing)
+    if "print" ∈ metadatakeys(sess.results)
+        lock(sess.lock) do
+            prints = metadata(sess.results, "print")
+            if !isempty(prints)
+                for m in prints
+                    # Skip runs with no trades
+                    m.trades == 0 && continue
+                    
+                    # Check if this is the best objective yet
+                    obj = length(m.obj) > 1 ? m.obj : m.obj[1]
+                    best = sess.best[]
+                    is_best = best isa Ref{Nothing} || obj > best
+                    if is_best
+                        sess.best[] = obj
+                    end
+                    
+                    # Color formatting
+                    if is_best
+                        color = "\033[1;32m"  # bold green
+                    elseif m.pnl > 0
+                        color = "\033[32m"    # green
+                    else
+                        color = "\033[0m"     # default
+                    end
+                    reset = "\033[0m"
+                    
+                    # Format as table
+                    pnl_pct = round(m.pnl * 100, digits=2)
+                    cash_str = round(m.cash, digits=2)
+                    obj_str = round(obj, digits=4)
+                    
+                    run_str = isnothing(n) ? "" : "run: $(n) | "
+                    println("$(color)$(run_str)obj: $(obj_str) | pnl: $(pnl_pct)% | cash: $(cash_str) | trades: $(m.trades)$(reset)")
+                end
+                empty!(prints)
+            end
+        end
+    end
+end
+
+function _multi_opt_func(sess, splits, backtest_func, median_func, obj_type)
     function parallel_backtest_func(params, n)
         scores = Vector{obj_type}(undef, splits)
         Threads.@threads for i in 1:splits
             if isrunning()
                 scores[i] = @something backtest_func(params, n) default_value(obj_type)
                 @debug "parallel backtest job finished" i n
+                _print_metrics(sess, n)
             end
         end
         @debug "parallel backtest batch finished" n
@@ -538,10 +588,14 @@ The function takes four arguments: `splits`, `backtest_func`, `median_func`, and
 `splits` is the number of splits for the optimization process, `backtest_func` is the backtest function, `median_func` is the function to calculate the median, and `obj_type` is the type of the objective.
 The function returns a function that performs a single-threaded optimization for a given set of parameters.
 """
-function _single_opt_func(splits, backtest_func, median_func, args...)
+function _single_opt_func(sess, splits, backtest_func, median_func, args...)
     function single_backtest_func(params, n=0)
-        mapreduce(permutedims, vcat, [(backtest_func(params, n) for n in 1:splits)...]) |>
-        median_func
+        scores = Vector{Any}(undef, splits)
+        for i in 1:splits
+            scores[i] = backtest_func(params, n)
+            _print_metrics(sess, n)
+        end
+        mapreduce(permutedims, vcat, scores) |> median_func
     end
 end
 
@@ -577,11 +631,12 @@ function define_opt_func(
     n_jobs,
     obj_type,
     isthreaded=isthreadsafe(s),
+    sess,
 )
     median_func = define_median_func(splits)
     opt_func = isthreaded && split_test ? _multi_opt_func : _single_opt_func
     epoch_splits = split_test ? n_jobs * splits : splits
-    opt_func(epoch_splits, backtest_func, median_func, obj_type)
+    opt_func(sess, epoch_splits, backtest_func, median_func, obj_type)
 end
 
 @doc """ Returns the number of objectives and their type.
