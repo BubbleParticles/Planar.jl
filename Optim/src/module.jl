@@ -1,5 +1,5 @@
 using SimMode: SimMode
-using SimMode.Executors: st, Instances, OptSetup, OptRun, OptScore, Context
+using SimMode.Executors: st, Instances, OptSetup, OptRun, OptScore, OptMinimize, Context
 using SimMode.TimeTicks
 using .Instances: value
 using .Instances.Data: DataFrame, Not, save_data, load_data, nrow, todata, tobytes
@@ -69,6 +69,19 @@ call!(::Strategy, ::OptSetup)::ContextSpace = error("not implemented")
 $(TYPEDSIGNATURES)
 """
 call!(::Strategy, params, ::OptRun) = error("not implemented")
+
+@doc """ Indicates if the optimization is a minimization problem.
+
+$(TYPEDSIGNATURES)
+
+"""
+call!(::Strategy, ::OptMinimize) = true
+
+isbest(s, obj, best) = if call!(s, OptMinimize())
+    obj < best
+else
+    obj > best
+end
 
 @doc """ A structure representing an optimization session.
 
@@ -523,7 +536,7 @@ The function returns a function that performs a multi-threaded optimization for 
 function _get_color_and_update_best(sess, obj, pnl)
     # Check if this is the best objective yet
     best = sess.best[]
-    is_best = best isa Ref{Nothing} || obj > best
+    is_best = best isa Ref{Nothing} || isbest(s, obj, best)
     if is_best
         sess.best[] = obj
     end

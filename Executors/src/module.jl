@@ -51,10 +51,12 @@ struct OptSetup <: ExecAction end
 struct OptRun <: ExecAction end
 @doc "Action to get the score of a single simulation (after it has finished)."
 struct OptScore <: ExecAction end
+@doc "Action to indicate if the optimization is a minimization problem."
+struct OptMinimize <: ExecAction end
 
 export call!, UpdateOrders, UpdateOrdersShuffled, CancelOrders
 export UpdateLeverage, UpdateMargin, UpdatePositions
-export OptSetup, OptRun, OptScore
+export OptSetup, OptRun, OptScore, OptMinimize
 export NewTrade
 export WatchOHLCV, UpdateData, InitData
 export limitorder, marketorder
