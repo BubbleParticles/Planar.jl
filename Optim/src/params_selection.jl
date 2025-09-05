@@ -1,5 +1,17 @@
 using Metrics.Data: DataFrame
+using Metrics: mean, median
 using SimMode.Misc: attr
+
+# Wrapper for median that handles vector of vectors
+function safe_median(values)
+    if !isempty(values) && values[1] isa AbstractVector
+        # Convert vector of vectors to matrix and apply median across dim=2
+        matrix = hcat(values...)
+        return vec(median(matrix; dims=2))
+    else
+        return median(values)
+    end
+end
 
 function _filter_results(os::OptSession)
     results = filter([:trades] => trades -> trades > 0, os.results)
@@ -202,4 +214,145 @@ function select_balanced_params(sess::OptSession; n::Int=10, sort_by::Symbol=:pn
     return result[1:min(n, nrow(result)), :]
 end
 
-export select_diverse_params, select_best_params, select_balanced_params
+@doc """ Groups session results by repeat and aggregates metrics columns.
+
+$(TYPEDSIGNATURES)
+
+- `sess`: The optimization session containing results
+- `sort_by`: Column to sort by (default: :pnl_avg)
+- `filter_zero_trades`: Filter out rows with 0 trades (default: true)
+
+Returns a DataFrame with one row per unique parameter combination, containing:
+- Parameter columns (from first row of each group)
+- Aggregated metrics: average, median, min, max for obj, cash, pnl, trades
+"""
+function agg(sess::OptSession; sort_by::Symbol=:pnl_avg, filter_zero_trades::Bool=true)
+    if isempty(sess.results)
+        @warn "No results found in session. Returning empty DataFrame."
+        return DataFrame()
+    end
+    
+    # Get parameter column names
+    param_cols = [keys(sess.params)...]
+    param_cols_str = [string(col) for col in param_cols]
+    metric_cols = ["obj", "cash", "pnl", "trades"]
+    
+    # Group by parameter combinations (excluding repeat column)
+    grouped = groupby(sess.results, param_cols)
+    
+    if length(grouped) == 0
+        @warn "No groups found after grouping by parameters. Returning empty DataFrame."
+        return DataFrame()
+    end
+    
+    # Create aggregated results
+    aggregated_rows = []
+    
+    for group in grouped
+        # Get parameter values from first row
+        first_row = group[1, :]
+        param_values = [first_row[col] for col in param_cols]
+        
+        # Create row maintaining original column order
+        row_data = Dict{Any, Any}()
+        
+        # Process each column in the original order
+        for col in names(sess.results)
+            if string(col) == "repeat"
+                # Skip repeat column
+                continue
+            elseif string(col) in param_cols_str
+                # Add parameter column
+                col_idx = findfirst(x -> string(x) == string(col), param_cols)
+                row_data[col] = param_values[col_idx]
+            elseif string(col) in metric_cols
+                # Replace metric column with its 4 aggregated versions
+                values = group[!, col]
+                row_data[Symbol("$(col)_avg")] = mean(values)
+                row_data[Symbol("$(col)_med")] = safe_median(values)
+                row_data[Symbol("$(col)_min")] = minimum(values)
+                row_data[Symbol("$(col)_max")] = maximum(values)
+            else
+                # Handle any other columns by taking the first value
+                row_data[col] = group[1, col]
+            end
+        end
+        
+        push!(aggregated_rows, row_data)
+    end
+    
+    # Convert to DataFrame - ensure proper column ordering
+    if isempty(aggregated_rows)
+        return DataFrame()
+    end
+    
+    # Get all column names in the correct order
+    all_cols = []
+    for col in names(sess.results)
+        if string(col) == "repeat"
+            continue
+        elseif string(col) in param_cols_str
+            push!(all_cols, col)
+        elseif string(col) in metric_cols
+            push!(all_cols, Symbol("$(col)_avg"))
+            push!(all_cols, Symbol("$(col)_med"))
+            push!(all_cols, Symbol("$(col)_min"))
+            push!(all_cols, Symbol("$(col)_max"))
+        else
+            push!(all_cols, col)
+        end
+    end
+    
+    # Create DataFrame with proper structure
+    result_df = DataFrame()
+    for col in all_cols
+        result_df[!, col] = [row[col] for row in aggregated_rows]
+    end
+    
+    # Filter out rows with 0 trades if requested
+    if filter_zero_trades && "trades_avg" in names(result_df)
+        result_df = filter([:trades_avg] => trades -> trades > 0, result_df)
+    end
+    
+    # Sort by the specified column if it exists
+    if string(sort_by) in names(result_df)
+        sort!(result_df, [sort_by]; rev=false)  # Sort in descending order (best first)
+    end
+    
+    return result_df
+end
+
+@doc """ Extracts parameter values from a specific row as a named tuple.
+
+$(TYPEDSIGNATURES)
+
+- `df`: DataFrame containing aggregated results (from agg function)
+- `row_idx`: Row index to extract parameters from (default: 1 for best result)
+
+Returns a named tuple with parameter names as keys and their values.
+"""
+function get_params(df::DataFrame, row_idx::Int=1)
+    if isempty(df)
+        error("DataFrame is empty")
+    end
+    
+    # Handle negative indexing (convert to positive)
+    if row_idx < 0
+        row_idx = nrow(df) + row_idx + 1
+    end
+    
+    if row_idx < 1 || row_idx > nrow(df)
+        error("Row index $row_idx is out of bounds for DataFrame with $(nrow(df)) rows")
+    end
+    
+    # Get parameter columns (exclude metric columns)
+    param_cols = filter(name -> !occursin(r"_(avg|med|min|max)$", string(name)), names(df))
+    
+    # Extract parameter values from the specified row
+    param_values = [df[row_idx, col] for col in param_cols]
+    
+    # Create named tuple
+    return NamedTuple{Tuple(Symbol.(param_cols))}(param_values)
+end
+
+export select_diverse_params, select_best_params, select_balanced_params, agg, get_params

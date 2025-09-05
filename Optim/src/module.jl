@@ -427,7 +427,7 @@ function random_ctx_length(ctx, splits, big_step, small_step)
     ms_mult(small_step, pad_qt_3)
 end
 
-function random_ctx_start(ctx, splits, cycle, wp, big_step, small_step)
+function random_ctx_start(ctx, splits, tid, wp, big_step, small_step)
     Random.seed!() # NOTE: this is to affect random_ctx_length
     pad_qt_1 = rand(1:splits) / splits
     pad_qt_2 = rand(1:splits) / splits
@@ -435,7 +435,7 @@ function random_ctx_start(ctx, splits, cycle, wp, big_step, small_step)
     ctx.range.start +
     wp +
     ms_mult(ctx.range.step, pad_qt_1) +
-    ms_mult(big_step, pad_qt_2) * cycle +
+    ms_mult(big_step, pad_qt_2) * tid +
     ms_mult(small_step, pad_qt_3)
 end
 
@@ -454,10 +454,8 @@ function define_backtest_func(sess, small_step, big_step; verbose=false)
         slot = sess.s_clones[tid]
         try
             @lock slot[1] begin
-                # `ofs` is used as custom input source of randomness
                 s = slot[2]
                 ctx = sess.ctx_clones[tid]
-                ofs = sess.attrs[:offset] + n
                 # clear strat
                 st.reset!(s, true)
                 # set params as strategy attributes
@@ -466,9 +464,8 @@ function define_backtest_func(sess, small_step, big_step; verbose=false)
                 call!(s, params, OptRun())
                 # randomize strategy startup time
                 let wp = call!(s, WarmupPeriod())
-                    cycle = (n - 1) % splits
                     start_at = random_ctx_start(
-                        ctx, splits, cycle, wp, big_step, small_step
+                        ctx, splits, tid, wp, big_step, small_step
                     )
                     current!(ctx.range, start_at)
                     stop_at =
@@ -476,7 +473,7 @@ function define_backtest_func(sess, small_step, big_step; verbose=false)
                     if stop_at < ctx.range.stop
                         ctx.range.stop = stop_at
                     end
-                    @debug "optim backtest range" cycle compact(ms(small_step)) compact(
+                    @debug "optim backtest range" tid compact(ms(small_step)) compact(
                         ms(big_step)
                     ) start_at stop_at duration = compact(stop_at - start_at) source_duration = compact(
                         ctx.range.stop - ctx.range.start
