@@ -18,6 +18,9 @@ using SimMode.Misc.DocStringExtensions
 import .st: call!
 using .Instances.Data.DataFrames: metadata, metadata!, metadatakeys
 
+@doc "A constant representing the default objective value."
+const DEFAULT_OBJ = float(typemax(Int))
+
 include("utils.jl")
 
 @doc "A named tuple representing the context and space in the optimization process."
@@ -77,11 +80,12 @@ $(TYPEDSIGNATURES)
 """
 call!(::Strategy, ::OptMinimize) = true
 
-isbest(s, obj, best) = if call!(s, OptMinimize())
-    obj < best
-else
-    obj > best
-end
+isbest(s, obj, best) =
+    if call!(s, OptMinimize())
+        obj < best
+    else
+        obj > best
+    end
 
 @doc """ A structure representing an optimization session.
 
@@ -477,9 +481,7 @@ function define_backtest_func(sess, small_step, big_step; verbose=false)
                 call!(s, params, OptRun())
                 # randomize strategy startup time
                 let wp = call!(s, WarmupPeriod())
-                    start_at = random_ctx_start(
-                        ctx, splits, tid, wp, big_step, small_step
-                    )
+                    start_at = random_ctx_start(ctx, splits, tid, wp, big_step, small_step)
                     current!(ctx.range, start_at)
                     stop_at =
                         start_at + random_ctx_length(ctx, splits, big_step, small_step)
@@ -540,7 +542,7 @@ function _get_color_and_update_best(sess, obj, pnl)
     if is_best
         sess.best[] = obj
     end
-    
+
     # Color formatting
     if is_best
         color = "\033[1;32m"  # bold green
@@ -550,41 +552,43 @@ function _get_color_and_update_best(sess, obj, pnl)
         color = "\033[0m"     # default
     end
     reset = "\033[0m"
-    
+
     return color, reset
 end
 
 function _print_aggregated_metrics(sess, metrics_list, n)
     # Skip if all runs have no trades
-    all(m -> m.trades == 0, metrics_list) && return
-    
+    all(m -> m.trades == 0, metrics_list) && return nothing
+
     # Calculate aggregated statistics
     objs = [length(m.obj) > 1 ? m.obj : m.obj[1] for m in metrics_list]
     pnls = [m.pnl for m in metrics_list]
     cashs = [m.cash for m in metrics_list]
     trades = [m.trades for m in metrics_list]
-    
+
     obj_avg = mean(objs)
-    obj_min = round(minimum(objs), digits=4)
-    obj_max = round(maximum(objs), digits=4)
-    
-    pnl_avg = round(mean(pnls) * 100, digits=2)
-    pnl_min = round(minimum(pnls) * 100, digits=2)
-    pnl_max = round(maximum(pnls) * 100, digits=2)
-    
-    cash_avg = round(mean(cashs), digits=2)
-    cash_min = round(minimum(cashs), digits=2)
-    cash_max = round(maximum(cashs), digits=2)
-    
-    trades_avg = round(mean(trades), digits=1)
-    trades_min = round(minimum(trades), digits=1)
-    trades_max = round(maximum(trades), digits=1)
-    
+    obj_min = round(minimum(objs); digits=4)
+    obj_max = round(maximum(objs); digits=4)
+
+    pnl_avg = round(mean(pnls) * 100; digits=2)
+    pnl_min = round(minimum(pnls) * 100; digits=2)
+    pnl_max = round(maximum(pnls) * 100; digits=2)
+
+    cash_avg = round(mean(cashs); digits=2)
+    cash_min = round(minimum(cashs); digits=2)
+    cash_max = round(maximum(cashs); digits=2)
+
+    trades_avg = round(mean(trades); digits=1)
+    trades_min = round(minimum(trades); digits=1)
+    trades_max = round(maximum(trades); digits=1)
+
     # Get color and update best
     color, reset = _get_color_and_update_best(sess, obj_avg, mean(pnls))
-    
-    obj_avg_str = round(obj_avg, digits=4)
-    println("$(color)run: $(n) | obj: $(obj_avg_str) [$(obj_min)-$(obj_max)] | pnl: $(pnl_avg)% [$(pnl_min)-$(pnl_max)] | cash: $(cash_avg) [$(cash_min)-$(cash_max)] | trades: $(trades_avg) [$(trades_min)-$(trades_max)]$(reset)")
+
+    obj_avg_str = round(obj_avg; digits=4)
+    println(
+        "$(color)run: $(n) | obj: $(obj_avg_str) [$(obj_min)-$(obj_max)] | pnl: $(pnl_avg)% [$(pnl_min)-$(pnl_max)] | cash: $(cash_avg) [$(cash_min)-$(cash_max)] | trades: $(trades_avg) [$(trades_min)-$(trades_max)]$(reset)",
+    )
 end
 
 function _print_metrics(sess, n=nothing)
@@ -595,18 +599,20 @@ function _print_metrics(sess, n=nothing)
                 for m in prints
                     # Skip runs with no trades
                     m.trades == 0 && continue
-                    
+
                     # Get color and update best
                     obj = length(m.obj) > 1 ? m.obj : m.obj[1]
                     color, reset = _get_color_and_update_best(sess, obj, m.pnl)
-                    
+
                     # Format as table
-                    pnl_pct = round(m.pnl * 100, digits=2)
-                    cash_str = round(m.cash, digits=2)
-                    obj_str = round(obj, digits=4)
-                    
+                    pnl_pct = round(m.pnl * 100; digits=2)
+                    cash_str = round(m.cash; digits=2)
+                    obj_str = round(obj; digits=4)
+
                     run_str = isnothing(n) ? "" : "run: $(n) | "
-                    println("$(color)$(run_str)obj: $(obj_str) | pnl: $(pnl_pct)% | cash: $(cash_str) | trades: $(m.trades)$(reset)")
+                    println(
+                        "$(color)$(run_str)obj: $(obj_str) | pnl: $(pnl_pct)% | cash: $(cash_str) | trades: $(m.trades)$(reset)",
+                    )
                 end
                 empty!(prints)
             end
@@ -641,7 +647,10 @@ function _multi_opt_func(sess, splits, backtest_func, median_func, obj_type)
             _print_aggregated_metrics(sess, valid_metrics, n)
         end
 
-        mapreduce(permutedims, vcat, scores) |> median_func
+        filtered = filtervecs(scores)
+        med_v = ((median_func(v) for v in filtered)...,) # NOTE: might be broken in grid multiobjective
+        @info "parallel backtest batch finished" filtered med_v
+        v
     end
 end
 
@@ -924,7 +933,59 @@ function extbayes!()
     end
 end
 
-export OptSession, extbayes!
+@doc """ Filters a vector of vectors across dimension 2.
+
+$(TYPEDSIGNATURES)
+
+This function takes a vector of vectors `vov` and a filter function `filter_func`.
+It iterates across dimension 2 (columns) and constructs a new vector of vectors where each element
+is a filtered list of the corresponding elements from the input vector of vectors.
+
+# Examples
+```julia
+vov = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+filter_func = x -> x > 2
+result = filtervecs(vov, filter_func)
+# Result: [[3], [4, 5, 6], [7, 8, 9]]
+```
+"""
+function filtervecs(
+    vov::Vector{Vector{T}},
+    filter_func::Function=x -> x != DEFAULT_OBJ;
+    default_val::DFT=DEFAULT_OBJ,
+) where {T}
+    isempty(vov) && return Vector{Vector{DFT}}()
+
+    # Get the maximum length to determine the number of columns
+    max_len = maximum(length, vov)
+    max_len == 0 && return Vector{Vector{DFT}}()
+
+    # Initialize result vector of vectors
+    result = Vector{Vector{DFT}}(undef, max_len)
+
+    # Iterate across dimension 2 (columns)
+    for col in 1:max_len
+        # Collect elements from this column across all vectors
+        col_elements = Vector{DFT}()
+        for vec in vov
+            if col <= length(vec)
+                push!(col_elements, DFT(vec[col]))
+            end
+        end
+
+        # Apply filter function to the column elements
+        filtered_elements = filter(filter_func, col_elements)
+        # If filtered result is empty, fill with default value
+        if isempty(filtered_elements)
+            result[col] = [default_val]
+        else
+            result[col] = filtered_elements
+        end
+    end
+    return result
+end
+
+export OptSession, DEFAULT_OBJ, extbayes!
 
 include("optimize.jl")
 include("grid.jl")
