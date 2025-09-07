@@ -159,8 +159,12 @@ function get_method(v, method_kwargs)
         Optim.NewtonTrustRegion()
     elseif v == :newton
         Optim.Newton()
+    elseif v == :ipnewton
+        Optim.IPNewton()
     elseif v == :krylov
         Optim.KrylovTrustRegion()
+    elseif v == :automod
+        Optimization.AutoModelingToolkit()
     else
         @assert !(v isa DataType) "Expected an instance of an Optimization.jl method, got $(v)"
         v
@@ -265,18 +269,30 @@ function is_not_subtype_of_any(T, supertypes)
     return nothing
 end
 
+# Check if a solve method is compatible with box constraints
+function supports_box_constraints(solve_method)
+    this_type = typeof(solve_method)
+    return all(s -> !(this_type <: s), (Optim.Newton,))
+end
+
 # Build OptimizationProblem
 function _build_problem(
     optf, initial_guess, lower_float, upper_float, integer_mask; solve_method_instance
 )
     # Always provide bounds; some algorithms require them
     kwargs = Dict{Symbol,Any}()
-    solve_method = typeof(solve_method_instance)
-    no_box_constraints = (Optim.SimulatedAnnealing,)
-    if !any(s -> solve_method <: s, no_box_constraints)
+    
+    # Check if the solve method supports box constraints
+    if supports_box_constraints(solve_method_instance)
         kwargs[:lb] = lower_float
         kwargs[:ub] = upper_float
+    else
+        # Provide specific warning for Newton optimizer
+        if typeof(solve_method_instance) == Optim.Newton
+            @warn "$solve_method_instance optimizer is not compatible with box constraints (Fminbox). Excluding bounds for this optimization. Consider using :ipnewton instead for box-constrained Newton optimization."
+        end
     end
+    
     any(integer_mask) && (kwargs[:int] = integer_mask)
     return OptimizationProblem(optf, initial_guess; kwargs...)
 end
@@ -610,6 +626,10 @@ function _run_multi_start(
     return solutions[best_idx]
 end
 
+function requires_opt_method(solve_method)
+    solve_method in (:cgradient, :gradientd, :opt_lbfgs, :opt_bfgs, :newton, :ipnewton)
+end
+
 @doc """ Optimize parameters using the Optimization.jl framework.
 
 $(TYPEDSIGNATURES)
@@ -694,6 +714,9 @@ function optimize(
     end
     solve_method_instance = get_method(solve_method, solve_method_kwargs)
     opt_method_instance = get_method(opt_method, opt_method_kwargs)
+    if isnothing(opt_method_instance) && requires_opt_method(solve_method)
+        opt_method_instance = get_method(:automod, (;))
+    end
     if n_obj > 1 && (solve_method_instance isa LBFGS)
         @warn "BFGS does not support multi-objective optimization. Switching to GA."
         solve_method_instance = get_method(:bbo, solve_method_kwargs)
@@ -756,7 +779,7 @@ function optimize(
         save_session(sess; from=from[], zi)
     catch e
         stopcall!()
-        Base.show_backtrace(stdout, catch_backtrace())
+        @error "optimize: optimization failed" exception = (e, catch_backtrace())
         save_session(sess; from=from[], zi)
         e isa InterruptException || showerror(stdout, e)
     end
@@ -764,6 +787,8 @@ function optimize(
     stopcall!()
     (sess, r)
 end
+
+get_value(p) = hasproperty(p, :value) ? p.value : p
 
 @doc """ Applies precision constraints to optimization parameters.
 
@@ -780,7 +805,7 @@ function apply_precision(u, s::Strategy)
         return u
     end
 
-    u_rounded = copy(u)
+    u_rounded = [get_value(p) for p in u]
 
     # Get bounds for clamping
     bounds = get(s, :opt_bounds, nothing)
@@ -794,12 +819,13 @@ function apply_precision(u, s::Strategy)
                 u[i] = clamp(u[i], lower[i], upper[i])
             end
 
+            val = get_value(u[i])
             if prec >= 0
                 # Round to specified number of decimal places
-                u_rounded[i] = round(u[i]; digits=prec)
+                u_rounded[i] = round(val; digits=prec)
             elseif prec == -1
                 # Integer parameter
-                u_rounded[i] = round(Int, u[i])
+                u_rounded[i] = round(Int, val)
             end
 
             # Ensure rounded value is within bounds
@@ -815,7 +841,8 @@ function apply_precision(u, s::Strategy)
         for (i, categories) in enumerate(categorical_info)
             if !isnothing(categories)
                 # Convert continuous value to categorical index
-                cat_index = round(Int, clamp(u[i], 1, length(categories)))
+                val = get_value(u[i])
+                cat_index = round(Int, clamp(val, 1, length(categories)))
                 u_rounded[i] = cat_index
             end
         end

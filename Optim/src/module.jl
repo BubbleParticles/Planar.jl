@@ -648,9 +648,7 @@ function _multi_opt_func(sess, splits, backtest_func, median_func, obj_type)
         end
 
         filtered = filtervecs(scores)
-        med_v = ((median_func(v) for v in filtered)...,) # NOTE: might be broken in grid multiobjective
-        @info "parallel backtest batch finished" filtered med_v
-        v
+        ((median_func(v) for v in filtered)...,) # NOTE: might be broken in grid multiobjective
     end
 end
 
