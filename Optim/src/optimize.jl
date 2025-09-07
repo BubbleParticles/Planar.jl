@@ -12,6 +12,8 @@ using OptimizationCMAEvolutionStrategy
 using OptimizationEvolutionary
 using OptimizationOptimJL
 using OptimizationManopt
+using Symbolics
+using ModelingToolkit
 # using OptimizationNOMAD
 # using OptimizationSpeedMapping
 # using Zygote
@@ -281,7 +283,7 @@ function _build_problem(
 )
     # Always provide bounds; some algorithms require them
     kwargs = Dict{Symbol,Any}()
-    
+
     # Check if the solve method supports box constraints
     if supports_box_constraints(solve_method_instance)
         kwargs[:lb] = lower_float
@@ -292,9 +294,9 @@ function _build_problem(
             @warn "$solve_method_instance optimizer is not compatible with box constraints (Fminbox). Excluding bounds for this optimization. Consider using :ipnewton instead for box-constrained Newton optimization."
         end
     end
-    
+
     any(integer_mask) && (kwargs[:int] = integer_mask)
-    return OptimizationProblem(optf, initial_guess; kwargs...)
+    return OptimizationProblem(optf, initial_guess, ; kwargs...)
 end
 
 # Try to build an initial guess vector from the strategy's current defaults
@@ -627,7 +629,16 @@ function _run_multi_start(
 end
 
 function requires_opt_method(solve_method)
-    solve_method in (:cgradient, :gradientd, :opt_lbfgs, :opt_bfgs, :newton, :ipnewton)
+    solve_method in (
+        :cgradient,
+        :gradientd,
+        :opt_lbfgs,
+        :opt_bfgs,
+        :newton,
+        :ipnewton,
+        :newton_trust,
+        :oaccel,
+    )
 end
 
 @doc """ Optimize parameters using the Optimization.jl framework.
@@ -647,6 +658,10 @@ $(TYPEDSIGNATURES)
 From within your strategy, define three `call!` functions:
 - `call!(::Strategy, ::OptSetup)`: for the period of time to evaluate and the bounds for the optimization.
 - `call!(::Strategy, params, ::OptRun)`: called before running the backtest, should apply the parameters to the strategy.
+
+!!! warning
+    For compatibility between optimization methods and solvers read [Optimization.jl](https://github.com/SciML/Optimization.jl) documentation carefully.
+    Solvers that require auto differentiation might not work with your strategy.
 
 ## Examples
 
@@ -768,7 +783,7 @@ function optimize(
                 solve_kwargs,
             )
         else
-            @info "optimize: running single optimization" n_params = length(space) n_jobs maxiters maxtime = compact(
+            @info "optimize: running single optimization" n_params = length(sess.params) n_jobs maxiters maxtime = compact(
                 Second(isnothing(maxtime) ? 0 : maxtime)
             ) s = nameof(s)
             r = _run_single(prob, solve_method_instance, callback, solve_kwargs)
@@ -788,7 +803,14 @@ function optimize(
     (sess, r)
 end
 
-get_value(p) = hasproperty(p, :value) ? p.value : p
+get_value(p) =
+    if hasproperty(p, :value)
+        p.value
+    elseif hasproperty(p, :val)
+        p.val
+    else
+        p
+    end
 
 @doc """ Applies precision constraints to optimization parameters.
 
@@ -798,6 +820,9 @@ This function rounds parameters according to the precision specification stored 
 If no precision is specified, returns the parameters unchanged.
 """
 function apply_precision(u, s::Strategy)
+    if eltype(u) <: Symbolics.Num
+        return u
+    end
     precision = get(s, :opt_precision, nothing)
     categorical_info = get(s, :opt_categorical, nothing)
 

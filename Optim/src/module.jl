@@ -538,7 +538,7 @@ The function returns a function that performs a multi-threaded optimization for 
 function _get_color_and_update_best(sess, obj, pnl)
     # Check if this is the best objective yet
     best = sess.best[]
-    is_best = best isa Ref{Nothing} || isbest(s, obj, best)
+    is_best = best isa Ref{Nothing} || isbest(sess.s, obj, best)
     if is_best
         sess.best[] = obj
     end
