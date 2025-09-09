@@ -141,7 +141,9 @@ function reset!(s::Strategy, config=false)
         reset!(ai, Val(:full))
     end
     if config
-        reset!(s.config)
+        cfg = s.config
+        # Reset only dynamic attributes dict to defaults
+        cfg.attrs = copy(cfg.defaults.attrs)
     else
         let cfg = s.config
             nameof(exchange(s))

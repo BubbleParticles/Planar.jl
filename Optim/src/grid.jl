@@ -632,8 +632,8 @@ function slidetest(
             let id = Threads.threadid(), (l, s) = s_clones[id]
                 lock(l) do
                     st.reset!(s, true)
-                    range_start = ctx.range.start + wp + (n - 1) * split_len * inc
-                    range_stop = range_start + split_len * inc
+                    range_start = ctx.range.start + (n - 1) * split_len * inc
+                    range_stop = range_start + wp + split_len * inc
                     this_range = DateRange(range_start, range_stop, inc)
                     this_ctx = Context(ctx_mode, this_range)
                     start!(s, this_ctx; doreset=false)
