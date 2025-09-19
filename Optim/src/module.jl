@@ -806,23 +806,29 @@ function agg(f, sess::OptSession)
         combine(gd, f; renamecols=false)
     end
 end
-@doc """ Aggregates the results of an optimization session.
-
-$(TYPEDSIGNATURES)
-
-The function takes an optimization session `sess` and optional functions `reduce_func` and `agg_func`.
-It groups the results by the session parameters, applies the `reduce_func` to each group, and then applies the `agg_func` to the reduced results.
 
 """
-function agg(sess::OptSession; reduce_func=mean, agg_func=median)
-    agg(
-        (
-            Not([keys(sess.params)..., :repeat]) .=>
-                x -> maybereduce(x, reduce_func) |> agg_func
-        ),
-        sess,
+    agg(df::DataFrame; reduce_func=mean, agg_func=median)
+
+Aggregates the DataFrame `df` by grouping on all columns except `:obj`, `:cash`, `:pnl`, and `:trades`.
+Applies `reduce_func` to each group, then `agg_func` to the reduced results.
+"""
+function agg(df::DataFrame; reduce_func=mean, agg_func=median)
+    # Identify columns to group by (all except the metrics columns)
+    metrics = ["obj", "cash", "pnl", "trades"]
+    group_cols = setdiff(names(df), metrics)
+    if isempty(group_cols)
+        return df
+    end
+    gd = groupby(df, group_cols)
+    combine(
+        gd,
+        (Not(group_cols) .=>
+            x -> maybereduce(x, reduce_func) |> agg_func);
+        renamecols=false,
     )
 end
+
 
 function optsessions(s::Strategy; zi=get_zinstance(s))
     optsessions(string(nameof(s)); zi)

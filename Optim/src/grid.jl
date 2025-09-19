@@ -4,7 +4,7 @@ using SimMode.Instruments: compactnum as cnum, Instruments
 using SimMode.Lang.Logging: SimpleLogger, with_logger, current_logger
 using SimMode.Lang: splitkws
 using Metrics.Data: Cache as ca, nrow, groupby, combine, DataFrame, DATA_PATH
-using SimMode.Misc: attr
+using SimMode.Misc: attr, LittleDict
 using Random: shuffle!
 using SimMode: Context, Sim
 
@@ -330,7 +330,7 @@ function gridsearch(
         end
 
         opt_func = define_opt_func(
-            s; backtest_func, split_test=false, splits, n_jobs, obj_type
+            s; backtest_func, split_test=false, splits, n_jobs, obj_type, sess
         )
         current_params, (eta_start_time, eta_completed, eta_total) = gridpbar!(
             sess, first(grid)
@@ -608,30 +608,44 @@ function slidetest(
 )
     ctx, _, _ = call!(s, OptSetup())
     inc = ctx.range.step
-    @assert 0 < step_ratio < 1 "step_ratio must be between 0 and 1"
+    @assert 0 < step_ratio <= 1 "step_ratio must be between 0 and 1"
     split_len = round(Int, length(ctx.range) * step_ratio)
     n_iters = length(ctx.range) ÷ split_len
     wp = call!(s, WarmupPeriod())
     results = DataFrame()
     initial_cash = s.initial_cash
-    rlock = ReentrantLock()
-    s_clones = tuple(((ReentrantLock(), similar(s)) for _ in 1:n_jobs)...)
     ctx_mode = typeof(ctx).parameters[1]()
-    if !isnothing(params)
-        for (l, s_c) in s_clones
-            attrs = s_c.attrs
+    params!(s) =  begin
+        st.reset!(s, true)
+        if !isnothing(params)
+            attrs = s.attrs
             for (k, p) in pairs(params)
                 attrs[k] = p
             end
-            call!(s_c, params, OptRun())
+            call!(s, params, OptRun())
         end
     end
 
-    @withpbar! 1:n_iters begin
+    if n_jobs == 1
+        # Sequential execution - no threading needed
+        for n in 1:n_iters
+            params!(s)
+            range_start = ctx.range.start + (n - 1) * split_len * inc
+            range_stop = range_start + wp + split_len * inc
+            this_range = DateRange(range_start, range_stop, inc)
+            this_ctx = Context(ctx_mode, this_range)
+            start!(s, this_ctx; doreset=false)
+            push!(results, (; step=n, metrics_func(s; initial_cash)...))
+        end
+    else
+        # Parallel execution with threading
+        rlock = ReentrantLock()
+        s_clones = tuple(((ReentrantLock(), similar(s)) for _ in 1:n_jobs)...)
+
         Threads.@threads for n in 1:n_iters
             let id = Threads.threadid(), (l, s) = s_clones[id]
                 lock(l) do
-                    st.reset!(s, true)
+                    params!(s)
                     range_start = ctx.range.start + (n - 1) * split_len * inc
                     range_stop = range_start + wp + split_len * inc
                     this_range = DateRange(range_start, range_stop, inc)
@@ -648,22 +662,62 @@ function slidetest(
     results
 end
 
-function slidetest(s::Strategy, params_df::DataFrame; kwargs...)
+function slidetest(s::Strategy, params_df::DataFrame; parallel=true, kwargs...)
     results = DataFrame()
     try
-        @withpbar! 1:nrow(params_df) begin
-            for n in 1:(nrow(params_df) - 1)
-                params = NamedTuple(params_df[n, :])
-                ans = slidetest(s; params, kwargs...)
-                ans[!, :n] .= n
-                append!(results, ans)
-                @pbupdate!
+        func_kwargs = LittleDict(kwargs...)
+        if parallel
+            func_kwargs[:n_jobs] = 1
+        end
+
+        if parallel
+            rlock = ReentrantLock()
+            n_jobs = Threads.nthreads()
+            s_clones = tuple(((ReentrantLock(), similar(s)) for _ in 1:n_jobs)...)
+            # @withpbar! 1:nrow(params_df) begin
+                Threads.@threads for n in 1:nrow(params_df)
+                    let id = Threads.threadid(), (_, s_clone) = s_clones[id]
+                        _process_slidetest_row(s_clone, params_df, n, func_kwargs, results, rlock)
+                    end
+                end
+            # end
+        else
+            rlock = nothing
+            @withpbar! 1:nrow(params_df) begin
+                for n in 1:nrow(params_df)
+                    _process_slidetest_row(s, params_df, n, func_kwargs, results, rlock)
+                end
             end
         end
     catch e
         @error "Error during slide test" exception = (e, catch_backtrace())
     end
     results
+end
+
+function _process_slidetest_row(
+    s::Strategy,
+    params_df::DataFrame,
+    n::Int,
+    func_kwargs::LittleDict,
+    results::DataFrame,
+    rlock::Union{ReentrantLock,Nothing},
+)
+    params = NamedTuple(params_df[n, :])
+
+    # Call singular slidetest with n_jobs=1 (now safe since it won't use threading)
+    ans = slidetest(s; params, n_jobs=1, func_kwargs...)
+    ans[!, :n] .= n
+
+    if rlock !== nothing
+        lock(rlock) do
+            append!(results, ans)
+            @pbupdate!
+        end
+    else
+        append!(results, ans)
+        @pbupdate!
+    end
 end
 
 export gridsearch, progsearch, slidetest
