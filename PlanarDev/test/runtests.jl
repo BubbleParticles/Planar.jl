@@ -34,6 +34,7 @@ all_tests = [
     :coinmarketcap,
     :coinpaprika,
     :coingecko,
+    :frankfurter,
     :funding,
     #
     :backtest,

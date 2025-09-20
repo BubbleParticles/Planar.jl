@@ -259,9 +259,11 @@ end
 @doc "Close all watchers."
 _closeall() = begin
     asyncmap(close, values(WATCHERS))
-    empty!(WatchersImpls.OHLCV_CACHE)
+    # Only clear cache if WatchersImpls is loaded
+    if isdefined(@__MODULE__, :WatchersImpls)
+        empty!(WatchersImpls.OHLCV_CACHE)
+    end
 end
-atexit(_closeall)
 
 include("errors.jl")
 include("defaults.jl")
@@ -274,7 +276,11 @@ export pushnew!, pushstart!, start!, stop!, isstarted, isstopped, process!, load
 include("apis/coinmarketcap.jl")
 include("apis/coingecko.jl")
 include("apis/coinpaprika.jl")
+include("apis/frankfurter.jl")
 include("impls/impls.jl")
 
 using .WatchersImpls: iswatchfunc
 export iswatchfunc
+
+# Set up cleanup after all modules are loaded
+atexit(_closeall)
