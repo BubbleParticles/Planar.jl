@@ -274,7 +274,7 @@ end
 # Check if a solve method is compatible with box constraints
 function supports_box_constraints(solve_method)
     this_type = typeof(solve_method)
-    return all(s -> !(this_type <: s), (Optim.Newton,))
+    return all(s -> !(this_type <: s), (Optim.Newton, Optim.SimulatedAnnealing))
 end
 
 # Build OptimizationProblem
