@@ -25,6 +25,7 @@ all_tests = [
     :ohlcv,
     :tradesohlcv,
     :watchers,
+    :blockchain_watchers,
     :average_ohlcv_watcher,
     #
     :profits,
