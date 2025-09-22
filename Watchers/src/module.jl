@@ -278,10 +278,13 @@ include("apis/coingecko.jl")
 include("apis/coinpaprika.jl")
 include("apis/frankfurter.jl")
 include("apis/fred.jl")
+include("apis/defillama.jl")
 include("impls/impls.jl")
+include("impls/stablecoin_watcher.jl")
+include("impls/blockchain_watcher.jl")
 
 using .WatchersImpls: iswatchfunc
-export iswatchfunc
+export iswatchfunc, stablecoin_watcher, blockchain_watcher
 
 # Set up cleanup after all modules are loaded
 atexit(_closeall)
