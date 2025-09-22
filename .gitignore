@@ -24,11 +24,12 @@ user/Load/test/
 .kiro/
 
 !/**/deps/precompiles/*_Planar*.jl
-!/Data/vendor/.gitkeep
-!/Data/vendor/zarr/.gitkeep
-!/user/strategies/README.md
-!/vendor/.gitkeep
-!/vendor/Temporal/
+!Data/vendor/.gitkeep
+!Data/vendor/zarr/.gitkeep
+!user/strategies/README.md
+!vendor/.gitkeep
+!vendor/Temporal/
+!vendor/DBnomics.jl/
 !PlanarDev/
 !PlanarInteractive/
 !user/.envrc
