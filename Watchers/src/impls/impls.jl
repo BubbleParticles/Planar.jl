@@ -24,6 +24,7 @@ using Base: Semaphore
 
 using ..CoinGecko: CoinGecko as cg
 using ..CoinPaprika: CoinPaprika as cp
+using ..DefiLlama: DefiLlama as dl
 
 # TODO replace _function wrappers with statickeys syntax
 @statickeys! begin
@@ -71,5 +72,6 @@ include("ccxt_ohlcv_tickers.jl")
 include("ccxt_ohlcv_candles.jl")
 include("ccxt_orderbook.jl")
 include("ccxt_average_ohlcv_watcher.jl")
+include("dl_tvl.jl")
 
 end
