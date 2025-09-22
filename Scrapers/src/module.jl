@@ -41,3 +41,4 @@ end
 include("utils.jl")
 include("bybit.jl")
 include("binance.jl")
+include("DBNomics.jl")

@@ -46,6 +46,8 @@ all_tests = [
     :paper,
     :live,
     :live_call,
+    :dbnomics,
+    :dbnomics_api,
 ]
 
 tests(selected=ARGS) = begin
