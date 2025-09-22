@@ -21,6 +21,7 @@ Planar/test/
 PlanarInteractive/test/
 user/Load/test/
 .vscode/
+.kiro/
 
 !/**/deps/precompiles/*_Planar*.jl
 !/Data/vendor/.gitkeep
