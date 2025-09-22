@@ -277,6 +277,7 @@ include("apis/coinmarketcap.jl")
 include("apis/coingecko.jl")
 include("apis/coinpaprika.jl")
 include("apis/frankfurter.jl")
+include("apis/fred.jl")
 include("impls/impls.jl")
 
 using .WatchersImpls: iswatchfunc

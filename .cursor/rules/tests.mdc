@@ -47,13 +47,13 @@ end
 ### Running Individual Tests
 ```bash
 # From the project root directory
-julia --startup-file=no --project=PlanarDev/test/ PlanarDev/test/runtests.jl <test_name>
+julia -i --startup-file=no --project=PlanarDev -e "include(\"PlanarDev/test/runtests.jl\"); tests([:test_sym])"
 ```
 
 ### Running All Tests
 ```bash
 # From the project root directory
-julia --startup-file=no --project=PlanarDev/test/ PlanarDev/test/runtests.jl
+julia --startup-file=no --project=PlanarDev PlanarDev/test/runtests.jl
 ```
 
 ### Environment Setup

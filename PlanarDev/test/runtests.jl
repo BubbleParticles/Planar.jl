@@ -35,6 +35,11 @@ all_tests = [
     :coinpaprika,
     :coingecko,
     :frankfurter,
+    :fred,
+    :fred_comprehensive,
+    :fred_performance,
+    :fred_parameters,
+    :fred_integration,
     :funding,
     #
     :backtest,
