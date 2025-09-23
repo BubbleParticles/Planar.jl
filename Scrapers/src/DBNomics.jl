@@ -115,7 +115,7 @@ result, and returns it.
 
 # Notes
 - By default the call enforces `simplify=true` to ensure a `DataFrame` result.
-- Cache key: `"$(NAME)/series/$(provider)/$(dataset)"`.
+- Cache key: `"\$(NAME)/series/\$(provider)/\$(dataset)"`.
 """
 function rdb_series_cached(provider::AbstractString, dataset::AbstractString; reset::Bool=false, kwargs...)
     key = "$(NAME)/series/$(provider)/$(dataset)"
