@@ -38,7 +38,31 @@ function to_ohlcv_dbnomics(df)
 end
 
 """
-Fetches data from DBNomics for a given series id and saves it as a DataFrame.
+Fetches data from DBnomics for one or more series `ids` and saves each as a
+DataFrame in the cache (standard OHLCV columns).
+
+Hints:
+- To discover available providers (often referred to as "databases"), use
+  `DBnomics.rdb_providers()`.
+- To list datasets for a given provider, use `DBnomics.rdb_datasets(provider)`.
+- To discover the downloadable series ids for a provider/dataset, use
+  `DBnomics.rdb_series(provider, dataset; simplify=true)` and construct ids as
+  `"\$provider/\$dataset/\$series_code"`. (also see rdb_series docs for shorter downloads)
+
+Minimal workflow to build `ids`:
+```julia
+using DBnomics
+
+# 1) Providers
+providers = rdb_providers(code=true)              # e.g. ["ECB", "IMF", ...]
+
+# 2) Datasets for one provider
+datasets  = rdb_datasets("ECB"; code=true)       # e.g. ["EXR", "BOP", ...]
+
+# 3) Series codes for a dataset, then build full ids
+df = rdb_series("ECB", "EXR"; simplify=true)    # DataFrame with `series_code`
+ids = "ECB/EXR/" .* String.(df.series_code)      # full ids usable here
+```
 """
 function dbnomicsdownload(ids::AbstractVector{String}; reset=false, kwargs...)
     out = Dict{String,DataFrame}()
@@ -71,5 +95,42 @@ end
 @fromassets dbnomicsload
 
 export dbnomicsdownload, dbnomicsload
+
+"""
+Returns the series metadata for a given `provider` and `dataset` from DBnomics,
+with transparent caching using Planar's cache.
+
+If cached content exists and `reset == false`, the cached `DataFrame` is
+returned. Otherwise the function fetches via `DBnomics.rdb_series`, stores the
+result, and returns it.
+
+# Arguments
+- `provider::AbstractString`: DBnomics provider code (e.g., "ECB").
+- `dataset::AbstractString`: Dataset code within the provider (e.g., "EXR").
+- `reset::Bool = false`: If `true`, ignore cache and re-fetch.
+- `kwargs...`: Extra keyword args forwarded to `DBnomics.rdb_series`.
+
+# Returns
+- `DataFrame` with at least a `series_code` column when `simplify=true`.
+
+# Notes
+- By default the call enforces `simplify=true` to ensure a `DataFrame` result.
+- Cache key: `"$(NAME)/series/$(provider)/$(dataset)"`.
+"""
+function rdb_series_cached(provider::AbstractString, dataset::AbstractString; reset::Bool=false, kwargs...)
+    key = "$(NAME)/series/$(provider)/$(dataset)"
+    if !reset
+        cached = ca.load_cache(key, raise=false)
+        if !(cached === nothing)
+            return cached
+        end
+    end
+
+    df = DBnomics.rdb_series(provider, dataset; simplify=true, kwargs...)
+    ca.save_cache(key, df)
+    df
+end
+
+export rdb_series_cached
 
 end # module DBNomicsData
