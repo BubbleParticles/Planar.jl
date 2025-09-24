@@ -278,6 +278,7 @@ include("apis/coingecko.jl")
 include("apis/coinpaprika.jl")
 include("apis/frankfurter.jl")
 include("apis/fred.jl")
+include("apis/dbnomics.jl")
 include("impls/impls.jl")
 
 using .WatchersImpls: iswatchfunc
