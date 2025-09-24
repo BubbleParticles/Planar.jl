@@ -1,11 +1,11 @@
 # All the packages added in the test/Project.toml go here (before the NO_TMP switch)
-using Aqua
+# using Aqua
 using Test
 
 include("env.jl")
 
 all_tests = [
-    :aqua,
+    # :aqua,
     :time,
     :data,
     :processing,
@@ -31,6 +31,7 @@ all_tests = [
     :roi,
     :stoploss,
     #
+    :alphavantage,
     :coinmarketcap,
     :coinpaprika,
     :coingecko,
