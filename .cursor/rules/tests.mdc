@@ -44,7 +44,7 @@ end
 
 ## Test Execution
 
-### Running Individual Tests
+### Running Individual Tests (for specific packages or apis)
 ```bash
 # From the project root directory
 julia -i --startup-file=no --project=PlanarDev -e "include(\"PlanarDev/test/runtests.jl\"); tests([:test_sym])"
