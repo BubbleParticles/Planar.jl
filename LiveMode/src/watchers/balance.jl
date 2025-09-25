@@ -152,7 +152,9 @@ function _balance_dispatch_events!(w, s, isqc, bal, sym, symsdict)
     nothing
 end
 
-function _balance_process_symbol!(w, s, symsdict, baldict, qc_upper, qc_lower, sym, sym_bal, date, assets_value)
+function _balance_process_symbol!(
+    w, s, symsdict, baldict, qc_upper, qc_lower, sym, sym_bal, date, assets_value
+)
     if isdict(sym_bal) && haskey(sym_bal, @pyconst("free"))
         k = Symbol(sym)
         total = get_float(sym_bal, "total")
@@ -201,7 +203,9 @@ function _balance_setup_state!(s, w, attrs)
 end
 
 function _balance_setup_stall_guard!(state)
-    s = state.s; w = state.w; attrs = state.attrs
+    s = state.s
+    w = state.w
+    attrs = state.attrs
     # Stop any existing stall_guard_task using stop_task
     if haskey(w, :stall_guard_task)
         stop_task(w[:stall_guard_task])
@@ -216,7 +220,7 @@ function _balance_setup_stall_guard!(state)
                     _force_fetchbal(s; fallback_kwargs=attrs[:func_kwargs])
                 end
             catch e
-                @warn "balance watcher: stall guard error" exception=e
+                @warn "balance watcher: stall guard error" exception = e
             end
             sleep(10)
         end
@@ -234,7 +238,8 @@ function _balance_process_bal!(state, w, v)
 end
 
 function _balance_init_watch!(state)
-    s = state.s; w = state.w
+    s = state.s
+    w = state.w
     v = @lock w fetch_balance(s; state.timeout, state.params, state.rest...)
     _balance_process_bal!(state, w, v)
     state_init = Ref(false)
@@ -243,7 +248,10 @@ function _balance_init_watch!(state)
         notify(state.buf_notify)
         maybe_backoff!(state.errors, v)
     end
-    h = w[:balance_handler] = watch_balance_handler(state.exc; f_push, state.params, state.rest...)
+    h =
+        w[:balance_handler] = watch_balance_handler(
+            state.exc; f_push, state.params, state.rest...
+        )
     start_handler!(h)
     state_init
 end
@@ -315,7 +323,7 @@ function _w_balance_func(s, w, attrs)
     end
 end
 
-_balance_task!(w) = begin
+function _balance_task!(w)
     f = _tfunc(w)
     errors = w.errors_count
     w[:balance_task] = (@async while isstarted(w)
@@ -371,37 +379,51 @@ This function processes balance for a watcher `w` using the CCXT library. It goe
 
 """
 function Watchers._process!(w::Watcher, ::CcxtBalanceVal; fetched=false)
+    # No-op if there is nothing new in the ring buffer
     if isempty(w.buffer)
         return nothing
     end
+    # Read the last fetched event from the exchange and the current balance view
     eid = typeof(exchangeid(_exc(w)))
     data_date, data = last(w.buffer)
     baldict = w.view.assets
     if !_balance_valid_event_data(eid, data)
-        @debug "balance watcher: wrong data type" _module = LogWatchBalProcess data_date typeof(data)
+        # Ignore unrelated/unexpected payloads but advance processed watermark
+        @debug "balance watcher: wrong data type" _module = LogWatchBalProcess data_date typeof(
+            data
+        )
         _lastprocessed!(w, data_date)
         _lastcount!(w, ())
         return nothing
     end
     if _balance_is_already_processed(w, data_date, data)
+        # Skip if same payload already handled (idempotency)
         @debug "balance watcher: already processed" _module = LogWatchBalProcess data_date
         return nothing
     end
+    # Use exchange provided timestamp if present, else fallback to now
     date = @something pytodate(data, eid) now()
     if _balance_is_same_view_date(w, data_date, date)
         return nothing
     end
+    # Strategy context and helpers for per-asset processing
     s = w.strategy
     symsdict = w.symsdict
+    # Compute current non-cash asset valuation to derive a conservative free amount when free==0
     assets_value = current_total(s; bal=w.view) - s.cash
+    # Resolve quote-currency symbols once (upper/lower forms)
     qc_upper, qc_lower = _balance_qc_syms(w, s)
+    # Update per-currency balances and dispatch sync events
     for (sym, sym_bal) in data.items()
-        _balance_process_symbol!(w, s, symsdict, baldict, qc_upper, qc_lower, sym, sym_bal, date, assets_value)
+        _balance_process_symbol!(
+            w, s, symsdict, baldict, qc_upper, qc_lower, sym, sym_bal, date, assets_value
+        )
     end
+    # Commit view timestamp and watermarks
     w.view.date = date
     _lastprocessed!(w, data_date)
     _lastcount!(w, data)
-    @debug "balance watcher data:" _module = LogWatchBalProcess date get(bal, :BTC, nothing) _module = :Watchers
+    @debug "balance watcher data:" _module = LogWatchBalProcess date get(bal, :BTC, nothing) 
 end
 
 @doc """ Starts a watcher for balance in a live strategy.
