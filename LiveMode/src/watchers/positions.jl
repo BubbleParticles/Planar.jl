@@ -54,7 +54,7 @@ function ccxt_positions_watcher(
     attrs[:iswatch] = iswatch
     _exc!(attrs, exc)
     watcher_type = Union{Py,PyList}
-    wid = string(wid, "-", hash((exc.id, nameof(s))))
+    wid = string(wid, "-", hash((exc.id, nameof(s), account(s))))
     watcher(
         watcher_type,
         wid,

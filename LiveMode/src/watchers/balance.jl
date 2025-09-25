@@ -43,7 +43,7 @@ function ccxt_balance_watcher(
     attrs[:func_kwargs] = (; params, kwargs...)
     attrs[:interval] = interval
     watcher_type = Py
-    wid = string(wid, "-", hash((exc.id, nameof(s))))
+    wid = string(wid, "-", hash((exc.id, nameof(s), account(s))))
     watcher(
         watcher_type,
         wid,
