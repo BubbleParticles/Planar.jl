@@ -181,7 +181,11 @@ function _w_positions_watch_mode(
         end
         h =
             w[:positions_handler] = watch_positions_handler(
-                exc, (ai for ai in s.universe); f_push=push_positions_to_buf, params, rest...
+                exc,
+                (ai for ai in s.universe);
+                f_push=push_positions_to_buf,
+                params,
+                rest...,
             )
         start_handler!(h)
     end
@@ -512,11 +516,17 @@ function _positions_process_resp!(
     push!(processed_syms, (sym, side))
     # Compute dates and staleness
     prev_side = get(last_dict, sym, side)
-    this_date = _positions_compute_effective_date(prev_date, data_date, resp, eid, w.started)
-    if _positions_is_stale_update(pup_prev, resp, eid, sym, side, prev_side, this_date, prev_date)
+    this_date = _positions_compute_effective_date(
+        prev_date, data_date, resp, eid, w.started
+    )
+    if _positions_is_stale_update(
+        pup_prev, resp, eid, sym, side, prev_side, this_date, prev_date
+    )
         return nothing
     end
-    @debug "watchers pos process: position async" _module = LogWatchPosProcess islocked(ai) islocked(pos_cond)
+    @debug "watchers pos process: position async" _module = LogWatchPosProcess islocked(ai) islocked(
+        pos_cond
+    )
     max_date_ref[] = max(max_date_ref[], this_date)
     # Build pup and enqueue job
     pup = _positions_build_pup(pup_prev, this_date, resp)
@@ -543,13 +553,15 @@ end
 # -- _positions_process_resp! helpers --
 function _positions_validate_and_lookup!(w, s, resp, data_date, eid, long_dict, short_dict)
     if !isdict(resp) || resp_event_type(resp, eid) != ot.PositionEvent
-        @debug "watchers pos process: not a position update" resp _module = LogWatchPosProcess
+        @debug "watchers pos process: not a position update" resp _module =
+            LogWatchPosProcess
         return false, nothing, nothing, nothing, nothing, nothing, nothing, nothing
     end
     sym = resp_position_symbol(resp, eid, String)
     ai = asset_bysym(s, sym, w.symsdict)
     if isnothing(ai)
-        @debug "watchers pos process: no matching asset for symbol" _module = LogWatchPosProcess sym
+        @debug "watchers pos process: no matching asset for symbol" _module =
+            LogWatchPosProcess sym
         return false, nothing, nothing, nothing, nothing, nothing, nothing, nothing
     end
     default_side_func = Returns(_last_updated_position(long_dict, short_dict, sym))
@@ -574,15 +586,25 @@ function _positions_compute_effective_date(prev_date, data_date, resp, eid, star
     return resp_date == prev_date ? data_date : resp_date
 end
 
-function _positions_is_stale_update(pup_prev, resp, eid, sym, side, prev_side, this_date, prev_date)
+function _positions_is_stale_update(
+    pup_prev, resp, eid, sym, side, prev_side, this_date, prev_date
+)
     if resp === get(@something(pup_prev, (;)), :resp, nothing)
-        @warn "watchers pos process: received stale position update" sym side prev_side this_date prev_date resp_position_contracts(resp, eid) resp_position_contracts(pup_prev.resp, eid)
+        @warn "watchers pos process: received stale position update" sym side prev_side this_date prev_date resp_position_contracts(
+            resp, eid
+        ) resp_position_contracts(pup_prev.resp, eid)
         return true
     end
     return false
 end
 
-_positions_build_pup(pup_prev, this_date, resp) = isnothing(pup_prev) ? _posupdate(this_date, resp) : _posupdate(pup_prev, this_date, resp)
+function _positions_build_pup(pup_prev, this_date, resp)
+    if isnothing(pup_prev)
+        _posupdate(this_date, resp)
+    else
+        _posupdate(pup_prev, this_date, resp)
+    end
+end
 
 function _positions_enqueue_update_job!(
     w,
@@ -609,13 +631,21 @@ function _positions_enqueue_update_job!(
                 @lock pos_cond begin
                     @debug "watchers pos process: processing" _module = LogWatchPosProcess sym side
                     if !isnothing(pup)
-                        @debug "watchers pos process: unread" _module = LogWatchPosProcess contracts = resp_position_contracts(pup.resp, eid) pup.date
+                        @debug "watchers pos process: unread" _module = LogWatchPosProcess contracts = resp_position_contracts(
+                            pup.resp, eid
+                        ) pup.date
                         pup.read[] = false
                         pup.closed[] = iszero(resp_position_contracts(pup.resp, eid))
                         prev_side = get(last_dict, sym, side)
-                        mm = @something resp_position_margin_mode(resp, eid, Val(:parsed)) marginmode(w[:strategy])
-                        if mm isa IsolatedMargin && prev_side != side && !isnothing(pup_prev)
-                            @deassert LogWatchPosProcess resp_position_side(pup_prev.resp, eid) |> _ccxtposside == prev_side
+                        mm = @something resp_position_margin_mode(resp, eid, Val(:parsed)) marginmode(
+                            w[:strategy]
+                        )
+                        if mm isa IsolatedMargin &&
+                            prev_side != side &&
+                            !isnothing(pup_prev)
+                            @deassert LogWatchPosProcess resp_position_side(
+                                pup_prev.resp, eid
+                            ) |> _ccxtposside == prev_side
                             pup_prev.closed[] = true
                             if iswatchevent
                                 _live_sync_cash!(s, ai, prev_side; pup=pup_prev)
@@ -624,13 +654,24 @@ function _positions_enqueue_update_job!(
                         last_dict[sym] = side
                         side_dict[sym] = pup
                         if iswatchevent
-                            @debug "watchers pos process: syncing" _module = LogWatchPosProcess contracts = resp_position_contracts(pup.resp, eid) length(ai.events) timestamp(ai, side)
+                            @debug "watchers pos process: syncing" _module =
+                                LogWatchPosProcess contracts = resp_position_contracts(
+                                pup.resp, eid
+                            ) length(ai.events) timestamp(ai, side)
                             _live_sync_cash!(s, ai, side; pup)
-                            @debug "watchers pos process: synced" _module = LogWatchPosProcess contracts = resp_position_contracts(pup.resp, eid) side cash(ai, side) timestamp(ai, side) pup.date iswatchevent fetched length(ai.events)
+                            @debug "watchers pos process: synced" _module =
+                                LogWatchPosProcess contracts = resp_position_contracts(
+                                pup.resp, eid
+                            ) side cash(ai, side) timestamp(ai, side) pup.date iswatchevent fetched length(
+                                ai.events
+                            )
                         end
                         safenotify(pos_cond)
                     else
-                        @debug "watchers pos process: pup is nothing" _module = LogWatchPosProcess get(@something(pup_prev, (;)), :date, nothing)
+                        @debug "watchers pos process: pup is nothing" _module =
+                            LogWatchPosProcess get(
+                            @something(pup_prev, (;)), :date, nothing
+                        )
                     end
                 end
             end
@@ -665,14 +706,15 @@ function _positions_finalize!(
         _setposflags!(w, s, max_date, short_dict, Short(), processed_syms)
         live_sync_universe_cash!(s)
     end
-    t = (@async begin
-        # wait for per-asset jobs to complete with proportional timeout
-        waitforcond(jobs_completed, Second(15) * jobs_count_ref[])
-        if jobs_count_ref[] < jobs_completed_ref[]
-            @error "watchers pos process: positions update jobs timed out" jobs_count = jobs_count_ref[] jobs_completed = jobs_completed_ref[]
-        end
-        finalize_flags_and_cash_sync()
-    end) |> errormonitor
+    t =
+        (@async begin
+            # wait for per-asset jobs to complete with proportional timeout
+            waitforcond(jobs_completed, Second(15) * jobs_count_ref[])
+            if jobs_count_ref[] < jobs_completed_ref[]
+                @error "watchers pos process: positions update jobs timed out" jobs_count = jobs_count_ref[] jobs_completed = jobs_completed_ref[]
+            end
+            finalize_flags_and_cash_sync()
+        end) |> errormonitor
     push!(tasks, t)
     filter!(!istaskdone, tasks)
     sendrequest!(s, max_date, () -> wait(t))
