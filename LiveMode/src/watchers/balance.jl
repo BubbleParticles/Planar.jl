@@ -130,6 +130,7 @@ function _w_balance_func(s, w, attrs)
                 v = popfirst!(buf)
                 if v isa Exception
                     @error "balance watcher: unexpected value" exception = v
+                    maybe_backoff!(errors, v)
                     sleep(1)
                 else
                     process_bal!(w, pydict(v))
@@ -142,6 +143,7 @@ function _w_balance_func(s, w, attrs)
                 v = popfirst!(buf)
                 _dopush!(w, v)
                 push!(tasks, @async process!(w))
+                filter!(!istaskdone, tasks)
             end
         end
         function fetch_balance_func(w)
@@ -163,7 +165,7 @@ end
 _balance_task!(w) = begin
     f = _tfunc(w)
     errors = w.errors_count
-    w[:balance_task] = @async while isstarted(w)
+    w[:balance_task] = (@async while isstarted(w)
         try
             f(w)
             safenotify(w.beacon.fetch)
@@ -175,7 +177,7 @@ _balance_task!(w) = begin
                 @debug_backtrace LogWatchBalance
             end
         end
-    end
+    end) |> errormonitor
 end
 
 _balance_task(w) = @lget! attrs(w) :balance_task _balance_task!(w)
@@ -228,6 +230,7 @@ function Watchers._process!(w::Watcher, ::CcxtBalanceVal; fetched=false)
         )
         _lastprocessed!(w, data_date)
         _lastcount!(w, ())
+        return nothing
     end
     if data_date == _lastprocessed(w) && length(data) == _lastcount(w)
         @debug "balance watcher: already processed" _module = LogWatchBalProcess data_date
