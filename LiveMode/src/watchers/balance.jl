@@ -59,6 +59,112 @@ function ccxt_balance_watcher(
     )
 end
 
+function _balance_valid_event_data(eid, data)
+    isdict(data) && resp_event_type(data, eid) == ot.BalanceUpdated
+end
+
+function _balance_is_already_processed(w, data_date, data)
+    data_date == _lastprocessed(w) && length(data) == _lastcount(w)
+end
+
+function _balance_is_same_view_date(w, data_date, date)
+    if date == w.view.date
+        _lastprocessed!(w, data_date)
+        return true
+    end
+    false
+end
+
+function _balance_qc_syms(w, s)
+    @lget! attrs(w) :qc_syms begin
+        upper = nameof(cash(s))
+        lower = string(upper) |> lowercase |> Symbol
+        upper, lower
+    end
+end
+
+function _balance_compute_free(total, free, assets_value)
+    if iszero(free)
+        return max(zero(total), total - assets_value)
+    end
+    free
+end
+
+function _balance_compute_used_for_qc!(used, s)
+    # TODO: add fees?
+    for o in orders(s)
+        if o isa IncreaseOrder
+            used += unfilled(o) * o.price
+        end
+    end
+    used
+end
+
+function _balance_compute_used_for_asset!(used, s, ai)
+    for o in orders(s, ai)
+        if o isa ReduceOrder
+            used += unfilled(o)
+        end
+    end
+    used
+end
+
+function _balance_compute_used(sym_bal, isqc, s, symsdict, sym)
+    v = get_float(sym_bal, "used")
+    if iszero(v)
+        used = v
+        if isqc
+            return _balance_compute_used_for_qc!(used, s)
+        else
+            ai = asset_bysym(s, string(sym), symsdict)
+            if !isnothing(ai)
+                return _balance_compute_used_for_asset!(used, s, ai)
+            end
+        end
+        return used
+    else
+        return v
+    end
+end
+
+function _balance_update_snapshot!(baldict, k, date, sym, total, free, used)
+    if haskey(baldict, k)
+        update!(baldict[k], date; total, free, used)
+        return baldict[k]
+    else
+        baldict[k] = BalanceSnapshot(; currency=sym, date, total, free, used)
+        return baldict[k]
+    end
+end
+
+function _balance_dispatch_events!(w, s, isqc, bal, sym, symsdict)
+    if isqc
+        s_events = get_events(s)
+        func = () -> _live_sync_strategy_cash!(s; bal)
+        sendrequest!(s, bal.date, func)
+    elseif s isa NoMarginStrategy
+        ai = asset_bysym(s, sym, symsdict)
+        if !isnothing(ai)
+            func = () -> _live_sync_cash!(s, ai; bal)
+            sendrequest!(ai, bal.date, func)
+        end
+    end
+    nothing
+end
+
+function _balance_process_symbol!(w, s, symsdict, baldict, qc_upper, qc_lower, sym, sym_bal, date, assets_value)
+    if isdict(sym_bal) && haskey(sym_bal, @pyconst("free"))
+        k = Symbol(sym)
+        total = get_float(sym_bal, "total")
+        free = _balance_compute_free(total, get_float(sym_bal, "free"), assets_value)
+        isqc = k == qc_upper || k == qc_lower
+        used = _balance_compute_used(sym_bal, isqc, s, symsdict, sym)
+        bal = _balance_update_snapshot!(baldict, k, date, sym, total, free, used)
+        _balance_dispatch_events!(w, s, isqc, bal, sym, symsdict)
+    end
+    nothing
+end
+
 @doc """ Wraps a fetch balance function with a specified interval.
 
 $(TYPEDSIGNATURES)
@@ -271,91 +377,31 @@ function Watchers._process!(w::Watcher, ::CcxtBalanceVal; fetched=false)
     eid = typeof(exchangeid(_exc(w)))
     data_date, data = last(w.buffer)
     baldict = w.view.assets
-    if !isdict(data) || resp_event_type(data, eid) != ot.BalanceUpdated
-        @debug "balance watcher: wrong data type" _module = LogWatchBalProcess data_date typeof(
-            data
-        )
+    if !_balance_valid_event_data(eid, data)
+        @debug "balance watcher: wrong data type" _module = LogWatchBalProcess data_date typeof(data)
         _lastprocessed!(w, data_date)
         _lastcount!(w, ())
         return nothing
     end
-    if data_date == _lastprocessed(w) && length(data) == _lastcount(w)
+    if _balance_is_already_processed(w, data_date, data)
         @debug "balance watcher: already processed" _module = LogWatchBalProcess data_date
         return nothing
     end
     date = @something pytodate(data, eid) now()
-    if date == w.view.date
-        _lastprocessed!(w, data_date)
+    if _balance_is_same_view_date(w, data_date, date)
         return nothing
     end
     s = w.strategy
     symsdict = w.symsdict
     assets_value = current_total(s; bal=w.view) - s.cash
-    qc_upper, qc_lower = @lget! attrs(w) :qc_syms begin
-        upper = nameof(cash(s))
-        lower = string(upper) |> lowercase |> Symbol
-        upper, lower
-    end
+    qc_upper, qc_lower = _balance_qc_syms(w, s)
     for (sym, sym_bal) in data.items()
-        if isdict(sym_bal) && haskey(sym_bal, @pyconst("free"))
-            k = Symbol(sym)
-            total = get_float(sym_bal, "total")
-            free = let v = get_float(sym_bal, "free")
-                if iszero(v)
-                    max(zero(total), total - assets_value)
-                else
-                    v
-                end
-            end
-            isqc = k == qc_upper || k == qc_lower
-            used = let v = get_float(sym_bal, "used")
-                if iszero(v)
-                    used = v
-                    # TODO: add fees?
-                    if isqc
-                        for o in orders(s)
-                            if o isa IncreaseOrder
-                                used += unfilled(o) * o.price
-                            end
-                        end
-                    else
-                        ai = asset_bysym(s, string(sym), symsdict)
-                        if !isnothing(ai)
-                            for o in orders(s, ai)
-                                if o isa ReduceOrder
-                                    used += unfilled(o)
-                                end
-                            end
-                        end
-                    end
-                    used
-                else
-                    v
-                end
-            end
-            bal = if haskey(baldict, k)
-                update!(baldict[k], date; total, free, used)
-            else
-                baldict[k] = BalanceSnapshot(; currency=sym, date, total, free, used)
-            end
-            if isqc
-                s_events = get_events(s)
-                func = () -> _live_sync_strategy_cash!(s; bal)
-                sendrequest!(s, bal.date, func)
-            elseif s isa NoMarginStrategy
-                ai = asset_bysym(s, sym, symsdict)
-                if !isnothing(ai)
-                    func = () -> _live_sync_cash!(s, ai; bal)
-                    sendrequest!(ai, bal.date, func)
-                end
-            end
-        end
+        _balance_process_symbol!(w, s, symsdict, baldict, qc_upper, qc_lower, sym, sym_bal, date, assets_value)
     end
     w.view.date = date
     _lastprocessed!(w, data_date)
     _lastcount!(w, data)
-    @debug "balance watcher data:" _module = LogWatchBalProcess date get(bal, :BTC, nothing) _module =
-        :Watchers
+    @debug "balance watcher data:" _module = LogWatchBalProcess date get(bal, :BTC, nothing) _module = :Watchers
 end
 
 @doc """ Starts a watcher for balance in a live strategy.
