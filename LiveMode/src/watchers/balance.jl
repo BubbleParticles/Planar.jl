@@ -65,7 +65,7 @@ $(TYPEDSIGNATURES)
 
 This function wraps a fetch balance function `s` with a specified `interval`. Additional keyword arguments `kwargs` are passed to the fetch balance function.
 """
-function _w_balance_func(s, w, attrs)
+function _balance_setup_state!(s, w, attrs)
     exc = exchange(s)
     timeout = throttle(s)
     interval = attrs[:interval]
@@ -78,87 +78,134 @@ function _w_balance_func(s, w, attrs)
     sizehint!(buf, buffer_size)
     tasks = w[:process_tasks] = Vector{Task}()
     errors = w[:errors_count] = Ref(0)
-    if attrs[:iswatch]
-        # Stop any existing stall_guard_task using stop_task
-        if haskey(w, :stall_guard_task)
-            stop_task(w[:stall_guard_task])
-            delete!(w, :stall_guard_task)
-        end
-        w[:stall_guard_task] = @start_task IdDict() begin
-            while isstarted(w)
-                try
-                    last = _lastprocessed(w)
-                    if now() - last > Second(60)
-                        @warn "balance watcher: forcing fetch due to stall" last now() s
-                        _force_fetchbal(s; fallback_kwargs=attrs[:func_kwargs])
-                    end
-                catch e
-                    @warn "balance watcher: stall guard error" exception=e
-                end
-                sleep(10)
-            end
-        end
-        init = Ref(true)
-        function process_bal!(w, v)
-            if !isnothing(v)
-                if !isnothing(_dopush!(w, v; if_func=isdict))
-                    push!(tasks, @async process!(w))
-                    filter!(!istaskdone, tasks)
-                end
-            end
-        end
-        function init_watch_func(w)
-            v = @lock w fetch_balance(s; timeout, params, rest...)
-            process_bal!(w, v)
-            init[] = false
-            f_push(v) = begin
-                push!(buf, v)
-                notify(buf_notify)
-                maybe_backoff!(errors, v)
-            end
-            h = w[:balance_handler] = watch_balance_handler(exc; f_push, params, rest...)
-            start_handler!(h)
-        end
-        function watch_balance_func(w)
-            if init[]
-                init_watch_func(w)
-            end
-            while isempty(buf) && isstarted(w)
-                wait(buf_notify)
-            end
-            if !isempty(buf)
-                v = popfirst!(buf)
-                if v isa Exception
-                    @error "balance watcher: unexpected value" exception = v
-                    maybe_backoff!(errors, v)
-                    sleep(1)
-                else
-                    process_bal!(w, pydict(v))
-                end
-            end
-        end
-    else
-        function flush_buf_notify(w)
-            while !isempty(buf)
-                v = popfirst!(buf)
-                _dopush!(w, v)
-                push!(tasks, @async process!(w))
-                filter!(!istaskdone, tasks)
-            end
-        end
-        function fetch_balance_func(w)
-            start = now()
+    (
+        s=s,
+        w=w,
+        attrs=attrs,
+        exc=exc,
+        timeout=timeout,
+        interval=interval,
+        params=params,
+        rest=rest,
+        buf=buf,
+        buf_notify=buf_notify,
+        tasks=tasks,
+        errors=errors,
+    )
+end
+
+function _balance_setup_stall_guard!(state)
+    s = state.s; w = state.w; attrs = state.attrs
+    # Stop any existing stall_guard_task using stop_task
+    if haskey(w, :stall_guard_task)
+        stop_task(w[:stall_guard_task])
+        delete!(w, :stall_guard_task)
+    end
+    w[:stall_guard_task] = @start_task IdDict() begin
+        while isstarted(w)
             try
-                flush_buf_notify(w)
-                v = @lock w fetch_balance(s; timeout, params, rest...)
-                _dopush!(w, v; if_func=isdict)
-                push!(tasks, @async process!(w))
-                flush_buf_notify(w)
-                filter!(!istaskdone, tasks)
-            finally
-                sleep_pad(start, interval)
+                last = _lastprocessed(w)
+                if now() - last > Second(60)
+                    @warn "balance watcher: forcing fetch due to stall" last now() s
+                    _force_fetchbal(s; fallback_kwargs=attrs[:func_kwargs])
+                end
+            catch e
+                @warn "balance watcher: stall guard error" exception=e
+            end
+            sleep(10)
+        end
+    end
+end
+
+function _balance_process_bal!(state, w, v)
+    if !isnothing(v)
+        if !isnothing(_dopush!(w, v; if_func=isdict))
+            push!(state.tasks, @async process!(w))
+            filter!(!istaskdone, state.tasks)
+        end
+    end
+    nothing
+end
+
+function _balance_init_watch!(state)
+    s = state.s; w = state.w
+    v = @lock w fetch_balance(s; state.timeout, state.params, state.rest...)
+    _balance_process_bal!(state, w, v)
+    state_init = Ref(false)
+    f_push(v) = begin
+        push!(state.buf, v)
+        notify(state.buf_notify)
+        maybe_backoff!(state.errors, v)
+    end
+    h = w[:balance_handler] = watch_balance_handler(state.exc; f_push, state.params, state.rest...)
+    start_handler!(h)
+    state_init
+end
+
+function _balance_watch_closure(state)
+    init_ref = Ref(true)
+    function _balance_watch_do_init!()
+        if init_ref[]
+            _ = _balance_init_watch!(state)
+            init_ref[] = false
+        end
+        nothing
+    end
+    function balance_watch_step(w)
+        _balance_watch_do_init!()
+        while isempty(state.buf) && isstarted(w)
+            wait(state.buf_notify)
+        end
+        if !isempty(state.buf)
+            v = popfirst!(state.buf)
+            if v isa Exception
+                @error "balance watcher: unexpected value" exception = v
+                maybe_backoff!(state.errors, v)
+                sleep(1)
+            else
+                _balance_process_bal!(state, w, pydict(v))
             end
         end
+        nothing
+    end
+    balance_watch_step
+end
+
+function _balance_flush_buf_notify!(state, w)
+    while !isempty(state.buf)
+        v = popfirst!(state.buf)
+        _dopush!(w, v)
+        push!(state.tasks, @async process!(w))
+        filter!(!istaskdone, state.tasks)
+    end
+end
+
+function _balance_fetch_closure(state)
+    s = state.s
+    function balance_fetch_step(w)
+        start = now()
+        try
+            _balance_flush_buf_notify!(state, w)
+            v = @lock w fetch_balance(s; state.timeout, state.params, state.rest...)
+            _dopush!(w, v; if_func=isdict)
+            push!(state.tasks, @async process!(w))
+            _balance_flush_buf_notify!(state, w)
+            filter!(!istaskdone, state.tasks)
+        finally
+            sleep_pad(start, state.interval)
+        end
+        nothing
+    end
+    balance_fetch_step
+end
+
+function _w_balance_func(s, w, attrs)
+    state = _balance_setup_state!(s, w, attrs)
+    if attrs[:iswatch]
+        _balance_setup_stall_guard!(state)
+        return _balance_watch_closure(state)
+    else
+        return _balance_fetch_closure(state)
     end
 end
 
