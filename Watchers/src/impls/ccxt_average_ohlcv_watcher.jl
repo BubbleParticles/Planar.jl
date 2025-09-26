@@ -94,6 +94,9 @@ function ccxt_average_ohlcv_watcher(
         :all_source_symbols => all_source_symbols,
         :source_watchers => LittleDict{String,Watcher}(),
         :aggregated_ohlcv => Dict{String,DataFrame}(),
+        :buffer_capacity => buffer_capacity,
+        :view_capacity => view_capacity,
+        :n_jobs => n_jobs
     )
     a[:load_path] = load_path
     a[k"ids"] = [string(v) for v in all_source_symbols]
@@ -105,10 +108,8 @@ function ccxt_average_ohlcv_watcher(
     if !isnothing(logfile)
         @setkey! a logfile
     end
-    for k in (:flush, :buffer_capacity, :view_capacity)
-        if haskey(kwargs, k)
-            a[k] = kwargs[k]
-        end
+    if haskey(kwargs, :flush)
+        a[:flush] = kwargs[:flush]
     end
     val = CcxtAverageOHLCVVal()
     wid = a[k"key"] = string(
