@@ -262,3 +262,13 @@ function sizehint!(s::Strategy)
         _sizehint!(ai.history, ai_sizes, ai.asset.raw)
     end
 end
+
+# --- STRATEGY IDENTIFIER FUNCTION ---
+@doc """
+Returns a unique identifier for a strategy instance, concatenating the strategy name, exchange id, and account.
+"""
+function id(s::Strategy)
+    string(nameof(s), "_", Symbol(exchangeid(s)), "_", getfield(getfield(s, :config), :account))
+end
+
+export id
