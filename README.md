@@ -78,6 +78,15 @@ Here's a comparison of features with other popular trading frameworks:
 | 🔁 Low code duplication       | ✔️            | ✔️                                                     | ❌                                                       | ✔️                                                        | ❌                                           | ✔️                                                               | ❌                                                     |
 | ⚓ By-Simulation              | ✔️            | ❌                                                    | ❌                                                       | ❌                                                       | ❌                                           | ❌                                                              | ❌                                                     |
 
+## System Recommendations
+
+| 🪙 Symbols | 💾 RAM | 🧠 CPU |
+|------------|--------|--------|
+| 10         | 1 GB   | 1      |
+| 100        | 4 GB   | 2      |
+
+*Note: OHLCV data can be shared among strategies.*
+
 <!-- PRESENTATION END -->
 
 ## Install
