@@ -59,14 +59,23 @@ function ccxt_balance_watcher(
     )
 end
 
+@doc """
+Returns true if the data is a dictionary and the event type matches BalanceUpdated.
+"""
 function _balance_valid_event_data(eid, data)
     isdict(data) && resp_event_type(data, eid) == ot.BalanceUpdated
 end
 
+@doc """
+Checks if the data for the given date has already been processed.
+"""
 function _balance_is_already_processed(w, data_date, data)
     data_date == _lastprocessed(w) && length(data) == _lastcount(w)
 end
 
+@doc """
+Returns true if the current date matches the view's date, and updates last processed.
+"""
 function _balance_is_same_view_date(w, data_date, date)
     if date == w.view.date
         _lastprocessed!(w, data_date)
@@ -75,6 +84,9 @@ function _balance_is_same_view_date(w, data_date, date)
     false
 end
 
+@doc """
+Returns the upper and lower case quote-currency symbols for the strategy.
+"""
 function _balance_qc_syms(w, s)
     @lget! attrs(w) :qc_syms begin
         upper = nameof(cash(s))
@@ -83,6 +95,9 @@ function _balance_qc_syms(w, s)
     end
 end
 
+@doc """
+Computes the free balance, falling back to total - assets_value if free is zero.
+"""
 function _balance_compute_free(total, free, assets_value)
     if iszero(free)
         return max(zero(total), total - assets_value)
@@ -90,8 +105,10 @@ function _balance_compute_free(total, free, assets_value)
     free
 end
 
+@doc """
+Computes used balance for quote-currency by summing unfilled order values.
+"""
 function _balance_compute_used_for_qc!(used, s)
-    # TODO: add fees?
     for o in orders(s)
         if o isa IncreaseOrder
             used += unfilled(o) * o.price
@@ -100,6 +117,9 @@ function _balance_compute_used_for_qc!(used, s)
     used
 end
 
+@doc """
+Computes used balance for a specific asset by summing unfilled reduce orders.
+"""
 function _balance_compute_used_for_asset!(used, s, ai)
     for o in orders(s, ai)
         if o isa ReduceOrder
@@ -109,6 +129,9 @@ function _balance_compute_used_for_asset!(used, s, ai)
     used
 end
 
+@doc """
+Computes the used balance for a symbol, using custom logic if value is zero.
+"""
 function _balance_compute_used(sym_bal, isqc, s, symsdict, sym)
     v = get_float(sym_bal, "used")
     if iszero(v)
@@ -127,6 +150,9 @@ function _balance_compute_used(sym_bal, isqc, s, symsdict, sym)
     end
 end
 
+@doc """
+Updates or creates a BalanceSnapshot for the given symbol and date.
+"""
 function _balance_update_snapshot!(baldict, k, date, sym, total, free, used)
     if haskey(baldict, k)
         update!(baldict[k], date; total, free, used)
@@ -137,6 +163,9 @@ function _balance_update_snapshot!(baldict, k, date, sym, total, free, used)
     end
 end
 
+@doc """
+Dispatches sync events for updated balances, depending on asset type.
+"""
 function _balance_dispatch_events!(w, s, isqc, bal, sym, symsdict)
     if isqc
         s_events = get_events(s)
@@ -152,6 +181,9 @@ function _balance_dispatch_events!(w, s, isqc, bal, sym, symsdict)
     nothing
 end
 
+@doc """
+Processes and updates the balance for a single symbol.
+"""
 function _balance_process_symbol!(
     w, s, symsdict, baldict, qc_upper, qc_lower, sym, sym_bal, date, assets_value
 )
@@ -167,11 +199,8 @@ function _balance_process_symbol!(
     nothing
 end
 
-@doc """ Wraps a fetch balance function with a specified interval.
-
-$(TYPEDSIGNATURES)
-
-This function wraps a fetch balance function `s` with a specified `interval`. Additional keyword arguments `kwargs` are passed to the fetch balance function.
+@doc """
+Initializes and returns the state for the balance watcher, including buffers and tasks.
 """
 function _balance_setup_state!(s, w, attrs)
     exc = exchange(s)
@@ -180,8 +209,6 @@ function _balance_setup_state!(s, w, attrs)
     params, rest = _ccxt_balance_args(s, attrs[:func_kwargs])
     buffer_size = attr(s, :live_buffer_size, 1000)
     s[:balance_buffer] = w[:buf_process] = buf = Vector{Any}()
-    # NOTE: this is NOT a Threads.Condition because we shouldn't yield inside the push function
-    # (we can't lock (e.g. by using `safenotify`) must use plain `notify`)
     s[:balance_notify] = w[:buf_notify] = buf_notify = Condition()
     sizehint!(buf, buffer_size)
     tasks = w[:process_tasks] = Vector{Task}()
@@ -202,11 +229,13 @@ function _balance_setup_state!(s, w, attrs)
     )
 end
 
+@doc """
+Starts a background task to force fetch if the watcher stalls for too long.
+"""
 function _balance_setup_stall_guard!(state)
     s = state.s
     w = state.w
     attrs = state.attrs
-    # Stop any existing stall_guard_task using stop_task
     if haskey(w, :stall_guard_task)
         stop_task(w[:stall_guard_task])
         delete!(w, :stall_guard_task)
@@ -227,6 +256,9 @@ function _balance_setup_stall_guard!(state)
     end
 end
 
+@doc """
+Processes a new balance value, pushing it to the buffer and starting processing tasks.
+"""
 function _balance_process_bal!(state, w, v)
     if !isnothing(v)
         if !isnothing(_dopush!(w, v; if_func=isdict))
@@ -237,6 +269,9 @@ function _balance_process_bal!(state, w, v)
     nothing
 end
 
+@doc """
+Initializes the balance watcher and its handler.
+"""
 function _balance_init_watch!(state)
     s = state.s
     w = state.w
@@ -256,6 +291,9 @@ function _balance_init_watch!(state)
     state_init
 end
 
+@doc """
+Returns a closure that steps the balance watcher, initializing if needed.
+"""
 function _balance_watch_closure(state)
     init_ref = Ref(true)
     function _balance_watch_do_init!()
@@ -285,6 +323,9 @@ function _balance_watch_closure(state)
     balance_watch_step
 end
 
+@doc """
+Flushes the buffer, processing all pending balance values.
+"""
 function _balance_flush_buf_notify!(state, w)
     while !isempty(state.buf)
         v = popfirst!(state.buf)
@@ -294,6 +335,9 @@ function _balance_flush_buf_notify!(state, w)
     end
 end
 
+@doc """
+Returns a closure that fetches and processes balance updates periodically.
+"""
 function _balance_fetch_closure(state)
     s = state.s
     function balance_fetch_step(w)
@@ -313,6 +357,9 @@ function _balance_fetch_closure(state)
     balance_fetch_step
 end
 
+@doc """
+Returns the appropriate balance watcher function (watch or fetch) based on attrs.
+"""
 function _w_balance_func(s, w, attrs)
     state = _balance_setup_state!(s, w, attrs)
     if attrs[:iswatch]
@@ -323,6 +370,9 @@ function _w_balance_func(s, w, attrs)
     end
 end
 
+@doc """
+Starts the main balance watcher task for the watcher.
+"""
 function _balance_task!(w)
     f = _tfunc(w)
     errors = w.errors_count
