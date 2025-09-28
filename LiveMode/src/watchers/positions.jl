@@ -154,6 +154,13 @@ function _start_stall_guard!(w, s, kwargs)
     end
 end
 
+@doc """ Pushes a new value to the watcher's buffer and schedules processing if the value is not nothing. Used internally to handle new position data, either from fetch or watch mode.
+
+- `w`: The watcher object.
+- `tasks`: Array of processing tasks.
+- `v`: The value to push (positions data).
+- `fetched`: Whether the data was fetched (vs. watched).
+"""
 function _positions_process_push!(w, tasks, v; fetched=false)
     if !isnothing(v)
         if !isnothing(_dopush!(w, pylist(v)))
@@ -288,6 +295,10 @@ function stop_watch_positions!(s::LiveStrategy)
     end
 end
 
+@doc """ Starts the main asynchronous task for processing positions in the watcher. This task repeatedly calls the watcher's processing function as long as the watcher is started, handling errors and backoff.
+
+- `w`: The watcher object.
+"""
 function _positions_task!(w)
     f = _tfunc(w)
     errors = w.errors_count
@@ -343,6 +354,10 @@ function Watchers._stop!(w::Watcher, ::CcxtPositionsVal)
     nothing
 end
 
+@doc """ Processes any pending position messages from the exchange's internal message queue, parsing and pushing them to the watcher buffer for processing. Used to handle out-of-band position updates.
+
+- `w`: The watcher object.
+"""
 function _positions_from_messages(w::Watcher)
     exc = w.exc
     messages = pygetattr(exc, "_positions_messages", nothing)
@@ -466,10 +481,27 @@ end
 # Helpers for _process!
 _positions_is_list(data) = islist(data)
 
+@doc """ Checks if the given data for a watcher has already been processed, by comparing the data's date and length to the last processed values.
+
+- `w`: The watcher object.
+- `data_date`: The date of the data.
+- `data`: The data to check.
+
+Returns `true` if already processed, `false` otherwise.
+"""
 function _positions_already_processed(w, data_date, data)
     data_date == _lastprocessed(w) && length(data) == _lastcount(w)
 end
 
+@doc """ Handles the case where a watch event returns an empty list of positions. Marks the watcher as processed for this date and returns true if handled.
+
+- `w`: The watcher object.
+- `data_date`: The date of the data.
+- `data`: The data to check.
+- `iswatchevent`: Whether this is a watch event.
+
+Returns `true` if handled, `false` otherwise.
+"""
 function _positions_handle_empty_watch!(w, data_date, data, iswatchevent)
     if iswatchevent && isempty(data)
         @debug "watchers pos process: nothing to process" _module = LogWatchPosProcess typeof(
@@ -482,47 +514,59 @@ function _positions_handle_empty_watch!(w, data_date, data, iswatchevent)
     false
 end
 
+@doc """ Processes a single position response, validating, checking staleness, and scheduling an update job if appropriate. Updates the max date reference if the position is newer.
+
+- `ctx`: Context object with watcher and state.
+- `resp`: The position response.
+- `data_date`: The date of the data.
+- `max_date_ref`: Reference to the maximum date seen so far.
+"""
 function _positions_process_resp!(ctx, resp, data_date, max_date_ref)
     # Validate and locate required structures
-    valid, sym, ai, side, side_dict, pup_prev, prev_date, pos_cond = _positions_validate_and_lookup!(
-        ctx, resp, data_date
-    )
-    if !valid
+    lookup_result = _positions_validate_and_lookup!(ctx, resp, data_date)
+    if lookup_result === nothing
         return nothing
     end
-    push!(ctx.processed_syms, (sym, side))
+    push!(ctx.processed_syms, (lookup_result.sym, lookup_result.side))
     # Compute dates and staleness
-    prev_side = get(ctx.last_dict, sym, side)
-    this_date = _positions_compute_effective_date(ctx, prev_date, data_date, resp)
-    if _positions_is_stale_update(
-        ctx, pup_prev, resp, sym, side, prev_side, this_date, prev_date
+    prev_side = get(ctx.last_dict, lookup_result.sym, lookup_result.side)
+    this_date = _positions_compute_effective_date(
+        ctx, lookup_result.prev_date, data_date, resp
     )
+    if _positions_is_stale_update(ctx, lookup_result, resp, prev_side, this_date)
         return nothing
     end
-    @debug "watchers pos process: position async" _module = LogWatchPosProcess islocked(ai) islocked(
-        pos_cond
-    )
+    @debug "watchers pos process: position async" _module = LogWatchPosProcess islocked(
+        lookup_result.ai
+    ) islocked(lookup_result.pos_cond)
     max_date_ref[] = max(max_date_ref[], this_date)
     # Build pup and enqueue job
-    pup = _positions_build_pup(pup_prev, this_date, resp)
-    _positions_enqueue_update_job!(
-        ctx, ai, sym, side, side_dict, pos_cond, pup, pup_prev, resp
-    )
+    pup = _positions_build_pup(lookup_result.pup_prev, this_date, resp)
+    _positions_enqueue_update_job!(ctx, lookup_result, pup, resp)
 end
 
 # -- _positions_process_resp! helpers --
+
+@doc """ Validates a position response and looks up the corresponding asset, side, and previous position state. Returns a named tuple with lookup results, or `nothing` if invalid or not found.
+
+- `ctx`: Context object with watcher and state.
+- `resp`: The position response.
+- `data_date`: The date of the data.
+
+Returns a named tuple with lookup results, or `nothing`.
+"""
 function _positions_validate_and_lookup!(ctx, resp, data_date)
     if !isdict(resp) || resp_event_type(resp, ctx.eid) != ot.PositionEvent
         @debug "watchers pos process: not a position update" resp _module =
             LogWatchPosProcess
-        return false, nothing, nothing, nothing, nothing, nothing, nothing, nothing
+        return nothing
     end
     sym = resp_position_symbol(resp, ctx.eid, String)
     ai = asset_bysym(ctx.s, sym, ctx.w.symsdict)
     if isnothing(ai)
         @debug "watchers pos process: no matching asset for symbol" _module =
             LogWatchPosProcess sym
-        return false, nothing, nothing, nothing, nothing, nothing, nothing, nothing
+        return nothing
     end
     default_side_func = Returns(_last_updated_position(ctx.long_dict, ctx.short_dict, sym))
     side = posside_fromccxt(resp, ctx.eid; default_side_func)
@@ -534,30 +578,55 @@ function _positions_validate_and_lookup!(ctx, resp, data_date)
         pup_prev.date, pup_prev.notify
     end
     if data_date <= prev_date
-        return false, nothing, nothing, nothing, nothing, nothing, nothing, nothing
+        return nothing
     else
         @debug "watchers pos process: scheduling" _module = LogWatchPosProcess data_date prev_date
     end
-    return true, sym, ai, side, side_dict, pup_prev, prev_date, pos_cond
+    return (; valid=true, sym, ai, side, side_dict, pup_prev, prev_date, pos_cond)
 end
 
+@doc """ Computes the effective date for a position update, preferring the response's date if available and newer, otherwise using the data date.
+
+- `ctx`: Context object.
+- `prev_date`: Previous date for this position.
+- `data_date`: The date of the data.
+- `resp`: The position response.
+
+Returns the effective date as a `DateTime`.
+"""
 function _positions_compute_effective_date(ctx, prev_date, data_date, resp)
     resp_date = @something pytodate(resp, ctx.eid) ctx.w.started
     resp_date == prev_date ? data_date : resp_date
 end
 
-function _positions_is_stale_update(
-    ctx, pup_prev, resp, sym, side, prev_side, this_date, prev_date
-)
-    if resp === get(@something(pup_prev, (;)), :resp, nothing)
-        @warn "watchers pos process: received stale position update" sym side prev_side this_date prev_date resp_position_contracts(
+@doc """ Checks if a position update is stale (i.e., the response is identical to the previous one). Logs a warning if so.
+
+- `ctx`: Context object.
+- `lookup_result`: Result from `_positions_validate_and_lookup!`.
+- `resp`: The position response.
+- `prev_side`: The previous side for this position.
+- `this_date`: The effective date for this update.
+
+Returns `true` if the update is stale, `false` otherwise.
+"""
+function _positions_is_stale_update(ctx, lookup_result, resp, prev_side, this_date)
+    if resp === get(@something(lookup_result.pup_prev, (;)), :resp, nothing)
+        @warn "watchers pos process: received stale position update" lookup_result.sym lookup_result.side prev_side this_date lookup_result.prev_date resp_position_contracts(
             resp, ctx.eid
-        ) resp_position_contracts(pup_prev.resp, ctx.eid)
+        ) resp_position_contracts(lookup_result.pup_prev.resp, ctx.eid)
         return true
     end
     return false
 end
 
+@doc """ Builds a new position update tuple (`pup`) for a given response, using the previous state if available.
+
+- `pup_prev`: Previous position update tuple, or `nothing`.
+- `this_date`: The effective date for this update.
+- `resp`: The position response.
+
+Returns a new `PositionTuple`.
+"""
 function _positions_build_pup(pup_prev, this_date, resp)
     if isnothing(pup_prev)
         _posupdate(this_date, resp)
@@ -566,56 +635,61 @@ function _positions_build_pup(pup_prev, this_date, resp)
     end
 end
 
-function _positions_enqueue_update_job!(
-    ctx, ai, sym, side, side_dict, pos_cond, pup, pup_prev, resp
-)
+@doc """ Enqueues an update job for a position, which will update the position state and trigger cash sync if needed. Increments the job count reference.
+
+- `ctx`: Context object.
+- `lr`: Lookup result from `_positions_validate_and_lookup!`.
+- `pup`: The new position update tuple.
+- `resp`: The position response.
+"""
+function _positions_enqueue_update_job!(ctx, lr, pup, resp)
     function update_position_job()
         try
-            @inlock ai begin
-                @debug "watchers pos process: internal lock" _module = LogWatchPosProcess sym side
-                @lock pos_cond begin
-                    @debug "watchers pos process: processing" _module = LogWatchPosProcess sym side
+            @inlock lr.ai begin
+                @debug "watchers pos process: internal lock" _module = LogWatchPosProcess lr.sym lr.side
+                @lock lr.pos_cond begin
+                    @debug "watchers pos process: processing" _module = LogWatchPosProcess lr.sym lr.side
                     if !isnothing(pup)
                         @debug "watchers pos process: unread" _module = LogWatchPosProcess contracts = resp_position_contracts(
                             pup.resp, ctx.eid
                         ) pup.date
                         pup.read[] = false
                         pup.closed[] = iszero(resp_position_contracts(pup.resp, ctx.eid))
-                        prev_side = get(ctx.last_dict, sym, side)
+                        prev_side = get(ctx.last_dict, lr.sym, lr.side)
                         mm = @something resp_position_margin_mode(
                             resp, ctx.eid, Val(:parsed)
                         ) marginmode(ctx.w[:strategy])
                         if mm isa IsolatedMargin &&
-                            prev_side != side &&
-                            !isnothing(pup_prev)
+                            prev_side != lr.side &&
+                            !isnothing(lr.pup_prev)
                             @deassert LogWatchPosProcess resp_position_side(
-                                pup_prev.resp, ctx.eid
+                                lr.pup_prev.resp, ctx.eid
                             ) |> _ccxtposside == prev_side
-                            pup_prev.closed[] = true
+                            lr.pup_prev.closed[] = true
                             if ctx.iswatchevent
-                                _live_sync_cash!(ctx.s, ai, prev_side; pup=pup_prev)
+                                _live_sync_cash!(ctx.s, lr.ai, prev_side; pup=lr.pup_prev)
                             end
                         end
-                        ctx.last_dict[sym] = side
-                        side_dict[sym] = pup
+                        ctx.last_dict[lr.sym] = lr.side
+                        lr.side_dict[lr.sym] = pup
                         if ctx.iswatchevent
                             @debug "watchers pos process: syncing" _module =
                                 LogWatchPosProcess contracts = resp_position_contracts(
                                 pup.resp, ctx.eid
-                            ) length(ai.events) timestamp(ai, side)
-                            _live_sync_cash!(ctx.s, ai, side; pup)
+                            ) length(lr.ai.events) timestamp(lr.ai, lr.side)
+                            _live_sync_cash!(ctx.s, lr.ai, lr.side; pup)
                             @debug "watchers pos process: synced" _module =
                                 LogWatchPosProcess contracts = resp_position_contracts(
                                 pup.resp, ctx.eid
-                            ) side cash(ai, side) timestamp(ai, side) pup.date ctx.iswatchevent ctx.fetched length(
-                                ai.events
+                            ) lr.side cash(lr.ai, lr.side) timestamp(lr.ai, lr.side) pup.date ctx.iswatchevent ctx.fetched length(
+                                lr.ai.events
                             )
                         end
-                        safenotify(pos_cond)
+                        safenotify(lr.pos_cond)
                     else
                         @debug "watchers pos process: pup is nothing" _module =
                             LogWatchPosProcess get(
-                            @something(pup_prev, (;)), :date, nothing
+                            @something(lr.pup_prev, (;)), :date, nothing
                         )
                     end
                 end
@@ -624,10 +698,15 @@ function _positions_enqueue_update_job!(
             ctx.jobs[] = ctx.jobs[] + 1
         end
     end
-    sendrequest!(ai, pup.date, update_position_job)
+    sendrequest!(lr.ai, pup.date, update_position_job)
     ctx.jobs_count_ref[] += 1
 end
 
+@doc """ Finalizes the processing of all position updates for a batch, waiting for all jobs to complete and then syncing flags and cash for all positions.
+
+- `ctx`: Context object.
+- `max_date`: The maximum date for this batch of updates.
+"""
 function _positions_finalize!(ctx, max_date)
     if ctx.iswatchevent
         return nothing
