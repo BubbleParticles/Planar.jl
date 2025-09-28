@@ -6,7 +6,6 @@ using .PaperMode: sleep_pad
 using .Exchanges: check_timeout, current_account
 using .Lang: splitkws, safenotify, safewait
 
-
 const CcxtPositionsVal = Val{:ccxt_positions}
 # :read, if true, the value of :pos has already be locally synced
 # :closed, if true, the value of :pos should be considered stale, and the position should be closed (contracts == 0)
@@ -401,15 +400,7 @@ _deletek(py, k=@pyconst("info")) = haskey(py, k) && py.pop(k)
 function _last_updated_position(long_dict, short_dict, sym)
     lp = get(long_dict, sym, nothing)
     sp = get(short_dict, sym, nothing)
-    if isnothing(sp)
-        Long()
-    elseif isnothing(lp)
-        Short()
-    elseif lp.date >= sp.date
-        Long()
-    else
-        Short()
-    end
+    isnothing(sp) || (!isnothing(lp) && lp.date >= sp.date) ? Long() : Short()
 end
 
 @doc """ Processes positions for a watcher using the CCXT library.
@@ -552,7 +543,7 @@ end
 
 function _positions_compute_effective_date(ctx, prev_date, data_date, resp)
     resp_date = @something pytodate(resp, ctx.eid) ctx.w.started
-    return resp_date == prev_date ? data_date : resp_date
+    resp_date == prev_date ? data_date : resp_date
 end
 
 function _positions_is_stale_update(
@@ -692,8 +683,6 @@ function _setunread!(w)
     map(v -> (v.read[] = false), values(data.long))
     map(v -> (v.read[] = false), values(data.short))
 end
-
-function handle_positions!(s, ai, orders_byid, resp, sem) end
 
 positions_watcher(s) = s[:live_positions_watcher]
 
