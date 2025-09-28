@@ -6,6 +6,10 @@ using .PaperMode: sleep_pad
 using .Exchanges: check_timeout, current_account
 using .Lang: splitkws, safenotify, safewait
 
+# Define PositionsProcessCtx as a NamedTuple constructor for context passing
+PositionsProcessCtx(w, s, eid, iswatchevent, fetched, long_dict, short_dict, last_dict, processed_syms, jobs, jobs_count_ref) =
+    (; w, s, eid, iswatchevent, fetched, long_dict, short_dict, last_dict, processed_syms, jobs, jobs_count_ref)
+
 const CcxtPositionsVal = Val{:ccxt_positions}
 # :read, if true, the value of :pos has already be locally synced
 # :closed, if true, the value of :pos should be considered stale, and the position should be closed (contracts == 0)
