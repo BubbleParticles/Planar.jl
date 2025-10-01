@@ -48,6 +48,8 @@ all_tests = [
     :live_call,
     :dbnomics,
     :dbnomics_api,
+    #
+    :warmup,
 ]
 
 tests(selected=ARGS) = begin
