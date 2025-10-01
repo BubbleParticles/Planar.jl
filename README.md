@@ -7,9 +7,14 @@
 
 <!-- PRESENTATION BEGIN -->
 
-![Planar.jl Logo](docs/src/assets/logo_small.png)
+<div align="center">
+  <img src="docs/src/assets/logo_small.png" alt="Planar.jl Logo" />
+  <br>
+  <em>Planar, advanced solutions for demanding practitioners</em>
+</div>
 
-> _Planar, advanced solutions for demanding practitioners_
+<br>
+<br>
 
 Planar is a framework designed to help you build your own trading bot. While it is primarily built around the [CCXT](https://github.com/ccxt/ccxt) API, it can be extended to work with any custom exchange, albeit with some effort.
 
