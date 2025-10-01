@@ -1,4 +1,4 @@
-using Watchers.WatchersImpls:
+using .WatchersImpls:
     _resolve,
     _curdate,
     _tfr,
@@ -10,7 +10,7 @@ using Watchers.WatchersImpls:
     getexchange!,
     _exc!,
     _check_ids
-using Watchers: logerror
+using .Watchers: logerror
 using Base: Semaphore, acquire, release, ReentrantLock, current_task
 using .Data: DataFrame
 using .Misc: period

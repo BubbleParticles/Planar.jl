@@ -55,8 +55,8 @@ get(ENV, "PLANAR_DOCS_LOADED", "false") == "true" || begin
     use(:Instruments, "Instruments")
     use(:Exchanges, "Exchanges")
     use(:Plotting, "Plotting")
-    use(:Engine, "Engine")
     use(:Watchers, "Watchers")
+    use(:Engine, "Engine")
     use(:Pbar, "Pbar")
     use(:Metrics, "Metrics")
     use(:Optim, "Optim")
@@ -68,6 +68,7 @@ get(ENV, "PLANAR_DOCS_LOADED", "false") == "true" || begin
     @eval using Base: Timer
     ENV["LOADED"] = "true"
 end
+exit()
 
 function filter_strategy(t)
     try
