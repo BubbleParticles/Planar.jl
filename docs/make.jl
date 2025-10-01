@@ -68,7 +68,6 @@ get(ENV, "PLANAR_DOCS_LOADED", "false") == "true" || begin
     @eval using Base: Timer
     ENV["LOADED"] = "true"
 end
-exit()
 
 function filter_strategy(t)
     try
