@@ -57,7 +57,7 @@ function default_load_timeframe(tf::TimeFrame)
     end
 end
 
-export default_load_timeframe
+export default_load_timeframe, getexchange!
 
 include("utils.jl")
 include("caching.jl")
