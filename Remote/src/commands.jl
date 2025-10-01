@@ -6,7 +6,7 @@ using LiveMode.Instances: MarginInstance, NoMarginInstance, HedgedInstance, leve
 using LiveMode.Instances: DataFrame, committed, cash
 using LiveMode.Instances.Data: Not
 using .Misc.Lang: MatchString
-using PrettyTables: pretty_table, tf_markdown
+using PrettyTables: pretty_table
 import Base: get
 
 @doc """ Updates the short description of a strategy
@@ -299,7 +299,7 @@ function balance(cl::TelegramClient, s; text, chat_id, kwargs...)
     io = IOBuffer()
     try
         write(io, "```")
-        pretty_table(io, df; tf=tf_markdown)
+        pretty_table(io, df; backend=:markdown)
         write(io, "```")
         sendMessage(cl; text=String(take!(io)), chat_id, parse_mode="markdown")
     finally
@@ -365,7 +365,7 @@ function assets(cl::TelegramClient, s; text, chat_id, isinput, kwargs...)
                 @debug "tg asset: " df
                 write(io, "```")
                 pretty_table(
-                    io, @view df[:, [:amount, :price, :size, :side, :date]]; tf=tf_markdown
+                    io, @view df[:, [:amount, :price, :size, :side, :date]]; backend=:markdown 
                 )
                 write(io, "```\n")
             end
