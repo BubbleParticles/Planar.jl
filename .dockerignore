@@ -1,6 +1,1 @@
-Dockerfile
-.github/
-*.el
-docs/
-deps/
-pyrightconfig.json
+.dev/.dockerignore

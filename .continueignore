@@ -1,6 +1,1 @@
-.conda/*
-.conda
-.conda/
-.Planar.so
-*/.conda/*
-wip.jl
+.dev/.continueignore

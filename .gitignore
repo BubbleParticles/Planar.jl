@@ -49,3 +49,18 @@ user/Load/test/
 !user/strategies/TwoParameters
 !user/strategies/SimpleStrategy
 !user/strategies/common.jl
+node_modules
+
+# Ignore symlinked top-level ignore files (moved originals live in .dev/)
+/.continueignore
+/.cursorignore
+/.dockerignore
+/.ignore
+/.supermavenignore
+/.cursor
+/.windsurf
+/.kilo
+/mcp.json
+/pyrightconfig.json
+/.kiro
+/.kilocode

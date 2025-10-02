@@ -1,4 +1,1 @@
-{
-    "venvPath": ".conda",
-    "venv": "."
-}
+.dev/pyrightconfig.json
