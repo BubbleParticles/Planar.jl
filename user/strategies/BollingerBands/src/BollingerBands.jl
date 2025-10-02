@@ -8,27 +8,13 @@ const TF = tf"1m"
 
 @strategyenv!
 @contractsenv!
+using Indicators
 
-using OnlineTechnicalIndicators: BB, fit!
-
-function bbands!(ohlcv, from_date; n=20, sigma=2.0)
-    ohlcv = viewfrom(ohlcv, from_date; offset=-n)
-    close = ohlcv.close
-    bb = BB{DFT}(period=n, std_dev_mult=sigma)
-    lower, upper = DFT[], DFT[]
-    for price in ohlcv.close
-        fit!(bb, price)
-        v = bb.value
-        if ismissing(v)
-            push!(lower, NaN)
-            push!(upper, NaN)
-            continue
-        end
-        push!(lower, v.lower)
-        push!(upper, v.upper)
-    end
-    @assert bb.value.lower <= bb.value.central <= bb.value.upper
-    [lower upper]
+function bbands!(ohlcv, from_date)
+    ohlcv = viewfrom(ohlcv, from_date; offset=-20)
+    bb = bbands(ohlcv.close; n=20, sigma=2.0)
+    @assert bb[end, 1] <= bb[end, 2] <= bb[end, 3]
+    [bb[:, 1] bb[:, 3]]
 end
 
 function call!(s::SC{<:ExchangeID,Sim}, ::ResetStrategy)
@@ -66,11 +52,11 @@ function handler(s, ai, ats, ts)
     4) Resolve buy or sell signals
     """
     if current_price < lower && !has_position
-        @linfo 1 "buy signal: creating market order" sym = raw(ai) buy_value current_price
+        @linfo "buy signal: creating market order" sym = raw(ai) buy_value current_price
         amount = buy_value / current_price
         call!(s, ai, MarketOrder{Buy}; date=ts, amount)
     elseif current_price > upper && has_position
-        @linfo 1 "sell signal: closing position" exposure = value(ai) current_price
+        @linfo "sell signal: closing position" exposure = value(ai) current_price
         call!(s, ai, Long(), ts, PositionClose())
     end
     """
@@ -92,7 +78,6 @@ function call!(t::Type{<:SC}, config, ::LoadStrategy)
     assets = marketsid(t)
     sandbox = config.mode == Paper() ? false : config.sandbox
     timeframe = tf"1h"
-    config.timeframes = [tf"1h", tf"1d"]
     s = Strategy(@__MODULE__, assets; config, sandbox, timeframe)
     @assert marginmode(s) == config.margin
     @assert execmode(s) == config.mode

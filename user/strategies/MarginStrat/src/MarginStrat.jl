@@ -11,7 +11,7 @@ const TF = tf"1d"
 
 # Load required indicators
 # using .Indicators
-using OnlineTechnicalIndicators: RSI, EMA, fit!
+using OnlineTechnicalIndicators: RSI, EMA
 
 call!(_::SC, ::WarmupPeriod) = Day(27 * 2)
 
@@ -30,55 +30,41 @@ function online_qqe(close)
     # Step 1: Calculate RSI
     rsi_period = 14
     rsi = RSI{DFT}(; period=rsi_period)
+    rsi_values = Float64[]
+    for price in close
+        oti.fit!(rsi, price)
+        push!(rsi_values, value(rsi))
+    end
+
     # Step 2: Smooth RSI with EMA
     smoothed_rsi = EMA{DFT}(; period=5)
+
     # Step 3: Absolute Change in Smoothed RSI
     abs_change = (x, y) -> abs(x - y)
+
     # Step 4: Double 27-period EMA on absolute changes
     ema1 = EMA{DFT}(; period=27)
     ema2 = EMA{DFT}(; period=27)
+
     # Step 5: Multiply by 4.236 for slow trailing line
     slow_trailing_multiplier = 4.236
 
-    qqe = DFT[]
-    prev_smoothed_rsi = NaN
-    for (n, price) in enumerate(close)
-        fit!(rsi, price)
-        if ismissing(rsi.value)
-            push!(qqe, NaN)
-            continue
-        end
-        fit!(smoothed_rsi, rsi.value)
-        if ismissing(smoothed_rsi.value)
-            push!(qqe, NaN)
-            continue
-        end
-        v1 = abs_change(smoothed_rsi.value, prev_smoothed_rsi)
-        if ismissing(v1) || isnan(v1)
-            prev_smoothed_rsi = smoothed_rsi.value
-            push!(qqe, NaN)
-            continue
-        end
-        fit!(ema1, v1)
-        if ismissing(ema1.value)
-            push!(qqe, NaN)
-            continue
-        end
-        fit!(ema2, ema1.value)
-        if ismissing(ema2.value)
-            push!(qqe, NaN)
-            continue
-        end
-        v2 = ema2.value * slow_trailing_multiplier
-        push!(qqe, v2)
-        prev_smoothed_rsi = smoothed_rsi.value
-    end
-    qqe
+    oti.fit!(rsi, close)
+    oti.fit!(smoothed_rsi, value(rsi))
+    change = abs_change(value(smoothed_rsi), prev_smoothed_rsi)
+    push!(ema1, change)
+    push!(ema2, value(ema1))
+    slow_trailing = value(ema2) * slow_trailing_multiplier
+
+    # Main QQE line: value(smoothed_rsi)
+    # Slow trailing line: slow_trailing
+
 end
 
 function qqe!(ohlcv, from_date)
     ohlcv = viewfrom(ohlcv, from_date; offset=-27 * 2)
-    [online_qqe(ohlcv.close);;] # it's a matrix
+    # shift by one to avoid lookahead # FIXME: this should not be needed
+    [qqe(ohlcv.close);;] # it's a matrix
 end
 
 function call!(s::SC{<:ExchangeID,Sim}, ::ResetStrategy)
