@@ -1,0 +1,124 @@
+# Documentation Testing Configuration
+
+[general]
+project_path = "Planar"
+docs_path = "docs/src"
+default_timeout = 30
+parallel = false
+
+[code_examples]
+enabled = true
+# Files to skip during code example testing
+skip_files = [
+    "disambiguation.md",
+    "documentation-index.md"
+]
+# Patterns that indicate a code block should be skipped
+skip_patterns = [
+    "# DOCTEST_SKIP",
+    "# Example only",
+    "# Pseudo-code"
+]
+# Global requirements for all code examples
+global_requirements = [
+    "Planar",
+    "Test"
+]
+
+[output_validation]
+enabled = true
+# What to do when output doesn't match: "warn", "error", or "ignore"
+on_mismatch = "warn"
+# Normalize whitespace when comparing outputs
+normalize_whitespace = true
+# Patterns to ignore when comparing outputs (regex patterns)
+ignore_patterns = [
+    "\\d+\\.\\d+s",           # Timing information
+    "@ \\w+",                 # Memory addresses
+    "\\d{4}-\\d{2}-\\d{2}",   # Dates
+    "\\d{2}:\\d{2}:\\d{2}"    # Times
+]
+
+[link_validation]
+enabled = true
+# Check external links (can be slow)
+check_external = true
+# Timeout for external link checks (seconds)
+external_timeout = 10
+# URL patterns to skip during link validation
+skip_patterns = [
+    "localhost",
+    "127.0.0.1",
+    "example.com",
+    "placeholder.com"
+]
+# Retry failed external links
+retry_failed = true
+retry_count = 2
+
+[content_consistency]
+enabled = true
+
+[content_consistency.terminology]
+# Terminology rules: preferred_term = ["discouraged_alternative1", "discouraged_alternative2"]
+[content_consistency.terminology.rules]
+"Planar" = ["planar", "PLANAR"]
+"Julia" = ["julia", "JULIA"]
+"CCXT" = ["ccxt", "Ccxt"]
+"API" = ["api", "Api"]
+"OHLCV" = ["ohlcv", "Ohlcv"]
+"JSON" = ["json", "Json"]
+"HTTP" = ["http", "Http"]
+"URL" = ["url", "Url"]
+"CSV" = ["csv", "Csv"]
+"DataFrame" = ["dataframe", "Dataframe", "data frame"]
+"backtesting" = ["back-testing", "back testing"]
+"live trading" = ["livetrading", "live-trading"]
+"paper trading" = ["papertrading", "paper-trading"]
+"cryptocurrency" = ["crypto-currency", "crypto currency"]
+"exchange" = ["Exchange"]  # Prefer lowercase unless referring to specific exchange class
+
+[content_consistency.format]
+# Enable various format consistency checks
+check_headings = true
+check_code_blocks = true
+check_lists = true
+check_links = true
+check_images = true
+
+# Heading preferences
+prefer_atx_headings = true  # Use # ## ### instead of underlined headings
+require_space_after_hash = true
+
+# Code block preferences
+require_language_specification = true
+prefer_fenced_over_indented = true
+
+# List preferences
+prefer_dash_for_unordered = true  # Use - instead of * or +
+require_space_after_number = true
+
+[reporting]
+# Generate detailed reports
+generate_html = true
+generate_json = true
+generate_summary = true
+
+# Report output locations (relative to docs/test/)
+html_output = "results/report.html"
+json_output = "results/report.json"
+summary_output = "results/summary.txt"
+
+# Include detailed failure information in reports
+include_failure_details = true
+include_suggestions = true
+
+[ci]
+# CI-specific settings
+fail_on_warnings = false
+fail_on_external_link_failures = false
+fail_on_consistency_warnings = false
+
+# GitHub Actions specific
+generate_step_summary = true
+annotate_files = true
