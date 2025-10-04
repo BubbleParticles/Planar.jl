@@ -163,6 +163,6 @@ balloons(s)
 ### Important Links
 - [Getting Started](getting-started/index.md) - Begin here
 - [Strategy Guide](strategy.md) - Core development guide
-- [API Reference](API/) - Complete function documentation
+- [API Reference](API/api.md) - Complete function documentation
 - [Troubleshooting](troubleshooting.md) - Problem solving
 - [Community](contacts.md) - Get help and support

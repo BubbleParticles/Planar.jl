@@ -714,7 +714,7 @@ function exit_position(s, ai, ats, ts, reason)
     amount = freecash(ai)
     if amount > 0
         call!(s, ai, MarketOrder(); amount, date=ts, side=Sell)
-        @info "Position closed: $reason" asset=ai.asset.symbol
+        @info "Position closed: \$reason" asset=ai.asset.symbol
         delete!(s.attrs, :entry_info)
     end
 end
@@ -1129,7 +1129,7 @@ function call!(s::SC, ts::DateTime, ctx)
     foreach(s.universe) do ai
         # Check if data is available
         if isempty(ai.ohlcv) || ats < first(ai.ohlcv.timestamp)
-            @warn "Insufficient data for $(ai.asset.symbol)"
+            @warn "Insufficient data for \$(ai.asset.symbol)"
             return
         end
         
@@ -1250,20 +1250,20 @@ end
 # Add debugging methods to your strategy
 function debug_state(s::SC)
     println("=== Strategy State ===")
-    println("Cash: $(freecash(s))")
-    println("Committed: $(s.cash_committed)")
-    println("Attributes: $(s.attrs)")
+    println("Cash: \$(freecash(s))")
+    println("Committed: \$(s.cash_committed)")
+    println("Attributes: \$(s.attrs)")
     
     println("\n=== Universe State ===")
     foreach(s.universe) do ai
-        println("$(ai.asset.symbol): $(freecash(ai))")
+        println("\$(ai.asset.symbol): \$(freecash(ai))")
     end
     
     println("\n=== Open Orders ===")
     for (side, orders) in [(:buy, s.buyorders), (:sell, s.sellorders)]
         for (symbol, order_list) in orders
             if !isempty(order_list)
-                println("$side orders for $symbol: $(length(order_list))")
+                println("\$side orders for \$symbol: \$(length(order_list))")
             end
         end
     end
@@ -1688,18 +1688,18 @@ function implement_trailing_stop(s, ai, trail_pct=0.02)
     
     if inst.islong(pos)
         # For long positions, trail stop up as price increases
-        highest_price = get(s.attrs, Symbol("highest_$(ai.asset.symbol)"), pos.entry_price)
+        highest_price = get(s.attrs, Symbol("highest_\$(ai.asset.symbol)"), pos.entry_price)
         highest_price = max(highest_price, current_price)
-        s.attrs[Symbol("highest_$(ai.asset.symbol)")] = highest_price
+        s.attrs[Symbol("highest_\$(ai.asset.symbol)")] = highest_price
         
         stop_price = highest_price * (1 - trail_pct)
         
         # Update stop loss if new stop is higher than current
-        current_stop = get(s.attrs, Symbol("stop_$(ai.asset.symbol)"), 0.0)
+        current_stop = get(s.attrs, Symbol("stop_\$(ai.asset.symbol)"), 0.0)
         if stop_price > current_stop
             cancel_sell_orders(s, ai)  # Cancel existing stop
             place_stop_loss(s, ai, abs(inst.freecash(ai)), stop_price, now())
-            s.attrs[Symbol("stop_$(ai.asset.symbol)")] = stop_price
+            s.attrs[Symbol("stop_\$(ai.asset.symbol)")] = stop_price
         end
     end
 end
@@ -1887,8 +1887,8 @@ function monitor_risk_metrics(s)
         pos = inst.position(ai)
         
         if !isnothing(pos)
-            metrics[Symbol("exposure_$(symbol)")] = abs(inst.freecash(ai)) * closeat(ai.ohlcv, available(s.timeframe, now()))
-            metrics[Symbol("pnl_$(symbol)")] = pos.unrealized_pnl
+            metrics[Symbol("exposure_\$(symbol)")] = abs(inst.freecash(ai)) * closeat(ai.ohlcv, available(s.timeframe, now()))
+            metrics[Symbol("pnl_\$(symbol)")] = pos.unrealized_pnl
         end
     end
     

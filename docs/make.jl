@@ -65,6 +65,7 @@ get(ENV, "PLANAR_DOCS_LOADED", "false") == "true" || begin
     use(:Optim, "Optim")
     use(:Ccxt, "Ccxt")
     use(:Python, "Python")
+    use(:Strategies, "Strategies")
     use(:StrategyTools, "StrategyTools")
     use(:StrategyStats, "StrategyStats")
     using Planar.Data.DataStructures
@@ -85,6 +86,19 @@ function filter_strategy(t)
 end
 
 get(ENV, "PLANAR_DOCS_SKIP_BUILD", "") == "true" && exit()
+
+# Read version from Planar/Project.toml
+function get_planar_version()
+    project_file = joinpath(@__DIR__, "..", "Planar", "Project.toml")
+    if isfile(project_file)
+        content = read(project_file, String)
+        m = match(r"version\s*=\s*\"([^\"]*)\"", content)
+        return m !== nothing ? m[1] : "unknown"
+    end
+    return "unknown"
+end
+
+planar_version = get_planar_version()
 
 makedocs(;
     sitename="Planar.jl",
@@ -168,9 +182,11 @@ makedocs(;
             "Community" => "contacts.md",
         ],
     ],
-    remotes=nothing,
+    repo="https://github.com/BubbleParticles/Planar.jl",
     format=Documenter.HTML(;
         sidebar_sitename=false,
+        repolink="https://github.com/BubbleParticles/Planar.jl",
+        inventory_version=planar_version,
         size_threshold_ignore=[
             "watchers/watchers.md", "API/instances.md", "API/executors.md"
         ],

@@ -1,5 +1,5 @@
 # Strategies
 
 ```@autodocs
-Modules = [Engine.Strategies]
+Modules = [Strategies]
 ```

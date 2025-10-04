@@ -45,7 +45,7 @@ We recommend following this path:
 If you run into issues:
 
 - Check the [Troubleshooting Guide](../troubleshooting.md) for common problems
-- Review the [API Documentation](../API/) for detailed function references
+- Review the [API Documentation](../API/api.md) for detailed function references
 - Visit our [Contacts](../contacts.md) page for community resources
 
 Let's get started! 🚀

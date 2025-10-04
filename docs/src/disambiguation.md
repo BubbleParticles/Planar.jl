@@ -180,5 +180,5 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 
 - **[Strategy Development](strategy.md)** - Learn strategy concepts in detail
 - **[Data Management](data.md)** - Understand data storage and access
-- **[API Reference](API/)** - Complete function documentation
+- **[API Reference](API/api.md)** - Complete function documentation
 - **[Documentation Index](documentation-index.md)** - Find specific topics quickly

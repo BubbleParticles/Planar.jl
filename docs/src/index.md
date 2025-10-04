@@ -193,6 +193,6 @@ The most relevant underlying Planar modules:
 
 ### Advanced Users
 1. **[Customization](customizations/customizations.md)** - Extending Planar
-2. **[API Reference](API/)** - Complete function documentation
+2. **[API Reference](API/api.md)** - Complete function documentation
 3. **[Type System](types.md)** - Understanding Planar's types
   
