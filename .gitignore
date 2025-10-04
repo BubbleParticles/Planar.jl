@@ -53,6 +53,7 @@ reports/
 node_modules
 
 # Ignore symlinked top-level ignore files (moved originals live in .dev/)
+/.dev/.kiro/specs
 /.continueignore
 /.cursorignore
 /.dockerignore
