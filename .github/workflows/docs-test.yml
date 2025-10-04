@@ -1,4 +1,4 @@
-name: Documentation Tests
+name: docs-test
 
 on:
   workflow_dispatch:
