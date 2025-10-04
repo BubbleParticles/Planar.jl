@@ -16,6 +16,8 @@
 /user/.envrc
 !/user/scripts/
 Planar.so
+Project.toml
+Manifest.toml
 test/test.jlo
 Planar/test/
 PlanarInteractive/test/
