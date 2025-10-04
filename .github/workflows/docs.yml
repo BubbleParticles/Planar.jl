@@ -5,74 +5,75 @@ on:
     inputs:
       debug_enabled:
         type: boolean
-        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        description: "Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)"
         required: false
         default: false
   push:
     tags:
-      - 'v*'
+      - "v*"
     paths:
-      - 'docs/**'
+      - "docs/**"
 
 jobs:
   build:
     runs-on: ubuntu-latest
     env:
+      CI: true
       JULIA_VERSION: 1.11
       JULIA_NOPRECOMP: "all"
     permissions: write-all
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Julia
-      uses: julia-actions/setup-julia@v1
-      with:
-        version: '1'
-        include-all-prereleases: false
-    - uses: actions/cache@v3
-      id: julia-cache
-      if: always()
-      with:
-        path: |
-          ~/.julia
-          ~/.conda
-        key: ${{ runner.os }}-julia-${{ env.JULIA_VERSION }}-cache-${{ hashFiles('Planar/Project.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-julia-${{ env.JULIA_VERSION }}-cache-${{ hashFiles('Planar/Project.toml') }}
-          ${{ runner.os }}-julia-${{ env.JULIA_VERSION }}-
-          ${{ runner.os }}-
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v3
-      if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-    - name: CONDAPKG env var
-      run: |
-        echo "JULIA_CONDAPKG_ENV=$GITHUB_WORKSPACE/.conda" >> $GITHUB_ENV
-    - name: Install dependencies
-      run: |
-        sudo apt-get install -y xauth
-        # FIXME
-        # [ -e ~/.cache/Planar.jl/data ] && rm -r ~/.cache/Planar.jl/data
-        julia --project=Planar docs/setup.jl
-    - name: Build docs
-      run: |
-        # FIXME
-        # [ -e ~/.cache/Planar.jl/data ] && rm -r ~/.cache/Planar.jl/data
-        # export JULIA_CONDAPKG_OFFLINE=yes
-        julia --project=Planar docs/make.jl
-    - name: Checkout gh-pages branch
-      uses: actions/checkout@v3
-      with:
-        ref: gh-pages
-        path: ghpages
-    - name: Deploy docs
-      run: |
-        cd ghpages
-        rm -rf ./*
-        cp -r ../docs/build/* .
-        touch ./.nojekyll
-        git add .nojekyll
-        git add .
-        git config --local user.email "github-actions@users.noreply.github.com"
-        git config --local user.name "GitHub Actions"
-        git commit -m "Update documentation"
-        git push origin gh-pages
+      - uses: actions/checkout@v2
+      - name: Set up Julia
+        uses: julia-actions/setup-julia@v1
+        with:
+          version: "1"
+          include-all-prereleases: false
+      - uses: actions/cache@v3
+        id: julia-cache
+        if: always()
+        with:
+          path: |
+            ~/.julia
+            ~/.conda
+          key: ${{ runner.os }}-julia-${{ env.JULIA_VERSION }}-cache-${{ hashFiles('Planar/Project.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-julia-${{ env.JULIA_VERSION }}-cache-${{ hashFiles('Planar/Project.toml') }}
+            ${{ runner.os }}-julia-${{ env.JULIA_VERSION }}-
+            ${{ runner.os }}-
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+      - name: CONDAPKG env var
+        run: |
+          echo "JULIA_CONDAPKG_ENV=$GITHUB_WORKSPACE/.conda" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y xauth
+          # FIXME
+          # [ -e ~/.cache/Planar.jl/data ] && rm -r ~/.cache/Planar.jl/data
+          julia --project=Planar docs/setup.jl
+      - name: Build docs
+        run: |
+          # FIXME
+          # [ -e ~/.cache/Planar.jl/data ] && rm -r ~/.cache/Planar.jl/data
+          # export JULIA_CONDAPKG_OFFLINE=yes
+          julia --project=Planar docs/make.jl
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v3
+        with:
+          ref: gh-pages
+          path: ghpages
+      - name: Deploy docs
+        run: |
+          cd ghpages
+          rm -rf ./*
+          cp -r ../docs/build/* .
+          touch ./.nojekyll
+          git add .nojekyll
+          git add .
+          git config --local user.email "github-actions@users.noreply.github.com"
+          git config --local user.name "GitHub Actions"
+          git commit -m "Update documentation"
+          git push origin gh-pages
