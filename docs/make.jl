@@ -1,4 +1,7 @@
-include("noprecomp.jl")
+# only use eval in CI
+if get(ENV, "CI", "false") == "true"
+    include("noprecomp.jl")
+end
 using Pkg: Pkg;
 Pkg.activate("Planar")
 let dse = expanduser("~/.julia/environments/v$(VERSION.major).$(VERSION.minor)/")
@@ -44,7 +47,7 @@ end
 
 if isempty(get(ENV, "PLANAR_DOCS_SKIP_BUILD", ""))
     withenv("PLANAR_DOCS_SKIP_BUILD" => "true") do
-        run(`julia --project=Planar docs/make.jl`)
+        run(`$(Base.julia_cmd()) --project=Planar docs/make.jl`)
     end
 end
 
@@ -87,7 +90,7 @@ makedocs(;
     sitename="Planar.jl",
     pages=[
         "Introduction" => [
-            "Overview" => "presentation.md", 
+            "Overview" => "presentation.md",
             "What is Planar?" => "index.md"
         ],
         "Getting Started" => [
