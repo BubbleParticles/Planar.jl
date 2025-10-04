@@ -1,6 +1,13 @@
 name: Documentation Tests
 
 on:
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: "Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)"
+        required: false
+        default: false
   push:
     branches: [main, master, develop]
     paths:
@@ -73,6 +80,15 @@ jobs:
               generate_summary_report(results_file)
             end
           "
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          limit-access-to-actor: true
+        timeout-minutes: 300
 
       - name: Upload test results
         if: always()
