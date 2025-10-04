@@ -2,18 +2,18 @@ name: Documentation Tests
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
     paths:
-      - 'docs/**'
-      - '.github/workflows/docs-test.yml'
+      - "docs/**"
+      - ".github/workflows/docs-test.yml"
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
     paths:
-      - 'docs/**'
-      - '.github/workflows/docs-test.yml'
+      - "docs/**"
+      - ".github/workflows/docs-test.yml"
   schedule:
     # Run weekly to catch issues with external dependencies
-    - cron: '0 0 * * 0'
+    - cron: "0 0 * * 0"
 
 jobs:
   test-docs:
@@ -22,117 +22,117 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        julia-version: ['1.10', '1.11']
-        
+        julia-version: ["1.10", "1.11"]
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-        
-    - name: Setup Julia
-      uses: julia-actions/setup-julia@v1
-      with:
-        version: ${{ matrix.julia-version }}
-        
-    - name: Cache Julia packages
-      uses: julia-actions/cache@v1
-      
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential
-        
-    - name: Setup Julia environment
-      run: |
-        julia --project=Planar -e '
-          using Pkg
-          Pkg.instantiate()
-          Pkg.precompile()
-        '
-        
-    - name: Create results directory
-      run: mkdir -p docs/test/results
-        
-    - name: Run documentation tests
-      run: |
-        julia --project=Planar docs/test/runtests.jl --verbose \
-          --output=docs/test/results/test-results-julia-${{ matrix.julia-version }}.toml
-        
-    - name: Generate test reports
-      if: always()
-      run: |
-        julia --project=Planar -e "
-          push!(LOAD_PATH, \"docs/test\")
-          using TestResultsReporter
-          
-          results_file = \"docs/test/results/test-results-julia-${{ matrix.julia-version }}.toml\"
-          if isfile(results_file)
-            generate_html_report(results_file, \"docs/test/results/report-julia-${{ matrix.julia-version }}.html\")
-            generate_json_report(results_file, \"docs/test/results/report-julia-${{ matrix.julia-version }}.json\")
-            generate_summary_report(results_file)
-          end
-        "
-        
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v3
-      with:
-        name: docs-test-results-julia-${{ matrix.julia-version }}
-        path: |
-          docs/test/results/
-          
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Julia
+        uses: julia-actions/setup-julia@v1
+        with:
+          version: ${{ matrix.julia-version }}
+
+      - name: Cache Julia packages
+        uses: julia-actions/cache@v1
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Setup Julia environment
+        run: |
+          julia --project=Planar -e '
+            using Pkg
+            Pkg.instantiate()
+            Pkg.precompile()
+          '
+
+      - name: Create results directory
+        run: mkdir -p docs/test/results
+
+      - name: Run documentation tests
+        run: |
+          julia --project=Planar docs/test/runtests.jl --verbose \
+            --output=docs/test/results/test-results-julia-${{ matrix.julia-version }}.toml
+
+      - name: Generate test reports
+        if: always()
+        run: |
+          julia --project=Planar -e "
+            push!(LOAD_PATH, \"docs/test\")
+            using TestResultsReporter
+
+            results_file = \"docs/test/results/test-results-julia-${{ matrix.julia-version }}.toml\"
+            if isfile(results_file)
+              generate_html_report(results_file, \"docs/test/results/report-julia-${{ matrix.julia-version }}.html\")
+              generate_json_report(results_file, \"docs/test/results/report-julia-${{ matrix.julia-version }}.json\")
+              generate_summary_report(results_file)
+            end
+          "
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-test-results-julia-${{ matrix.julia-version }}
+          path: |
+            docs/test/results/
+
   test-examples-only:
     name: Test Code Examples Only
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-        
-    - name: Setup Julia
-      uses: julia-actions/setup-julia@v1
-      with:
-        version: '1.11'
-        
-    - name: Cache Julia packages
-      uses: julia-actions/cache@v1
-      
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential
-        
-    - name: Setup Julia environment
-      run: |
-        julia --project=Planar -e '
-          using Pkg
-          Pkg.instantiate()
-          Pkg.precompile()
-        '
-        
-    - name: Run code example tests only
-      run: |
-        julia --project=Planar docs/test/runtests.jl --skip-links --skip-format --verbose
-        
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Julia
+        uses: julia-actions/setup-julia@v1
+        with:
+          version: "1.11"
+
+      - name: Cache Julia packages
+        uses: julia-actions/cache@v1
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Setup Julia environment
+        run: |
+          julia --project=Planar -e '
+            using Pkg
+            Pkg.instantiate()
+            Pkg.precompile()
+          '
+
+      - name: Run code example tests only
+        run: |
+          julia --project=Planar docs/test/runtests.jl --skip-links --skip-format --verbose
+
   validate-links:
     name: Validate Links
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup Julia
-      uses: julia-actions/setup-julia@v1
-      with:
-        version: '1.11'
-        
-    - name: Run link validation only
-      run: |
-        julia --project=Planar docs/test/runtests.jl --skip-examples --skip-format --verbose \
-          --output=docs/test/results/link-validation-results.toml
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Julia
+        uses: julia-actions/setup-julia@v1
+        with:
+          version: "1.11"
+
+      - name: Run link validation only
+        run: |
+          julia --project=Planar docs/test/runtests.jl --skip-examples --skip-format --verbose \
+            --output=docs/test/results/link-validation-results.toml
