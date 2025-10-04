@@ -3,6 +3,7 @@
 [![build-status-docker](https://github.com/bubbleparticles/Planar.jl/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/build.yml) 
 [![build-status-docker-v1.0.1](https://github.com/bubbleparticles/Planar.jl/actions/workflows/build.yml/badge.svg?branch=v1.0.1)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/build.yml)
 [![tests](https://github.com/bubbleparticles/Planar.jl/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/tests.yml)
+[![Discord](https://img.shields.io/discord/1234567890?color=7289da&label=Discord&logo=discord&logoColor=white)](https://discord.gg/KFy9AfyJ)
 
 
 <!-- PRESENTATION BEGIN -->
