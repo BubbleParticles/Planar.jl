@@ -1,3 +1,10 @@
+---
+category: "getting-started"
+difficulty: "advanced"
+topics: [execution-modes, margin-trading, exchanges, data-management, optimization, getting-started, strategy-development, troubleshooting, visualization, configuration]
+last_updated: "2025-10-04"---
+---
+
 # Documentation Index
 
 This comprehensive index helps you quickly find information across all Planar documentation.
@@ -7,13 +14,13 @@ This comprehensive index helps you quickly find information across all Planar do
 ### Getting Started
 - **Installation** - [Docker](getting-started/installation.md#docker-installation), [Source](getting-started/installation.md#source-installation)
 - **Quick Start** - [15-minute tutorial](getting-started/quick-start.md)
-- **First Strategy** - [Tutorial](getting-started/first-strategy.md), [Examples](getting-started/first-strategy.md#strategy-examples)
+- **First Strategy** - [Tutorial](getting-started/first-[strategy](../guides/strategy-development.md).md), [Examples](getting-started/first-[strategy](../guides/strategy-development.md).md#[strategy](../guides/strategy-development.md)-examples)
 
 ### Strategy Development
 - **Strategy Basics** - [Architecture](strategy.md#strategy-fundamentals), [Dispatch System](strategy.md#dispatch-system)
 - **Strategy Creation** - [Interactive Generator](strategy.md#interactive-strategy-generator), [Manual Setup](strategy.md#manual-setup)
-- **Strategy Loading** - [Runtime Loading](strategy.md#loading-a-strategy), [Configuration](strategy.md#strategy-configuration)
-- **Advanced Patterns** - [Multi-timeframe](strategy.md#multi-timeframe-strategy), [Portfolio Rebalancing](strategy.md#portfolio-rebalancing-strategy)
+- **Strategy Loading** - [Runtime Loading](strategy.md#loading-a-strategy), [Configuration](strategy.md#strategy-[configuration](../config.md))
+- **Advanced Patterns** - [Multi-timeframe](strategy.md#multi-[timeframe](../guides/data-management.md#timeframes)-strategy), [Portfolio Rebalancing](strategy.md#portfolio-rebalancing-strategy)
 - **Margin Trading** - [Concepts](strategy.md#margin-trading-concepts), [Position Management](strategy.md#position-management)
 
 ### Data Management
@@ -23,13 +30,13 @@ This comprehensive index helps you quickly find information across all Planar do
 - **Live Streaming** - [Watchers](data.md#live-data-streaming-with-watchers), [OHLCV Tickers](data.md#ohlcv-ticker-watcher)
 
 ### Execution Modes
-- **Backtesting** - [Configuration](engine/backtesting.md#backtest-configuration), [Performance](engine/backtesting.md#performance-optimization-settings)
+- **Backtesting** - [Configuration](engine/[backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode).md#[backtest](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode)-[configuration](../config.md)), [Performance](engine/[backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode).md#performance-[optimization](../optimization.md)-settings)
 - **Paper Trading** - [Setup](engine/paper.md), [Real-time Simulation](engine/paper.md)
 - **Live Trading** - [API Setup](engine/live.md), [Risk Management](engine/live.md), [Monitoring](engine/live.md)
 - **Mode Comparison** - [Feature Matrix](engine/mode-comparison.md#feature-comparison-matrix), [Transition Guide](engine/mode-comparison.md)
 
 ### Optimization
-- **Methods** - [Grid Search](optimization.md#grid-search), [Bayesian Optimization](optimization.md#bayesian-optimization)
+- **Methods** - [Grid Search]([optimization](../optimization.md).md#grid-search), [Bayesian Optimization]([optimization](../optimization.md).md#bayesian-optimization)
 - **Configuration** - [Parameter Definition](optimization.md#parameter-definition), [Objective Functions](optimization.md#objective-functions)
 - **Results** - [Analysis](optimization.md#result-analysis), [Visualization](optimization.md#optimization-visualization)
 
@@ -41,13 +48,13 @@ This comprehensive index helps you quickly find information across all Planar do
 ### Customization
 - **Dispatch System** - [Overview](customizations/customizations.md#dispatch-system), [Patterns](customizations/customizations.md#dispatch-patterns)
 - **Custom Orders** - [Implementation](customizations/orders.md), [Examples](customizations/orders.md#examples)
-- **Exchange Extensions** - [Adding Exchanges](customizations/exchanges.md), [Custom Behavior](customizations/exchanges.md)
+- **Exchange Extensions** - [Adding Exchanges](customizations/[exchanges](../exchanges.md).md), [Custom Behavior](customizations/[exchanges](../exchanges.md).md)
 
 ## Function Index
 
 ### Core Functions
 - `strategy()` - [Strategy Loading](strategy.md#loading-a-strategy)
-- `start!()` - [Backtesting](engine/backtesting.md), [Strategy Execution](strategy.md)
+- `start!()` - [Backtesting](engine/[backtesting](../guides/execution-modes.md#simulation-mode).md), [Strategy Execution](strategy.md)
 - `call!()` - [Dispatch System](strategy.md#dispatch-system), [Strategy Interface](strategy.md#strategy-interface-details)
 - `fetch_ohlcv()` - [Data Fetching](data.md#basic-fetch-usage)
 - `load_ohlcv()` - [Data Loading](strategy.md#quick-example)
@@ -80,15 +87,15 @@ This comprehensive index helps you quickly find information across all Planar do
 - **Parameters** - [Strategy Attributes](strategy.md#parameter-management)
 
 ### System Configuration
-- **Environment Variables** - [JULIA_PROJECT, JULIA_NUM_THREADS](troubleshooting.md#environment-check)
+- **Environment Variables** - [JULIA_PROJECT, JULIA_NUM_THREADS]([troubleshooting](../troubleshooting/).md#environment-check)
 - **Exchange APIs** - [API Keys](engine/live.md), [Sandbox Mode](engine/live.md)
 - **Data Storage** - [LMDB Configuration](data.md#storage-architecture)
 
 ## Error Handling
 
 ### Common Issues
-- **Installation Problems** - [Dependency Conflicts](troubleshooting.md#dependency-conflicts)
-- **Strategy Loading** - [Module Not Found](troubleshooting.md#strategy-loading-problems)
+- **Installation Problems** - [Dependency Conflicts]([troubleshooting](../troubleshooting/).md#dependency-conflicts)
+- **Strategy Loading** - [Module Not Found]([troubleshooting](../troubleshooting/).md#strategy-loading-problems)
 - **Data Issues** - [Missing Data](troubleshooting.md#data-access-issues)
 - **Order Execution** - [Insufficient Funds](troubleshooting.md#order-execution-problems)
 
@@ -100,20 +107,20 @@ This comprehensive index helps you quickly find information across all Planar do
 ## File Locations
 
 ### User Files
-- **Strategies** - `user/strategies/`
-- **Configuration** - `user/planar.toml`
-- **Secrets** - `user/secrets.toml`
+- **Strategies** - `user/[strategies](../guides/strategy-development.md)/`
+- **Configuration** - `user/[planar.toml](../config.md#[configuration](../config.md)-file)`
+- **Secrets** - `user/[secrets.toml](../config.md#secrets-management)`
 - **Data** - `user/data.mdb`, `user/lock.mdb`
 
 ### Documentation
 - **Source** - `docs/src/`
 - **API Reference** - `docs/src/API/`
-- **Examples** - `user/strategies/QuickStart/examples/`
+- **Examples** - `user/[strategies](../guides/strategy-development.md)/QuickStart/examples/`
 
 ## Search Keywords
 
 ### Trading Concepts
-- OHLCV, Candlestick, Timeframe, Exchange, Pair, Symbol
+- [OHLCV](../guides/data-management.md#ohlcv-data), Candlestick, Timeframe, Exchange, Pair, Symbol
 - Long, Short, Position, Margin, Leverage, Isolated, Cross
 - Buy, Sell, Order, Trade, Execution, Slippage, Fees
 - Backtest, Paper Trading, Live Trading, Simulation
@@ -128,6 +135,16 @@ This comprehensive index helps you quickly find information across all Planar do
 - Sharpe Ratio, Sortino Ratio, Maximum Drawdown, Volatility
 - Return, Profit, Loss, Risk, Portfolio, Allocation
 - Benchmark, Alpha, Beta, Correlation, Statistics
+
+
+## See Also
+
+- **[Exchanges](../exchanges.md)** - Exchange integration and configuration
+- **[Config](../config.md)** - Exchange integration and configuration
+- **[Overview](../troubleshooting/index.md)** - Troubleshooting: Troubleshooting and problem resolution
+- **[Optimization](../optimization.md)** - Performance optimization techniques
+- **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
+- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
 
 ## Quick Reference
 
@@ -146,7 +163,7 @@ fetch_ohlcv(s, from=-1000)
 # Load data
 load_ohlcv(s)
 
-# Run backtest
+# Run [backtest](../guides/execution-modes.md#simulation-mode)
 start!(s)
 
 # Plot results
@@ -155,8 +172,8 @@ balloons(s)
 ```
 
 ### Key File Paths
-- Strategy files: `user/strategies/StrategyName.jl`
-- Configuration: `user/planar.toml`
+- Strategy files: `user/[strategies](../guides/strategy-development.md)/StrategyName.jl`
+- Configuration: `user/[planar.toml](../config.md#configuration-file)`
 - Documentation: `docs/src/`
 - Examples: `user/strategies/QuickStart/examples/`
 

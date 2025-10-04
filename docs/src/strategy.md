@@ -1,20 +1,27 @@
+---
+category: "strategy-development"
+difficulty: "advanced"
+topics: [execution-modes, margin-trading, exchanges, data-management, optimization, strategy-development, troubleshooting, visualization, configuration]
+last_updated: "2025-10-04"---
+---
+
 # Strategy Development Guide
 
 <!--
-Keywords: strategy development, call! function, dispatch system, margin trading, backtesting, optimization, Julia modules, trading logic
-Description: Comprehensive guide to developing trading strategies in Planar using Julia's dispatch system, covering everything from basic concepts to advanced patterns.
+Keywords: [strategy](../guides/strategy-development.md) development, call! function, [dispatch system](../guides/[strategy](../guides/strategy-development.md)-development.md#dispatch-system), [margin trading](../guides/[strategy](../guides/strategy-development.md)-development.md#margin-trading-concepts), [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode), [optimization](../optimization.md), [Julia](https://julialang.org/) modules, trading logic
+Description: Comprehensive guide to developing trading [strategies](../guides/strategy-development.md) in Planar using [Julia](https://julialang.org/)'s [dispatch system](../guides/strategy-development.md#dispatch-system), covering everything from basic concepts to advanced patterns.
 -->
 
-This comprehensive guide covers everything you need to know about developing trading strategies in Planar. From basic concepts to advanced patterns, you'll learn how to build robust, profitable trading systems.
+This comprehensive guide covers everything you need to know about developing trading [strategies](../guides/strategy-development.md) in Planar. From basic concepts to advanced patterns, you'll learn how to build robust, profitable trading systems.
 
 ## Quick Navigation
 
 - **[Strategy Fundamentals](#strategy-fundamentals)** - Core concepts and architecture
 - **[Creating Strategies](#creating-a-new-strategy)** - Interactive and manual setup
 - **[Loading Strategies](#loading-a-strategy)** - Runtime instantiation
-- **[Advanced Examples](#advanced-strategy-examples)** - Multi-timeframe, portfolio, and optimization strategies
+- **[Advanced Examples](#advanced-strategy-examples)** - Multi-[timeframe](../guides/data-management.md#timeframes), portfolio, and [optimization](../optimization.md) [strategies](../guides/strategy-development.md)
 - **[Best Practices](#best-practices)** - Code organization and performance tips
-- **[Troubleshooting](#troubleshooting-and-debugging)** - Common issues and solutions
+- **[Troubleshooting](#[troubleshooting](../troubleshooting/)-and-debugging)** - Common issues and solutions
 
 ## Prerequisites
 
@@ -26,7 +33,7 @@ Before diving into strategy development, ensure you have:
 
 ## Related Topics
 
-- **[Optimization](optimization.md)** - Parameter tuning and backtesting
+- **[Optimization]([optimization](../optimization.md).md)** - Parameter tuning and [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode)
 - **[Plotting](plotting.md)** - Visualizing strategy performance
 - **[Customization](customizations/customizations.md)** - Extending strategy functionality
 
@@ -34,15 +41,15 @@ Before diving into strategy development, ensure you have:
 
 ### Architecture Overview
 
-Planar strategies are built around Julia's powerful dispatch system, enabling clean separation of concerns and easy customization. Each strategy is a Julia module that implements specific interface methods through the `call!` function dispatch pattern.
+Planar strategies are built around [Julia](https://julialang.org/)'s powerful [dispatch system](../guides/strategy-development.md#dispatch-system), enabling clean separation of concerns and easy customization. Each strategy is a Julia module that implements specific interface methods through the `call!` function dispatch pattern.
 
 #### Core Components
 
-- **Strategy Module**: Contains your trading logic and configuration
+- **Strategy Module**: Contains your trading logic and [configuration](../config.md)
 - **Dispatch System**: Uses `call!` methods to handle different strategy events
 - **Asset Universe**: Collection of tradeable assets managed by the strategy
-- **Execution Modes**: Sim (backtesting), Paper (simulated live), and Live trading
-- **Margin Support**: Full support for isolated and cross margin trading
+- **Execution Modes**: Sim ([backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode)), Paper (simulated live), and Live trading
+- **Margin Support**: Full support for isolated and [cross margin](../guides/strategy-development.md#margin-modes) trading
 
 #### Strategy Type Hierarchy
 
@@ -59,7 +66,7 @@ Where:
 
 ### Dispatch System
 
-The strategy interface uses Julia's multiple dispatch through the `call!` function. This pattern allows you to define different behaviors for different contexts while maintaining clean, extensible code.
+The strategy interface uses Julia's [multiple dispatch](../guides/strategy-development.md#dispatch-system) through the `call!` function. This pattern allows you to define different behaviors for different contexts while maintaining clean, extensible code.
 
 #### Key Dispatch Patterns
 
@@ -89,16 +96,16 @@ call!(s::SC, ::WarmupPeriod)      # Returns required lookback period
 
 # Market and optimization events
 call!(::Type{<:SC}, ::StrategyMarkets)  # Returns tradeable markets
-call!(s::SC, ::OptSetup)               # Optimization configuration
+call!(s::SC, ::OptSetup)               # Optimization [configuration](../config.md)
 call!(s::SC, params, ::OptRun)         # Optimization execution
 ```
 
 #### Exchange-Specific Dispatch
 
-You can customize behavior for specific exchanges:
+You can customize behavior for specific [exchanges](../exchanges.md):
 
 ```julia
-# Default behavior for all exchanges
+# Default behavior for all [exchanges](../exchanges.md)
 function call!(::Type{<:SC}, ::StrategyMarkets)
     ["BTC/USDT", "ETH/USDT", "SOL/USDT"]
 end
@@ -111,7 +118,7 @@ end
 
 ### Margin Trading Concepts
 
-Planar provides comprehensive margin trading support with proper position management and risk controls.
+Planar provides comprehensive [margin trading](../guides/strategy-development.md#margin-trading-concepts) support with proper position management and risk controls.
 
 #### Margin Modes
 
@@ -124,9 +131,9 @@ const MARGIN = NoMargin
 ```julia
 const MARGIN = Isolated
 
-# Position-specific leverage updates
-function update_leverage!(s, ai, pos::Long, leverage)
-    call!(s, ai, leverage, UpdateLeverage(); pos=Long())
+# Position-specific [leverage](../guides/strategy-development.md#margin-modes) updates
+function update_leverage!(s, ai, pos::Long, [leverage](../guides/strategy-development.md#margin-modes))
+    call!(s, ai, [leverage](../guides/strategy-development.md#margin-modes), UpdateLeverage(); pos=Long())
 end
 ```
 
@@ -169,7 +176,7 @@ end
 # Position size limits
 function validate_position_size(s, ai, amount)
     max_position = freecash(s) * attr(s, :max_position_pct, 0.1)
-    min(amount, max_position / closeat(ai, available(s.timeframe, now())))
+    min(amount, max_position / closeat(ai, available(s.[timeframe](../guides/data-management.md#timeframes), now())))
 end
 ```
 
@@ -177,7 +184,7 @@ end
 
 ### Interactive Strategy Generator
 
-The simplest way to create a strategy is using the interactive generator, which prompts for all required configuration options:
+The simplest way to create a strategy is using the interactive generator, which prompts for all required [configuration](../config.md) options:
 
 ```julia
 julia> using Planar
@@ -191,7 +198,7 @@ Timeframe:
    1h
    1d
 
-Select exchange by:
+Select [exchange](../[exchanges](../exchanges.md).md) by:
  > volume
    markets
    nokyc
@@ -222,8 +229,8 @@ Add project dependencies (comma separated): Indicators
 
 ┌ Info: New Strategy
 │   name = "MyNewStrategy"
-│   exchange = :binance
-└   timeframe = "5m"
+│   [exchange](../exchanges.md) = :binance
+└   [timeframe](../guides/data-management.md#timeframes) = "5m"
 [ Info: Config file updated
 
 Load strategy? [y]/n: 
@@ -235,7 +242,7 @@ You can also create strategies programmatically without user interaction:
 
 ```julia
 # Skip interaction by passing ask=false
-Planar.generate_strat("MyNewStrategy", ask=false, exchange=:myexc)
+Planar.generate_strat("MyNewStrategy", ask=false, [exchange](../exchanges.md)=:myexc)
 
 # Or use a configuration object
 cfg = Planar.Config(exchange=:myexc)
@@ -456,7 +463,7 @@ const TF = tf"5m"  # Primary execution timeframe
 @strategyenv!
 
 function call!(s::SC, ::ResetStrategy)
-    # Configure multiple timeframes
+    # Configure multiple [timeframes](../guides/data-management.md#timeframes)
     s.attrs[:timeframes] = [tf"5m", tf"1h", tf"4h"]
     s.attrs[:trend_threshold] = 0.02
     s.attrs[:position_size] = 0.1
@@ -466,7 +473,7 @@ function call!(s::SC, ts::DateTime, ctx)
     ats = available(s.timeframe, ts)
     
     foreach(s.universe) do ai
-        # Get signals from multiple timeframes
+        # Get signals from multiple [timeframes](../guides/data-management.md#timeframes)
         signals = Dict{TimeFrame, Float64}()
         
         for tf in s.attrs[:timeframes]
@@ -496,7 +503,7 @@ function calculate_trend_signal(ai, timeframe, ats)
 end
 
 function combine_signals(signals)
-    # Weight longer timeframes more heavily
+    # Weight longer [timeframes](../guides/data-management.md#timeframes) more heavily
     weights = Dict(tf"5m" => 0.2, tf"1h" => 0.3, tf"4h" => 0.5)
     
     weighted_sum = sum(signals[tf] * weights[tf] for tf in keys(signals))
@@ -653,7 +660,7 @@ function call!(s::SC, ts::DateTime, ctx)
     ats = available(s.timeframe, ts)
     
     foreach(s.universe) do ai
-        # Calculate RSI
+        # Calculate [RSI](../guides/strategy-development.md#technical-indicators)
         rsi = calculate_rsi(ai, ats, s.attrs[:rsi_period])
         
         # Entry conditions
@@ -664,7 +671,7 @@ function call!(s::SC, ts::DateTime, ctx)
         # Exit conditions
         if has_position(ai)
             if rsi > s.attrs[:rsi_overbought]
-                exit_position(s, ai, ats, ts, "RSI overbought")
+                exit_position(s, ai, ats, ts, "[RSI](../guides/strategy-development.md#technical-indicators) overbought")
             else
                 check_stop_loss_take_profit(s, ai, ats, ts)
             end
@@ -787,7 +794,7 @@ user/strategies/MyStrategy/
 
 ### Strategy Configuration
 
-Strategies can be configured through `user/planar.toml`:
+Strategies can be configured through `user/[planar.toml](../config.md#configuration-file)`:
 
 ```toml
 [strategies.MyStrategy]
@@ -1097,7 +1104,7 @@ const TF = tf"1h"
 
 #### 2. Data Access Issues
 
-**Issue**: OHLCV data is empty or missing
+**Issue**: [OHLCV data](../guides/data-management.md#ohlcv-data) is empty or missing
 ```julia
 ERROR: BoundsError: attempt to access 0-element Vector
 ```
@@ -1115,7 +1122,7 @@ end
 
 **Issue**: Inconsistent data between timeframes
 ```julia
-WARNING: Data gap detected in OHLCV series
+WARNING: Data gap detected in [OHLCV](../guides/data-management.md#ohlcv-data) series
 ```
 
 **Solutions**:
@@ -1457,7 +1464,7 @@ function place_market_sell(s, ai, amount, ts)
     call!(s, ai, MarketOrder(); amount, date=ts, side=Sell)
 end
 
-# Market order with position specification (for margin trading)
+# Market order with position specification (for [margin trading](../guides/strategy-development.md#margin-trading-concepts))
 function place_market_order_with_position(s, ai, amount, ts, position_side)
     call!(s, ai, MarketOrder(); amount, date=ts, pos=position_side)
 end
@@ -1923,7 +1930,7 @@ This comprehensive order management and risk documentation provides practical pa
 e Also
 
 ### Core Documentation
-- **[Data Management](data.md)** - Working with OHLCV data and storage
+- **[Data Management](data.md)** - Working with [OHLCV data](../guides/data-management.md#ohlcv-data) and storage
 - **[Execution Modes](engine/mode-comparison.md)** - Understanding Sim, Paper, and Live modes
 - **[Optimization](optimization.md)** - Parameter optimization and backtesting
 - **[Plotting](plotting.md)** - Visualizing strategy performance and results
@@ -1940,14 +1947,14 @@ e Also
 - **[Strategy Stats](API/strategystats.md)** - Performance analysis functions
 
 ### Support
-- **[Troubleshooting](troubleshooting.md)** - Common strategy development issues
+- **[Troubleshooting]([troubleshooting](../troubleshooting/).md)** - Common strategy development issues
 - **[Community](contacts.md)** - Getting help and sharing strategies
 
 ## Next Steps
 
 After mastering strategy development:
 
-1. **[Optimize Your Strategies](optimization.md)** - Learn parameter optimization techniques
+1. **[Optimize Your Strategies](optimization.md)** - Learn [parameter optimization](../optimization.md) techniques
 2. **[Visualize Performance](plotting.md)** - Create compelling performance charts
-3. **[Deploy Live](engine/live.md)** - Move from backtesting to live trading
+3. **[Deploy Live](engine/live.md)** - Move from backtesting to [live trading](../guides/execution-modes.md#live-mode)
 4. **[Extend Functionality](customizations/customizations.md)** - Customize Planar for your needs

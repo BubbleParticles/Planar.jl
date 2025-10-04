@@ -1,14 +1,21 @@
+---
+category: "strategy-development"
+difficulty: "advanced"
+topics: [execution-modes, margin-trading, exchanges, optimization, strategy-development, troubleshooting, visualization, configuration]
+last_updated: "2025-10-04"---
+---
+
 # Execution Mode Comparison and Transition Guide
 
 This guide provides a comprehensive comparison of Planar's three execution modes (Sim, Paper, and Live) and guidance on safely transitioning between them.
 
 ## Mode Overview
 
-Planar supports three distinct execution modes, each designed for different stages of strategy development and deployment:
+Planar supports three distinct execution modes, each designed for different stages of [strategy](../guides/strategy-development.md) development and deployment:
 
-- **Sim Mode (Simulation/Backtesting)**: Historical data simulation for strategy development and testing
-- **Paper Mode**: Real-time simulation with live market data but no actual trades
-- **Live Mode**: Real trading with actual capital and exchange APIs
+- **Sim Mode (Simulation/Backtesting)**: Historical data [simulation](../guides/execution-modes.md#simulation-mode) for [strategy](../guides/strategy-development.md) development and testing
+- **Paper Mode**: Real-time [simulation](../guides/execution-modes.md#simulation-mode) with live [market data](../guides/data-management.md) but no actual trades
+- **Live Mode**: Real trading with actual capital and [exchange](../[exchanges](../exchanges.md).md) APIs
 
 ## Detailed Mode Comparison
 
@@ -33,12 +40,12 @@ Planar supports three distinct execution modes, each designed for different stag
 #### Sim Mode (Backtesting)
 ```julia
 # Sim mode characteristics
-s = strategy(:Example, mode=Sim())
+s = [strategy](../guides/strategy-development.md)(:Example, mode=Sim())
 
 # Advantages:
 # - Extremely fast execution (millions of candles per minute)
 # - No API rate limits
-# - Perfect for parameter optimization
+# - Perfect for [parameter optimization](../[optimization](../optimization.md).md)
 # - Deterministic results
 # - Historical data analysis
 
@@ -51,7 +58,7 @@ s = strategy(:Example, mode=Sim())
 
 **Best Use Cases:**
 - Strategy development and debugging
-- Parameter optimization
+- Parameter [optimization](../optimization.md)
 - Historical performance analysis
 - Backtesting across multiple time periods
 - Monte Carlo simulations
@@ -67,8 +74,8 @@ s = strategy(:Example, mode=Sim())
 s = strategy(:Example, mode=Paper())
 
 # Advantages:
-# - Real market data and conditions
-# - Realistic order book simulation
+# - Real [market data](../guides/data-management.md) and conditions
+# - Realistic order book [simulation](../guides/execution-modes.md#simulation-mode)
 # - Network latency included
 # - Real-time strategy validation
 # - No capital risk
@@ -88,7 +95,7 @@ s = strategy(:Example, mode=Paper())
 - Strategy parameter fine-tuning
 
 **Performance Characteristics:**
-- Speed: Real-time (limited by market data frequency)
+- Speed: Real-time (limited by [market data](../guides/data-management.md) frequency)
 - Memory: 1-4GB depending on complexity
 - Latency: Network + processing delays
 
@@ -115,14 +122,14 @@ s = strategy(:Example, mode=Live())
 **Best Use Cases:**
 - Production trading
 - Real capital deployment
-- Market making strategies
+- Market making [strategies](../guides/strategy-development.md)
 - Arbitrage opportunities
 - Professional trading operations
 
 **Performance Characteristics:**
-- Speed: Limited by exchange APIs
-- Memory: 1-2GB for typical strategies
-- Latency: Network + exchange processing
+- Speed: Limited by [exchange](../[exchanges](../exchanges.md).md) APIs
+- Memory: 1-2GB for typical [strategies](../guides/strategy-development.md)
+- Latency: Network + [exchange](../[exchanges](../exchanges.md).md) processing
 
 ## Transition Strategies
 
@@ -181,10 +188,10 @@ if validate_sim_results(sim_strategy)
     # Create paper mode version
     paper_strategy = strategy(:Example, mode=Paper())
     
-    # Copy configuration
+    # Copy [configuration](../config.md)
     copy_strategy_config!(paper_strategy, sim_strategy)
     
-    # Start paper trading
+    # Start [paper trading](../guides/execution-modes.md#paper-mode)
     start!(paper_strategy)
 else
     @error "Strategy not ready for paper mode"
@@ -194,7 +201,7 @@ end
 #### Configuration Adjustments
 
 ```julia
-# Adjust configuration for paper mode
+# Adjust [configuration](../config.md) for paper mode
 function prepare_for_paper_mode(s)
     # Reduce position sizes for safety
     s.config.base_size *= 0.5
@@ -226,7 +233,7 @@ function validate_paper_performance(s, min_days=30)
     # Check minimum testing period
     trading_days = calculate_trading_days(s)
     if trading_days < min_days
-        @error "Insufficient paper trading period: $trading_days days (minimum: $min_days)"
+        @error "Insufficient [paper trading](../guides/execution-modes.md#paper-mode) period: $trading_days days (minimum: $min_days)"
         return false
     end
     
@@ -264,7 +271,7 @@ function prepare_for_live_mode(paper_strategy)
     # Create live strategy with conservative settings
     live_strategy = strategy(paper_strategy.name, mode=Live())
     
-    # Copy validated configuration
+    # Copy validated [configuration](../config.md)
     copy_strategy_config!(live_strategy, paper_strategy)
     
     # Apply live mode safety adjustments
@@ -692,6 +699,16 @@ function apply_mode_configuration(s, config::Dict{Symbol, Any})
 end
 ```
 
+
+## See Also
+
+- **[Exchanges](../exchanges.md)** - Exchange integration and configuration
+- **[Config](../config.md)** - Exchange integration and configuration
+- **[Overview](../troubleshooting/index.md)** - Troubleshooting: Troubleshooting and problem resolution
+- **[Optimization](../optimization.md)** - Performance optimization techniques
+- **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
+- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
+
 ## Monitoring and Alerting Across Modes
 
 ### Cross-Mode Performance Tracking
@@ -748,4 +765,4 @@ function compare_mode_performance(tracker::CrossModeTracker)
 end
 ```
 
-This comprehensive mode comparison and transition guide provides traders with the knowledge needed to safely and effectively move their strategies from development through to live trading, while avoiding common pitfalls and maintaining proper risk management throughout the process.
+This comprehensive mode comparison and transition guide provides traders with the knowledge needed to safely and effectively move their [strategies](../guides/strategy-development.md) from development through to [live trading](../guides/execution-modes.md#live-mode), while avoiding common pitfalls and maintaining proper risk management throughout the process.

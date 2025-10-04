@@ -1,3 +1,10 @@
+---
+category: "strategy-development"
+difficulty: "advanced"
+topics: [margin-trading, optimization, strategy-development, troubleshooting, visualization]
+last_updated: "2025-10-04"---
+---
+
 # Mobile-Responsive Design Considerations
 
 This document outlines design considerations for ensuring Planar documentation is accessible and usable across different devices and screen sizes.
@@ -185,6 +192,16 @@ The Planar documentation uses Documenter.jl's default HTML theme, which includes
 4. **Progressive Enhancement**: Basic functionality works everywhere, enhanced features where supported
 5. **Regular Testing**: Continuously test on real devices and connections
 6. **User Feedback**: Gather and act on feedback from mobile users
+
+
+## See Also
+
+- **[Optimization](../optimization.md)** - Performance optimization techniques
+- **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
+- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
+- **[Exchanges](../exchanges.md)** - Data handling and management
+- **[Strategy Development](../guides/strategy-development.md)** - Guide: Strategy development and implementation
+- **[Optimization](../optimization.md)** - Strategy development and implementation
 
 ## Resources
 

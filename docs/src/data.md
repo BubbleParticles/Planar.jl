@@ -1,27 +1,34 @@
+---
+category: "strategy-development"
+difficulty: "advanced"
+topics: [execution-modes, margin-trading, exchanges, data-management, optimization, strategy-development, troubleshooting, visualization, configuration]
+last_updated: "2025-10-04"---
+---
+
 # Data Management
 
 <!--
-Keywords: OHLCV data, Zarr storage, LMDB, data fetching, scrapers, watchers, historical data, real-time data, market data
-Description: Comprehensive data management system for OHLCV and time-series market data using Zarr storage, LMDB backend, and multiple data collection methods.
+Keywords: [OHLCV data](../guides/data-management.md#ohlcv-data), Zarr storage, LMDB, data fetching, scrapers, watchers, historical data, real-time data, [market data](../guides/data-management.md)
+Description: Comprehensive [data management](../guides/data-management.md) system for [OHLCV](../guides/data-management.md#ohlcv-data) and time-series [market data](../guides/data-management.md) using Zarr storage, LMDB backend, and multiple data collection methods.
 -->
 
-The Data module provides comprehensive storage and management of OHLCV (Open, High, Low, Close, Volume) data and other time-series market data.
+The Data module provides comprehensive storage and management of [OHLCV](../guides/data-management.md#ohlcv-data) (Open, High, Low, Close, Volume) data and other time-series [market data](../guides/data-management.md).
 
 ## Quick Navigation
 
 - **[Storage Architecture](#storage-architecture)** - Understanding Zarr and LMDB backends
 - **[Historical Data](#historical-data-with-scrapers)** - Using Scrapers for bulk data collection
-- **[Real-Time Data](#real-time-data-with-fetch)** - Fetching live data from exchanges
+- **[Real-Time Data](#real-time-data-with-fetch)** - Fetching live data from [exchanges](../exchanges.md)
 - **[Live Streaming](#live-data-streaming-with-watchers)** - Continuous data monitoring
 
 ## Prerequisites
 
 - Basic understanding of [OHLCV data concepts](getting-started/index.md)
-- Familiarity with [Exchange setup](exchanges.md)
+- Familiarity with [Exchange setup]([exchanges](../exchanges.md).md)
 
 ## Related Topics
 
-- **[Strategy Development](strategy.md)** - Using data in trading strategies
+- **[Strategy Development]([strategy](../guides/strategy-development.md).md)** - Using data in trading [strategies](../guides/strategy-development.md)
 - **[Watchers](watchers/watchers.md)** - Real-time data monitoring
 - **[Processing](API/processing.md)** - Data transformation and analysis
 
@@ -40,15 +47,15 @@ The framework wraps a Zarr subtype of `AbstractStore` in a [`Planar.Data.ZarrIns
 
 ### Data Organization
 
-OHLCV data is organized hierarchically using [`Planar.Data.key_path`](@ref):
+[OHLCV data](../guides/data-management.md#ohlcv-data) is organized hierarchically using [`Planar.Data.key_path`](@ref):
 
 ## Data Architecture Overview
 
-The Data module provides a comprehensive data management system with the following key components:
+The Data module provides a comprehensive [data management](../guides/data-management.md) system with the following key components:
 
 - **Storage Backend**: Zarr arrays with LMDB as the default store
-- **Data Organization**: Hierarchical structure by exchange/source, pair, and timeframe
-- **Data Types**: OHLCV data, generic time-series data, and cached metadata
+- **Data Organization**: Hierarchical structure by [exchange](../[exchanges](../exchanges.md).md)/source, pair, and [timeframe](../guides/data-management.md#timeframes)
+- **Data Types**: [OHLCV data](../guides/data-management.md#ohlcv-data), generic time-series data, and cached metadata
 - **Access Patterns**: Progressive loading for large datasets, contiguous time-series validation
 - **Performance**: Chunked storage, compression, and optimized indexing
 
@@ -59,7 +66,7 @@ Data is organized in a hierarchical structure:
 ZarrInstance/
 ├── exchange_name/
 │   ├── pair_name/
-│   │   ├── timeframe/
+│   │   ├── [timeframe](../guides/data-management.md#timeframes)/
 │   │   │   ├── timestamp
 │   │   │   ├── open
 │   │   │   ├── high
@@ -86,7 +93,7 @@ The Scrapers module provides access to historical data archives from major excha
 ```julia
 using Scrapers: Scrapers as scr, BinanceData as bn
 
-# Download OHLCV data for ETH
+# Download [OHLCV](../guides/data-management.md#ohlcv-data) data for ETH
 bn.binancedownload("eth", market=:data, freq=:monthly, kind=:klines)
 
 # Load downloaded data into the storage system
@@ -162,17 +169,17 @@ println("Successfully downloaded: $successful")
     If data becomes corrupted, pass `reset=true` to force a complete redownload.
 
 !!! tip "Performance Optimization"
-    - **Monthly Archives**: Use for historical backtesting (faster download, larger chunks)
+    - **Monthly Archives**: Use for historical [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode) (faster download, larger chunks)
     - **Daily Archives**: Use for recent data or frequent updates
-    - **Parallel Downloads**: Consider for multiple symbols, but respect exchange rate limits 
+    - **Parallel Downloads**: Consider for multiple symbols, but respect [exchange](../exchanges.md) rate limits 
 
 ## Real-Time Data with Fetch
 
-The Fetch module downloads data directly from exchanges using CCXT, making it ideal for:
+The Fetch module downloads data directly from exchanges using [CCXT](../exchanges.md#ccxt-integration), making it ideal for:
 
 - Getting the most recent market data
 - Filling gaps in historical data
-- Real-time data updates for live trading
+- Real-time data updates for [live trading](../guides/execution-modes.md#live-mode)
 
 ### Basic Fetch Usage
 
@@ -182,7 +189,7 @@ using Exchanges
 using Fetch: Fetch as fe
 
 exc = getexchange!(:kucoin)
-timeframe = tf"1m"
+[timeframe](../guides/data-management.md#timeframes) = tf"1m"
 pairs = ("BTC/USDT", "ETH/USDT")
 
 # Will fetch the last 1000 candles, `to` can also be passed to download a specific range
@@ -196,7 +203,7 @@ using TimeTicks
 using Exchanges
 using Fetch: Fetch as fe
 
-# Initialize exchange
+# Initialize [exchange](../exchanges.md)
 exc = getexchange!(:binance)
 
 # Fetch specific date ranges
@@ -296,13 +303,13 @@ validated_data = fetch_and_validate(exc, tf"1m", "BTC/USDT"; from=-500)
 ```
 
 !!! warning "Rate Limit Considerations"
-    Direct exchange fetching is heavily rate-limited, especially for smaller timeframes.
+    Direct exchange fetching is heavily rate-limited, especially for smaller [timeframes](../guides/data-management.md#timeframes).
     Use archives for bulk historical data collection.
 
 !!! tip "Fetch Best Practices"
     - **Recent Updates**: Use fetch for recent data updates and gap filling
     - **Rate Limiting**: Implement delays between requests to respect exchange limits
-    - **Data Validation**: Always validate fetched data before using in strategies
+    - **Data Validation**: Always validate fetched data before using in [strategies](../guides/strategy-development.md)
     - **Raw Data**: Use `fetch_candles` for unchecked data when you need raw exchange responses
 
 ## Live Data Streaming with Watchers
@@ -872,7 +879,7 @@ end
 ### Data Aggregation and Resampling
 
 ```julia
-# Aggregate data to different timeframes
+# Aggregate data to different [timeframes](../guides/data-management.md#timeframes)
 function resample_ohlcv(data, target_timeframe)
     # Group by target timeframe periods
     data.period = floor.(data.timestamp, target_timeframe)
@@ -1080,7 +1087,7 @@ function configure_optimal_storage()
     
     # Enable compression for better storage efficiency
     # (This would be configured at the ZarrInstance level)
-    @info "Storage configuration optimized for time-series data"
+    @info "Storage [configuration](../config.md) optimized for time-series data"
 end
 
 # Monitor storage performance
@@ -1274,7 +1281,7 @@ filled_data = fill_gaps(data_with_gaps, Hour(1))
 ### Data Transformation and Feature Engineering
 
 ```julia
-# Add technical indicators and features
+# Add [technical indicators](../guides/[strategy](../guides/strategy-development.md)-development.md#technical-indicators) and features
 function add_technical_features(data::DataFrame)
     enhanced_data = copy(data)
     
@@ -1332,7 +1339,7 @@ end
 
 ## Storage Configuration and Optimization
 
-This section covers advanced storage configuration, optimization techniques, and troubleshooting for the Zarr/LMDB backend.
+This section covers advanced storage [configuration](../config.md), [optimization](../optimization.md) techniques, and [troubleshooting](../troubleshooting/) for the Zarr/LMDB backend.
 
 ### Zarr Storage Configuration
 
@@ -1364,7 +1371,7 @@ function create_optimized_zarr_instance(storage_path; config...)
     # Implementation depends on the actual ZarrInstance constructor
     @info "Creating optimized Zarr instance at $storage_path"
     
-    # Example configuration
+    # Example [configuration](../config.md)
     optimized_config = configure_zarr_storage(; config...)
     
     # Return configured instance (pseudo-code)
@@ -1807,7 +1814,7 @@ end
 
 function process_pair_data(pair_data, pair, exchange_name)
     if nrow(pair_data) > 10  # Ensure we have enough data
-        # Calculate technical indicators in real-time
+        # Calculate [technical indicators](../guides/[strategy](../guides/strategy-development.md)-development.md#technical-indicators) in real-time
         indicators = calculate_realtime_indicators(pair_data)
         
         # Store indicators
@@ -1823,7 +1830,7 @@ function process_pair_data(pair_data, pair, exchange_name)
 end
 
 function calculate_realtime_indicators(data)
-    # Calculate common technical indicators
+    # Calculate common [technical indicators](../guides/strategy-development.md#technical-indicators)
     indicators = Dict()
     
     if nrow(data) >= 20
@@ -1831,7 +1838,7 @@ function calculate_realtime_indicators(data)
         indicators[:sma_20] = mean(data.close[end-19:end])
         indicators[:ema_20] = calculate_ema(data.close, 20)
         
-        # RSI
+        # [RSI](../guides/strategy-development.md#technical-indicators)
         indicators[:rsi_14] = calculate_rsi(data.close, 14)
         
         # Bollinger Bands
@@ -2167,5 +2174,5 @@ end
     - Use multiple watchers per exchange for redundancy
     - Monitor data quality continuously to catch issues early
     - Implement automatic restart mechanisms for failed watchers
-    - Cache processed data for quick access by trading strategies
+    - Cache processed data for quick access by trading [strategies](../guides/strategy-development.md)
     - Set up proper logging and error handling for debugging issues

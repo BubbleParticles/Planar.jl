@@ -1,3 +1,10 @@
+---
+category: "strategy-development"
+difficulty: "advanced"
+topics: [execution-modes, margin-trading, exchanges, data-management, optimization, strategy-development, visualization, configuration]
+last_updated: "2025-10-04"---
+---
+
 # Glossary and Disambiguation
 
 This glossary defines key terms and concepts used throughout Planar documentation and codebase.
@@ -10,7 +17,7 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 : A structure created from parsing a symbol, typically representing an `Asset`, `Derivative`, or `AssetInstance`. Variables representing asset instances are often named `ai`, while simple assets are named `a` or `aa` (for `AbstractAsset`).
 
 **Symbol (sym)**
-: Though `Symbol` is a built-in Julia type, in trading contexts it often denotes the pairing of a base currency with a quote currency. Commonly refers to a `Symbol` for single currencies and a `String` for currency pairs.
+: Though `Symbol` is a built-in [Julia](https://julialang.org/) type, in trading contexts it often denotes the pairing of a base currency with a quote currency. Commonly refers to a `Symbol` for single currencies and a `String` for currency pairs.
 
 **Pair**
 : A `String` in the format `"BASE/QUOTE"` where the slash separates the base and quote currencies (e.g., `"BTC/USDT"`).
@@ -30,7 +37,7 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 ### Position and Order Terms
 
 **Long/Short**
-: Used exclusively in margin trading contexts. "Long" indicates betting on price increase; "short" indicates betting on price decrease.
+: Used exclusively in [margin trading](../guides/[strategy](../guides/strategy-development.md)-development.md#margin-trading-concepts) contexts. "Long" indicates betting on price increase; "short" indicates betting on price decrease.
 
 **Side/Position**
 : "Side" refers to trade direction ("buy" or "sell"). "Position" refers to market exposure ("long" or "short"). A trade's side is buy/sell; its position is long/short.
@@ -39,15 +46,15 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 : Trading with borrowed funds to increase position size. Planar supports `NoMargin` (spot), `Isolated` (position-specific margin), and `Cross` (shared margin) modes.
 
 **Leverage**
-: The ratio of position size to margin. Higher leverage amplifies both profits and losses.
+: The ratio of position size to margin. Higher [leverage](../guides/strategy-development.md#margin-modes) amplifies both profits and losses.
 
 ### Data and Market Terms
 
-**OHLCV**
-: Open, High, Low, Close, Volume - standard candlestick data format. Usually refers to a DataFrame containing this market data.
+**[OHLCV](../guides/data-management.md#ohlcv-data)**
+: Open, High, Low, Close, Volume - standard candlestick data format. Usually refers to a DataFrame containing this [market data](../guides/data-management.md).
 
 **Candle**
-: A single OHLCV data point, can be a DataFrame row, named tuple, or `Candle` structure.
+: A single [OHLCV data](../guides/data-management.md#ohlcv-data) point, can be a DataFrame row, named tuple, or `Candle` structure.
 
 **Timeframe**
 : The duration each candle represents (e.g., `tf"1m"` for 1-minute candles, `tf"1h"` for hourly).
@@ -56,34 +63,34 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 : A complex data structure associating a DataFrame, Zarr array, and trading pair.
 
 **Resample**
-: Converting data between timeframes, usually downsampling (e.g., 1m → 1h) as upsampling is rarely beneficial.
+: Converting data between [timeframes](../guides/data-management.md#timeframes), usually downsampling (e.g., 1m → 1h) as upsampling is rarely beneficial.
 
 ### Exchange and Infrastructure Terms
 
 **Exchange (exc)**
-: Can refer to an `Exchange` instance, `ExchangeID`, or the `Symbol` of an exchange ID. A global `exc` variable is defined in `ExchangeTypes` for REPL convenience.
+: Can refer to an `Exchange` instance, `ExchangeID`, or the `Symbol` of an [exchange](../[exchanges](../exchanges.md).md) ID. A global `exc` variable is defined in `ExchangeTypes` for REPL convenience.
 
 **Sandbox**
-: Exchange-provided "testnet" for API testing. Distinct from paper trading - sandbox uses test APIs, paper trading uses live data with simulated execution.
+: Exchange-provided "testnet" for API testing. Distinct from [paper trading](../guides/execution-modes.md#paper-mode) - sandbox uses test APIs, [paper trading](../guides/execution-modes.md#paper-mode) uses live data with simulated execution.
 
 **Instance**
-: Typically implies an `AssetInstance` - the combination of an asset and exchange.
+: Typically implies an `AssetInstance` - the combination of an asset and [exchange](../[exchanges](../exchanges.md).md).
 
 **Futures/Swap/Perps**
-: Swaps are perpetual futures contracts. Following CCXT conventions: swaps use `"BASE/QUOTE:SETTLE"` format, futures include expiry as `"BASE/QUOTE:SETTLE-EXPIRY"`.
+: Swaps are perpetual futures contracts. Following [CCXT](../[exchanges](../exchanges.md).md#ccxt-integration) conventions: swaps use `"BASE/QUOTE:SETTLE"` format, futures include expiry as `"BASE/QUOTE:SETTLE-EXPIRY"`.
 
 ## Planar-Specific Terms
 
 ### Strategy System
 
 **Strategy**
-: A Julia module implementing trading logic through the `call!` dispatch system. Parameterized by execution mode, exchange, margin type, and quote currency.
+: A [Julia](https://julialang.org/) module implementing trading logic through the `call!` [dispatch system](../guides/[strategy](../guides/strategy-development.md)-development.md#dispatch-system). Parameterized by execution mode, [exchange](../exchanges.md), margin type, and quote currency.
 
 **Dispatch**
-: Julia's multiple dispatch system used throughout Planar for customization. Methods are selected based on argument types.
+: [Julia](https://julialang.org/)'s multiple [dispatch system](../guides/[strategy](../guides/strategy-development.md)-development.md#dispatch-system) used throughout Planar for customization. Methods are selected based on argument types.
 
 **Call! Function**
-: The primary interface for strategy logic. Different method signatures handle different events (execution, loading, optimization, etc.).
+: The primary interface for strategy logic. Different method signatures handle different events (execution, loading, [optimization](../optimization.md), etc.).
 
 **Strategy Environment**
 : Macros like `@strategyenv!`, `@contractsenv!`, and `@optenv!` that import required types and functions into strategy modules.
@@ -91,10 +98,10 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 ### Execution Modes
 
 **Sim Mode**
-: Backtesting mode using historical data. Fast execution with simplified order simulation.
+: Backtesting mode using historical data. Fast execution with simplified order [simulation](../guides/execution-modes.md#simulation-mode).
 
 **Paper Mode**
-: Real-time simulation using live market data but no actual trades. Tests strategy logic with realistic market conditions.
+: Real-time [simulation](../guides/execution-modes.md#simulation-mode) using live [market data](../guides/data-management.md) but no actual trades. Tests strategy logic with realistic market conditions.
 
 **Live Mode**
 : Real trading with actual capital and exchange APIs. Includes full risk management and monitoring.
@@ -102,7 +109,7 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 ### Data System
 
 **Zarr**
-: Columnar storage format used for OHLCV data. Supports compression and chunked access for large datasets.
+: Columnar storage format used for [OHLCV data](../guides/data-management.md#ohlcv-data). Supports compression and chunked access for large datasets.
 
 **LMDB**
 : Lightning Memory-Mapped Database used as the default storage backend for Zarr arrays.
@@ -114,21 +121,21 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 : Module for downloading historical data archives from exchanges (currently Binance and Bybit).
 
 **Fetch**
-: Module for downloading data directly from exchange APIs using CCXT.
+: Module for downloading data directly from exchange APIs using [CCXT](../exchanges.md#ccxt-integration).
 
 **Watcher**
-: Real-time data monitoring system that continuously collects and stores live market data.
+: Real-time data monitoring system that continuously collects and stores live [market data](../guides/data-management.md).
 
 ### Optimization and Analysis
 
 **OptSession**
-: Structure managing optimization parameters, configuration, and results. Can be saved and reloaded.
+: Structure managing [optimization](../optimization.md) parameters, [configuration](../config.md), and results. Can be saved and reloaded.
 
 **Grid Search**
 : Optimization method testing all combinations of parameter values.
 
 **Bayesian Optimization**
-: Advanced optimization using probabilistic models to efficiently explore parameter space.
+: Advanced [optimization](../optimization.md) using probabilistic models to efficiently explore parameter space.
 
 **Objective Function**
 : Function returning a score to maximize during optimization (e.g., Sharpe ratio, profit).
@@ -164,13 +171,13 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 ## File and Directory Conventions
 
 **Strategy Locations**
-- Single file: `user/strategies/StrategyName.jl`
-- Project: `user/strategies/StrategyName/src/StrategyName.jl`
+- Single file: `user/[strategies](../guides/strategy-development.md)/StrategyName.jl`
+- Project: `user/[strategies](../guides/strategy-development.md)/StrategyName/src/StrategyName.jl`
 
 **Configuration Files**
-- Main config: `user/planar.toml`
-- Secrets: `user/secrets.toml`
-- Strategy config: `user/strategies/StrategyName/Project.toml`
+- Main config: `user/[planar.toml](../config.md#[configuration](../config.md)-file)`
+- Secrets: `user/[secrets.toml](../config.md#secrets-management)`
+- Strategy config: `user/[strategies](../guides/strategy-development.md)/StrategyName/Project.toml`
 
 **Data Storage**
 - LMDB files: `user/data.mdb`, `user/lock.mdb`

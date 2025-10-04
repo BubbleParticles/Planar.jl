@@ -1,16 +1,23 @@
+---
+category: "strategy-development"
+difficulty: "advanced"
+topics: [execution-modes, exchanges, optimization, strategy-development, troubleshooting, visualization]
+last_updated: "2025-10-04"---
+---
+
 # Metrics Module Documentation
 
-The `Metrics` module provides functions for analyzing the outcomes of backtest runs within the trading strategy framework.
+The `Metrics` module provides functions for analyzing the outcomes of [backtest](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode) runs within the trading [strategy](../guides/strategy-development.md) framework.
 
 ### Resampling Trades
 
-Using the [`Metrics.resample_trades`](@ref) function, trades can be resampled to a specified time frame. This aggregates the profit and loss (PnL) of each trade for every asset in the strategy over the given period.
+Using the [`Metrics.resample_trades`](@ref) function, trades can be resampled to a specified time frame. This aggregates the profit and loss (PnL) of each trade for every asset in the [strategy](../guides/strategy-development.md) over the given period.
 
 ```julia
 using Planar
 using Metrics
 
-strategy_instance = strategy(:Example)
+strategy_instance = [strategy](../guides/strategy-development.md)(:Example)
 Metrics.resample_trades(strategy_instance, tf"1d")
 ```
 
@@ -46,3 +53,12 @@ Metrics.multi(strategy_instance, :sortino, :calmar; tf=tf"1d", normalize=true)
 ```
 
 The `normalize` option normalizes the metric values by dividing by a predefined constant and then clipping the results to the range [0, 1].
+
+## See Also
+
+- **[Exchanges](../exchanges.md)** - Exchange integration and configuration
+- **[Config](../config.md)** - Exchange integration and configuration
+- **[Optimization](../optimization.md)** - Performance optimization techniques
+- **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
+- **[Strategy Development](../guides/strategy-development.md)** - Guide: Strategy development and implementation
+- **[Optimization](../optimization.md)** - Strategy development and implementation

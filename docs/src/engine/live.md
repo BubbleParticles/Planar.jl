@@ -1,10 +1,17 @@
+---
+category: "getting-started"
+difficulty: "advanced"
+topics: [execution-modes, margin-trading, exchanges, data-management, optimization, getting-started, strategy-development, troubleshooting, visualization, configuration]
+last_updated: "2025-10-04"---
+---
+
 # Running in Live Mode
 
-A strategy in live mode operates against the exchange API defined by the strategy. This mode executes real trades with actual capital, so proper configuration and risk management are critical.
+A [strategy](../guides/strategy-development.md) in live mode operates against the [exchange](../[exchanges](../exchanges.md).md) API defined by the [strategy](../guides/strategy-development.md). This mode executes real trades with actual capital, so proper [configuration](../config.md) and risk management are critical.
 
 ## Initial Setup and Configuration
 
-To construct the strategy, use the same methods as in [paper mode](./paper.md), but with additional security considerations:
+To construct the [strategy](../guides/strategy-development.md), use the same methods as in [paper mode](./paper.md), but with additional security considerations:
 
 ```julia
 using Strategies
@@ -20,13 +27,13 @@ start!(s, foreground=true)
 # Configure API credentials securely
 s.config.api_key = ENV["EXCHANGE_API_KEY"]        # Never hardcode keys
 s.config.api_secret = ENV["EXCHANGE_API_SECRET"]
-s.config.api_passphrase = ENV["EXCHANGE_PASSPHRASE"]  # For some exchanges
+s.config.api_passphrase = ENV["EXCHANGE_PASSPHRASE"]  # For some [exchanges](../exchanges.md)
 
 # Use sandbox for testing
 s = strategy(:Example, 
     mode=Live(), 
     sandbox=true,  # Use testnet/sandbox
-    exchange=:binance
+    [exchange](../[exchanges](../exchanges.md).md)=:binance
 )
 ```
 
@@ -43,7 +50,7 @@ s = strategy(:Example,
 # - Disable withdrawal permissions
 # - Use IP whitelisting when possible
 
-# 3. Use separate API keys for different strategies
+# 3. Use separate [API keys](../getting-started/installation.md#api-[configuration](../config.md)) for different [strategies](../guides/strategy-development.md)
 api_config = Dict(
     :scalping_strategy => (
         key = ENV["BINANCE_SCALPING_KEY"],
@@ -65,10 +72,10 @@ s.config.api_credentials = api_config[:scalping_strategy]
 ```julia
 using Strategies, LiveMode
 
-# Create live strategy with full configuration
+# Create live strategy with full [configuration](../config.md)
 s = strategy(:LiveTradingBot,
     mode=Live(),
-    exchange=:binance,
+    [exchange](../exchanges.md)=:binance,
     sandbox=false,  # Set to true for testing
     initial_cash=1000.0,  # Start with smaller amount
     max_position_size=0.1  # Limit position sizes
@@ -91,7 +98,7 @@ start!(s, foreground=true)
 #### Advanced Multi-Asset Live Setup
 
 ```julia
-# Advanced live trading setup with multiple assets
+# Advanced [live trading](../guides/execution-modes.md#live-mode) setup with multiple assets
 s = strategy(:MultiAssetLive,
     mode=Live(),
     exchange=:binance,
@@ -157,7 +164,7 @@ s.config.balance_watcher = (
     timeout = 10
 )
 
-# Configure position watcher for margin strategies
+# Configure position watcher for margin [strategies](../guides/strategy-development.md)
 s.config.position_watcher = (
     enabled = true,
     interval = 15,  # Check every 15 seconds
@@ -418,7 +425,7 @@ s.config.timeouts = (
     order_cancellation = Second(10), # Wait up to 10s for cancellation
     balance_sync = Second(15),       # Wait up to 15s for balance updates
     position_sync = Second(20),      # Wait up to 20s for position updates
-    market_data = Second(5)          # Wait up to 5s for market data
+    market_data = Second(5)          # Wait up to 5s for [market data](../guides/data-management.md)
 )
 
 # Use custom timeouts for specific operations
@@ -546,7 +553,7 @@ function sync_account_state!(s)
     # Sync open orders
     sync_open_orders!(s)
     
-    # Sync positions (for margin strategies)
+    # Sync positions (for margin [strategies](../guides/strategy-development.md))
     if is_margin_strategy(s)
         sync_positions!(s)
     end
@@ -638,6 +645,16 @@ function send_alert(s, message, level=:info)
 end
 ```
 
+
+## See Also
+
+- **[Exchanges](../exchanges.md)** - Exchange integration and configuration
+- **[Config](../config.md)** - Exchange integration and configuration
+- **[Overview](../troubleshooting/index.md)** - Troubleshooting: Troubleshooting and problem resolution
+- **[Optimization](../optimization.md)** - Performance optimization techniques
+- **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
+- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
+
 ## Event Tracing
 
 During live execution events are recorded and flushed to storage (based on the active `ZarrInstance`).
@@ -709,7 +726,7 @@ end
 
 #### Replaying Events
 
-To replay events in a local simulation, use the `replay_from_trace!` function:
+To replay events in a local [simulation](../guides/execution-modes.md#simulation-mode), use the `replay_from_trace!` function:
 
 ```julia
 replay_from_trace!(live_strategy)
@@ -855,13 +872,13 @@ function setup_automated_tuning(s)
     @async begin
         while isrunning(s)
             try
-                # Run optimization every 24 hours
+                # Run [optimization](../optimization.md) every 24 hours
                 sleep(24 * 3600)
                 
-                @info "Running automated strategy optimization"
+                @info "Running automated strategy [optimization](../optimization.md)"
                 optimization_results = optimize_from_events(s)
                 
-                # Log optimization results
+                # Log [optimization](../optimization.md) results
                 @info "Optimization completed" optimization_results
                 
                 # Send optimization report

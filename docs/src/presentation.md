@@ -1,3 +1,10 @@
+---
+category: "configuration"
+difficulty: "beginner"
+topics: [configuration]
+last_updated: "2025-10-04"
+---
+
 # Why Planar?
 
 ```@eval

@@ -1,23 +1,30 @@
+---
+category: "strategy-development"
+difficulty: "advanced"
+topics: [execution-modes, margin-trading, data-management, optimization, strategy-development, troubleshooting, visualization, configuration]
+last_updated: "2025-10-04"---
+---
+
 # Optimization
 
-Planar provides tools to optimize strategy parameters. Optimzations are managed through the [`Optim.OptSession`](@ref) type. Which is a structure that holds informations about the optimization parameters, configuration and previous runs.
-Optimization sessions can be periodically saved, and therefore can be reloaded at a later time to explore previous results or continue the optimization from where it left off.
+Planar provides tools to optimize [strategy](../guides/strategy-development.md) parameters. Optimzations are managed through the [`Optim.OptSession`](@ref) type. Which is a structure that holds informations about the [optimization](../optimization.md) parameters, [configuration](../config.md) and previous runs.
+Optimization sessions can be periodically saved, and therefore can be reloaded at a later time to explore previous results or continue the [optimization](../optimization.md) from where it left off.
 
-There are currently 3 different optimization methods: [`Optim.gridsearch`](@ref), [`Optim.optimize`](@ref), `boptimize!`(when using `BayesianOptimization`).
+There are currently 3 different [optimization](../optimization.md) methods: [`Optim.gridsearch`](@ref), [`Optim.optimize`](@ref), `boptimize!`(when using `BayesianOptimization`).
 Configuration is done by defining three `call!` functions.
 
 - `call!(::S, ::OptSetup)`: returns a named tuples with:
-   - `ctx`: a `Executors.Context` which is the period of time used for backtesting
+   - `ctx`: a `Executors.Context` which is the period of time used for [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode)
    - `params`: a named tuple of all the parameters to be optimizied. Values should be in the form of iterables.
    - `bounds`: only required for `optimize`, a tuple of (lower, upper) bounds for the optimization parameters.
 - `precision`: optional precision specification for each parameter. Use -1 for integers, 0 for no decimals, 1 for 1 decimal place, etc.
 - `categorical`: optional categorical specification for each parameter. Use `nothing` for continuous parameters, or an array of categories for categorical parameters.
-- `call!(::S, ::OptRun)`: called before a single backtest is run. Receives one combination of the parameters. Should apply the parameters to the strategy. No return values expected.
+- `call!(::S, ::OptRun)`: called before a single [backtest](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode) is run. Receives one combination of the parameters. Should apply the parameters to the [strategy](../guides/strategy-development.md). No return values expected.
 - `call!(::S, ::OptScore)::Vector`: for `optimize` and `boptimize!` it is the objective score that advances the optimization. In grid search it can be used to store additional metrics in the results dataframe. Within the `Stats` package there are metrics like `sharpe`` or `sortino` commonly used as optimization objectives.
 
 ## Complete Optimization Example
 
-Here's a comprehensive example showing how to implement optimization in your strategy:
+Here's a comprehensive example showing how to implement optimization in your [strategy](../guides/strategy-development.md):
 
 ```julia
 using Planar
@@ -25,16 +32,16 @@ using Optim
 
 # Define your strategy with optimization support
 function call!(s::MyStrategy, ::OptSetup)
-    # Define the optimization context (time period for backtesting)
+    # Define the optimization context (time period for [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode))
     ctx = Context(Sim(), tf"1h", dt"2023-01-01", dt"2024-01-01")
     
     # Define parameters to optimize with their ranges
     params = (;
         ma_fast_period = 5:1:20,           # Fast MA period: 5 to 20
         ma_slow_period = 20:5:100,         # Slow MA period: 20 to 100 in steps of 5
-        rsi_period = 10:2:30,              # RSI period: 10 to 30 in steps of 2
-        rsi_oversold = 20.0:5.0:40.0,      # RSI oversold threshold
-        rsi_overbought = 60.0:5.0:80.0,    # RSI overbought threshold
+        rsi_period = 10:2:30,              # [RSI](../guides/strategy-development.md#technical-indicators) period: 10 to 30 in steps of 2
+        rsi_oversold = 20.0:5.0:40.0,      # [RSI](../guides/strategy-development.md#technical-indicators) oversold threshold
+        rsi_overbought = 60.0:5.0:80.0,    # [RSI](../guides/strategy-development.md#technical-indicators) overbought threshold
         stop_loss = 0.02:0.01:0.05,        # Stop loss: 2% to 5%
         take_profit = 0.05:0.01:0.15,      # Take profit: 5% to 15%
         position_size = 0.1:0.1:1.0,       # Position size: 10% to 100%
@@ -71,7 +78,7 @@ function call!(s::MyStrategy, ::OptSetup)
     )
 end
 
-# Apply parameters before each backtest run
+# Apply parameters before each [backtest](../guides/execution-modes.md#simulation-mode) run
 function call!(s::MyStrategy, params, ::OptRun)
     # Extract parameters and apply them to strategy
     s[:ma_fast_period] = params.ma_fast_period
@@ -122,7 +129,7 @@ params = (;
     
     # Categorical parameters
     ma_type = [:sma, :ema, :wma],       # Moving average types
-    timeframe = [tf"5m", tf"15m", tf"1h"], # Timeframes
+    [timeframe](../guides/data-management.md#timeframes) = [tf"5m", tf"15m", tf"1h"], # Timeframes
     
     # Boolean parameters (as integers)
     use_filter = [0, 1],                # 0 = false, 1 = true
@@ -169,7 +176,7 @@ using Optim
 gridsearch(s, splits=1, save_freq=Minute(1), resume=false)
 ```
 Will perform an search from scratch, saving every minute.
-`splits` controls the number of times a backtest is run using the _same_ combination of parameters. When splits > 1 we split the optimization `Context` into shorter ranges and restart the backtest on each one of these sub contexes. This allows to fuzz out scenarios of overfitting by averaging the results of different backtest "restarts".
+`splits` controls the number of times a [backtest](../guides/execution-modes.md#simulation-mode) is run using the _same_ combination of parameters. When splits > 1 we split the optimization `Context` into shorter ranges and restart the backtest on each one of these sub contexes. This allows to fuzz out scenarios of overfitting by averaging the results of different backtest "restarts".
 
 #### Grid Search Examples
 
@@ -190,7 +197,7 @@ sess, results = gridsearch(s, splits=2, save_freq=Minute(5))
 # Resume a previously interrupted grid search
 sess, results = gridsearch(s, resume=true)
 
-# Resume with different split configuration
+# Resume with different split [configuration](../config.md)
 sess, results = gridsearch(s, splits=5, resume=true)
 ```
 
@@ -343,7 +350,7 @@ function call!(s::MyStrategy, ::OptSetup)
         # Categorical parameters
         ma_type = [:sma, :ema, :wma, :hma],
         order_type = [:market, :limit, :stop],
-        timeframe = [tf"5m", tf"15m", tf"30m", tf"1h"]
+        [timeframe](../guides/data-management.md#timeframes) = [tf"5m", tf"15m", tf"30m", tf"1h"]
     )
     
     lower, upper = Optim.lowerupper(params)
@@ -357,7 +364,7 @@ function call!(s::MyStrategy, ::OptSetup)
         1,   # position_size: 1 decimal place
         -1,  # ma_type: integer (categorical index)
         -1,  # order_type: integer (categorical index)
-        -1   # timeframe: integer (categorical index)
+        -1   # [timeframe](../guides/data-management.md#timeframes): integer (categorical index)
     ]
     
     # Define categorical mappings
@@ -583,7 +590,7 @@ sess, result = boptimize!(s,
 # Define custom GP model for your strategy
 function gpmodel(s::MyStrategy)
     # Custom Gaussian Process model
-    # Return GP model configuration
+    # Return GP model [configuration](../config.md)
 end
 
 function modelopt(s::MyStrategy)
@@ -729,7 +736,7 @@ Plotting.plot_results(sess.results,
 Plotting.plot_results(sess.results,
     x=:ma_period,
     y=:obj,
-    group=:ma_type,        # Group by moving average type
+    group=:ma_type,        # Group by [moving average](../guides/strategy-development.md#technical-indicators) type
     plot_type=:scatter,
     title="Performance by MA Type"
 )
@@ -849,6 +856,16 @@ using StatsPlots
     ylabel="Frequency"
 )
 ```
+
+
+## See Also
+
+- **[Strategy Development](../guides/strategy-development.md)** - Build optimizable strategies
+- **[Performance Issues](../troubleshooting/performance-issues.md)** - Optimize performance
+- **[](../reference/api/)** - Optimization API reference
+- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
+- **[Exchanges](../exchanges.md)** - Data handling and management
+- **[Execution Modes](../guides/execution-modes.md)** - Guide: Backtesting and simulation
 
 ## Optimization Result Analysis
 

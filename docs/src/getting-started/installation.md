@@ -1,3 +1,14 @@
+---
+title: "Installation Guide"
+description: "Complete installation instructions for Planar on all supported platforms"
+category: "getting-started"
+difficulty: "beginner"
+estimated_time: "10 minutes"
+prerequisites: []
+topics: [exchanges, data-management, optimization, getting-started, strategy-development, troubleshooting, visualization, configuration]
+last_updated: "2025-10-04"
+---
+
 # Installation Guide
 
 This guide provides comprehensive installation instructions for Planar on all supported platforms. Choose the method that best fits your needs and experience level.
@@ -8,7 +19,7 @@ This guide provides comprehensive installation instructions for Planar on all su
 |--------|----------|------|------|
 | **Docker** | Quick start, production | Fast setup, consistent environment | Larger download, requires Docker |
 | **Git Source** | Development, customization | Full control, latest features | More setup steps, dependency management |
-| **Julia Package** | Julia developers | Native Julia workflow | Limited to released versions |
+| **[Julia](https://julialang.org/) Package** | [Julia](https://julialang.org/) developers | Native [Julia](https://julialang.org/) workflow | Limited to released versions |
 
 ## Prerequisites
 
@@ -44,7 +55,7 @@ Planar provides four Docker images:
 # Runtime only (smaller, faster download)
 docker pull docker.io/psydyllic/planar-sysimage
 
-# With plotting and optimization (recommended for learning)
+# With plotting and [optimization](../optimization.md) (recommended for learning)
 docker pull docker.io/psydyllic/planar-sysimage-interactive
 
 # Precompiled versions (more flexible, slower startup)
@@ -66,16 +77,41 @@ docker run -it --rm -v $(pwd)/planar-data:/app/user docker.io/psydyllic/planar-s
 
 ### Step 4: Verify Installation
 
-In the Julia REPL:
+Test your Docker installation with this comprehensive verification:
 
 ```julia
+# Test 1: Basic module loading
 using PlanarInteractive
 @environment!
+println("✅ Modules loaded successfully")
 
-# Test basic functionality
-s = strategy(:QuickStart, exchange=:binance)
-println("✅ Planar installed successfully!")
+# Test 2: Strategy creation
+s = strategy(:QuickStart, exchange.md)=:binance)
+println("✅ Strategy system working")
+
+# Test 3: Data system
+try
+    # Test small data fetch (should work without API keys))
+    fetch_ohlcv(s, from=-10)
+    println("✅ Data fetching operational")
+catch e
+    println("⚠️  Data fetch test: $e (this is normal without exchange.md) API)")
+end
+
+# Test 4: Plotting capability (interactive image only)
+try
+    using WGLMakie
+    println("✅ Plotting backend available")
+catch e
+    println("ℹ️  Plotting not available (use interactive image for plotting)")
+end
+
+println("🎉 Installation verification complete!")
 ```
+
+**Expected output**: You should see all green checkmarks. Warnings about data fetching or plotting are normal depending on your setup.
+
+**⚠️ Having issues?** See [Installation Troubleshooting](../troubleshooting/installation-issues.md) for detailed solutions to common problems.
 
 ## Method 2: Git Source Installation
 
@@ -150,14 +186,40 @@ This step may take 10-20 minutes on first run as it compiles many packages.
 
 ### Step 6: Verify Installation
 
+Run this comprehensive verification script:
+
 ```julia
+# Test 1: Module loading
 using PlanarInteractive
 @environment!
+println("✅ Modules loaded successfully")
 
-# Test basic functionality
-s = strategy(:QuickStart, exchange=:binance)
-println("✅ Planar installed successfully!")
+# Test 2: Strategy system
+s = strategy(:QuickStart, exchange.md)=:binance)
+println("✅ Strategy creation working")
+
+# Test 3: Configuration system
+println("Config loaded: $(s.config.cash) initial balance")
+println("✅ Configuration system working")
+
+# Test 4: Data structures
+ai = first(s.universe.assets)
+println("Asset: $(ai.asset)")
+println("✅ Asset system working")
+
+# Test 5: Indicator system
+try
+    using OnlineTechnicalIndicators
+    rsi = OnlineTechnicalIndicators.RSI-development.md#technical-indicators){Float64}(14)
+    println("✅ Technical indicators available")
+catch e
+    println("⚠️  Technical indicators: $e")
+end
+
+println("🎉 Source installation verified!")
 ```
+
+**⚠️ Tests failing?** Check [Installation Troubleshooting](../troubleshooting/installation-issues.md) for step-by-step solutions to common installation problems.
 
 ## Method 3: Julia Package Installation
 
@@ -181,14 +243,14 @@ mkdir -p user/strategies user/logs user/keys
 
 2. **Copy example configuration**:
 ```bash
-cp user/planar.toml.example user/planar.toml
+cp user/[planar.toml](../guides/strategy-development.md)-file).example user/[planar.toml](../config.md#configuration-file)
 ```
 
 3. **Set up secrets file** (for live trading):
 ```bash
 # Create secrets file (never commit this!)
-touch user/secrets.toml
-echo "user/secrets.toml" >> .gitignore
+touch user/[secrets.toml](../config.md#secrets-management)
+echo "user/[secrets.toml](../config.md#secrets-management)" >> .gitignore
 ```
 
 ### Verify Core Components
@@ -270,44 +332,264 @@ cp .JuliaFormatter.toml ~/.JuliaFormatter.toml
 git config core.hooksPath .githooks
 ```
 
-## Troubleshooting Installation
+## Quick Troubleshooting
 
-### Common Issues
+For comprehensive troubleshooting with detailed solutions, see [Installation Issues](../troubleshooting/installation-issues.md).
 
-**"Package not found" errors**:
+### Docker Issues
+
+**Docker not starting**:
+```bash
+# Check Docker status
+docker --version
+docker info
+
+# Restart Docker service (Linux)
+sudo systemctl restart docker
+
+# On Windows/macOS, restart Docker Desktop
+```
+
+**Image pull failures**:
+```bash
+# Try alternative registry
+docker pull ghcr.io/psydyllic/planar-sysimage-interactive
+
+# Check available space
+docker system df
+docker system prune  # Clean up if needed
+```
+
+**Container startup issues**:
+```bash
+# Check container logs
+docker run --rm docker.io/psydyllic/planar-sysimage-interactive julia --version
+
+# Test with minimal command
+docker run --rm docker.io/psydyllic/planar-sysimage-interactive echo "Docker working"
+```
+
+### Source Installation Issues
+
+**Julia not found**:
+```bash
+# Verify Julia installation
+julia --version
+which julia
+
+# Add Julia to PATH (Linux/macOS)
+export PATH="$PATH:/path/to/julia/bin"
+
+# Windows: Add to system PATH through Control Panel
+```
+
+**Git clone failures**:
+```bash
+# Check Git configuration
+git --version
+git config --list
+
+# Clone with HTTPS instead of SSH
+git clone https://github.com/psydyllic/Planar.jl
+cd Planar.jl
+git submodule update --init --recursive
+```
+
+**Package compilation errors**:
 ```julia
-# Ensure correct project is active
+# Clear package cache completely
 using Pkg
-Pkg.activate("PlanarInteractive")
+Pkg.gc()
+rm(joinpath(first(DEPOT_PATH), "compiled"), recursive=true, force=true)
 Pkg.instantiate()
-```
-
-**Compilation failures**:
-```bash
-# Clear package cache and retry
-julia -e 'using Pkg; Pkg.gc(); Pkg.precompile()'
-```
-
-**Permission errors**:
-```bash
-# Fix Julia depot permissions (Linux/macOS)
-sudo chown -R $USER ~/.julia
 ```
 
 **Memory issues during compilation**:
 ```bash
 # Reduce parallel compilation
 export JULIA_NUM_THREADS=1
-julia --project=PlanarInteractive -e 'using Pkg; Pkg.instantiate()'
+
+# Increase swap space (Linux)
+sudo fallocate -l 4G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
 ```
+
+**Permission errors**:
+```bash
+# Fix Julia depot permissions (Linux/macOS)
+sudo chown -R $USER ~/.julia
+
+# Windows: Run as administrator or check folder permissions
+```
+
+### Platform-Specific Issues
+
+#### Windows
+
+**PowerShell execution policy**:
+```powershell
+# Allow script execution
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+**Long path issues**:
+```powershell
+# Enable long paths (requires admin)
+New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
+```
+
+**Antivirus interference**:
+- Add Julia installation directory to antivirus exclusions
+- Add `~/.julia` directory to exclusions
+- Temporarily disable real-time protection during installation
+
+#### macOS
+
+**Xcode Command Line Tools missing**:
+```bash
+# Install Xcode Command Line Tools
+xcode-select --install
+
+# Verify installation
+xcode-select -p
+```
+
+**Homebrew issues**:
+```bash
+# Update Homebrew
+brew update
+brew doctor
+
+# Reinstall problematic packages
+brew reinstall git julia
+```
+
+**Apple Silicon compatibility**:
+```bash
+# Check architecture
+uname -m
+
+# Force x86_64 if needed (not recommended)
+arch -x86_64 julia
+```
+
+#### Linux
+
+**Missing system dependencies**:
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install build-essential git curl
+
+# CentOS/RHEL/Fedora
+sudo yum groupinstall "Development Tools"
+sudo yum install git curl
+
+# Arch Linux
+sudo pacman -S base-devel git curl
+```
+
+**Library compatibility issues**:
+```bash
+# Check system libraries
+ldd --version
+ldconfig -p | grep -i ssl
+
+# Update system libraries
+sudo apt update && sudo apt upgrade  # Ubuntu/Debian
+sudo yum update                      # CentOS/RHEL
+```
+
+### Network and Connectivity Issues
+
+**Firewall blocking downloads**:
+```bash
+# Test connectivity
+curl -I https://github.com
+curl -I https://pkg.julialang.org
+
+# Configure proxy if needed
+export https_proxy=http://proxy.company.com:8080
+export http_proxy=http://proxy.company.com:8080
+```
+
+**DNS resolution issues**:
+```bash
+# Test DNS
+nslookup github.com
+nslookup pkg.julialang.org
+
+# Try alternative DNS
+echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+```
+
+### Performance Issues
+
+**Slow compilation**:
+```julia
+# Check available resources
+using Sys
+println("CPU cores: $(Sys.CPU_THREADS)")
+println("Memory: $(round(Sys.total_memory()/1024^3, digits=2)) GB")
+
+# Optimize compilation
+ENV["JULIA_NUM_THREADS"] = min(Sys.CPU_THREADS, 4)
+```
+
+**Disk space issues**:
+```bash
+# Check available space
+df -h
+
+# Clean Julia cache
+julia -e 'using Pkg; Pkg.gc()'
+
+# Clean Docker (if using Docker)
+docker system prune -a
+```
+
+## Installation Verification Checklist
+
+Use this checklist to ensure your installation is complete and working:
+
+### ✅ Basic System Check
+- [ ] Julia 1.11+ installed and accessible (`julia --version`)
+- [ ] Git installed and working (`git --version`)
+- [ ] Docker installed (if using Docker method) (`docker --version`)
+- [ ] Sufficient disk space (2GB+ available)
+- [ ] Stable internet connection
+
+### ✅ Planar Installation Check
+- [ ] Repository cloned successfully (source method)
+- [ ] Docker image pulled successfully (Docker method)
+- [ ] Environment variables configured (direnv or manual)
+- [ ] Julia project activated correctly
+- [ ] All dependencies installed without errors
+
+### ✅ Functionality Verification
+- [ ] `using PlanarInteractive` loads without errors
+- [ ] `@environment!` executes successfully
+- [ ] Strategy creation works (`strategy(:QuickStart, exchange=:binance)`)
+- [ ] Basic configuration accessible
+- [ ] Technical indicators available
+
+### ✅ Optional Features Check
+- [ ] Plotting backend loads (`using WGLMakie` or `using GLMakie`)
+- [ ] Data fetching works (with internet connection)
+- [ ] User directory structure created
+- [ ] Configuration files copied
 
 ### Getting Help
 
-If you encounter issues:
+If any checklist item fails:
 
-1. **Check the logs**: Julia compilation errors are usually detailed
-2. **Search existing issues**: Check the GitHub repository for similar problems
-3. **Ask for help**: Use the community resources listed in [Contacts](../contacts.md)
+1. **Review the error message**: Julia provides detailed error information
+2. **Check the [troubleshooting](../troubleshooting/) section**: Most common issues are covered above
+3. **Verify prerequisites**: Ensure all system requirements are met
+4. **Search existing issues**: Check the [GitHub repository](https://github.com/psydyllic/Planar.jl) for similar problems
+5. **Ask for help**: Use the community resources listed in [Contacts](../contacts.md)
 
 ### Performance Optimization
 
@@ -321,6 +603,12 @@ Pkg.precompile()
 # Create system image for even faster startup (advanced)
 # See scripts/build-sysimage.sh for details
 ```
+
+## See Also
+
+- **[Quick Start](quick-start.md)** - 15-minute getting started tutorial
+- **[First Strategy](getting-started/first-strategy.md)** - Build your first trading strategy
+- **[Installation Issues](troubleshooting/installation-issues.md)** - Related information
 
 ## Next Steps
 

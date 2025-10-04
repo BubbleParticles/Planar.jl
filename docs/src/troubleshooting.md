@@ -1,12 +1,69 @@
-# Troubleshooting
+---
+title: "Troubleshooting Overview"
+description: "Quick access to troubleshooting resources and common solutions"
+category: "troubleshooting"
+difficulty: "beginner"
+prerequisites: []
+related_topics: ["getting-started", "configuration", "strategy-development"]
+last_updated: "2025-10-04"
+estimated_time: "5 minutes"
+---
 
-This guide provides comprehensive solutions to common issues encountered when using Planar. Issues are organized by category with step-by-step diagnostic procedures and platform-specific solutions.
+# Troubleshooting Overview
+
+This page provides quick access to troubleshooting resources. For detailed solutions, visit the specific troubleshooting guides in the [troubleshooting section](troubleshooting/).
+
+## Quick Access to Solutions
+
+### Most Common Issues
+
+1. **Installation Problems** → [Installation Issues](troubleshooting/installation-issues.md)
+2. **Strategy Not Working** → [Strategy Problems](troubleshooting/strategy-problems.md)  
+3. **Slow Performance** → [Performance Issues](troubleshooting/performance-issues.md)
+4. **Exchange Errors** → [Exchange Issues](troubleshooting/exchange-issues.md)
+
+### Emergency Quick Fixes
+
+**Complete Reset (Nuclear Option):**
+```julia
+# Clear all caches and restart fresh
+rm(joinpath(first(DEPOT_PATH), "compiled"), recursive=true, force=true)
+; find ./ -name .CondaPkg | xargs -I {} rm -r {}
+julia --project=Planar -e "using Pkg; Pkg.instantiate()"
+```
+
+**Dependency Issues:**
+```julia
+include("resolve.jl")
+recurse_projects(update=true)
+```
+
+**Python Problems:**
+```julia
+; find ./ -name .CondaPkg | xargs -I {} rm -r {}
+using Python
+import Pkg; Pkg.instantiate()
+```
+
+## Comprehensive Troubleshooting Guides
+
+For detailed solutions with step-by-step instructions, platform-specific guidance, and advanced diagnostics, see:
+
+- **[Troubleshooting Index](troubleshooting/)** - Complete troubleshooting guide with all categories
+- **[Installation Issues](troubleshooting/installation-issues.md)** - Setup, dependencies, environment configuration
+- **[Strategy Problems](troubleshooting/strategy-problems.md)** - Development, execution, debugging
+- **[Performance Issues](troubleshooting/performance-issues.md)** - Optimization, memory, speed
+- **[Exchange Issues](troubleshooting/exchange-issues.md)** - Connectivity, authentication, trading
+
+## Legacy Content Notice
+
+This page previously contained comprehensive troubleshooting information. That content has been reorganized into categorized guides for better navigation and maintenance. If you're looking for specific troubleshooting information, please check the appropriate category above.
 
 ## Quick Diagnostic Checklist
 
 Before diving into specific issues, try these common solutions:
 
-1. **Environment Check**: Ensure you're using the correct Julia project
+1. **Environment Check**: Ensure you're using the correct [Julia](https://julialang.org/) project
    ```bash
    julia --project=Planar  # or PlanarInteractive
    ```
@@ -17,7 +74,7 @@ Before diving into specific issues, try these common solutions:
    recurse_projects()  # Add update=true if needed
    ```
 
-3. **Clean Restart**: Exit Julia completely and restart with a fresh REPL
+3. **Clean Restart**: Exit [Julia](https://julialang.org/) completely and restart with a fresh REPL
 
 4. **Check Environment Variables**: Verify `JULIA_PROJECT`, `JULIA_NUM_THREADS`, and other relevant settings
 
@@ -52,7 +109,7 @@ rm(joinpath(first(DEPOT_PATH), "compiled"), recursive=true, force=true)
 **Symptoms**: Precompilation errors when activating project in existing REPL
 
 **Diagnostic Steps**:
-1. Check if Julia was started with correct project
+1. Check if [Julia](https://julialang.org/) was started with correct project
 2. Verify environment variables are set correctly
 3. Look for conflicting package environments
 
@@ -120,7 +177,7 @@ julia --project=Planar -e "using Pkg; Pkg.precompile()"
 
 ### Debug Symbol Issues
 
-**Symptoms**: `_debug_` not found errors during strategy execution
+**Symptoms**: `_debug_` not found errors during [strategy](../guides/strategy-development.md) execution
 
 **Diagnostic Steps**:
 1. Check if `JULIA_DEBUG="all"` is set
@@ -172,7 +229,7 @@ CondaPkg.add("package_name")  # Add specific packages
 **Symptoms**: Persistent Python module resolution failures, environment conflicts
 
 **Diagnostic Steps**:
-1. Check CondaPkg status and configuration
+1. Check CondaPkg status and [configuration](../config.md)
 2. Verify environment variables are set correctly
 3. Look for conflicting Python installations
 
@@ -227,15 +284,15 @@ GC.gc()  # Force garbage collection if needed
 **Symptoms**: Timeout errors, connection refused, API calls hanging
 
 **Diagnostic Steps**:
-1. Check exchange status and maintenance schedules
+1. Check [exchange](../[exchanges](../exchanges.md).md) status and maintenance schedules
 2. Verify API credentials and permissions
-3. Test network connectivity to exchange endpoints
+3. Test network connectivity to [exchange](../[exchanges](../exchanges.md).md) endpoints
 
 **Solutions**:
 ```julia
 # Step 1: Test basic connectivity
 using Exchanges
-exchange = getexchange(:binance)  # or your exchange
+[exchange](../[exchanges](../exchanges.md).md) = getexchange(:binance)  # or your exchange
 try
     exchange.fetch_ticker("BTC/USDT")
     @info "Exchange connection working"
@@ -258,14 +315,14 @@ exchange.rateLimit = 1200  # Adjust rate limiting
 **Symptoms**: Authentication errors, invalid API key messages, permission denied
 
 **Diagnostic Steps**:
-1. Verify API credentials in `secrets.toml`
+1. Verify API credentials in `[secrets.toml](../config.md#secrets-management)`
 2. Check API key permissions on exchange
 3. Verify IP whitelist settings if applicable
 
 **Solutions**:
 ```julia
 # Step 1: Verify credentials format
-# Check user/secrets.toml for correct format:
+# Check user/[secrets.toml](../config.md#secrets-management) for correct format:
 # [exchanges.binance]
 # apiKey = "your_api_key"
 # secret = "your_secret"
@@ -282,8 +339,8 @@ end
 
 # Step 3: Check API permissions
 # Ensure your API key has required permissions:
-# - Spot trading (for spot strategies)
-# - Futures trading (for margin strategies)
+# - Spot trading (for spot [strategies](../guides/strategy-development.md))
+# - Futures trading (for margin [strategies](../guides/strategy-development.md))
 # - Read permissions for data fetching
 ```
 
@@ -320,7 +377,7 @@ using Logging
 **Diagnostic Steps**:
 1. Check current database size usage
 2. Monitor available disk space
-3. Verify LMDB configuration
+3. Verify LMDB [configuration](../config.md)
 
 **Solutions**:
 ```julia
@@ -347,7 +404,7 @@ Data.mapsize!(zi, 4096) # 4GB for large datasets
 
 ### Data Corruption Issues
 
-**Symptoms**: Segfaults when saving OHLCV, corrupted data reads, database errors
+**Symptoms**: Segfaults when saving [OHLCV](../guides/data-management.md#ohlcv-data), corrupted data reads, database errors
 
 **Diagnostic Steps**:
 1. Check for incomplete write operations
@@ -389,12 +446,12 @@ end
 **Solutions**:
 ```julia
 # Option 1: Disable LMDB if not available
-# Add to your strategy Project.toml:
+# Add to your [strategy](../guides/strategy-development.md) Project.toml:
 [preferences.Data]
 data_store = "" # Disables lmdb (set it back to "lmdb" to enable lmdb)
 
 # Option 2: Use alternative storage
-# Configure alternative data storage in strategy
+# Configure alternative data storage in [strategy](../guides/strategy-development.md)
 using Data
 # Use in-memory or file-based storage instead
 
@@ -426,10 +483,10 @@ catch e
 end
 
 # Step 2: Implement retry logic
-function robust_fetch(exchange, symbol, timeframe; retries=3)
+function robust_fetch(exchange, symbol, [timeframe](../guides/data-management.md#timeframes); retries=3)
     for i in 1:retries
         try
-            return fetch_ohlcv(exchange, symbol, timeframe)
+            return fetch_ohlcv(exchange, symbol, [timeframe](../guides/data-management.md#timeframes))
         catch e
             @warn "Fetch attempt $i failed" exception=e
             sleep(2^i)  # Exponential backoff
@@ -489,7 +546,7 @@ Makie.inline!(true)   # Re-enable if needed
 
 **Diagnostic Steps**:
 1. Check if required system libraries are installed
-2. Verify display server configuration (Linux)
+2. Verify display server [configuration](../config.md) (Linux)
 3. Test graphics driver compatibility
 
 **Solutions**:
@@ -623,9 +680,9 @@ WGLMakie.activate!()
 
 **Solutions**:
 ```julia
-# Step 1: Verify strategy configuration in user/planar.toml
+# Step 1: Verify strategy configuration in user/[planar.toml](../config.md#configuration-file)
 [strategies.MyStrategy]
-path = "strategies/MyStrategy"  # Correct path
+path = "[strategies](../guides/strategy-development.md)/MyStrategy"  # Correct path
 # or
 package = "MyStrategy"  # If using package format
 
@@ -650,7 +707,7 @@ end
 
 **Diagnostic Steps**:
 1. Check strategy logic and data dependencies
-2. Verify market data availability
+2. Verify [market data](../guides/data-management.md) availability
 3. Look for timing or synchronization issues
 
 **Solutions**:
@@ -667,7 +724,7 @@ data = strategy.data_source()
 # Test signal generation
 signals = generate_signals(strategy, data)
 
-# Step 3: Use simulation mode for debugging
+# Step 3: Use [simulation](../guides/execution-modes.md#simulation-mode) mode for debugging
 using SimMode
 sim = SimMode.Simulator(strategy)
 SimMode.run!(sim, start_date, end_date)
@@ -879,7 +936,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ### Strategy Execution Performance
 
-**Symptoms**: Slow backtesting, high CPU usage, long execution times
+**Symptoms**: Slow [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode), high CPU usage, long execution times
 
 **Diagnostic Steps**:
 1. Profile strategy execution to identify bottlenecks
@@ -893,7 +950,7 @@ using Profile, ProfileView
 # Profile strategy execution
 @profile begin
     strategy = load_strategy(:MyStrategy)
-    result = backtest(strategy, start_date, end_date)
+    result = [backtest](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode)(strategy, start_date, end_date)
 end
 
 # View results
@@ -973,7 +1030,7 @@ end
 using BenchmarkTools
 
 # Benchmark memory allocations
-@benchmark backtest($strategy, $start_date, $end_date)
+@benchmark [backtest](../guides/execution-modes.md#simulation-mode)($strategy, $start_date, $end_date)
 
 # Monitor memory usage
 function monitor_memory(f, args...)
@@ -991,7 +1048,7 @@ function monitor_memory(f, args...)
 end
 
 # Use with strategy execution
-result = monitor_memory(backtest, strategy, start_date, end_date)
+result = monitor_memory([backtest](../guides/execution-modes.md#simulation-mode), strategy, start_date, end_date)
 ```
 
 **Memory Optimization Techniques**:
@@ -1038,7 +1095,7 @@ end
 
 ### Data-Related Performance Issues
 
-**Symptoms**: Slow data loading, high I/O wait times, database performance issues
+**Symptoms**: Slow data loading, high I/O wait times, database [performance issues](../[troubleshooting](../troubleshooting/)/performance-issues.md)
 
 **Diagnostic Steps**:
 1. Monitor I/O operations and disk usage
@@ -1055,7 +1112,7 @@ using Data
 all_data = load_ohlcv(:binance, "BTC/USDT", "1h", DateTime(2020,1,1), DateTime(2024,1,1))
 
 # Good: Progressive loading with caching
-function load_data_progressively(exchange, symbol, timeframe, start_date, end_date; chunk_days=30)
+function load_data_progressively(exchange, symbol, [timeframe](../guides/data-management.md#timeframes), start_date, end_date; chunk_days=30)
     cache = Dict()
     current_date = start_date
     
@@ -1082,17 +1139,17 @@ Data.mapsize!(zi, 4096)  # Increase map size
 # Use batch operations when possible
 Data.batch_save_ohlcv!(zi, exchange, symbol_data_pairs)
 
-# Issue 3: Zarr array optimization
+# Issue 3: Zarr array [optimization](../optimization.md)
 # Configure chunk sizes for your access patterns
 zarr_array = zarr_create(Float64, (1000000, 5), chunks=(10000, 5))  # Optimize chunk size
 ```
 
 ### Optimization and Backtesting Performance
 
-**Symptoms**: Slow parameter optimization, long backtesting times, inefficient search
+**Symptoms**: Slow [parameter optimization](../[optimization](../optimization.md).md), long [backtesting](../guides/execution-modes.md#simulation-mode) times, inefficient search
 
 **Diagnostic Steps**:
-1. Profile optimization algorithms
+1. Profile [optimization](../optimization.md) algorithms
 2. Check parameter space size and search efficiency
 3. Monitor parallel execution utilization
 
@@ -1129,7 +1186,7 @@ function optimize_hierarchical(strategy, param_ranges)
     return fine_results
 end
 
-# Issue 2: Inefficient backtesting
+# Issue 2: Inefficient [backtesting](../guides/execution-modes.md#simulation-mode)
 # Bad: Recalculating indicators for each parameter set
 function backtest_strategy(params)
     data = load_data()  # Loads same data repeatedly
@@ -1317,11 +1374,21 @@ function comprehensive_monitor(f, args...)
 end
 ```
 
+
+## See Also
+
+- **[Exchanges](../exchanges.md)** - Exchange integration and configuration
+- **[Config](../config.md)** - Exchange integration and configuration
+- **[Overview](../troubleshooting/index.md)** - Troubleshooting: Troubleshooting and problem resolution
+- **[Optimization](../optimization.md)** - Performance optimization techniques
+- **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
+- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
+
 ## Getting Help
 
 ### Before Seeking Help
 
-1. **Check this troubleshooting guide** for your specific issue
+1. **Check this [troubleshooting](../troubleshooting/) guide** for your specific issue
 2. **Search existing GitHub issues** for similar problems
 3. **Try the diagnostic steps** provided for your issue category
 4. **Gather relevant information**:

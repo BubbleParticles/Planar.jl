@@ -1,19 +1,26 @@
+---
+category: "strategy-development"
+difficulty: "advanced"
+topics: [execution-modes, margin-trading, exchanges, data-management, optimization, strategy-development, troubleshooting, visualization, configuration]
+last_updated: "2025-10-04"---
+---
+
 # Running in Paper Mode
 
-Paper mode provides a realistic simulation environment that uses live market data while simulating order execution. This allows you to test strategies with real market conditions without risking actual capital.
+Paper mode provides a realistic [simulation](../guides/execution-modes.md#simulation-mode) environment that uses live [market data](../guides/data-management.md) while simulating order execution. This allows you to test [strategies](../guides/strategy-development.md) with real market conditions without risking actual capital.
 
 ## Configuration Options
 
-In order to configure a strategy in paper mode, you can define the default mode in `user/planar.toml` or in your strategy project's `Project.toml` file. Alternatively, pass the mode as a keyword argument:
+In order to configure a [strategy](../guides/strategy-development.md) in paper mode, you can define the default mode in `user/[planar.toml](../config.md#[configuration](../config.md)-file)` or in your [strategy](../guides/strategy-development.md) project's `Project.toml` file. Alternatively, pass the mode as a keyword argument:
 
 ### Configuration via TOML Files
 
 ```toml
-# user/planar.toml
+# user/[planar.toml](../config.md#[configuration](../config.md)-file)
 [Example]
 mode = "Paper"
-exchange = "binance"
-throttle = 5  # seconds between strategy calls
+[exchange](../[exchanges](../exchanges.md).md) = "binance"
+throttle = 5  # seconds between [strategy](../guides/strategy-development.md) calls
 initial_cash = 10000.0
 ```
 
@@ -21,10 +28,10 @@ initial_cash = 10000.0
 # Strategy Project.toml
 [strategy]
 mode = "Paper"
-sandbox = true  # Use exchange sandbox/testnet
+sandbox = true  # Use [exchange](../[exchanges](../exchanges.md).md) sandbox/testnet
 ```
 
-### Configuration via Julia Code
+### Configuration via [Julia](https://julialang.org/) Code
 
 ```julia
 using Strategies
@@ -33,7 +40,7 @@ s = strategy(:Example, mode=Paper())
 # Or with additional parameters
 s = strategy(:Example, 
     mode=Paper(), 
-    exchange=:binance,
+    [exchange](../[exchanges](../exchanges.md).md)=:binance,
     initial_cash=10000.0,
     throttle=5
 )
@@ -57,7 +64,7 @@ start!(s, foreground=true, verbose=true)
 # Run in background
 start!(s, foreground=false)
 
-# Custom logging configuration
+# Custom logging [configuration](../config.md)
 start!(s, 
     foreground=true,
     log_level=:debug,
@@ -77,7 +84,7 @@ Upon executing this, the following log output is expected:
 ┌ Info: Starting strategy ExampleMargin in paper mode!
 │
 │     throttle: 5 seconds
-│     timeframes: 1m(main), 1m(optional), 1m 15m 1h 1d(extras)
+│     [timeframes](../guides/data-management.md#timeframes): 1m(main), 1m(optional), 1m 15m 1h 1d(extras)
 │     cash: USDT: 100.0 (on phemex) [100.0]
 │     assets: ETH/USDT:USDT, BTC/USDT:USDT, SOL/USDT:USDT
 │     margin: Isolated()
@@ -147,7 +154,7 @@ for asset in s.universe
     setup_live_data!(s, asset, "1m")
 end
 
-# Start paper trading
+# Start [paper trading](../guides/execution-modes.md#paper-mode)
 start!(s, foreground=true)
 ```
 
@@ -156,7 +163,7 @@ start!(s, foreground=true)
 ```julia
 using Strategies, PaperMode
 
-# Create margin strategy with isolated margin
+# Create margin strategy with [isolated margin](../guides/strategy-development.md#margin-modes)
 s = strategy(:MarginStrategy, 
     mode=Paper(),
     margin=Isolated(),
@@ -168,10 +175,10 @@ s.config.initial_cash = 5000.0
 s.config.max_leverage = 10.0
 s.config.risk_per_trade = 0.02  # 2% risk per trade
 
-# Set up multi-timeframe data
-timeframes = ["1m", "5m", "15m", "1h"]
+# Set up multi-[timeframe](../guides/data-management.md#timeframes) data
+[timeframes](../guides/data-management.md#timeframes) = ["1m", "5m", "15m", "1h"]
 for asset in s.universe
-    for tf in timeframes
+    for tf in [timeframes](../guides/data-management.md#timeframes)
         setup_live_data!(s, asset, tf)
     end
 end
@@ -191,9 +198,9 @@ start!(s,
 ### Multi-Exchange Paper Trading
 
 ```julia
-# Set up strategies on multiple exchanges
+# Set up [strategies](../guides/strategy-development.md) on multiple exchanges
 exchanges = [:binance, :bybit, :okx]
-strategies = Dict()
+[strategies](../guides/strategy-development.md) = Dict()
 
 for exchange in exchanges
     s = strategy(:ArbitrageStrategy, 
@@ -217,7 +224,7 @@ end
 # Start all strategies
 for (exchange, strategy) in strategies
     @async start!(strategy, foreground=false)
-    @info "Started paper trading on $exchange"
+    @info "Started [paper trading](../guides/execution-modes.md#paper-mode) on $exchange"
 end
 
 # Monitor all strategies
@@ -385,6 +392,16 @@ function update_metrics!(metrics::PaperTradingMetrics, s)
     return metrics
 end
 ```
+
+
+## See Also
+
+- **[Exchanges](../exchanges.md)** - Exchange integration and configuration
+- **[Config](../config.md)** - Exchange integration and configuration
+- **[Optimization](../optimization.md)** - Performance optimization techniques
+- **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
+- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
+- **[Exchanges](../exchanges.md)** - Data handling and management
 
 ## Risk Management in Paper Mode
 

@@ -1,25 +1,42 @@
+---
+category: "strategy-development"
+difficulty: "advanced"
+topics: [execution-modes, data-management, optimization, strategy-development, troubleshooting]
+last_updated: "2025-10-04"---
+---
+
 # Backtesting overview
 
 ## Goals
 
-- The backtest should be able to be executed given a custom start and end date.
-- The strategy has to have access to the OHLCV and all past trade history.
-- It must be able to run during live trading.
+- The [backtest](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode) should be able to be executed given a custom start and end date.
+- The [strategy](../guides/strategy-development.md) has to have access to the [OHLCV](../guides/data-management.md#ohlcv-data) and all past trade history.
+- It must be able to run during [live trading](../guides/execution-modes.md#live-mode).
 
 ## Main loop
 
 - for each `timestamp`:
   - while true:
-    - process(`strategy`, `timestamp`, `context`)
+    - process(`[strategy](../guides/strategy-development.md)`, `timestamp`, `context`)
     
-The loop is just a timestamp feeder!, and the strategy holds all the state.
+The loop is just a timestamp feeder!, and the [strategy](../guides/strategy-development.md) holds all the state.
 
 - Because we use the `TimeFrames` abstraction, the step can be arbitrary, the strategy will just index into ohlcv data according to the last candle compatible with the given timestamp. This is a performance trade-off, we prefer to always index with dates, and never with integers, because it reduces the assumptions to _the row data must match its timestamp_ (its not corrupted!) compared to spurious bugs that might arise by integer indexing.
-- The simulation is adversarial to the strategy, it is the job of the simulation to decide __how much__ loss a trade has incurred.
+- The [simulation](../guides/execution-modes.md#simulation-mode) is adversarial to the strategy, it is the job of the [simulation](../guides/execution-modes.md#simulation-mode) to decide __how much__ loss a trade has incurred.
 
 ## Strategy General Considerations
 
 - The strategy must account for a  tie breaker to choose which trades to perform on the same candle since we don't know which pair we observed first. In general this is a good use case for MC.
+
+
+## See Also
+
+- **[Optimization](../optimization.md)** - Performance optimization techniques
+- **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
+- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
+- **[Exchanges](../exchanges.md)** - Data handling and management
+- **[Strategy Development](../guides/strategy-development.md)** - Guide: Strategy development and implementation
+- **[Optimization](../optimization.md)** - Strategy development and implementation
 
 ## What does executing an order mean?
 When the engine executes an order, it does the following for every order:

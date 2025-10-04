@@ -1,0 +1,26 @@
+---
+category: "optimization"
+difficulty: "advanced"
+topics: [exchanges, optimization, troubleshooting]
+last_updated: "2025-10-04"---
+---
+
+# Advanced Topics
+
+This section covers advanced Planar usage patterns and customization techniques.
+
+## Available Topics
+
+- [Customization](customization.md) - Extending Planar
+- [Margin Trading](margin-trading.md) - Advanced trading features
+- [Multi-Exchange](multi-[exchange](../[exchanges](../exchanges.md).md).md) - Complex setups
+- [Performance](performance.md) - Optimization and scaling
+
+## Prerequisites
+
+These topics assume familiarity with basic Planar concepts covered in the [Development Guides](../guides/).
+
+## See Also
+
+- [API Reference](../reference/) - Complete function documentation
+- [Troubleshooting](../[troubleshooting](../troubleshooting/)/) - Problem resolution

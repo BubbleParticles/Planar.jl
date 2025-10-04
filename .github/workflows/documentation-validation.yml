@@ -1,0 +1,334 @@
+name: Documentation Validation
+
+on:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - '*.md'
+  push:
+    branches: [main, develop]
+    paths:
+      - 'docs/**'
+      - '*.md'
+
+jobs:
+  validate-documentation:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Julia
+      uses: julia-actions/setup-julia@v1
+      with:
+        version: '1.11'
+        
+    - name: Cache Julia packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.julia
+        key: ${{ runner.os }}-julia-${{ hashFiles('**/Project.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-julia-
+          
+    - name: Install Julia dependencies
+      run: |
+        julia --project=. -e 'using Pkg; Pkg.instantiate()'
+        
+    - name: Validate links
+      run: |
+        chmod +x scripts/check-links.sh
+        ./scripts/check-links.sh
+        
+    - name: Validate code examples
+      run: |
+        julia --project=. scripts/validate-examples.jl
+        
+    - name: Check template compliance
+      run: |
+        chmod +x scripts/check-templates.sh
+        ./scripts/check-templates.sh
+        
+    - name: Generate content freshness report
+      run: |
+        julia --project=. scripts/freshness-report.jl
+        
+    - name: Upload validation reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: validation-reports
+        path: |
+          docs/maintenance/link-check-report.md
+          docs/maintenance/code-validation-report.md
+          docs/maintenance/template-compliance-report.md
+          docs/maintenance/freshness-report.md
+          
+    - name: Comment PR with validation results
+      uses: actions/github-script@v6
+      if: github.event_name == 'pull_request'
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Read validation reports
+          let comment = '## 📋 Documentation Validation Results\n\n';
+          
+          try {
+            // Link check results
+            if (fs.existsSync('docs/maintenance/link-check-report.md')) {
+              const linkReport = fs.readFileSync('docs/maintenance/link-check-report.md', 'utf8');
+              const brokenLinks = (linkReport.match(/❌/g) || []).length;
+              if (brokenLinks === 0) {
+                comment += '✅ **Link Validation**: All links are working\n';
+              } else {
+                comment += `❌ **Link Validation**: ${brokenLinks} broken links found\n`;
+              }
+            }
+            
+            // Code validation results
+            if (fs.existsSync('docs/maintenance/code-validation-report.md')) {
+              const codeReport = fs.readFileSync('docs/maintenance/code-validation-report.md', 'utf8');
+              const failedExamples = (codeReport.match(/❌ Fail/g) || []).length;
+              const totalExamples = (codeReport.match(/✅ Pass|❌ Fail/g) || []).length;
+              if (failedExamples === 0) {
+                comment += `✅ **Code Validation**: All ${totalExamples} examples working\n`;
+              } else {
+                comment += `❌ **Code Validation**: ${failedExamples}/${totalExamples} examples failed\n`;
+              }
+            }
+            
+            // Template compliance results
+            if (fs.existsSync('docs/maintenance/template-compliance-report.md')) {
+              const templateReport = fs.readFileSync('docs/maintenance/template-compliance-report.md', 'utf8');
+              const issues = (templateReport.match(/❌|⚠️/g) || []).length;
+              if (issues === 0) {
+                comment += '✅ **Template Compliance**: All templates followed correctly\n';
+              } else {
+                comment += `⚠️ **Template Compliance**: ${issues} issues found\n`;
+              }
+            }
+            
+            comment += '\n📊 **Detailed Reports**: Check the workflow artifacts for complete validation reports.\n';
+            
+            // Add guidance for contributors
+            comment += '\n### For Contributors\n';
+            comment += 'If validation failed:\n';
+            comment += '1. Check the detailed reports in the workflow artifacts\n';
+            comment += '2. Fix any broken links or code examples\n';
+            comment += '3. Ensure proper frontmatter and template compliance\n';
+            comment += '4. Run validation scripts locally before pushing:\n';
+            comment += '   ```bash\n';
+            comment += '   ./scripts/check-links.sh\n';
+            comment += '   julia scripts/validate-examples.jl\n';
+            comment += '   ./scripts/check-templates.sh\n';
+            comment += '   ```\n';
+            
+          } catch (error) {
+            comment += `❌ **Validation Error**: ${error.message}\n`;
+          }
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  spell-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install aspell
+      run: sudo apt-get install -y aspell aspell-en
+      
+    - name: Create custom dictionary
+      run: |
+        cat > .aspell.en.pws << 'EOF'
+        personal_ws-1.1 en 100
+        Planar
+        Julia
+        CCXT
+        API
+        APIs
+        backtesting
+        cryptocurrency
+        OHLCV
+        timeframe
+        timeframes
+        config
+        configs
+        workflow
+        workflows
+        GitHub
+        Markdown
+        YAML
+        JSON
+        TOML
+        DataFrame
+        DataFrames
+        async
+        await
+        struct
+        structs
+        enum
+        enums
+        tuple
+        tuples
+        dict
+        dicts
+        EOF
+        
+    - name: Spell check documentation
+      run: |
+        find docs -name "*.md" -exec aspell --personal=./.aspell.en.pws --dont-backup --mode=markdown check {} \;
+        
+    - name: Check for common writing issues
+      run: |
+        echo "Checking for common writing issues..."
+        
+        # Check for passive voice indicators
+        echo "Checking for passive voice..."
+        grep -r "is being\|was being\|will be\|has been\|have been\|had been" docs/ --include="*.md" || true
+        
+        # Check for weak words
+        echo "Checking for weak language..."
+        grep -r "very\|really\|quite\|rather\|somewhat\|pretty\|fairly" docs/ --include="*.md" || true
+        
+        # Check for unclear references
+        echo "Checking for unclear references..."
+        grep -r "this\|that\|these\|those" docs/ --include="*.md" | grep -v "this tutorial\|this guide\|this section" || true
+
+  accessibility-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Check heading hierarchy
+      run: |
+        echo "Checking heading hierarchy..."
+        python3 << 'EOF'
+        import os
+        import re
+        
+        def check_heading_hierarchy(file_path):
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            headings = re.findall(r'^(#{1,6})\s+(.+)$', content, re.MULTILINE)
+            issues = []
+            
+            prev_level = 0
+            for heading_match in headings:
+                level = len(heading_match[0])
+                title = heading_match[1]
+                
+                # Check for level jumps (e.g., H1 to H3)
+                if prev_level > 0 and level > prev_level + 1:
+                    issues.append(f"Heading level jump: H{prev_level} to H{level} - '{title}'")
+                
+                prev_level = level
+            
+            return issues
+        
+        all_issues = []
+        for root, dirs, files in os.walk('docs'):
+            for file in files:
+                if file.endswith('.md'):
+                    file_path = os.path.join(root, file)
+                    issues = check_heading_hierarchy(file_path)
+                    for issue in issues:
+                        all_issues.append(f"{file_path}: {issue}")
+        
+        if all_issues:
+            print("Heading hierarchy issues found:")
+            for issue in all_issues:
+                print(f"  - {issue}")
+        else:
+            print("✅ All heading hierarchies are correct")
+        EOF
+        
+    - name: Check alt text for images
+      run: |
+        echo "Checking for images without alt text..."
+        grep -r "!\[\](" docs/ --include="*.md" && echo "❌ Images without alt text found" || echo "✅ All images have alt text"
+        
+    - name: Check link accessibility
+      run: |
+        echo "Checking for inaccessible link text..."
+        grep -r "\[click here\]\|\[here\]\|\[link\]\|\[read more\]" docs/ --include="*.md" && echo "❌ Non-descriptive link text found" || echo "✅ All links have descriptive text"
+
+  performance-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Check file sizes
+      run: |
+        echo "Checking for large documentation files..."
+        find docs -name "*.md" -size +100k -exec ls -lh {} \; | while read line; do
+          echo "⚠️ Large file detected: $line"
+        done
+        
+    - name: Check for large images
+      run: |
+        echo "Checking for large images..."
+        find docs -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.gif" | while read file; do
+          size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo 0)
+          if [ "$size" -gt 1048576 ]; then  # 1MB
+            echo "⚠️ Large image detected: $file ($(($size / 1024))KB)"
+          fi
+        done
+        
+    - name: Check markdown complexity
+      run: |
+        echo "Checking markdown complexity..."
+        python3 << 'EOF'
+        import os
+        import re
+        
+        def analyze_complexity(file_path):
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Count various elements
+            headings = len(re.findall(r'^#{1,6}', content, re.MULTILINE))
+            links = len(re.findall(r'\[.*?\]\(.*?\)', content))
+            code_blocks = len(re.findall(r'```', content)) // 2
+            lists = len(re.findall(r'^\s*[-*+]\s', content, re.MULTILINE))
+            
+            # Calculate complexity score
+            complexity = headings + (links * 0.5) + (code_blocks * 2) + (lists * 0.3)
+            
+            return {
+                'headings': headings,
+                'links': links,
+                'code_blocks': code_blocks,
+                'lists': lists,
+                'complexity': complexity
+            }
+        
+        high_complexity_files = []
+        for root, dirs, files in os.walk('docs'):
+            for file in files:
+                if file.endswith('.md'):
+                    file_path = os.path.join(root, file)
+                    stats = analyze_complexity(file_path)
+                    if stats['complexity'] > 50:  # Threshold for high complexity
+                        high_complexity_files.append((file_path, stats))
+        
+        if high_complexity_files:
+            print("High complexity files detected:")
+            for file_path, stats in high_complexity_files:
+                print(f"  - {file_path}: complexity={stats['complexity']:.1f}")
+        else:
+            print("✅ All files have reasonable complexity")
+        EOF

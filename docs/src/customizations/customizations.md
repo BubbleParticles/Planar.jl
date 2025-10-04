@@ -1,17 +1,24 @@
+---
+category: "strategy-development"
+difficulty: "advanced"
+topics: [execution-modes, margin-trading, exchanges, data-management, optimization, strategy-development, troubleshooting]
+last_updated: "2025-10-04"---
+---
+
 # Comprehensive Customization Guide
 
-Planar's architecture is built around Julia's powerful dispatch system, enabling deep customization without modifying core framework code. This guide provides detailed instructions for extending Planar's functionality through custom implementations.
+Planar's architecture is built around [Julia](https://julialang.org/)'s powerful [dispatch system](../guides/[strategy](../guides/strategy-development.md)-development.md#dispatch-system), enabling deep customization without modifying core framework code. This guide provides detailed instructions for extending Planar's functionality through custom implementations.
 
 ## Understanding Planar's Dispatch System
 
-Planar leverages Julia's multiple dispatch to provide customization points throughout the framework. The key insight is that behavior is determined by the combination of argument types, allowing you to specialize functionality for specific scenarios.
+Planar leverages [Julia](https://julialang.org/)'s [multiple dispatch](../guides/[strategy](../guides/strategy-development.md)-development.md#dispatch-system) to provide customization points throughout the framework. The key insight is that behavior is determined by the combination of argument types, allowing you to specialize functionality for specific scenarios.
 
 ### Core Parametrized Types
 
 The framework provides parametrized types for various elements:
 - **Strategies**: `Strategy{Mode}` where `Mode` can be `Sim`, `Paper`, or `Live`
 - **Assets**: `Asset`, `Derivative` and other `AbstractAsset` subtypes
-- **Instances**: `AssetInstance{Asset, Exchange}` combining assets with exchanges
+- **Instances**: `AssetInstance{Asset, Exchange}` combining assets with [exchanges](../exchanges.md)
 - **Orders and Trades**: `Order{OrderType}` and `Trade{OrderType}`
 - **Exchanges**: `Exchange` subtypes with `ExchangeID` parameters
 
@@ -169,8 +176,8 @@ function call!(
     kwargs...
 ) where A
     # Use Binance's native trailing stop functionality
-    exchange = get_exchange(ai)
-    return exchange.create_trailing_stop_order(
+    [exchange](../[exchanges](../exchanges.md).md) = get_exchange(ai)
+    return [exchange](../[exchanges](../exchanges.md).md).create_trailing_stop_order(
         symbol = string(ai.asset),
         amount = kwargs[:amount],
         trail_amount = kwargs[:trail_amount],
@@ -183,7 +190,7 @@ end
 
 ### Exchange Interface Requirements
 
-To implement a custom exchange, you need to satisfy the interface defined by the `check` function in the `Exchanges` module. Here's a comprehensive example:
+To implement a custom [exchange](../exchanges.md), you need to satisfy the interface defined by the `check` function in the `Exchanges` module. Here's a comprehensive example:
 
 ```julia
 using Exchanges
@@ -218,11 +225,11 @@ end
 function Exchanges.fetch_ohlcv(
     exchange::MyBrokerExchange,
     symbol::String,
-    timeframe::String,
+    [timeframe](../guides/data-management.md#timeframes)::String,
     since::Union{Int, Nothing} = nothing,
     limit::Union{Int, Nothing} = nothing
 )
-    params = Dict("symbol" => symbol, "interval" => timeframe)
+    params = Dict("symbol" => symbol, "interval" => [timeframe](../guides/data-management.md#timeframes))
     since !== nothing && (params["startTime"] = since)
     limit !== nothing && (params["limit"] = limit)
     
@@ -345,7 +352,7 @@ end
 
 ### Strategy-Specific Functions
 
-Create "snowflake" functions for specific strategies:
+Create "snowflake" functions for specific [strategies](../guides/strategy-development.md):
 
 ```julia
 # General implementation
@@ -360,7 +367,7 @@ function calculate_position_size(
     ai::AssetInstance,
     signal_strength::Float64
 ) where Mode
-    # Aggressive strategy uses higher leverage
+    # Aggressive [strategy](../guides/strategy-development.md) uses higher [leverage](../guides/strategy-development.md#margin-modes)
     return s.base_position_size * signal_strength * 2.0
 end
 
@@ -378,7 +385,7 @@ end
 
 ### Custom Indicators and Signals
 
-Extend the framework with custom technical indicators:
+Extend the framework with custom [technical indicators](../guides/strategy-development.md#technical-indicators):
 
 ```julia
 using Statistics
@@ -561,7 +568,7 @@ Document your customizations thoroughly:
 """
     custom_momentum_strategy(s::Strategy, ai::AssetInstance, date::DateTime)
 
-Custom momentum strategy implementation that uses a combination of RSI and MACD
+Custom momentum strategy implementation that uses a combination of [RSI](../guides/strategy-development.md#technical-indicators) and MACD
 indicators to generate trading signals.
 
 # Arguments
@@ -610,11 +617,21 @@ function efficient_processing(input::Vector{Float64})
 end
 ```
 
+
+## See Also
+
+- **[Exchanges](../exchanges.md)** - Exchange integration and configuration
+- **[Config](../config.md)** - Exchange integration and configuration
+- **[Overview](../troubleshooting/index.md)** - Troubleshooting: Troubleshooting and problem resolution
+- **[Optimization](../optimization.md)** - Performance optimization techniques
+- **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
+- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
+
 ## Troubleshooting Customizations
 
 ### Common Issues
 
-1. **Method Ambiguity**: When multiple dispatch signatures could match
+1. **Method Ambiguity**: When [multiple dispatch](../guides/strategy-development.md#dispatch-system) signatures could match
 ```julia
 # Problem: Ambiguous methods
 function my_function(::Strategy{Sim}, ::AssetInstance) end
@@ -662,4 +679,4 @@ end
 3. Use `methodswith` to find all methods for a type
 4. Use `@which` to determine which method will be called
 
-Remember to leverage this flexibility to enhance functionality without overcomplicating the system, thus avoiding "complexity bankruptcy."
+Remember to [leverage](../guides/strategy-development.md#margin-modes) this flexibility to enhance functionality without overcomplicating the system, thus avoiding "complexity bankruptcy."

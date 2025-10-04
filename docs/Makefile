@@ -1,6 +1,6 @@
 # Documentation Makefile
 
-.PHONY: help test test-examples test-links test-format test-file clean
+.PHONY: help test test-examples test-links test-format test-file clean validate-links link-dashboard test-code-examples validate-content qa-all
 
 # Default target
 help:
@@ -10,6 +10,11 @@ help:
 	@echo "  test          - Run all documentation tests"
 	@echo "  test-examples - Run code example tests only"
 	@echo "  test-links    - Run link validation tests only"
+	@echo "  validate-links - Run automated link validation with dashboard"
+	@echo "  link-dashboard - Generate link health monitoring dashboard"
+	@echo "  test-code-examples - Test all Julia code examples in documentation"
+	@echo "  validate-content - Run content consistency and template validation"
+	@echo "  qa-all         - Run all quality assurance checks"
 	@echo "  test-format   - Run format consistency tests only"
 	@echo "  test-file     - Test a specific file (use FILE=path/to/file.md)"
 	@echo "  test-multi    - Test with multiple Julia versions"
@@ -40,6 +45,38 @@ test-examples:
 test-links:
 	@mkdir -p test/results
 	julia --project=Planar test/runtests.jl --skip-examples --skip-format --verbose --output=test/results/links-results.toml
+
+# Run automated link validation with dashboard
+validate-links:
+	@echo "Running automated link validation..."
+	julia --project=Planar scripts/link_validator.jl
+
+# Generate link health dashboard
+link-dashboard:
+	@echo "Generating link health dashboard..."
+	julia --project=Planar scripts/link_validator.jl
+	@echo "Dashboard available at: docs/reports/link_health_dashboard.html"
+
+# Run code example testing
+test-code-examples:
+	@echo "Testing all code examples in documentation..."
+	julia --project=Planar scripts/code_example_tester.jl
+
+# Run content consistency validation
+validate-content:
+	@echo "Validating content consistency and template compliance..."
+	julia --project=Planar scripts/content_consistency_validator.jl
+
+# Run all quality assurance checks
+qa-all:
+	@echo "Running all documentation quality assurance checks..."
+	@echo "1. Validating links..."
+	julia --project=Planar scripts/simple_link_validator.jl
+	@echo "2. Testing code examples..."
+	julia --project=Planar scripts/code_example_tester.jl
+	@echo "3. Validating content consistency..."
+	julia --project=Planar scripts/content_consistency_validator.jl
+	@echo "All QA checks completed. Check docs/reports/ for detailed results."
 
 # Run format consistency tests only
 test-format:

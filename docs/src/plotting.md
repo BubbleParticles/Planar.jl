@@ -1,3 +1,10 @@
+---
+category: "getting-started"
+difficulty: "advanced"
+topics: [execution-modes, margin-trading, exchanges, data-management, optimization, getting-started, strategy-development, troubleshooting, visualization, configuration]
+last_updated: "2025-10-04"---
+---
+
 # Plotting and Visualization
 
 The Plotting module utilizes [Makie](https://docs.makie.org/stable/) for creating visualizations. It is important to note that graphical backends are not automatically included with the module and must be installed manually:
@@ -12,12 +19,12 @@ using WGLMakie
 
 Planar enhances Makie with specialized plotting recipes for financial analysis:
 
-- OHLCV (Open-High-Low-Close Volume) charts
+- [OHLCV](../guides/data-management.md#ohlcv-data) (Open-High-Low-Close Volume) charts
 - Detailed trade history visualization
 - Summarized trade history with volume and balance insights
 - Custom indicator overlays and channels
 - Multi-asset portfolio visualization
-- Performance and optimization result analysis
+- Performance and [optimization](../optimization.md) result analysis
 
 !!! info "Interactive Features"
     Interactive backends, such as GLMakie and WGLMakie, allow for dynamic plots that can be clicked-and-dragged or zoomed. Additionally, interactive elements like tooltips are available on hover for candlesticks, trades, and balance charts.
@@ -79,11 +86,11 @@ save("chart.png", figure)
 save("chart.pdf", figure)  # Vector format
 ```
 
-## OHLCV Charts
+## [OHLCV](../guides/data-management.md#ohlcv-data) Charts
 
-OHLCV data is represented using candlesticks to indicate price movement, with red signifying a price decrease and green an increase. Volume is depicted as bars in the background of the chart.
+[OHLCV data](../guides/data-management.md#ohlcv-data) is represented using candlesticks to indicate price movement, with red signifying a price decrease and green an increase. Volume is depicted as bars in the background of the chart.
 
-### Basic OHLCV Chart
+### Basic [OHLCV](../guides/data-management.md#ohlcv-data) Chart
 
 ```julia
 using Plotting
@@ -153,10 +160,10 @@ figure = Plotting.ohlcv(df,
 
 ### Multiple Timeframes
 
-Compare different timeframes on the same chart:
+Compare different [timeframes](../guides/data-management.md#timeframes) on the same chart:
 
 ```julia
-# Load different timeframes
+# Load different [timeframes](../guides/data-management.md#timeframes)
 df_1h = binanceload("eth", tf="1h").data
 df_4h = binanceload("eth", tf="4h").data
 df_1d = binanceload("eth", tf="1d").data
@@ -189,8 +196,8 @@ The history of trades is illustrated using triangles, with upwards pointing tria
 using Lang
 using Strategies
 using Engine.Executors.SimMode: SimMode as bt
-strategy = st.strategy(:Example)
-ai = strategy.universe[m"eth"].instance
+[strategy](../guides/strategy-development.md) = st.[strategy](../guides/strategy-development.md)(:Example)
+ai = [strategy](../guides/strategy-development.md).universe[m"eth"].instance
 bt.start!(strategy)
 # Display the first 100 trades for an asset with the symbol "eth"
 figure = Plotting.tradesticks(strategy, m"eth", to=100)
@@ -264,12 +271,12 @@ display(fig)
 
 ## Aggregated Trade History for a Single Asset
 
-The `balloons` function provides an aggregated view of trade density within a specified timeframe. Each circle's size correlates with the trade volume—larger circles denote higher volume. Positive volume timeframes are labeled as _sells_ and negative ones as _buys_. Circle opacity reflects the number of trades within the timeframe. The accompanying balance chart indicates the quote currency held: the orange band represents actual cash (`Strategy.cash`), while the blue band represents the value of held assets in quote currency (`AssetInstance.cash * price`).
+The `balloons` function provides an aggregated view of trade density within a specified [timeframe](../guides/data-management.md#timeframes). Each circle's size correlates with the trade volume—larger circles denote higher volume. Positive volume [timeframes](../guides/data-management.md#timeframes) are labeled as _sells_ and negative ones as _buys_. Circle opacity reflects the number of trades within the [timeframe](../guides/data-management.md#timeframes). The accompanying balance chart indicates the quote currency held: the orange band represents actual cash (`Strategy.cash`), while the blue band represents the value of held assets in quote currency (`AssetInstance.cash * price`).
 
 ### Basic Balloons Chart
 
 ```julia
-# Aggregate trades within a 1-day timeframe for the "eth" asset.
+# Aggregate trades within a 1-day [timeframe](../guides/data-management.md#timeframes) for the "eth" asset.
 Plotting.balloons(strategy, m"eth", tf=tf"1d")
 ```
 ![Balloons](./assets/balloons.jpg)
@@ -314,11 +321,11 @@ figure = Plotting.balloons(strategy, m"eth", tf=tf"1d",
 figure = Plotting.balloons(strategy, m"eth", tf=tf"1d")
 Plotting.frequency_heatmap!(figure, strategy, m"eth", tf=tf"1h")
 
-# Compare different strategies
-strategies = [strategy1, strategy2, strategy3]
+# Compare different [strategies](../guides/strategy-development.md)
+[strategies](../guides/strategy-development.md) = [strategy1, strategy2, strategy3]
 colors = [:blue, :red, :green]
 
-figure = Plotting.balloons(strategies[1], m"eth", tf=tf"1d", color=colors[1])
+figure = Plotting.balloons([strategies](../guides/strategy-development.md)[1], m"eth", tf=tf"1d", color=colors[1])
 for (i, strat) in enumerate(strategies[2:end])
     Plotting.balloons!(figure, strat, m"eth", tf=tf"1d", 
                       color=colors[i+1], alpha=0.7)
@@ -409,7 +416,7 @@ display(fig)
 
 ## Custom Indicators
 
-Custom indicators enhance chart analysis and can be integrated into plots. Planar provides several functions for adding technical indicators to your charts.
+Custom indicators enhance chart analysis and can be integrated into plots. Planar provides several functions for adding [technical indicators](../guides/strategy-development.md#technical-indicators) to your charts.
 
 ### Line Indicators
 
@@ -452,10 +459,10 @@ Plotting.line_indicator!(figure, ema_20,
 # Add legend
 Plotting.add_legend!(figure, position=:topright)
 
-# RSI in separate subplot
+# [RSI](../guides/strategy-development.md#technical-indicators) in separate subplot
 rsi = Indicators.rsi(df.close, n=14)
 Plotting.add_subplot!(figure, rsi, 
-    title="RSI (14)", 
+    title="[RSI](../guides/strategy-development.md#technical-indicators) (14)", 
     y_range=(0, 100),
     horizontal_lines=[30, 70],  # Overbought/oversold levels
     line_colors=[:red, :red]
@@ -511,7 +518,7 @@ Plotting.channel_indicator!(figure, kc...,
 # Volume-based indicators
 figure = Plotting.ohlcv(df, show_volume=true)
 
-# Volume moving average
+# Volume [moving average](../guides/strategy-development.md#technical-indicators)
 vol_ma = Indicators.sma(df.volume, n=20)
 Plotting.volume_indicator!(figure, vol_ma, 
     color=:orange, linewidth=2, label="Volume MA(20)")
@@ -624,7 +631,7 @@ ax_vol = Axis(fig[4, 1], title="Volume", height=100)
 Plotting.volume_bars!(ax_vol, df.volume)
 
 # Indicator subplots
-ax_rsi = Axis(fig[5, 1], title="RSI", height=80)
+ax_rsi = Axis(fig[5, 1], title="[RSI](../guides/strategy-development.md#technical-indicators)", height=80)
 rsi = Indicators.rsi(df.close)
 Plotting.line_indicator!(ax_rsi, rsi, color=:purple)
 
@@ -734,7 +741,7 @@ display(risk_chart)
 ### Parameter Optimization Heatmaps
 
 ```julia
-# 2D parameter optimization results
+# 2D [parameter optimization](../[optimization](../optimization.md).md) results
 function plot_optimization_heatmap(opt_results, param1, param2, metric=:sharpe)
     fig = Figure(resolution=(1000, 800))
     ax = Axis(fig[1, 1], 
@@ -762,7 +769,7 @@ function plot_optimization_heatmap(opt_results, param1, param2, metric=:sharpe)
     return fig
 end
 
-# Usage with optimization results
+# Usage with [optimization](../optimization.md) results
 heatmap_fig = plot_optimization_heatmap(opt_results, :ma_fast, :ma_slow, :sharpe)
 display(heatmap_fig)
 ```
@@ -770,7 +777,7 @@ display(heatmap_fig)
 ### 3D Optimization Surface
 
 ```julia
-# 3D surface plot for parameter optimization
+# 3D surface plot for [parameter optimization](../optimization.md)
 function plot_3d_optimization(opt_results, param1, param2, metric=:sharpe)
     fig = Figure(resolution=(1200, 900))
     ax = Axis3(fig[1, 1], 
@@ -1189,7 +1196,7 @@ display(fig)
 #### Performance Tuning
 
 ```julia
-# High-performance configuration for large datasets
+# High-performance [configuration](../config.md) for large datasets
 function configure_high_performance()
     GLMakie.set_theme!(
         # Reduce visual quality for better performance
@@ -1215,7 +1222,7 @@ function configure_high_performance()
         stencil_bits = 0        # Disable stencil buffer
     )
     
-    println("High-performance configuration applied")
+    println("High-performance [configuration](../config.md) applied")
 end
 
 configure_high_performance()
@@ -1269,7 +1276,7 @@ web_fig = create_web_chart(df, "BTC/USDT Web Chart")
 #### Jupyter Notebook Integration
 
 ```julia
-# Jupyter-specific configuration
+# Jupyter-specific [configuration](../config.md)
 function setup_jupyter()
     WGLMakie.activate!()
     
@@ -1564,6 +1571,16 @@ end
 optimize_memory_usage(:GLMakie)
 ```
 
+
+## See Also
+
+- **[Exchanges](../exchanges.md)** - Exchange integration and configuration
+- **[Config](../config.md)** - Exchange integration and configuration
+- **[Overview](../troubleshooting/index.md)** - Troubleshooting: Troubleshooting and problem resolution
+- **[Optimization](../optimization.md)** - Performance optimization techniques
+- **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
+- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
+
 ## Advanced Interactive Features
 
 ### Custom Interaction Handlers
@@ -1576,7 +1593,7 @@ function create_interactive_analysis_chart(df)
     fig = Figure(resolution=(1400, 900))
     ax = Axis(fig[1, 1], title="Interactive Analysis Chart")
     
-    # Plot OHLCV data
+    # Plot [OHLCV data](../guides/data-management.md#ohlcv-data)
     ohlcv_plot = Plotting.ohlcv!(ax, df)
     
     # Add crosshair cursor
@@ -1695,9 +1712,9 @@ function create_streaming_chart(initial_data, update_interval=1.0)
     return fig
 end
 
-# Simulate new OHLCV data
+# Simulate new [OHLCV data](../guides/data-management.md#ohlcv-data)
 function simulate_new_ohlcv_row(last_row)
-    # Simple random walk simulation
+    # Simple random walk [simulation](../guides/execution-modes.md#simulation-mode)
     price_change = randn() * 0.01
     new_close = last_row.close * (1 + price_change)
     new_open = last_row.close
@@ -1818,7 +1835,7 @@ This completes the advanced plotting and backend documentation. The enhanced plo
 8. **Large dataset handling** with progressive loading and memory optimization
 9. **Interactive features** with widgets and real-time updates
 10. **Advanced backend configuration** for GLMakie, WGLMakie, and CairoMakie
-11. **Performance optimization** and troubleshooting guidance
+11. **Performance optimization** and [troubleshooting](../troubleshooting/) guidance
 12. **Multi-window management** for complex analysis workflows
 
 <function_calls>

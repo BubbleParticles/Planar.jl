@@ -1,13 +1,20 @@
+---
+category: "strategy-development"
+difficulty: "advanced"
+topics: [execution-modes, margin-trading, exchanges, data-management, optimization, strategy-development, troubleshooting, visualization, configuration]
+last_updated: "2025-10-04"---
+---
+
 # Running a Backtest
 
-To perform a backtest, you need to construct a strategy by following the guidelines in the [Strategy Documentation](../strategy.md). Once the strategy is created, you can call the `start!` function on it to begin the backtest.
+To perform a [backtest](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode), you need to construct a [strategy](../guides/strategy-development.md) by following the guidelines in the [Strategy Documentation](../[strategy](../guides/strategy-development.md).md). Once the [strategy](../guides/strategy-development.md) is created, you can call the `start!` function on it to begin the [backtest](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode).
 
 The entry function that is called in all modes is `call!(s::Strategy, ts::DateTime, ctx)`. This function takes three arguments:
 - `s`: The strategy object that you have created.
-- `ts`: The current date. In live mode, it is very close to `now()`, while in simulation mode, it is the date of the iteration step.
+- `ts`: The current date. In live mode, it is very close to `now()`, while in [simulation](../guides/execution-modes.md#simulation-mode) mode, it is the date of the iteration step.
 - `ctx`: Additional context information that can be passed to the function.
 
-During the backtest, the `call!` function is responsible for executing the strategy's logic at each timestep. It is called repeatedly with updated values of `ts` until the backtest is complete.
+During the [backtest](../guides/execution-modes.md#simulation-mode), the `call!` function is responsible for executing the strategy's logic at each timestep. It is called repeatedly with updated values of `ts` until the backtest is complete.
 
 It is important to note that the `call!` function should be implemented in your strategy module according to your specific trading logic.
 
@@ -18,7 +25,7 @@ Before running a backtest, you can configure various parameters to control the s
 ### Time Range Configuration
 
 ```julia
-# Set specific date range for backtesting
+# Set specific date range for [backtesting](../guides/execution-modes.md#simulation-mode)
 s = strategy(:Example)
 # Configure backtest period
 s.config.start_date = DateTime("2023-01-01")
@@ -35,10 +42,10 @@ s.config.base_size = 100.0       # Base order size in USDT
 
 ### Performance Optimization Settings
 
-For large backtests, consider these optimization settings:
+For large backtests, consider these [optimization](../optimization.md) settings:
 
 ```julia
-# Enable parallel processing for multi-asset strategies
+# Enable parallel processing for multi-asset [strategies](../guides/strategy-development.md)
 s.config.parallel = true
 
 # Adjust memory usage for large datasets
@@ -78,7 +85,7 @@ display(s)
 ## output
 Name: Example
 Config: 10.0(USDT)(Base Size), 100.0(USDT)(Initial Cash)
-Universe: 3 instances, 1 exchanges
+Universe: 3 instances, 1 [exchanges](../exchanges.md)
 Holdings: assets(trades): 2(977), min BTC: 23.13(USDT), max XMR: 79.611(USDT)
 Pending buys: 3
 Pending sells: 0
@@ -96,7 +103,7 @@ Our backtest indicates that our strategy:
 
 ## Comprehensive Backtest Example
 
-Here's a more detailed example showing a complete backtesting workflow:
+Here's a more detailed example showing a complete [backtesting](../guides/execution-modes.md#simulation-mode) workflow:
 
 ```julia
 using Engine.Strategies
@@ -148,15 +155,15 @@ println("Win Rate: $(round(win_rate(s) * 100, digits=2))%")
 ### Multi-Timeframe Backtesting
 
 ```julia
-# Configure multiple timeframes for analysis
+# Configure multiple [timeframes](../guides/data-management.md#timeframes) for analysis
 s.config.primary_timeframe = "1h"
 s.config.secondary_timeframes = ["4h", "1d"]
 
-# Load data for different timeframes
+# Load data for different [timeframes](../guides/data-management.md#timeframes)
 for tf in [s.config.primary_timeframe; s.config.secondary_timeframes]
     for asset in s.universe
         data = fetch_ohlcv(asset, tf, s.config.start_date, s.config.end_date)
-        load_data!(s, asset, data, timeframe=tf)
+        load_data!(s, asset, data, [timeframe](../guides/data-management.md#timeframes)=tf)
     end
 end
 ```
@@ -203,7 +210,7 @@ To place a limit order within your strategy, you call `call!` just like any call
 trade = call!(s, GTCOrder{Buy}, ai; price, amount, date=ts)
 ```
 
-Where `s` is your `Strategy{Sim, ...}` instance, `ai` is the `AssetInstance` to which the order refers (it should be one present in your `s.universe`). The `amount` is the quantity in base currency and `date` should be the one fed to the `call!` function. During backtesting, this would be the current timestamp being evaluated, and during live trading, it would be a recent timestamp. If you look at the example strategy, `ts` is _current_ and `ats` is _available_. The available timestamp `ats` is the one that matches the last candle that doesn't give you forward knowledge. The `date` given to the order call (`call!`) must always be the _current_ timestamp.
+Where `s` is your `Strategy{Sim, ...}` instance, `ai` is the `AssetInstance` to which the order refers (it should be one present in your `s.universe`). The `amount` is the quantity in base currency and `date` should be the one fed to the `call!` function. During [backtesting](../guides/execution-modes.md#simulation-mode), this would be the current timestamp being evaluated, and during [live trading](../guides/execution-modes.md#live-mode), it would be a recent timestamp. If you look at the example strategy, `ts` is _current_ and `ats` is _available_. The available timestamp `ats` is the one that matches the last candle that doesn't give you forward knowledge. The `date` given to the order call (`call!`) must always be the _current_ timestamp.
 
 A limit order call might return a trade if the order was queued correctly. If the trade hasn't completed the order, the order is queued in `s.buy/sellorders[ai]`. If `isnothing(trade)` is `true`, it means the order failed and was not scheduled. This can happen if the cost of the trade did not meet the asset limits, or there wasn't enough commitable cash. If instead `ismissing(trade)` is `true`, it means that the order was scheduled, but no trade has yet been performed. In backtesting, this happens if the price of the order is too low (buy) or too high (sell) for the current candle high/low prices.
 
@@ -211,7 +218,7 @@ A limit order call might return a trade if the order was queued correctly. If th
 
 In addition to GTC (Good Till Canceled) orders, there are also IOC (Immediate Or Cancel) and FOK (Fill Or Kill) orders:
 
-- **GTC (Good Till Canceled)**: This order remains active until it is either filled or canceled. Best for strategies that can wait for favorable prices.
+- **GTC (Good Till Canceled)**: This order remains active until it is either filled or canceled. Best for [strategies](../guides/strategy-development.md) that can wait for favorable prices.
 - **IOC (Immediate Or Cancel)**: This order must be executed immediately. Any portion of the order that cannot be filled immediately will be canceled. Useful for capturing immediate opportunities.
 - **FOK (Fill Or Kill)**: This order must be executed in its entirety or not at all. Ideal when you need exact position sizes.
 
@@ -318,7 +325,7 @@ function place_conditional_order(s, ai, condition_func, order_params...)
     return nothing
 end
 
-# Example: Place buy order only if RSI is oversold
+# Example: Place buy order only if [RSI](../guides/strategy-development.md#technical-indicators) is oversold
 rsi_condition = (s, ai, ts) -> calculate_rsi(ai, ts) < 30
 trade = place_conditional_order(s, ai, rsi_condition, 
     GTCOrder{Buy}, ai; price=current_price * 0.98, amount=100.0, date=ts
@@ -374,7 +381,7 @@ function execute_twap(s, ai, total_amount, duration_minutes=60)
     interval_duration = duration_minutes / intervals
     
     for i in 1:intervals
-        # Wait for next interval (in live trading)
+        # Wait for next interval (in [live trading](../guides/execution-modes.md#live-mode))
         if i > 1
             sleep(interval_duration * 60)  # Convert to seconds
         end
@@ -483,7 +490,7 @@ end
 
 ## Market Orders
 
-Although the ccxt library allows setting `timeInForce` for market orders because exchanges generally permit it, there isn't definitive information about how a market order is handled in these cases. Given that we are dealing with cryptocurrencies, some contexts like open and close times days are lost. It's plausible that `timeInForce` only matters when the order book doesn't have enough liquidity; otherwise, market orders are always _immediate_ and _fully filled_ orders. For this reason, we always consider market orders as FOK orders, and they will always have `timeInForce` set to FOK when executed live (through ccxt) to match the backtester.
+Although the ccxt library allows setting `timeInForce` for market orders because [exchanges](../exchanges.md) generally permit it, there isn't definitive information about how a market order is handled in these cases. Given that we are dealing with cryptocurrencies, some contexts like open and close times days are lost. It's plausible that `timeInForce` only matters when the order book doesn't have enough liquidity; otherwise, market orders are always _immediate_ and _fully filled_ orders. For this reason, we always consider market orders as FOK orders, and they will always have `timeInForce` set to FOK when executed live (through ccxt) to match the backtester.
 
 !!! warning "Market orders can be surprising"
     Market orders _always_ go through in the backtest. If the candle has no volume, the order incurs in _heavy_ slippage, and the execution price of the trades _can_ exceed the candle high/low price.
@@ -506,9 +513,9 @@ Slippage is factored into the trade execution process. Here's how it works for d
 
 ## Liquidations
 
-In isolated margin mode, liquidations are triggered by checking the `LIQUIDATION_BUFFER`. You can customize the buffer size by setting the value of the environment variable `PLANAR_LIQUIDATION_BUFFER`. This allows you to adjust the threshold at which liquidations are triggered.
+In [isolated margin](../guides/strategy-development.md#margin-modes) mode, liquidations are triggered by checking the `LIQUIDATION_BUFFER`. You can customize the buffer size by setting the value of the environment variable `PLANAR_LIQUIDATION_BUFFER`. This allows you to adjust the threshold at which liquidations are triggered.
 
-To obtain more accurate estimations, you can utilize the effective funding rate. This can be done by downloading the funding rate history using the `Fetch` module. By analyzing the funding rate history, you can gain insights into the funding costs associated with trading in isolated margin mode.
+To obtain more accurate estimations, you can utilize the effective funding rate. This can be done by downloading the funding rate history using the `Fetch` module. By analyzing the funding rate history, you can gain insights into the funding costs associated with trading in [isolated margin](../guides/strategy-development.md#margin-modes) mode.
 
 ### Liquidation Mechanics
 
@@ -526,13 +533,13 @@ s.config.liquidation_buffer = 0.015
 
 ```julia
 # Calculate liquidation price for long position
-function calculate_liquidation_price_long(entry_price, leverage, buffer=0.02)
-    liquidation_price = entry_price * (1 - (1/leverage) + buffer)
+function calculate_liquidation_price_long(entry_price, [leverage](../guides/strategy-development.md#margin-modes), buffer=0.02)
+    liquidation_price = entry_price * (1 - (1/[leverage](../guides/strategy-development.md#margin-modes)) + buffer)
     return liquidation_price
 end
 
 # Calculate liquidation price for short position  
-function calculate_liquidation_price_short(entry_price, leverage, buffer=0.02)
+function calculate_liquidation_price_short(entry_price, [leverage](../guides/strategy-development.md#margin-modes), buffer=0.02)
     liquidation_price = entry_price * (1 + (1/leverage) - buffer)
     return liquidation_price
 end
@@ -667,11 +674,21 @@ function open_long_with_funding_analysis(s, ai, hold_days=7)
 end
 ```
 
+
+## See Also
+
+- **[Exchanges](../exchanges.md)** - Exchange integration and configuration
+- **[Config](../config.md)** - Exchange integration and configuration
+- **[Optimization](../optimization.md)** - Performance optimization techniques
+- **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
+- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
+- **[Exchanges](../exchanges.md)** - Data handling and management
+
 ## Backtesting Performance
 
 Local benchmarking indicates that the `:Example` strategy, which employs FOK orders, operates on three assets, trades in spot markets, and utilizes a simple logic (which can be reviewed in the strategy code) to execute orders, currently takes approximately `~8 seconds` to cycle through `~1.3M * 3 (assets) ~= 3.9M candles`, executing `~6000 trades` on a single x86 core.
 
-It's crucial to note that the type of orders executed and the number of trades performed can significantly impact the runtime, aside from other evident factors like additional strategy logic or the number of assets. Therefore, caution is advised when interpreting claims about a backtester's ability to process X rows in Y time without additional context. Furthermore, our order creation logic always ensures that order inputs adhere to the exchange's [limits](https://docs.ccxt.com/#/README?id=precision-and-limits), and we also incorporate slippage and probability calculations, enabling the backtester to be "MC simmable".
+It's crucial to note that the type of orders executed and the number of trades performed can significantly impact the runtime, aside from other evident factors like additional strategy logic or the number of assets. Therefore, caution is advised when interpreting claims about a backtester's ability to process X rows in Y time without additional context. Furthermore, our order creation logic always ensures that order inputs adhere to the [exchange](../[exchanges](../exchanges.md).md)'s [limits](https://docs.ccxt.com/#/README?id=precision-and-limits), and we also incorporate slippage and probability calculations, enabling the backtester to be "MC simmable".
 
 Backtesting a strategy with margin will inevitably be slower due to the need to account for all the necessary calculations, such as position states and liquidation triggers.
 
@@ -773,4 +790,4 @@ timing_results = profile_backtest(s)
 4. **Multi-Asset Strategies**:
    - Enable parallel processing for independent assets
    - Balance memory usage vs. processing speed
-   - Consider asset correlation in optimization
+   - Consider asset correlation in [optimization](../optimization.md)

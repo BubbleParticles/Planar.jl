@@ -1,3 +1,10 @@
+---
+category: "getting-started"
+difficulty: "advanced"
+topics: [execution-modes, margin-trading, exchanges, data-management, optimization, getting-started, strategy-development, troubleshooting, visualization, configuration]
+last_updated: "2025-10-04"---
+---
+
 # Development Documentation
 
 This comprehensive guide covers Planar's architecture, development setup, contribution guidelines, and best practices for extending the framework.
@@ -37,26 +44,26 @@ Planar follows a modular architecture with clear separation of concerns:
 #### Engine Module
 The foundation of Planar, providing:
 - **Asset Management**: `AbstractAsset`, `Asset`, `Derivative` types
-- **Instance System**: `AssetInstance` linking assets to exchanges
+- **Instance System**: `AssetInstance` linking assets to [exchanges](../exchanges.md)
 - **Strategy Framework**: `Strategy{Mode}` parametric types
 - **Core Abstractions**: Base types and interfaces
 
 #### Execution Modes
 Three distinct execution environments:
-- **SimMode**: Fast synchronous backtesting with OHLCV data
-- **PaperMode**: Real-time simulation with live data feeds
-- **LiveMode**: Actual trading with exchange APIs
+- **SimMode**: Fast synchronous [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode) with [OHLCV data](../guides/data-management.md#ohlcv-data)
+- **PaperMode**: Real-time [simulation](../guides/execution-modes.md#simulation-mode) with live data feeds
+- **LiveMode**: Actual trading with [exchange](../[exchanges](../exchanges.md).md) APIs
 
 #### Data Pipeline
-Comprehensive data management:
-- **Fetch**: Data acquisition from exchanges and external sources
+Comprehensive [data management](../guides/data-management.md):
+- **Fetch**: Data acquisition from [exchanges](../exchanges.md) and external sources
 - **Processing**: Data cleaning, resampling, and transformation
 - **Storage**: Zarr-based large dataset storage with LMDB indexing
 - **Watchers**: Real-time data monitoring and alerting
 
 #### Exchange Integration
-Unified exchange interface:
-- **CCXT Integration**: 100+ exchange support via Ccxt.jl
+Unified [exchange](../exchanges.md) interface:
+- **[CCXT](../exchanges.md#ccxt-integration) Integration**: 100+ [exchange](../exchanges.md) support via Ccxt.jl
 - **Custom Exchanges**: Framework for implementing proprietary APIs
 - **Order Management**: Unified order types across exchanges
 
@@ -108,7 +115,7 @@ sequenceDiagram
     
     U->>S: Initialize Strategy
     S->>D: Load Historical Data
-    D->>S: Return OHLCV Data
+    D->>S: Return [OHLCV](../guides/data-management.md#ohlcv-data) Data
     
     loop Trading Loop
         S->>U: Call Strategy Logic
@@ -125,9 +132,9 @@ sequenceDiagram
 
 ### Prerequisites
 
-- **Julia 1.11+**: Latest stable Julia version
+- **[Julia](https://julialang.org/) 1.11+**: Latest stable [Julia](https://julialang.org/) version
 - **Git**: With submodule support
-- **Python 3.8+**: For CCXT integration (managed via CondaPkg)
+- **Python 3.8+**: For [CCXT](../exchanges.md#ccxt-integration) integration (managed via CondaPkg)
 - **Docker** (optional): For containerized development
 
 ### Initial Setup
@@ -150,7 +157,7 @@ export JULIA_NUM_THREADS=$(nproc)
 
 3. **Install Dependencies**:
 ```julia
-# Start Julia in project
+# Start [Julia](https://julialang.org/) in project
 julia --project=Planar
 
 # Install all dependencies
@@ -273,7 +280,7 @@ In rare cases involving complex multi-threaded scenarios, disable and re-enable 
 ```julia
 GC.enable(false)
 using Planar
-s = st.strategy()
+s = st.[strategy](../guides/strategy-development.md)()
 GC.enable(true)
 GC.gc()
 ```
@@ -285,6 +292,16 @@ Refer to https://github.com/cjdoris/PythonCall.jl/issues/201 for more details.
 When adding dependencies, ensure that a dependency is only included in one subpackage. If you need the same dependency in another subpackage, add the first subpackage as the dependency, not the external module.
 
 The order of `using` or `import` statements within packages is crucial. Always import external dependencies before internal ones to minimize method invalidations.
+
+
+## See Also
+
+- **[Exchanges](../exchanges.md)** - Exchange integration and configuration
+- **[Config](../config.md)** - Exchange integration and configuration
+- **[Overview](../troubleshooting/index.md)** - Troubleshooting: Troubleshooting and problem resolution
+- **[Optimization](../optimization.md)** - Performance optimization techniques
+- **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
+- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
 
 ## Contribution Guidelines
 
@@ -387,12 +404,12 @@ using Planar
 
 @testset "Strategy Execution Integration" begin
     # Setup test environment
-    strategy = create_test_strategy()
+    [strategy](../guides/strategy-development.md) = create_test_strategy()
     asset_instance = create_test_asset()
     
     @testset "Simulation Mode" begin
-        sim_strategy = Strategy{Sim}(strategy)
-        result = backtest!(sim_strategy, asset_instance, test_data)
+        sim_strategy = Strategy{Sim}([strategy](../guides/strategy-development.md))
+        result = [backtest](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode)!(sim_strategy, asset_instance, test_data)
         
         @test result.total_return > 0
         @test length(result.trades) > 0
@@ -400,7 +417,7 @@ using Planar
     
     @testset "Paper Mode" begin
         paper_strategy = Strategy{Paper}(strategy)
-        # Test paper trading logic
+        # Test [paper trading](../guides/execution-modes.md#paper-mode) logic
     end
 end
 ```
