@@ -11,15 +11,15 @@ Paper mode provides a realistic [simulation](../guides/execution-modes.md#simula
 
 ## Configuration Options
 
-In order to configure a [strategy](../guides/strategy-development.md) in paper mode, you can define the default mode in `user/[planar.toml](../config.md#[configuration](../config.md)-file)` or in your [strategy](../guides/strategy-development.md) project's `Project.toml` file. Alternatively, pass the mode as a keyword argument:
+In order to configure a [strategy](../guides/strategy-development.md) in paper mode, you can define the default mode in `user/[planar.toml](../config.md#configuration)-file)` or in your [strategy](../guides/strategy-development.md) project's `Project.toml` file. Alternatively, pass the mode as a keyword argument:
 
 ### Configuration via TOML Files
 
 ```toml
-# user/[planar.toml](../config.md#[configuration](../config.md)-file)
+# user/[planar.toml](../config.md#configuration)-file)
 [Example]
 mode = "Paper"
-[exchange](../[exchanges](../exchanges.md).md) = "binance"
+[exchange]([exchanges](../exchanges.md).md) = "binance"
 throttle = 5  # seconds between [strategy](../guides/strategy-development.md) calls
 initial_cash = 10000.0
 ```
@@ -28,7 +28,7 @@ initial_cash = 10000.0
 # Strategy Project.toml
 [strategy]
 mode = "Paper"
-sandbox = true  # Use [exchange](../[exchanges](../exchanges.md).md) sandbox/testnet
+sandbox = true  # Use [exchange]([exchanges](../exchanges.md).md) sandbox/testnet
 ```
 
 ### Configuration via [Julia](https://julialang.org/) Code
@@ -40,7 +40,7 @@ s = strategy(:Example, mode=Paper())
 # Or with additional parameters
 s = strategy(:Example, 
     mode=Paper(), 
-    [exchange](../[exchanges](../exchanges.md).md)=:binance,
+    [exchange]([exchanges](../exchanges.md).md)=:binance,
     initial_cash=10000.0,
     throttle=5
 )

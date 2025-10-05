@@ -196,8 +196,8 @@ The history of trades is illustrated using triangles, with upwards pointing tria
 using Lang
 using Strategies
 using Engine.Executors.SimMode: SimMode as bt
-[strategy](../guides/strategy-development.md) = st.[strategy](../guides/strategy-development.md)(:Example)
-ai = [strategy](../guides/strategy-development.md).universe[m"eth"].instance
+strategy = st.strategy(:Example)
+ai = strategy.universe[m"eth"].instance
 bt.start!(strategy)
 # Display the first 100 trades for an asset with the symbol "eth"
 figure = Plotting.tradesticks(strategy, m"eth", to=100)
@@ -271,7 +271,7 @@ display(fig)
 
 ## Aggregated Trade History for a Single Asset
 
-The `balloons` function provides an aggregated view of trade density within a specified [timeframe](../guides/data-management.md#timeframes). Each circle's size correlates with the trade volume—larger circles denote higher volume. Positive volume [timeframes](../guides/data-management.md#timeframes) are labeled as _sells_ and negative ones as _buys_. Circle opacity reflects the number of trades within the [timeframe](../guides/data-management.md#timeframes). The accompanying balance chart indicates the quote currency held: the orange band represents actual cash (`Strategy.cash`), while the blue band represents the value of held assets in quote currency (`AssetInstance.cash * price`).
+The `balloons` function provides an aggregated view of trade density within a specified timeframe. Each circle's size correlates with the trade volume—larger circles denote higher volume. Positive volume timeframes are labeled as _sells_ and negative ones as _buys_. Circle opacity reflects the number of trades within the timeframe. The accompanying balance chart indicates the quote currency held: the orange band represents actual cash (`Strategy.cash`), while the blue band represents the value of held assets in quote currency (`AssetInstance.cash * price`).
 
 ### Basic Balloons Chart
 
@@ -741,7 +741,7 @@ display(risk_chart)
 ### Parameter Optimization Heatmaps
 
 ```julia
-# 2D [parameter optimization](../[optimization](../optimization.md).md) results
+# 2D parameter optimization results
 function plot_optimization_heatmap(opt_results, param1, param2, metric=:sharpe)
     fig = Figure(resolution=(1000, 800))
     ax = Axis(fig[1, 1], 

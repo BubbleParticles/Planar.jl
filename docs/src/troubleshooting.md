@@ -284,15 +284,15 @@ GC.gc()  # Force garbage collection if needed
 **Symptoms**: Timeout errors, connection refused, API calls hanging
 
 **Diagnostic Steps**:
-1. Check [exchange](../[exchanges](../exchanges.md).md) status and maintenance schedules
+1. Check exchange status and maintenance schedules
 2. Verify API credentials and permissions
-3. Test network connectivity to [exchange](../[exchanges](../exchanges.md).md) endpoints
+3. Test network connectivity to exchange endpoints
 
 **Solutions**:
 ```julia
 # Step 1: Test basic connectivity
 using Exchanges
-[exchange](../[exchanges](../exchanges.md).md) = getexchange(:binance)  # or your exchange
+exchange = getexchange(:binance)  # or your exchange
 try
     exchange.fetch_ticker("BTC/USDT")
     @info "Exchange connection working"
@@ -936,7 +936,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ### Strategy Execution Performance
 
-**Symptoms**: Slow [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode), high CPU usage, long execution times
+**Symptoms**: Slow [backtesting](../guides/execution-modes.md#simulation)-mode), high CPU usage, long execution times
 
 **Diagnostic Steps**:
 1. Profile strategy execution to identify bottlenecks
@@ -950,7 +950,7 @@ using Profile, ProfileView
 # Profile strategy execution
 @profile begin
     strategy = load_strategy(:MyStrategy)
-    result = [backtest](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode)(strategy, start_date, end_date)
+    result = [backtest](../guides/execution-modes.md#simulation)-mode)(strategy, start_date, end_date)
 end
 
 # View results
@@ -1095,7 +1095,7 @@ end
 
 ### Data-Related Performance Issues
 
-**Symptoms**: Slow data loading, high I/O wait times, database [performance issues](../[troubleshooting](../troubleshooting/)/performance-issues.md)
+**Symptoms**: Slow data loading, high I/O wait times, database performance issues
 
 **Diagnostic Steps**:
 1. Monitor I/O operations and disk usage
@@ -1146,7 +1146,7 @@ zarr_array = zarr_create(Float64, (1000000, 5), chunks=(10000, 5))  # Optimize c
 
 ### Optimization and Backtesting Performance
 
-**Symptoms**: Slow [parameter optimization](../[optimization](../optimization.md).md), long [backtesting](../guides/execution-modes.md#simulation-mode) times, inefficient search
+**Symptoms**: Slow parameter optimization, long backtesting times, inefficient search
 
 **Diagnostic Steps**:
 1. Profile [optimization](../optimization.md) algorithms

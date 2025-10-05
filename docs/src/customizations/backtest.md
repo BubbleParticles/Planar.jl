@@ -19,11 +19,11 @@ last_updated: "2025-10-04"---
 The `SimMode` class, also known as the planar backtester, utilizes Open-High-Low-Close-Volume ([OHLCV](../guides/data-management.md#ohlcv-data)) data to simulate the execution of trades.
 
 ### Reasons to Avoid Tick-by-Tick Backtesting
-Tick-by-tick [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode) may not be ideal due to several factors:
+Tick-by-tick backtesting may not be ideal due to several factors:
 - **Data Availability**: Bid/ask tick data is often difficult to obtain and can be extremely voluminous, leading to increased resource consumption.
 - **Data Reconstruction**: Attempting to reconstruct order book data from trade history is speculative and can introduce significant bias.
-- **Overfitting Risks**: High-detail [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode) can cause [strategies](../guides/strategy-development.md) to overfit to specific market maker behaviors, resulting in additional bias.
-- **Computational Costs**: Intensive data and computational requirements may limit [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode) to a short time frame, insufficient for evaluating performance through different market conditions.
+- **Overfitting Risks**: High-detail backtesting can cause strategies to overfit to specific market maker behaviors, resulting in additional bias.
+- **Computational Costs**: Intensive data and computational requirements may limit backtesting to a short time frame, insufficient for evaluating performance through different market conditions.
 
 ### Implementing HFT Backtesting
 Should you decide to implement HFT backtesting, consider the following two approaches:

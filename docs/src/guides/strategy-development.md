@@ -10,7 +10,7 @@ last_updated: "2025-10-04"
 # Strategy Development Guide
 
 <!--
-Keywords: [strategy](../guides/strategy-development.md) development, call! function, [dispatch system](../guides/[strategy](../guides/strategy-development.md)-development.md#dispatch-system), [margin trading](../guides/[strategy](../guides/strategy-development.md)-development.md#margin-trading-concepts), [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode), [optimization](../optimization.md), [Julia](https://julialang.org/) modules, trading logic
+Keywords: [strategy](../guides/strategy-development.md) development, call! function, [dispatch system](../guides/[strategy](../guides/strategy-development.md)-development.md#dispatch-system), [margin trading](../guides/[strategy](../guides/strategy-development.md)-development.md#margin-trading-concepts), [backtesting](../guides/execution-modes.md#simulation)-mode), [optimization](../optimization.md), [Julia](https://julialang.org/) modules, trading logic
 Description: Comprehensive guide to developing trading [strategies](../guides/strategy-development.md) in Planar using [Julia](https://julialang.org/)'s [dispatch system](../guides/strategy-development.md#dispatch-system), covering everything from basic concepts to advanced patterns.
 -->
 
@@ -35,7 +35,7 @@ Before diving into strategy development, ensure you have:
 
 ## Related Topics
 
-- **[Optimization](../[optimization](../optimization.md).md)** - Parameter tuning and [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode)
+- **[Optimization]([optimization](../optimization.md).md)** - Parameter tuning and [backtesting](../guides/execution-modes.md#simulation)-mode)
 - **[Plotting](../plotting.md)** - Visualizing strategy performance
 - **[Customization](../customizations/customizations.md)** - Extending strategy functionality
 
@@ -50,7 +50,7 @@ Planar strategies are built around Julia's powerful dispatch system, enabling cl
 - **Strategy Module**: Contains your trading logic and [configuration](../config.md)
 - **Dispatch System**: Uses `call!` methods to handle different strategy events
 - **Asset Universe**: Collection of tradeable assets managed by the strategy
-- **Execution Modes**: Sim ([backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode)), Paper (simulated live), and Live trading
+- **Execution Modes**: Sim ([backtesting](../guides/execution-modes.md#simulation)-mode)), Paper (simulated live), and Live trading
 - **Margin Support**: Full support for isolated and [cross margin](../guides/strategy-development.md#margin-modes) trading
 
 #### Strategy Type Hierarchy
@@ -200,7 +200,7 @@ Timeframe:
    1h
    1d
 
-Select [exchange](../[exchanges](../exchanges.md).md) by:
+Select [exchange]([exchanges](../exchanges.md).md) by:
  > volume
    markets
    nokyc
@@ -741,8 +741,8 @@ function call!(s::SC, ts::DateTime, ctx)
     
     foreach(s.universe) do ai
         # Calculate moving averages
-        fast_ma = mean(closeat(ai.ohlcv, ats-s.attrs[:fast_period]:ats))
-        slow_ma = mean(closeat(ai.ohlcv, ats-s.attrs[:slow_period]:ats))
+        fast_ma = mean(closeat(ai.ohlcv, ats-s.attrs[:fast_period]:assets
+        slow_ma = mean(closeat(ai.ohlcv, ats-s.attrs[:slow_period]:assets
         
         current_price = closeat(ai.ohlcv, ats)
         

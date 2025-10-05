@@ -17,11 +17,11 @@ The functions are implemented in a way that they dispatch differently according 
 
 - `Sim`: This mode is used by the backtester to run simulations.
 - `Paper`: This is the dry run mode, which runs the bot as if it were live, working with live data feeds and simulating order execution with live prices.
-- `Live`: Similar to `Paper`, but with order execution actually forwarded to a live [exchange](../[exchanges](../exchanges.md).md) (e.g., through [CCXT](../[exchanges](../exchanges.md).md#ccxt-integration)).
+- `Live`: Similar to `Paper`, but with order execution actually forwarded to a live exchange (e.g., through CCXT).
 
 If the strategy is instantiated in `Sim` mode, calling `call!(s, ...)`, where `s` is the strategy object of type `Strategy{Sim, N, E, M, C}`, the `call!` function will dispatch to the `Sim` execution method. The other two parameters, `N` and `E`, are required for concretizing the strategy type:
 - `N<:Symbol`: The symbol that matches the module name of the strategy, such as `:Example`.
-- `E<:ExchangeID`: The symbol that has already been checked to match a valid [CCXT](../[exchanges](../exchanges.md).md#ccxt-integration) [exchange](../exchanges.md), which will be the [exchange](../exchanges.md) that the strategy will operate on.
+- `E<:ExchangeID`: The symbol that has already been checked to match a valid CCXT exchange, which will be the exchange that the strategy will operate on.
 - `M<:MarginMode`: The margin mode of the strategy, which can be `NoMargin`, `IsolatedMargin`, or `CrossMargin`. Note that the margin mode also has a type parameter to specify if hedged positions (having long and short on the same asset at the same time) are allowed. `Isolated` and `Cross` are shorthand for `IsolatedMargin{NotHedged}` and `CrossMargin{NotHedged}`.
 - `C`: The symbol of the `CurrencyCash` that represents the balance of the strategy, e.g., `:USDT`.
 

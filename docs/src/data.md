@@ -18,17 +18,17 @@ The Data module provides comprehensive storage and management of [OHLCV](../guid
 
 - **[Storage Architecture](#storage-architecture)** - Understanding Zarr and LMDB backends
 - **[Historical Data](#historical-data-with-scrapers)** - Using Scrapers for bulk data collection
-- **[Real-Time Data](#real-time-data-with-fetch)** - Fetching live data from [exchanges](../exchanges.md)
+- **[Real-Time Data](#real-time-data-with-fetch)** - Fetching live data from exchanges
 - **[Live Streaming](#live-data-streaming-with-watchers)** - Continuous data monitoring
 
 ## Prerequisites
 
 - Basic understanding of [OHLCV data concepts](getting-started/index.md)
-- Familiarity with [Exchange setup]([exchanges](../exchanges.md).md)
+- Familiarity with [Exchange setup](../exchanges.md)
 
 ## Related Topics
 
-- **[Strategy Development]([strategy](../guides/strategy-development.md).md)** - Using data in trading [strategies](../guides/strategy-development.md)
+- **[Strategy Development](../guides/strategy-development.md)** - Using data in trading strategies
 - **[Watchers](watchers/watchers.md)** - Real-time data monitoring
 - **[Processing](API/processing.md)** - Data transformation and analysis
 
@@ -54,7 +54,7 @@ The framework wraps a Zarr subtype of `AbstractStore` in a [`Planar.Data.ZarrIns
 The Data module provides a comprehensive [data management](../guides/data-management.md) system with the following key components:
 
 - **Storage Backend**: Zarr arrays with LMDB as the default store
-- **Data Organization**: Hierarchical structure by [exchange](../[exchanges](../exchanges.md).md)/source, pair, and [timeframe](../guides/data-management.md#timeframes)
+- **Data Organization**: Hierarchical structure by exchange/source, pair, and timeframe
 - **Data Types**: [OHLCV data](../guides/data-management.md#ohlcv-data), generic time-series data, and cached metadata
 - **Access Patterns**: Progressive loading for large datasets, contiguous time-series validation
 - **Performance**: Chunked storage, compression, and optimized indexing
@@ -169,7 +169,7 @@ println("Successfully downloaded: $successful")
     If data becomes corrupted, pass `reset=true` to force a complete redownload.
 
 !!! tip "Performance Optimization"
-    - **Monthly Archives**: Use for historical [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode) (faster download, larger chunks)
+    - **Monthly Archives**: Use for historical [backtesting](../guides/execution-modes.md#simulation)-mode) (faster download, larger chunks)
     - **Daily Archives**: Use for recent data or frequent updates
     - **Parallel Downloads**: Consider for multiple symbols, but respect [exchange](../exchanges.md) rate limits 
 
@@ -1281,7 +1281,7 @@ filled_data = fill_gaps(data_with_gaps, Hour(1))
 ### Data Transformation and Feature Engineering
 
 ```julia
-# Add [technical indicators](../guides/[strategy](../guides/strategy-development.md)-development.md#technical-indicators) and features
+# Add technical indicators and features
 function add_technical_features(data::DataFrame)
     enhanced_data = copy(data)
     
@@ -1339,7 +1339,7 @@ end
 
 ## Storage Configuration and Optimization
 
-This section covers advanced storage [configuration](../config.md), [optimization](../optimization.md) techniques, and [troubleshooting](../troubleshooting/) for the Zarr/LMDB backend.
+This section covers advanced storage configuration, optimization techniques, and troubleshooting for the Zarr/LMDB backend.
 
 ### Zarr Storage Configuration
 
@@ -1608,7 +1608,7 @@ function repair_data_corruption(source, pair, timeframe; backup=true)
 end
 ```
 
-[^1]: Default path might be a scratchspace (from Scratch.jl) in the future
+[^1]: `Default path might be a scratchspace (from Scratch.jl) in the future`
 
 !!! tip "Performance Best Practices"
     - Use progressive loading (`raw=true`) for datasets larger than available memory
@@ -1814,7 +1814,7 @@ end
 
 function process_pair_data(pair_data, pair, exchange_name)
     if nrow(pair_data) > 10  # Ensure we have enough data
-        # Calculate [technical indicators](../guides/[strategy](../guides/strategy-development.md)-development.md#technical-indicators) in real-time
+        # Calculate technical indicators in real-time
         indicators = calculate_realtime_indicators(pair_data)
         
         # Store indicators

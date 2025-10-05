@@ -50,9 +50,9 @@ The foundation of Planar, providing:
 
 #### Execution Modes
 Three distinct execution environments:
-- **SimMode**: Fast synchronous [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode) with [OHLCV data](../guides/data-management.md#ohlcv-data)
+- **SimMode**: Fast synchronous [backtesting](../guides/execution-modes.md#simulation)-mode) with [OHLCV data](../guides/data-management.md#ohlcv-data)
 - **PaperMode**: Real-time [simulation](../guides/execution-modes.md#simulation-mode) with live data feeds
-- **LiveMode**: Actual trading with [exchange](../[exchanges](../exchanges.md).md) APIs
+- **LiveMode**: Actual trading with [exchange]([exchanges](../exchanges.md).md) APIs
 
 #### Data Pipeline
 Comprehensive [data management](../guides/data-management.md):
@@ -409,7 +409,7 @@ using Planar
     
     @testset "Simulation Mode" begin
         sim_strategy = Strategy{Sim}([strategy](../guides/strategy-development.md))
-        result = [backtest](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode)!(sim_strategy, asset_instance, test_data)
+        result = [backtest](../guides/execution-modes.md#simulation)-mode)!(sim_strategy, asset_instance, test_data)
         
         @test result.total_return > 0
         @test length(result.trades) > 0

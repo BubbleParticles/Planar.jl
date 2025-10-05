@@ -7,11 +7,11 @@ last_updated: "2025-10-04"---
 
 # Comprehensive Customization Guide
 
-Planar's architecture is built around [Julia](https://julialang.org/)'s powerful [dispatch system](../guides/[strategy](../guides/strategy-development.md)-development.md#dispatch-system), enabling deep customization without modifying core framework code. This guide provides detailed instructions for extending Planar's functionality through custom implementations.
+Planar's architecture is built around Julia's powerful dispatch system, enabling deep customization without modifying core framework code. This guide provides detailed instructions for extending Planar's functionality through custom implementations.
 
 ## Understanding Planar's Dispatch System
 
-Planar leverages [Julia](https://julialang.org/)'s [multiple dispatch](../guides/[strategy](../guides/strategy-development.md)-development.md#dispatch-system) to provide customization points throughout the framework. The key insight is that behavior is determined by the combination of argument types, allowing you to specialize functionality for specific scenarios.
+Planar leverages Julia's multiple dispatch to provide customization points throughout the framework. The key insight is that behavior is determined by the combination of argument types, allowing you to specialize functionality for specific scenarios.
 
 ### Core Parametrized Types
 

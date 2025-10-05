@@ -29,11 +29,18 @@ using Dates
 # Add the test directory to load path
 push!(LOAD_PATH, @__DIR__)
 
-using DocTestFramework
-using ConfigValidator
-using LinkValidator
-using ContentConsistency
-using TestResultsReporter
+# Include local modules
+include("DocTestFramework.jl")
+include("config_validator.jl")
+include("LinkValidator.jl")
+include("ContentConsistency.jl")
+include("TestResultsReporter.jl")
+
+using .DocTestFramework
+using .ConfigValidator
+using .LinkValidator
+using .ContentConsistency
+using .TestResultsReporter
 
 function parse_args(args)
     options = Dict(

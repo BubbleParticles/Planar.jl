@@ -15,15 +15,15 @@ This section provides comprehensive documentation for all Planar.jl modules and 
 Data structures, persistence, and [OHLCV data](../guides/data-management.md#ohlcv-data) handling.
 
 ### [Engine](engine.md)
-Core execution engine for [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode), [paper trading](../guides/execution-modes.md#paper-mode), and [live trading](../guides/execution-modes.md#live-mode).
+Core execution engine for backtesting, paper trading, and live trading.
 
-### [Exchanges]([exchanges](../exchanges.md).md)
+### [Exchanges](exchanges.md)
 Exchange interfaces and connectivity.
 
 ### [Instruments](instruments.md)
 Financial instrument definitions and management.
 
-### [Strategies]([strategies](../guides/strategy-development.md).md)
+### [Strategies](strategies.md)
 Strategy base classes and interfaces.
 
 ## Data Processing
@@ -49,15 +49,15 @@ Order execution and trade management.
 Strategy instance management.
 
 ### [CCXT Integration](ccxt.md)
-[CCXT](../[exchanges](../exchanges.md).md#ccxt-integration) library integration and utilities.
+CCXT library integration and utilities.
 
 ## Analysis & Optimization
 
 ### [Metrics](metrics.md)
 Performance metrics and analysis.
 
-### [Optimization]([optimization](../optimization.md).md)
-Parameter [optimization](../optimization.md) and hyperparameter tuning.
+### [Optimization](optimization.md)
+Parameter optimization and hyperparameter tuning.
 
 ### [Strategy Tools](strategytools.md)
 Utilities for [strategy](../guides/strategy-development.md) development.
@@ -88,8 +88,8 @@ Additional utility functions and helpers.
 
 - **Getting Started**: See the [Getting Started Guide](../getting-started/index.md)
 - **Type System**: Learn about [Planar's Type System](../types.md)
-- **Strategy Development**: Read the [Strategy Guide](../[strategy](../guides/strategy-development.md).md)
-- **Troubleshooting**: Check the [Troubleshooting Guide](../[troubleshooting](../troubleshooting/).md)
+- **Strategy Development**: Read the [Strategy Guide](../guides/strategy-development.md)
+- **Troubleshooting**: Check the [Troubleshooting Guide](../troubleshooting/index.md)
 
 
 ## See Also

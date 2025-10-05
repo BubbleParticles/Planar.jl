@@ -6,7 +6,7 @@ last_updated: "2025-10-04"---
 ---
 
 # Types
-By learning the main types you get to know the building blocks to start composing your [strategy](../guides/strategy-development.md) for [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode) and/or [live trading](../guides/execution-modes.md#live-mode).
+By learning the main types you get to know the building blocks to start composing your [strategy](../guides/strategy-development.md) for [backtesting](../guides/execution-modes.md#simulation)-mode) and/or [live trading](../guides/execution-modes.md#live-mode).
 
 The main type is the `Strategy` and it has its own [page](./[strategy](../guides/strategy-development.md).md).
 Other important types follow.
@@ -32,7 +32,7 @@ Other important types follow.
 
 ## Asset instances
 
-The `AssetInstance` is a rich type that refers to a particular asset. It is not parametrized over a specific asset, but rather over the `AbstractAsset` implementation, the [exchange](../[exchanges](../exchanges.md).md), and the margin mode. An asset instance's information is always related to a specific [exchange](../[exchanges](../exchanges.md).md). For example, `cash(ai)` should return the amount of cash available for that asset on the [exchange](../[exchanges](../exchanges.md).md) matching the instance's ExchangeID parameter.
+The `AssetInstance` is a rich type that refers to a particular asset. It is not parametrized over a specific asset, but rather over the `AbstractAsset` implementation, the [exchange]([exchanges](../exchanges.md).md), and the margin mode. An asset instance's information is always related to a specific [exchange]([exchanges](../exchanges.md).md). For example, `cash(ai)` should return the amount of cash available for that asset on the [exchange]([exchanges](../exchanges.md).md) matching the instance's ExchangeID parameter.
 
 Here are the properties of the `AssetInstance`:
 

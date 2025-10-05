@@ -27,6 +27,33 @@ Validates all internal links in the documentation to ensure they point to existi
 julia docs/scripts/simple_link_validator.jl
 ```
 
+### 1.1 Comprehensive Link Validator (`validate_links_final.jl`)
+
+Advanced link validation tool that provides detailed analysis and improvement tracking.
+
+**Features:**
+- Validates both internal and external links
+- Categorizes failures by type (internal vs external)
+- Tracks improvement from baseline (original 502 failures)
+- Provides comprehensive statistics and success rates
+- Shows sample failures for debugging
+
+**Usage:**
+```bash
+cd docs/scripts
+julia validate_links_final.jl
+```
+
+### 1.2 Quick Link Check (`check_links.jl`)
+
+Simplified link validation for quick checks during development.
+
+**Usage:**
+```bash
+cd docs/scripts  
+julia check_links.jl
+```
+
 **Output:**
 - Console summary with health score
 - Detailed text report at `docs/reports/link_validation_report.txt`

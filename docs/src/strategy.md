@@ -8,7 +8,7 @@ last_updated: "2025-10-04"---
 # Strategy Development Guide
 
 <!--
-Keywords: [strategy](../guides/strategy-development.md) development, call! function, [dispatch system](../guides/[strategy](../guides/strategy-development.md)-development.md#dispatch-system), [margin trading](../guides/[strategy](../guides/strategy-development.md)-development.md#margin-trading-concepts), [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode), [optimization](../optimization.md), [Julia](https://julialang.org/) modules, trading logic
+Keywords: [strategy](../guides/strategy-development.md) development, call! function, [dispatch system](../guides/[strategy](../guides/strategy-development.md)-development.md#dispatch-system), [margin trading](../guides/[strategy](../guides/strategy-development.md)-development.md#margin-trading-concepts), [backtesting](../guides/execution-modes.md#simulation)-mode), [optimization](../optimization.md), [Julia](https://julialang.org/) modules, trading logic
 Description: Comprehensive guide to developing trading [strategies](../guides/strategy-development.md) in Planar using [Julia](https://julialang.org/)'s [dispatch system](../guides/strategy-development.md#dispatch-system), covering everything from basic concepts to advanced patterns.
 -->
 
@@ -19,9 +19,9 @@ This comprehensive guide covers everything you need to know about developing tra
 - **[Strategy Fundamentals](#strategy-fundamentals)** - Core concepts and architecture
 - **[Creating Strategies](#creating-a-new-strategy)** - Interactive and manual setup
 - **[Loading Strategies](#loading-a-strategy)** - Runtime instantiation
-- **[Advanced Examples](#advanced-strategy-examples)** - Multi-[timeframe](../guides/data-management.md#timeframes), portfolio, and [optimization](../optimization.md) [strategies](../guides/strategy-development.md)
+- **[Advanced Examples](#advanced-strategy-examples)** - Multi-timeframe, portfolio, and optimization strategies
 - **[Best Practices](#best-practices)** - Code organization and performance tips
-- **[Troubleshooting](#[troubleshooting](../troubleshooting/)-and-debugging)** - Common issues and solutions
+- **[Troubleshooting](#troubleshooting-and-debugging)** - Common issues and solutions
 
 ## Prerequisites
 
@@ -33,7 +33,7 @@ Before diving into strategy development, ensure you have:
 
 ## Related Topics
 
-- **[Optimization]([optimization](../optimization.md).md)** - Parameter tuning and [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode)
+- **[Optimization](../optimization.md)** - Parameter tuning and backtesting
 - **[Plotting](plotting.md)** - Visualizing strategy performance
 - **[Customization](customizations/customizations.md)** - Extending strategy functionality
 
@@ -48,7 +48,7 @@ Planar strategies are built around [Julia](https://julialang.org/)'s powerful [d
 - **Strategy Module**: Contains your trading logic and [configuration](../config.md)
 - **Dispatch System**: Uses `call!` methods to handle different strategy events
 - **Asset Universe**: Collection of tradeable assets managed by the strategy
-- **Execution Modes**: Sim ([backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode)), Paper (simulated live), and Live trading
+- **Execution Modes**: Sim ([backtesting](../guides/execution-modes.md#simulation)-mode)), Paper (simulated live), and Live trading
 - **Margin Support**: Full support for isolated and [cross margin](../guides/strategy-development.md#margin-modes) trading
 
 #### Strategy Type Hierarchy
@@ -198,7 +198,7 @@ Timeframe:
    1h
    1d
 
-Select [exchange](../[exchanges](../exchanges.md).md) by:
+Select exchange by:
  > volume
    markets
    nokyc
@@ -834,8 +834,8 @@ function call!(s::SC, ts::DateTime, ctx)
     
     foreach(s.universe) do ai
         # Calculate moving averages
-        fast_ma = mean(closeat(ai.ohlcv, ats-s.attrs[:fast_period]:ats))
-        slow_ma = mean(closeat(ai.ohlcv, ats-s.attrs[:slow_period]:ats))
+        fast_ma = mean(closeat(ai.ohlcv, ats-s.attrs[:fast_period]:assets
+        slow_ma = mean(closeat(ai.ohlcv, ats-s.attrs[:slow_period]:assets
         
         current_price = closeat(ai.ohlcv, ats)
         
@@ -1930,7 +1930,7 @@ This comprehensive order management and risk documentation provides practical pa
 e Also
 
 ### Core Documentation
-- **[Data Management](data.md)** - Working with [OHLCV data](../guides/data-management.md#ohlcv-data) and storage
+- **[Data Management](data.md)** - Working with OHLCV data and storage
 - **[Execution Modes](engine/mode-comparison.md)** - Understanding Sim, Paper, and Live modes
 - **[Optimization](optimization.md)** - Parameter optimization and backtesting
 - **[Plotting](plotting.md)** - Visualizing strategy performance and results
@@ -1947,14 +1947,14 @@ e Also
 - **[Strategy Stats](API/strategystats.md)** - Performance analysis functions
 
 ### Support
-- **[Troubleshooting]([troubleshooting](../troubleshooting/).md)** - Common strategy development issues
+- **[Troubleshooting](../troubleshooting/index.md)** - Common strategy development issues
 - **[Community](contacts.md)** - Getting help and sharing strategies
 
 ## Next Steps
 
 After mastering strategy development:
 
-1. **[Optimize Your Strategies](optimization.md)** - Learn [parameter optimization](../optimization.md) techniques
+1. **[Optimize Your Strategies](../optimization.md)** - Learn parameter optimization techniques
 2. **[Visualize Performance](plotting.md)** - Create compelling performance charts
-3. **[Deploy Live](engine/live.md)** - Move from backtesting to [live trading](../guides/execution-modes.md#live-mode)
+3. **[Deploy Live](engine/live.md)** - Move from backtesting to live trading
 4. **[Extend Functionality](customizations/customizations.md)** - Customize Planar for your needs

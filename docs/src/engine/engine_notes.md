@@ -9,9 +9,9 @@ last_updated: "2025-10-04"---
 
 ## Goals
 
-- The [backtest](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode) should be able to be executed given a custom start and end date.
-- The [strategy](../guides/strategy-development.md) has to have access to the [OHLCV](../guides/data-management.md#ohlcv-data) and all past trade history.
-- It must be able to run during [live trading](../guides/execution-modes.md#live-mode).
+- The backtest should be able to be executed given a custom start and end date.
+- The strategy has to have access to the OHLCV and all past trade history.
+- It must be able to run during live trading.
 
 ## Main loop
 
@@ -22,7 +22,7 @@ last_updated: "2025-10-04"---
 The loop is just a timestamp feeder!, and the [strategy](../guides/strategy-development.md) holds all the state.
 
 - Because we use the `TimeFrames` abstraction, the step can be arbitrary, the strategy will just index into ohlcv data according to the last candle compatible with the given timestamp. This is a performance trade-off, we prefer to always index with dates, and never with integers, because it reduces the assumptions to _the row data must match its timestamp_ (its not corrupted!) compared to spurious bugs that might arise by integer indexing.
-- The [simulation](../guides/execution-modes.md#simulation-mode) is adversarial to the strategy, it is the job of the [simulation](../guides/execution-modes.md#simulation-mode) to decide __how much__ loss a trade has incurred.
+- The simulation is adversarial to the strategy, it is the job of the simulation to decide __how much__ loss a trade has incurred.
 
 ## Strategy General Considerations
 

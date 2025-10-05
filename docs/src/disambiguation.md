@@ -68,16 +68,16 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 ### Exchange and Infrastructure Terms
 
 **Exchange (exc)**
-: Can refer to an `Exchange` instance, `ExchangeID`, or the `Symbol` of an [exchange](../[exchanges](../exchanges.md).md) ID. A global `exc` variable is defined in `ExchangeTypes` for REPL convenience.
+: Can refer to an `Exchange` instance, `ExchangeID`, or the `Symbol` of an [exchange]([exchanges](../exchanges.md).md) ID. A global `exc` variable is defined in `ExchangeTypes` for REPL convenience.
 
 **Sandbox**
 : Exchange-provided "testnet" for API testing. Distinct from [paper trading](../guides/execution-modes.md#paper-mode) - sandbox uses test APIs, [paper trading](../guides/execution-modes.md#paper-mode) uses live data with simulated execution.
 
 **Instance**
-: Typically implies an `AssetInstance` - the combination of an asset and [exchange](../[exchanges](../exchanges.md).md).
+: Typically implies an `AssetInstance` - the combination of an asset and [exchange]([exchanges](../exchanges.md).md).
 
 **Futures/Swap/Perps**
-: Swaps are perpetual futures contracts. Following [CCXT](../[exchanges](../exchanges.md).md#ccxt-integration) conventions: swaps use `"BASE/QUOTE:SETTLE"` format, futures include expiry as `"BASE/QUOTE:SETTLE-EXPIRY"`.
+: Swaps are perpetual futures contracts. Following [CCXT]([exchanges](../exchanges.md).md#ccxt-integration) conventions: swaps use `"BASE/QUOTE:SETTLE"` format, futures include expiry as `"BASE/QUOTE:SETTLE-EXPIRY"`.
 
 ## Planar-Specific Terms
 
@@ -175,7 +175,7 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 - Project: `user/[strategies](../guides/strategy-development.md)/StrategyName/src/StrategyName.jl`
 
 **Configuration Files**
-- Main config: `user/[planar.toml](../config.md#[configuration](../config.md)-file)`
+- Main config: `user/[planar.toml](../config.md#configuration)-file)`
 - Secrets: `user/[secrets.toml](../config.md#secrets-management)`
 - Strategy config: `user/[strategies](../guides/strategy-development.md)/StrategyName/Project.toml`
 

@@ -14,13 +14,13 @@ This comprehensive index helps you quickly find information across all Planar do
 ### Getting Started
 - **Installation** - [Docker](getting-started/installation.md#docker-installation), [Source](getting-started/installation.md#source-installation)
 - **Quick Start** - [15-minute tutorial](getting-started/quick-start.md)
-- **First Strategy** - [Tutorial](getting-started/first-[strategy](../guides/strategy-development.md).md), [Examples](getting-started/first-[strategy](../guides/strategy-development.md).md#[strategy](../guides/strategy-development.md)-examples)
+- **First Strategy** - [Tutorial](getting-started/first-strategy.md), [Examples](getting-started/first-strategy.md#strategy-examples)
 
 ### Strategy Development
 - **Strategy Basics** - [Architecture](strategy.md#strategy-fundamentals), [Dispatch System](strategy.md#dispatch-system)
 - **Strategy Creation** - [Interactive Generator](strategy.md#interactive-strategy-generator), [Manual Setup](strategy.md#manual-setup)
-- **Strategy Loading** - [Runtime Loading](strategy.md#loading-a-strategy), [Configuration](strategy.md#strategy-[configuration](../config.md))
-- **Advanced Patterns** - [Multi-timeframe](strategy.md#multi-[timeframe](../guides/data-management.md#timeframes)-strategy), [Portfolio Rebalancing](strategy.md#portfolio-rebalancing-strategy)
+- **Strategy Loading** - [Runtime Loading](strategy.md#loading-a-strategy), [Configuration](strategy.md#strategy-configuration)
+- **Advanced Patterns** - [Multi-timeframe](strategy.md#multi-timeframe-strategy), [Portfolio Rebalancing](strategy.md#portfolio-rebalancing-strategy)
 - **Margin Trading** - [Concepts](strategy.md#margin-trading-concepts), [Position Management](strategy.md#position-management)
 
 ### Data Management
@@ -30,13 +30,13 @@ This comprehensive index helps you quickly find information across all Planar do
 - **Live Streaming** - [Watchers](data.md#live-data-streaming-with-watchers), [OHLCV Tickers](data.md#ohlcv-ticker-watcher)
 
 ### Execution Modes
-- **Backtesting** - [Configuration](engine/[backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode).md#[backtest](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode)-[configuration](../config.md)), [Performance](engine/[backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode).md#performance-[optimization](../optimization.md)-settings)
+- **Backtesting** - [Configuration](engine/backtesting.md#backtest-configuration), [Performance](engine/backtesting.md#performance-optimization-settings)
 - **Paper Trading** - [Setup](engine/paper.md), [Real-time Simulation](engine/paper.md)
 - **Live Trading** - [API Setup](engine/live.md), [Risk Management](engine/live.md), [Monitoring](engine/live.md)
 - **Mode Comparison** - [Feature Matrix](engine/mode-comparison.md#feature-comparison-matrix), [Transition Guide](engine/mode-comparison.md)
 
 ### Optimization
-- **Methods** - [Grid Search]([optimization](../optimization.md).md#grid-search), [Bayesian Optimization]([optimization](../optimization.md).md#bayesian-optimization)
+- **Methods** - [Grid Search](optimization.md#grid-search), [Bayesian Optimization](optimization.md#bayesian-optimization)
 - **Configuration** - [Parameter Definition](optimization.md#parameter-definition), [Objective Functions](optimization.md#objective-functions)
 - **Results** - [Analysis](optimization.md#result-analysis), [Visualization](optimization.md#optimization-visualization)
 
@@ -48,13 +48,13 @@ This comprehensive index helps you quickly find information across all Planar do
 ### Customization
 - **Dispatch System** - [Overview](customizations/customizations.md#dispatch-system), [Patterns](customizations/customizations.md#dispatch-patterns)
 - **Custom Orders** - [Implementation](customizations/orders.md), [Examples](customizations/orders.md#examples)
-- **Exchange Extensions** - [Adding Exchanges](customizations/[exchanges](../exchanges.md).md), [Custom Behavior](customizations/[exchanges](../exchanges.md).md)
+- **Exchange Extensions** - [Adding Exchanges](customizations/exchanges.md), [Custom Behavior](customizations/exchanges.md)
 
 ## Function Index
 
 ### Core Functions
 - `strategy()` - [Strategy Loading](strategy.md#loading-a-strategy)
-- `start!()` - [Backtesting](engine/[backtesting](../guides/execution-modes.md#simulation-mode).md), [Strategy Execution](strategy.md)
+- `start!()` - [Backtesting](engine/backtesting.md), [Strategy Execution](strategy.md)
 - `call!()` - [Dispatch System](strategy.md#dispatch-system), [Strategy Interface](strategy.md#strategy-interface-details)
 - `fetch_ohlcv()` - [Data Fetching](data.md#basic-fetch-usage)
 - `load_ohlcv()` - [Data Loading](strategy.md#quick-example)
@@ -108,7 +108,7 @@ This comprehensive index helps you quickly find information across all Planar do
 
 ### User Files
 - **Strategies** - `user/[strategies](../guides/strategy-development.md)/`
-- **Configuration** - `user/[planar.toml](../config.md#[configuration](../config.md)-file)`
+- **Configuration** - `user/[planar.toml](../config.md#configuration)-file)`
 - **Secrets** - `user/[secrets.toml](../config.md#secrets-management)`
 - **Data** - `user/data.mdb`, `user/lock.mdb`
 
