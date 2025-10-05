@@ -59,6 +59,10 @@ cd Planar.jl && julia --project=PlanarInteractive
 In your Julia REPL, copy and paste these commands:
 
 ```julia
+# Activate PlanarInteractive project first
+import Pkg
+Pkg.activate("PlanarInteractive")
+
 # Load Planar with all features
 using PlanarInteractive
 
@@ -76,11 +80,11 @@ using PlanarInteractive
 
 ```julia
 # Load the built-in demo strategy
-s = strategy(:QuickStart, exchange.md)=:binance)
+s = strategy(:QuickStart, exchange=:binance)
 
 # Verify it loaded correctly
 println("Strategy: $(s.config.name)")
-println("Exchange: $(s.config.exchange.md))")
+println("Exchange: $(s.config.exchange)")
 println("Asset: $(first(s.universe.assets).asset)")
 ```
 
@@ -97,16 +101,21 @@ Asset: BTC/USDT
 
 ```julia
 # Download recent Bitcoin price data
-fetch_ohlcv(s, from=-500)  # Last 500 candles (~8 hours of 1-minute data)
-
-# Load data into the strategy
-load_ohlcv(s)
-
-# Verify data loaded
-ai = first(s.universe.assets)
-println("Downloaded $(length(ai.data.timestamp)) data points")
-println("From: $(ai.data.timestamp[1])")
-println("To: $(ai.data.timestamp[end])")
+try
+    fetch_ohlcv(s, from=-500)  # Last 500 candles (~8 hours of 1-minute data)
+    
+    # Load data into the strategy
+    load_ohlcv(s)
+    
+    # Verify data loaded
+    ai = first(s.universe.assets)
+    println("Downloaded $(length(ai.data.timestamp)) data points")
+    println("From: $(ai.data.timestamp[1])")
+    println("To: $(ai.data.timestamp[end])")
+catch e
+    @warn "Data fetch failed: $e"
+    @info "Check internet connection and exchange availability"
+end
 ```
 
 **Expected output**: Should show ~500 data points with recent timestamps.
@@ -119,18 +128,23 @@ println("To: $(ai.data.timestamp[end])")
 
 ```julia
 # Execute the trading strategy on historical data
-start!(s)
-
-# Check the results immediately
-initial_balance = s.config.cash
-final_balance = cash(s)
-profit_loss = final_balance - initial_balance
-return_pct = (profit_loss / initial_balance) * 100
-
-println("🏦 Initial balance: $(initial_balance)")
-println("💰 Final balance: $(round(final_balance, digits=2))")
-println("📈 Profit/Loss: $(round(profit_loss, digits=2)) ($(round(return_pct, digits=2))%)")
-println("🔄 Number of trades: $(length(s.history.trades))")
+try
+    start!(s)
+    
+    # Check the results immediately
+    initial_balance = s.config.cash
+    final_balance = cash(s)
+    profit_loss = final_balance - initial_balance
+    return_pct = (profit_loss / initial_balance) * 100
+    
+    println("🏦 Initial balance: $(initial_balance)")
+    println("💰 Final balance: $(round(final_balance, digits=2))")
+    println("📈 Profit/Loss: $(round(profit_loss, digits=2)) ($(round(return_pct, digits=2))%)")
+    println("🔄 Number of trades: $(length(s.history.trades))")
+catch e
+    @warn "Strategy execution failed: $e"
+    @info "Check that data was loaded successfully"
+end
 ```
 
 **Expected output**: Shows your strategy's performance with profit/loss and trade count.
@@ -140,11 +154,17 @@ println("🔄 Number of trades: $(length(s.history.trades))")
 ## Step 6: Visualize Results (3 minutes)
 
 ```julia
-# Load plotting system
-using WGLMakie  # Web-based interactive plots
-
-# Create the main visualization
-balloons(s)
+# Load plotting system (requires PlanarInteractive)
+try
+    using WGLMakie  # Web-based interactive plots
+    
+    # Create the main visualization
+    balloons(s)
+    @info "Chart should open in your browser"
+catch e
+    @warn "Plotting not available: $e"
+    @info "Try: using GLMakie instead of WGLMakie"
+end
 ```
 
 **What you'll see**: An interactive chart with:
@@ -279,7 +299,7 @@ You just completed your first algorithmic trading backtest! Here's what you acco
 Try modifying the QuickStart strategy:
 ```julia
 # Try different assets
-s2 = strategy(:QuickStart, exchange.md)=:binance, asset="ETH/USDT")
+s2 = strategy(:QuickStart, exchange=:binance, asset="ETH/USDT")
 
 # Try different time periods  
 fetch_ohlcv(s2, from=-2000)  # More data

@@ -162,18 +162,32 @@ using Planar
 @info "Planar loaded successfully"
 
 # Test exchange connectivity (sandbox)
-exchange = setup_exchange(:binance, sandbox=true)
-test_connectivity(exchange)
+# Note: Replace with your actual exchange setup
+try
+    exchange = getexchange!(:binance, sandbox=true)
+    @info "Exchange connection successful"
+catch e
+    @warn "Exchange connection failed (this is normal without API keys): $e"
+end
 ```
 
 ### Run Example Strategy
 
 ```julia
-# Load example configuration
-config = load_config("examples/simple_strategy.toml")
-
-# Run a quick backtest
-results = run_backtest(config)
+# Load example strategy (using built-in example)
+# Note: This requires PlanarInteractive for full functionality
+try
+    import Pkg
+    Pkg.activate("PlanarInteractive")
+    using PlanarInteractive
+    
+    # Create a simple test strategy
+    s = strategy(:QuickStart, exchange=:binance)
+    @info "Example strategy created successfully"
+catch e
+    @warn "Interactive features not available: $e"
+    @info "Basic Planar installation verified"
+end
 ```
 
 ## Docker Setup
@@ -232,7 +246,8 @@ export JULIA_GC_THREADS=2
 1. **Package Installation Fails**:
    ```julia
    # Clear package cache
-   using Pkg
+   import Pkg
+   Pkg.activate("Planar")  # Ensure correct project
    Pkg.gc()
    Pkg.resolve()
    ```

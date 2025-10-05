@@ -150,10 +150,10 @@ function safe_download(symbol, market=:um)
     try
         bn.binancedownload(symbol, market=market, freq=:monthly, kind=:klines)
         bn.binanceload(symbol, market=market, freq=:monthly, kind=:klines)
-        @info "Successfully downloaded $symbol"
+        @info "Successfully downloaded" symbol
         return true
     catch e
-        @warn "Failed to download $symbol: $e"
+        @warn "Failed to download" symbol e
         return false
     end
 end
@@ -407,9 +407,9 @@ for exchange_name in [:binance, :kucoin, :bybit]
         w = wi.ccxt_ohlcv_tickers_watcher(exc)
         wc.start!(w)
         push!(watchers, w)
-        @info "Started watcher for $exchange_name"
+        @info "Started watcher for" exchange_name
     catch e
-        @warn "Failed to start watcher for $exchange_name: $e"
+        @warn "Failed to start watcher for" exchange_name e
     end
 end
 
@@ -418,7 +418,7 @@ function monitor_watchers(watchers)
     for (i, w) in enumerate(watchers)
         status = wc.isrunning(w) ? "RUNNING" : "STOPPED"
         pairs_count = length(w.view)
-        @info "Watcher $i: $status, tracking $pairs_count pairs"
+        @info "Watcher" i "status:" status "tracking" pairs_count "pairs"
     end
 end
 
@@ -429,7 +429,7 @@ function cleanup_watchers(watchers)
             wc.stop!(w)
             @info "Stopped watcher"
         catch e
-            @warn "Error stopping watcher: $e"
+            @warn "Error stopping watcher:" e
         end
     end
 end
@@ -488,7 +488,7 @@ function create_resilient_watcher(exchange_name, pair)
             end
             
             wc.start!(w)
-            @info "Successfully started watcher for $pair on $exchange_name"
+            @info "Successfully started watcher for" pair "on" exchange_name
             return w
             
         catch e
@@ -522,7 +522,7 @@ function save_watcher_data(w, source_name="live_data")
     if !isempty(data)
         # Save to the data system
         Data.save_ohlcv(Data.zi[], source_name, w.pair, w.timeframe, data)
-        @info "Saved $(nrow(data)) candles to storage"
+        @info "Saved" nrow(data) "candles to storage"
     end
 end
 
@@ -635,9 +635,9 @@ function save_validated_ohlcv(source, pair, timeframe, data)
     # Save with validation
     try
         Data.save_ohlcv(Data.zi[], source, pair, timeframe, data)
-        @info "Successfully saved $(nrow(data)) candles for $pair"
+        @info "Successfully saved" nrow(data) "candles for" pair
     catch e
-        @error "Failed to save data: $e"
+        @error "Failed to save data:" e
         rethrow(e)
     end
 end
@@ -762,7 +762,7 @@ Since these save/load functions require a timestamp column, they check that the 
     OHLCV save/load functions validate timestamp contiguity by default. Use `check=:none` to disable validation for irregular data.
 
 !!! tip "Performance Optimization"
-    - Use progressive loading (`raw=true`) for large datasets to avoid memory issues
+    - Use progressive loading (`raw=true`) for datasets larger than available memory
     - Process data in chunks when dealing with very large time series
     - Consider serialization for complex data structures that don't fit standard numeric types
 
@@ -937,10 +937,10 @@ function get_or_compute_indicators(pair, timeframe; force_refresh=false)
     if !force_refresh
         try
             cached_result = Cache.load_cache(cache_key)
-            @info "Loaded indicators from cache for $pair"
+            @info "Loaded indicators from cache for" pair
             return cached_result
         catch
-            @info "Cache miss, computing indicators for $pair"
+            @info "Cache miss, computing indicators for" pair
         end
     end
     
@@ -962,13 +962,13 @@ function cached_with_expiry(key, compute_fn; ttl_hours=24)
         cached_time = cached_data["timestamp"]
         
         if now() - cached_time < Hour(ttl_hours)
-            @info "Using cached data for $key"
+            @info "Using cached data for" key
             return cached_data["data"]
         else
-            @info "Cache expired for $key, recomputing"
+            @info "Cache expired for" key "recomputing"
         end
     catch
-        @info "No valid cache found for $key"
+        @info "No valid cache found for" key
     end
     
     # Compute fresh data
@@ -1071,7 +1071,7 @@ function cache_size_info()
     end
     
     size_mb = total_size / (1024 * 1024)
-    @info "Cache contains $file_count files, total size: $(round(size_mb, digits=2)) MB"
+    @info "Cache contains" file_count "files, total size:" round(size_mb, digits=2) "MB"
     
     return (files=file_count, size_mb=size_mb)
 end
@@ -1090,42 +1090,17 @@ function configure_optimal_storage()
     @info "Storage [configuration](../config.md) optimized for time-series data"
 end
 
-# Monitor storage performance
-function storage_performance_test(source, pair, timeframe, n_operations=100)
-    @info "Testing storage performance..."
+# Create optimized ZarrInstance
+function create_optimized_zarr_instance(storage_path; config...)
+    # This would create a new ZarrInstance with optimized settings
+    # Implementation depends on the actual ZarrInstance constructor
+    @info "Creating optimized Zarr instance at $storage_path"
     
-    # Test write performance
-    test_data = Data.load_ohlcv(Data.zi[], source, pair, timeframe)
-    write_times = []
+    # Example [configuration](../config.md)
+    optimized_config = configure_optimal_storage(; config...)
     
-    for i in 1:n_operations
-        test_key = "perf_test_$i"
-        start_time = time()
-        Data.save_ohlcv(Data.zi[], "test_source", test_key, timeframe, test_data)
-        push!(write_times, time() - start_time)
-    end
-    
-    # Test read performance
-    read_times = []
-    for i in 1:n_operations
-        test_key = "perf_test_$i"
-        start_time = time()
-        Data.load_ohlcv(Data.zi[], "test_source", test_key, timeframe)
-        push!(read_times, time() - start_time)
-    end
-    
-    # Cleanup test data
-    for i in 1:n_operations
-        # Would need a delete function here
-    end
-    
-    avg_write = mean(write_times) * 1000  # Convert to ms
-    avg_read = mean(read_times) * 1000
-    
-    @info "Average write time: $(round(avg_write, digits=2)) ms"
-    @info "Average read time: $(round(avg_read, digits=2)) ms"
-    
-    return (write_ms=avg_write, read_ms=avg_read)
+    # Return configured instance (pseudo-code)
+    # return ZarrInstance(storage_path; optimized_config...)
 end
 ```
 
@@ -1162,7 +1137,6 @@ function clean_ohlcv_data(data::DataFrame)
     
     if any(invalid_low)
         cleaned_data.low[invalid_low] = min.(cleaned_data.open[invalid_low], cleaned_data.close[invalid_low])
-        push!(issues_found, "Fixed $(sum(invalid_low)) invalid low prices")
     end
     
     # Remove extreme outliers (beyond 5 standard deviations)
@@ -1437,7 +1411,7 @@ function optimize_for_access_pattern(pattern::Symbol)
         @info "Optimized for analytical workloads"
         
     else
-        @warn "Unknown access pattern: $pattern"
+        @warn "Unknown access pattern:" pattern
     end
 end
 
@@ -1510,7 +1484,7 @@ function validate_multiple_pairs(source, pairs, timeframe)
     results = Dict()
     
     for pair in pairs
-        @info "Validating $pair..."
+        @info "Validating" pair "..."
         results[pair] = validate_data_integrity(source, pair, timeframe)
     end
     
@@ -1523,7 +1497,7 @@ function validate_multiple_pairs(source, pairs, timeframe)
     # Report issues
     for (pair, result) in results
         if result["status"] != "valid"
-            @warn "Issues found in $pair" result
+            @warn "Issues found in" pair result
         end
     end
     
@@ -1557,7 +1531,7 @@ function diagnose_storage_issues()
     test_pairs = ["BTC/USDT", "ETH/USDT"]  # Common pairs for testing
     for pair in test_pairs
         try
-            test_data = Data.load_ohlcv(Data.zi[], "binance", pair, "1h")
+            test_data = Data.load_ohlcv(Data.zi[], "binance", pair, "1h"; check=:none)
             if nrow(test_data) == 0
                 push!(issues, "No data found for test pair: $pair")
             end
@@ -1577,17 +1551,17 @@ end
 
 # Repair corrupted data
 function repair_data_corruption(source, pair, timeframe; backup=true)
-    @info "Attempting to repair data for $source/$pair/$timeframe"
+    @info "Attempting to repair data for" source pair timeframe
     
     if backup
         # Create backup before repair
         try
-            original_data = Data.load_ohlcv(Data.zi[], source, pair, timeframe)
+            original_data = Data.load_ohlcv(Data.zi[], source, pair, timeframe; check=:none)
             backup_key = "backup_$(source)_$(pair)_$(timeframe)_$(now())"
             Data.save_ohlcv(Data.zi[], "backups", backup_key, timeframe, original_data)
-            @info "Backup created: $backup_key"
+            @info "Backup created:" backup_key
         catch e
-            @warn "Could not create backup: $e"
+            @warn "Could not create backup:" e
         end
     end
     
@@ -1598,24 +1572,59 @@ function repair_data_corruption(source, pair, timeframe; backup=true)
         
         # Save cleaned data
         Data.save_ohlcv(Data.zi[], source, pair, timeframe, cleaned_data; reset=true)
-        @info "Data repair completed for $pair"
+        @info "Data repair completed for" pair
         
         return true
     catch e
-        @error "Data repair failed: $e"
+        @error "Data repair failed:" e
         return false
     end
 end
 ```
 
-[^1]: `Default path might be a scratchspace (from Scratch.jl) in the future`
+### Progressive Data Loading
+
+When loading data from storage, you can directly use the `ZArray` by passing `raw=true` to `load_ohlcv` or `as_z=true` or `with_z=true` to `load_data`. By managing the array directly you can avoid materializing the entire dataset, which is required when dealing with large amounts of data.
+
+```julia
+# Example: Progressive loading for large datasets
+function analyze_large_dataset_progressively(source, pair, timeframe)
+    # Load as ZArray for progressive access
+    z_array = Data.load_ohlcv(Data.zi[], source, pair, timeframe; raw=true)
+    
+    # Process data in chunks
+    chunk_size = 1000
+    total_size = size(z_array, 1)
+    
+    results = []
+    for start_idx in 1:chunk_size:total_size
+        end_idx = min(start_idx + chunk_size - 1, total_size)
+        
+        # Load only the chunk we need
+        chunk_data = z_array[start_idx:end_idx, :]
+        chunk_df = DataFrame(chunk_data, Data.OHLCV_COLUMNS)
+        
+        # Process chunk (e.g., calculate statistics)
+        chunk_stats = (
+            mean_close = mean(chunk_df.close),
+            max_volume = maximum(chunk_df.volume),
+            date_range = (minimum(chunk_df.timestamp), maximum(chunk_df.timestamp))
+        )
+        
+        push!(results, chunk_stats)
+        @info "Processed chunk $start_idx:$end_idx"
+    end
+    
+    return results
+end
+```
 
 !!! tip "Performance Best Practices"
     - Use progressive loading (`raw=true`) for datasets larger than available memory
     - Implement caching for expensive computations with appropriate TTL
     - Monitor cache size and clean up old entries regularly
     - Use chunked processing for very large datasets
-    - Configure appropriate chunk sizes based on your access patterns
+    - Consider serialization for complex data structures that don't fit standard numeric types
 
 ## Real-Time Data Pipelines and Monitoring
 
@@ -1702,16 +1711,16 @@ function start_pipeline(pipeline)
         try
             # Start ticker watcher
             wc.start!(exchange_watchers[:ticker])
-            @info "Started ticker watcher for $exchange_name"
+            @info "Started ticker watcher for" exchange_name
             
             # Start individual pair watchers
             for pair_watcher in exchange_watchers[:pairs]
                 wc.start!(pair_watcher)
             end
-            @info "Started $(length(exchange_watchers[:pairs])) pair watchers for $exchange_name"
+            @info "Started" length(exchange_watchers[:pairs]) "pair watchers for" exchange_name
             
         catch e
-            @error "Failed to start watchers for $exchange_name: $e"
+            @error "Failed to start watchers for" exchange_name e
         end
     end
     
@@ -1744,9 +1753,9 @@ function stop_pipeline(pipeline)
                 wc.stop!(pair_watcher)
             end
             
-            @info "Stopped watchers for $exchange_name"
+            @info "Stopped watchers for" exchange_name
         catch e
-            @warn "Error stopping watchers for $exchange_name: $e"
+            @warn "Error stopping watchers for" exchange_name e
         end
     end
     
@@ -1783,7 +1792,7 @@ function process_realtime_data(pipeline; processing_interval=60)
         catch InterruptException
             break
         catch e
-            @error "Error in real-time processing: $e"
+            @error "Error in real-time processing:" e
             sleep(processing_interval)
         end
     end
@@ -1889,7 +1898,7 @@ function monitor_pipeline(pipeline)
                         wc.start!(ticker_watcher)
                         @info "Restarted $exchange_name ticker watcher"
                     catch e
-                        @error "Failed to restart $exchange_name ticker watcher: $e"
+                        @error "Failed to restart $exchange_name ticker watcher:" e
                     end
                 end
                 
@@ -1911,7 +1920,7 @@ function monitor_pipeline(pipeline)
                             wc.start!(pair_watcher)
                             @info "Restarted $exchange_name pair watcher $i"
                         catch e
-                            @error "Failed to restart pair watcher: $e"
+                            @error "Failed to restart pair watcher:" e
                         end
                     end
                 end
@@ -1935,7 +1944,7 @@ function monitor_pipeline(pipeline)
             @info "Monitoring stopped"
             break
         catch e
-            @error "Monitoring error: $e"
+            @error "Monitoring error:" e
             sleep(monitoring_interval)
         end
     end
@@ -2000,7 +2009,7 @@ function monitor_data_quality(pipeline)
         catch InterruptException
             break
         catch e
-            @error "Quality monitoring error: $e"
+            @error "Quality monitoring error:" e
             sleep(300)
         end
     end
@@ -2076,24 +2085,24 @@ function check_quality_alerts(quality_report)
         ticker_quality = quality[:ticker]
         if ticker_quality[:stale_data_pairs] > ticker_quality[:total_pairs] * 0.1
             send_alert("Stale Data Alert", 
-                      "$exchange has $(ticker_quality[:stale_data_pairs]) pairs with stale data")
+                       "$exchange has $(ticker_quality[:stale_data_pairs]) pairs with stale data")
         end
         
         if ticker_quality[:invalid_data_pairs] > 0
             send_alert("Invalid Data Alert", 
-                      "$exchange has $(ticker_quality[:invalid_data_pairs]) pairs with invalid data")
+                       "$exchange has $(ticker_quality[:invalid_data_pairs]) pairs with invalid data")
         end
         
         # Check pair quality
         for pair_quality in quality[:pairs]
             if pair_quality[:data_freshness_minutes] > 10
                 send_alert("Data Freshness Alert", 
-                          "$(pair_quality[:pair]) on $exchange has stale data ($(pair_quality[:data_freshness_minutes]) minutes old)")
+                           "$(pair_quality[:pair]) on $exchange has stale data ($(pair_quality[:data_freshness_minutes]) minutes old)")
             end
             
             if pair_quality[:invalid_candles] > 0
                 send_alert("Invalid Candles Alert", 
-                          "$(pair_quality[:pair]) on $exchange has $(pair_quality[:invalid_candles]) invalid candles")
+                           "$(pair_quality[:pair]) on $exchange has $(pair_quality[:invalid_candles]) invalid candles")
             end
         end
     end
@@ -2128,7 +2137,7 @@ function setup_production_pipeline()
     pipeline[:quality_task] = quality_task
     
     @info "Production pipeline started successfully"
-    @info "Monitoring $(length(exchanges)) exchanges and $(length(pairs)) pairs"
+    @info "Monitoring" length(exchanges) "exchanges and" length(pairs) "pairs"
     
     return pipeline
 end

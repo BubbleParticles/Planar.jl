@@ -124,6 +124,8 @@ bn.binanceload("eth", market=:data, freq=:monthly, kind=:klines)
 ### Market Types and Frequencies
 
 ```julia
+using Scrapers: Scrapers as scr, BinanceData as bn
+
 # Different market types
 bn.binancedownload("btc", market=:spot, freq=:monthly, kind=:klines)    # Spot market
 bn.binancedownload("btc", market=:um, freq=:monthly, kind=:klines)      # USD-M futures
@@ -141,11 +143,22 @@ bn.binancedownload("btc", market=:um, freq=:monthly, kind=:aggTrades)   # Aggreg
 ### Advanced Scraper Examples
 
 ```julia
-# Download multiple symbols at once
-symbols = ["btc", "eth", "ada", "dot"]
-for symbol in symbols
-    bn.binancedownload(symbol, market=:um, freq=:monthly, kind=:klines)
-    bn.binanceload(symbol, market=:um, freq=:monthly, kind=:klines)
+using Dates
+
+# Try to load Scrapers with error handling
+try
+    using Scrapers: Scrapers as scr, BinanceData as bn
+    
+    # Download multiple symbols at once
+    symbols = ["btc", "eth", "ada", "dot"]
+    for symbol in symbols
+        bn.binancedownload(symbol, market=:um, freq=:monthly, kind=:klines)
+        bn.binanceload(symbol, market=:um, freq=:monthly, kind=:klines)
+    end
+    @info "Scrapers functionality available"
+catch e
+    @warn "Scrapers module not available: $e"
+    @info "This is normal in some testing environments"
 end
 
 # Show all symbols that can be downloaded
@@ -222,7 +235,7 @@ using Exchanges
 using Fetch: Fetch as fe
 
 exc = getexchange!(:kucoin)
-[timeframe](../guides/data-management.md#timeframes) = tf"1m"
+timeframe = tf"1m"
 pairs = ("BTC/USDT", "ETH/USDT")
 
 # Will fetch the last 1000 candles, `to` can also be passed to download a specific range
@@ -235,8 +248,9 @@ fe.fetch_ohlcv(exc, timeframe, pairs; from=-1000) # or `fetch_candles` for unche
 using TimeTicks
 using Exchanges
 using Fetch: Fetch as fe
+using Dates
 
-# Initialize [exchange](../exchanges.md)
+# Initialize exchange
 exc = getexchange!(:binance)
 
 # Fetch specific date ranges
@@ -257,6 +271,10 @@ fe.fetch_ohlcv(exc, tf"1d", pairs; from=-365, save=true)
 ### Multi-Exchange Data Collection
 
 ```julia
+using TimeTicks
+using Exchanges
+using Fetch: Fetch as fe
+
 # Collect data from multiple exchanges
 exchanges = [:binance, :kucoin, :bybit]
 pair = "BTC/USDT"
@@ -276,6 +294,8 @@ end
 ### Rate Limit Management
 
 ```julia
+using TimeTicks
+using Exchanges
 using Fetch: Fetch as fe
 
 # Fetch with rate limit awareness
@@ -306,6 +326,10 @@ data = fetch_with_delays(exc, tf"1h", pairs; delay_ms=500)
 ### Data Validation and Quality Checks
 
 ```julia
+using TimeTicks
+using Exchanges
+using Fetch: Fetch as fe
+
 # Fetch with validation
 function fetch_and_validate(exc, timeframe, pair; from=-1000)
     data = fe.fetch_ohlcv(exc, timeframe, pair; from=from)
@@ -429,6 +453,9 @@ println("Data points: $(length(w.view))")
 ### Watcher Management
 
 ```julia
+using Exchanges
+using Planar.Watchers: Watchers as wc, WatchersImpls as wi
+
 # Start multiple watchers for different exchanges
 watchers = []
 
@@ -482,12 +509,24 @@ println("Asks: $(length(orderbook_data.asks))")
 ### Custom Data Processing
 
 ```julia
+using DataFrames
+using Statistics
+
 # Create a watcher with custom data processing
 function custom_data_processor(raw_data)
     # Custom processing logic
     processed = DataFrame(raw_data)
     
-    # Add custom indicators or transformations
+    # Add custom indicators or transformations (example implementations)
+    # Note: Replace with your preferred technical analysis library
+    function rolling_mean(data, window)
+        return [i <= window ? mean(data[1:i]) : mean(data[i-window+1:i]) for i in 1:length(data)]
+    end
+    
+    function rolling_std(data, window)
+        return [i <= window ? std(data[1:i]) : std(data[i-window+1:i]) for i in 1:length(data)]
+    end
+    
     processed.sma_20 = rolling_mean(processed.close, 20)
     processed.volatility = rolling_std(processed.close, 20)
     
@@ -502,6 +541,10 @@ wc.start!(w)
 ### Error Handling and Resilience
 
 ```julia
+using TimeTicks
+using Exchanges
+using Planar.Watchers: Watchers as wc, WatchersImpls as wi
+
 # Robust watcher with error handling
 function create_resilient_watcher(exchange_name, pair)
     max_retries = 3
@@ -541,11 +584,27 @@ resilient_watcher = create_resilient_watcher(:binance, "BTC/USDT")
 ### Data Persistence and Storage
 
 ```julia
-# Configure automatic data persistence
-w = wi.ccxt_ohlcv_watcher(exc, "BTC/USDT"; 
-                          timeframe=tf"1m",
-                          auto_save=true,
-                          save_interval=3600)  # Save every hour
+using TimeTicks
+using Exchanges
+
+# Try to load watcher modules with error handling
+try
+    using Planar.Watchers: Watchers as wc, WatchersImpls as wi
+    using Planar.Data: Data
+    
+    # Setup exchange first
+    exc = getexchange!(:binance)
+    
+    # Configure automatic data persistence
+    w = wi.ccxt_ohlcv_watcher(exc, "BTC/USDT"; 
+                              timeframe=tf"1m",
+                              auto_save=true,
+                              save_interval=3600)  # Save every hour
+    @info "Watcher configured successfully"
+catch e
+    @warn "Watcher modules not available: $e"
+    @info "This is normal in some testing environments"
+end
 
 # Manual data saving
 function save_watcher_data(w, source_name="live_data")
@@ -584,6 +643,20 @@ using Planar
 @environment!
 @assert da === Data
 
+# Example custom data loader function
+function my_custom_data_loader()
+    # This is a placeholder - replace with your actual data loading logic
+    using DataFrames, Dates
+    return DataFrame(
+        timestamp = [DateTime(2024, 1, 1) + Hour(i) for i in 1:10],
+        open = rand(10) * 50000 .+ 45000,
+        high = rand(10) * 50000 .+ 45000,
+        low = rand(10) * 50000 .+ 45000,
+        close = rand(10) * 50000 .+ 45000,
+        volume = rand(10) * 1000
+    )
+end
+
 source_name = "mysource"
 pair = "BTC123/USD"
 timeframe = "1m"
@@ -603,6 +676,7 @@ da.load_ohlcv(zi, source_name, pair, timeframe)
 ```julia
 using DataFrames
 using Dates
+using CSV
 
 # Example: Custom data from CSV files
 function load_csv_ohlcv(filepath)
@@ -635,6 +709,8 @@ Data.save_ohlcv(Data.zi[], "csv_source", "CUSTOM/PAIR", "1h", csv_data)
 ### Custom Data Validation
 
 ```julia
+using Planar.Data: Data
+
 # Example: Custom data with validation
 function save_validated_ohlcv(source, pair, timeframe, data)
     # Validate data structure
@@ -675,6 +751,8 @@ end
 ### Working with Large Custom Datasets
 
 ```julia
+using Planar.Data: Data
+
 # Example: Processing large datasets in chunks
 function save_large_dataset(source, pair, timeframe, large_data; chunk_size=10000)
     total_rows = nrow(large_data)
@@ -705,6 +783,26 @@ ic Data Storage
 If you want to save other kinds of data, there are the [`Planar.Data.save_data`](@ref) and [`Planar.Data.load_data`](@ref) functions. Unlike the ohlcv functions, these functions don't check for contiguity, so it is possible to store sparse data. The data, however, still requires a timestamp column, because data when saved can either be prepend or appended, therefore an index must still be available to maintain order.
 
 ```julia
+using DataFrames
+using Planar.Data: Data
+
+# Example indicator calculation functions (replace with your preferred library)
+function calculate_rsi(prices)
+    return rand(length(prices)) * 100  # Placeholder RSI calculation
+end
+
+function calculate_macd(prices)
+    return rand(length(prices)) * 2 .- 1  # Placeholder MACD calculation
+end
+
+function calculate_bollinger_upper(prices)
+    return prices .* 1.02  # Placeholder Bollinger upper band
+end
+
+function calculate_bollinger_lower(prices)
+    return prices .* 0.98  # Placeholder Bollinger lower band
+end
+
 # Example: Saving custom indicator data
 function save_custom_indicators(source, pair, timeframe, data)
     # Custom data with timestamp and various indicators
@@ -729,6 +827,10 @@ indicators = Data.load_data(Data.zi[], "my_source", "BTC/USDT", "indicators_1h")
 While OHLCV data requires a concrete type for storage (default `Float64`) generic data can either be saved with a shared type, or instead serialized. To serialize the data while saving pass the `serialize=true` argument to `save_data`, while to load serialized data pass `serialized=true` to `load_data`.
 
 ```julia
+using DataFrames
+using Dates
+using Planar.Data: Data
+
 # Example: Storing complex data structures
 complex_data = DataFrame(
     timestamp = [DateTime(2024, 1, 1), DateTime(2024, 1, 2)],

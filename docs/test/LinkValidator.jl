@@ -57,6 +57,10 @@ function extract_links(content::String, file_path::String)
         # Match markdown links [text](url)
         for m in eachmatch(r"\[([^\]]*)\]\(([^)]+)\)", line)
             url = m.captures[2]
+            # Skip nested links or Documenter references that don't represent actual URLs
+            if occursin('[', url) || occursin(']', url) || startswith(url, "@ref")
+                continue
+            end
             push!(links, (url, line_num))
         end
         
