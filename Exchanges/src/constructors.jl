@@ -3,7 +3,7 @@ import Serialization: deserialize, serialize
 using Serialization: AbstractSerializer, serialize_type
 
 using Reexport
-using Pbar.Term: RGB, tprint
+using Pbar.Term: RGBColor, tprint
 using ExchangeTypes
 using Data: Data, DataFrame, eventtrace
 @reexport using ExchangeTypes
