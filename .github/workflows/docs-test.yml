@@ -63,13 +63,13 @@ jobs:
 
       - name: Run documentation tests
         run: |
-          julia --project=Planar docs/test/runtests.jl --verbose --skip-external \
+          julia --project=docs docs/test/runtests.jl --verbose --skip-external \
             --output=docs/test/results/test-results-julia-${{ matrix.julia-version }}.toml
 
       - name: Generate test reports
         if: always()
         run: |
-          julia --project=Planar -e "
+          julia --project=docs -e "
             push!(LOAD_PATH, \"docs/test\")
             using TestResultsReporter
 
@@ -132,7 +132,7 @@ jobs:
 
       - name: Run code example tests only
         run: |
-          julia --project=Planar docs/test/runtests.jl --skip-links --skip-format --skip-external --verbose
+          julia --project=docs docs/test/runtests.jl --skip-links --skip-format --skip-external --verbose
 
   validate-links:
     name: Validate Links
@@ -150,5 +150,5 @@ jobs:
 
       - name: Run link validation only
         run: |
-          julia --project=Planar docs/test/runtests.jl --skip-examples --skip-format --skip-external --verbose \
+          julia --project=docs docs/test/runtests.jl --skip-examples --skip-format --skip-external --verbose \
             --output=docs/test/results/link-validation-results.toml
