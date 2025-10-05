@@ -67,16 +67,7 @@ config.exchange.retry_attempts = 3
 config.exchange.verify_ssl = false
 ```
 
-### Proxy Configuration
 
-**Problem**: Cannot connect through corporate proxy.
-
-**Solution**:
-```bash
-# Set proxy environment variables
-export HTTP_PROXY=http://proxy.company.com:8080
-export HTTPS_PROXY=https://proxy.company.com:8080
-```
 
 ## Exchange-Specific Issues
 
