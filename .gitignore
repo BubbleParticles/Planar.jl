@@ -23,6 +23,7 @@ Planar/test/
 PlanarInteractive/test/
 user/Load/test/
 reports/
+TODO.txt
 
 !/**/deps/precompiles/*_Planar*.jl
 !Data/vendor/.gitkeep

@@ -156,31 +156,11 @@ export JULIA_NUM_THREADS=$(nproc)
 ```
 
 3. **Install Dependencies**:
-```julia
-# Start [Julia](https://julialang.org/) in project
-julia --project=Planar
-
-# Install all dependencies
-] instantiate
-
-# Verify installation
-using Planar
-```
 
 ### Development Environment
 
 #### Recommended Julia Setup
 
-```julia
-# In your Julia startup file (~/.julia/config/startup.jl)
-using Pkg
-if isfile("Project.toml")
-    Pkg.activate(".")
-end
-
-# Enable development mode
-ENV["JULIA_DEBUG"] = "Planar"
-```
 
 #### IDE Configuration
 
@@ -219,41 +199,19 @@ The `PlanarDev` package assists developers by providing helper functions for wor
 
 To skip precompilation for selected modules, set the `JULIA_NOPRECOMP` environment variable:
 
-```julia
-ENV["JULIA_NOPRECOMP"] = (:Planar, :Scrapers, :Engine, :Watchers, :Plotting, :Metrics)
-```
 
 Alternatively, you can manage environment variables with `direnv` (refer to the `.envrc` in the repository). To disable precompilation entirely for certain packages, use `JULIA_NOPRECOMP=all`. This is recommended only when altering low-level components of the module stack. Remember to clear the compilation cache when changing precompilation settings:
 
-```julia
-include("resolve.jl")
-purge_compilecache() # Pass a package name as an argument to clear its specific cache.
-```
 
 The `Exchanges` and `Fetch` packages contain a `compile.jl` file to generate precompile statements using [CompileBot.jl](https://github.com/aminya/CompileBot.jl). This is particularly useful for precompilation tasks that involve numerous web requests. However, this method is not currently used as it does not compile as many methods as `PrecompileTools`.
 
 !!! warning "Custom Precompilation"
     For custom method precompilation, enclose your code with `py_start_loop` and `py_stop_loop` from the Python package to prevent Pkg from stalling due to lingering threads.
-    ```julia
-    using PrecompileTools
-    Python.py_stop_loop() # Stop the Python loop if it's running
-    Python.py_start_loop()
-    @precompile_workload $(myworkload...)
-    Python.py_stop_loop()
-    ```
 
 ### Method Invalidation Strategy
 
 The order of `using ...` statements when loading modules can influence method invalidation. To minimize invalidation, arrange the module imports starting with the ones most likely to cause invalidations to the ones least likely. For instance, placing `using Python` at the beginning can expedite loading times:
 
-```julia
-# Load modules that heavily trigger invalidations first
-using Python
-using Ccxt
-# Load less impactful modules later
-using Timeticks
-using Lang
-```
 
 Modules known for heavy invalidations:
 
@@ -264,26 +222,11 @@ Modules known for heavy invalidations:
 
 To reduce invalidations, include external modules in only one local package and then use that package as a dependency in other local packages. For instance, if `DataFrames` is a dependency of the local package `Data`, and you want to use `DataFrames` in the `Stats` package, do not add `DataFrames` to `Stats` dependencies. Instead, use `Data` and import `DataFrames` from there:
 
-```julia
-module Metrics
-
-using Data.DataFrames
-
-# ...
-end
-```
 
 ### Handling Segfaults
 
 In rare cases involving complex multi-threaded scenarios, disable and re-enable the garbage collector (GC) around the loading of Planar to avoid segmentation faults:
 
-```julia
-GC.enable(false)
-using Planar
-s = st.[strategy](../guides/strategy-development.md)()
-GC.enable(true)
-GC.gc()
-```
 
 Refer to https://github.com/cjdoris/PythonCall.jl/issues/201 for more details.
 
@@ -310,14 +253,6 @@ The order of `using` or `import` statements within packages is crucial. Always i
 #### Julia Formatting
 Planar uses JuliaFormatter with Blue style:
 
-```julia
-# Install JuliaFormatter
-] add JuliaFormatter
-
-# Format code
-using JuliaFormatter
-format(".", BlueStyle(), margin=92)
-```
 
 Configuration in `.JuliaFormatter.toml`:
 ```toml
@@ -342,109 +277,17 @@ remove_extra_newlines = true
 
 All public functions must have docstrings:
 
-```julia
-"""
-    my_function(arg1::Type1, arg2::Type2; kwarg1=default) -> ReturnType
-
-Brief description of what the function does.
-
-# Arguments
-- `arg1::Type1`: Description of first argument
-- `arg2::Type2`: Description of second argument
-- `kwarg1=default`: Description of keyword argument
-
-# Returns
-- `ReturnType`: Description of return value
-
-# Examples
-```julia
-result = my_function(value1, value2; kwarg1=custom_value)
-```
-
-# See Also
-- [`related_function`](@ref): Related functionality
-"""
-function my_function(arg1::Type1, arg2::Type2; kwarg1=default)
-    # Implementation
-end
-```
 
 ### Testing Patterns
 
 #### Unit Testing Structure
 
-```julia
-# test/test_mymodule.jl
-using Test
-using MyModule
-
-@testset "MyModule Tests" begin
-    @testset "Basic Functionality" begin
-        @test my_function(1, 2) == 3
-        @test_throws ArgumentError my_function(-1, 2)
-    end
-    
-    @testset "Edge Cases" begin
-        @test my_function(0, 0) == 0
-        @test isnan(my_function(Inf, -Inf))
-    end
-    
-    @testset "Performance" begin
-        @test @allocated(my_function(1, 2)) == 0
-    end
-end
-```
 
 #### Integration Testing
 
-```julia
-# test/integration/test_strategy_execution.jl
-using Test
-using Planar
-
-@testset "Strategy Execution Integration" begin
-    # Setup test environment
-    [strategy](../guides/strategy-development.md) = create_test_strategy()
-    asset_instance = create_test_asset()
-    
-    @testset "Simulation Mode" begin
-        sim_strategy = Strategy{Sim}([strategy](../guides/strategy-development.md))
-        result = [backtest](../guides/execution-modes.md#simulation)-mode)!(sim_strategy, asset_instance, test_data)
-        
-        @test result.total_return > 0
-        @test length(result.trades) > 0
-    end
-    
-    @testset "Paper Mode" begin
-        paper_strategy = Strategy{Paper}(strategy)
-        # Test [paper trading](../guides/execution-modes.md#paper-mode) logic
-    end
-end
-```
 
 #### Property-Based Testing
 
-```julia
-using Test
-using Random
-
-@testset "Property-Based Tests" begin
-    @testset "Order Validation Properties" begin
-        for _ in 1:100
-            # Generate random valid inputs
-            amount = rand() * 1000
-            price = rand() * 100
-            
-            order = create_order(amount, price)
-            
-            # Test properties that should always hold
-            @test order.amount ≈ amount
-            @test order.price ≈ price
-            @test is_valid_order(order)
-        end
-    end
-end
-```
 
 ### Extension Best Practices
 
@@ -482,166 +325,30 @@ julia = "1.11"
 ```
 
 3. **Module Definition**:
-```julia
-# src/MyNewModule.jl
-module MyNewModule
-
-using Engine
-using Engine: Strategy, AssetInstance
-
-# Export public interface
-export my_public_function, MyPublicType
-
-# Include submodules
-include("types.jl")
-include("functions.jl")
-include("utils.jl")
-
-end # module
-```
 
 #### Implementing Custom Strategies
 
-```julia
-# Define strategy type
-struct MyCustomStrategy <: AbstractStrategy
-    parameter1::Float64
-    parameter2::Int
-    
-    function MyCustomStrategy(param1=1.0, param2=10)
-        new(param1, param2)
-    end
-end
-
-# Implement required interface
-function generate_signals(
-    strategy::MyCustomStrategy,
-    ai::AssetInstance,
-    date::DateTime
-)
-    # Strategy logic here
-    return signal_value
-end
-
-function position_sizing(
-    strategy::MyCustomStrategy,
-    ai::AssetInstance,
-    signal::Float64
-)
-    # Position sizing logic
-    return position_size
-end
-```
 
 #### Performance Optimization Guidelines
 
 1. **Type Stability**:
-```julia
-# Good: Type-stable function
-function fast_calculation(x::Float64)::Float64
-    return x * 2.0 + 1.0
-end
-
-# Avoid: Type-unstable function
-function slow_calculation(x)
-    if x > 0
-        return x * 2.0
-    else
-        return "negative"  # Type instability
-    end
-end
-```
 
 2. **Memory Allocation**:
-```julia
-# Good: Pre-allocate arrays
-function efficient_processing!(output::Vector{Float64}, input::Vector{Float64})
-    @inbounds for i in eachindex(input, output)
-        output[i] = process_element(input[i])
-    end
-    return output
-end
-
-# Avoid: Allocating in loops
-function inefficient_processing(input::Vector{Float64})
-    output = Float64[]
-    for x in input
-        push!(output, process_element(x))  # Allocates on each iteration
-    end
-    return output
-end
-```
 
 3. **Benchmarking**:
-```julia
-using BenchmarkTools
-
-# Benchmark your functions
-@benchmark my_function(test_data)
-
-# Profile memory usage
-@time my_function(test_data)
-
-# Check for type instabilities
-@code_warntype my_function(test_data)
-```
 
 ### Debugging and Profiling
 
 #### Debugging Strategies
 
 1. **Logging**:
-```julia
-using Logging
-
-@debug "Debug information" variable_value
-@info "General information" 
-@warn "Warning message" problematic_value
-@error "Error occurred" exception=e
-```
 
 2. **Interactive Debugging**:
-```julia
-using Debugger
-
-# Set breakpoint
-@bp
-
-# Or use Infiltrator for lightweight debugging
-using Infiltrator
-@infiltrate  # Drops into REPL at this point
-```
 
 3. **Testing Utilities**:
-```julia
-# Test with different data
-test_data = generate_test_data(1000)
-result = my_function(test_data)
-
-# Validate results
-@assert all(isfinite, result) "Result contains non-finite values"
-@assert length(result) == length(test_data) "Length mismatch"
-```
 
 #### Performance Profiling
 
-```julia
-using Profile, ProfileView
-
-# Profile your code
-@profile begin
-    for i in 1:1000
-        my_function(test_data)
-    end
-end
-
-# View results
-ProfileView.view()
-
-# Or use PProf for flame graphs
-using PProf
-pprof()
-```
 
 ### Continuous Integration
 
@@ -706,24 +413,6 @@ jobs:
 
 #### Documentation Updates
 
-```julia
-# Generate documentation
-using Documenter
-
-makedocs(
-    sitename = "Planar.jl",
-    format = Documenter.HTML(),
-    modules = [Planar],
-    pages = [
-        "Home" => "index.md",
-        "Getting Started" => [
-            "getting-started/installation.md",
-            "getting-started/quick-start.md"
-        ],
-        "API Reference" => "api.md"
-    ]
-)
-```
 
 ### Community Guidelines
 

@@ -1,7 +1,7 @@
 # Documentation Testing Configuration
 
 [general]
-project_path = "Planar"
+project_path = "PlanarDev"
 docs_path = "docs/src"
 default_timeout = 30
 parallel = false
@@ -21,7 +21,6 @@ skip_patterns = [
 ]
 # Global requirements for all code examples
 global_requirements = [
-    "Planar",
     "Test"
 ]
 

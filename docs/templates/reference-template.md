@@ -38,35 +38,12 @@ function_name(param1::Type1, param2::Type2; keyword_param::Type3=default) -> Ret
 
 ### Basic Usage
 
-```julia
-# Simple example showing basic functionality
-result = function_name(value1, value2)
-println(result)  # Expected output
-```
 
 ### Advanced Usage
 
-```julia
-# More complex example with optional parameters
-advanced_result = function_name(
-    complex_value1, 
-    complex_value2; 
-    keyword_param=custom_value
-)
-```
 
 ### Real-World Example
 
-```julia
-# Practical example in context of trading strategy
-using Planar
-
-# Setup context
-strategy = load_strategy("example")
-
-# Use the function
-result = function_name(strategy.data, strategy.params)
-```
 
 ## Notes
 

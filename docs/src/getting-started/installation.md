@@ -57,11 +57,6 @@ scripts/build.sh
 
 ### 1. Install Dependencies
 
-```julia
-# In Julia REPL with --project=Planar
-using Pkg
-Pkg.instantiate()
-```
 
 ### 2. Create User Directory
 
@@ -154,41 +149,9 @@ export JULIA_PRECOMP=1
 
 ### Test Installation
 
-```julia
-# Load Planar
-using Planar
-
-# Test basic functionality
-@info "Planar loaded successfully"
-
-# Test exchange connectivity (sandbox)
-# Note: Replace with your actual exchange setup
-try
-    exchange = getexchange!(:binance, sandbox=true)
-    @info "Exchange connection successful"
-catch e
-    @warn "Exchange connection failed (this is normal without API keys): $e"
-end
-```
 
 ### Run Example Strategy
 
-```julia
-# Load example strategy (using built-in example)
-# Note: This requires PlanarInteractive for full functionality
-try
-    import Pkg
-    Pkg.activate("PlanarInteractive")
-    using PlanarInteractive
-    
-    # Create a simple test strategy
-    s = strategy(:QuickStart, exchange=:binance)
-    @info "Example strategy created successfully"
-catch e
-    @warn "Interactive features not available: $e"
-    @info "Basic Planar installation verified"
-end
-```
 
 ## Docker Setup
 
@@ -220,14 +183,6 @@ JULIA_VERSION=1.11.1 scripts/build.sh
 
 ### Precompilation
 
-```julia
-# Create sysimage for faster startup
-using PackageCompiler
-create_sysimage(["Planar"], sysimage_path="planar.so")
-
-# Use sysimage
-julia --sysimage=planar.so --project=Planar
-```
 
 ### Memory Settings
 
@@ -244,13 +199,6 @@ export JULIA_GC_THREADS=2
 ### Common Issues
 
 1. **Package Installation Fails**:
-   ```julia
-   # Clear package cache
-   import Pkg
-   Pkg.activate("Planar")  # Ensure correct project
-   Pkg.gc()
-   Pkg.resolve()
-   ```
 
 2. **Permission Errors**:
    ```bash

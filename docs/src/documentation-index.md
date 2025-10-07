@@ -149,27 +149,6 @@ This comprehensive index helps you quickly find information across all Planar do
 ## Quick Reference
 
 ### Essential Commands
-```julia
-# Load Planar
-using Planar
-@environment!
-
-# Create strategy
-s = strategy(:MyStrategy)
-
-# Download data
-fetch_ohlcv(s, from=-1000)
-
-# Load data
-load_ohlcv(s)
-
-# Run [backtest](../guides/execution-modes.md#simulation-mode)
-start!(s)
-
-# Plot results
-using Plotting
-balloons(s)
-```
 
 ### Key File Paths
 - Strategy files: `user/[strategies](../guides/strategy-development.md)/StrategyName.jl`

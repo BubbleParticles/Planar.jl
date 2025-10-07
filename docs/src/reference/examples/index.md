@@ -86,20 +86,10 @@ Backtesting, validation, and performance analysis.
 ### 1. Copy and Adapt
 All examples are designed to be copied and modified for your specific needs:
 
-```julia
-# Copy the example code
-# Modify parameters and logic
-# Test in simulation mode first
-```
 
 ### 2. Combine Examples
 Many examples can be combined to create more complex strategies:
 
-```julia
-# Use data loading from one example
-# Combine with indicator calculation from another
-# Add risk management from a third example
-```
 
 ### 3. Test Thoroughly
 Always test examples in simulation mode before live trading:
@@ -116,38 +106,6 @@ results = backtest(s, from=DateTime("2024-01-01"), to=DateTime("2024-12-31"))
 
 All examples follow this consistent structure:
 
-```julia
-# Example: [Title]
-# Description: [What this example demonstrates]
-# Complexity: [Beginner/Intermediate/Advanced]
-# Prerequisites: [What you need to know first]
-
-module ExampleStrategy
-    @strategyenv!
-    
-    # Configuration
-    const DESCRIPTION = "Example strategy description"
-    const TIMEFRAME = tf"1h"
-    
-    # Parameters (with sensible defaults)
-    const PARAM1 = Ref(10)
-    const PARAM2 = Ref(0.02)
-    
-    # Strategy logic
-    function call!(s::S, current_time::DateTime, ctx) where {S<:Strategy}
-        # Implementation here
-    end
-    
-    # Helper functions
-    function helper_function(args...)
-        # Helper implementation
-    end
-end
-
-# Usage example
-s = strategy(:ExampleStrategy)
-# Test and use the strategy
-```
 
 ## Testing Your Examples
 
@@ -188,15 +146,6 @@ We welcome contributions to the examples library! When contributing:
 
 ### Submission Guidelines
 
-```julia
-# 1. Create your example following the template
-# 2. Test it thoroughly in simulation mode
-# 3. Add appropriate documentation
-# 4. Submit via pull request with:
-#    - Clear description of what the example demonstrates
-#    - Test results showing it works
-#    - Any special requirements or dependencies
-```
 
 ## Getting Help
 

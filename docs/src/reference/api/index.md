@@ -86,14 +86,6 @@ fetch_ohlcv!(s)
 
 Most API functions use Julia's standard error handling:
 
-```julia
-try
-    result = some_api_function(args...)
-catch e
-    @error "API call failed" exception=e
-    # Handle error appropriately
-end
-```
 
 ## Performance Considerations
 

@@ -97,11 +97,6 @@ sandbox = true  # for testing
 **Problem**: PythonCall.jl fails to initialize.
 
 **Solution**:
-```julia
-# Rebuild Python environment
-using Pkg
-Pkg.build("PythonCall")
-```
 
 ### CCXT Installation Issues
 

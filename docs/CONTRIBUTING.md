@@ -136,9 +136,6 @@ category: "reference"
 Brief description of what this does and when to use it.
 
 ## Syntax
-```julia
-function_name(parameter1, parameter2; optional_param=default)
-```
 
 ## Parameters
 - `parameter1` (Type): Description of what this parameter does
@@ -151,16 +148,8 @@ Description of return value and type.
 ## Examples
 
 ### Basic Usage
-```julia
-# Simple example with explanation
-result = function_name("example", 42)
-```
 
 ### Advanced Usage
-```julia
-# More complex example
-result = function_name("example", 42; optional_param=true)
-```
 
 ## Related Functions
 - [`related_function`](link): Brief description
@@ -237,43 +226,6 @@ julia> # Paste your example code here
 ```
 
 ### Example Format
-```julia
-# Import required modules
-using Planar
-
-# Set up any necessary configuration
-config = Configuration(
-    exchange = "binance",
-    mode = :paper
-)
-
-# Main example code with clear comments
-strategy = SimpleStrategy(
-    symbol = "BTC/USDT",
-    timeframe = "1h"
-)
-
-# Show expected output or next steps
-result = backtest(strategy, config)
-println("Backtest completed with $(length(result.trades)) trades")
-```
-
-## Frontmatter Requirements
-
-All documentation files must include frontmatter metadata:
-
-```yaml
----
-title: "Page Title"                    # Required: Clear, descriptive title
-description: "Brief page description"   # Required: 1-2 sentence summary
-category: "getting-started"            # Required: getting-started|guides|advanced|reference|troubleshooting
-difficulty: "beginner"                 # Optional: beginner|intermediate|advanced
-prerequisites: ["installation"]        # Optional: Array of prerequisite topics
-related_topics: ["strategy-dev"]       # Optional: Array of related topics
-last_updated: "2024-01-15"            # Optional: Date of last significant update
-estimated_time: "15 minutes"          # Optional: For tutorials and guides
----
-```
 
 ## Review Process
 

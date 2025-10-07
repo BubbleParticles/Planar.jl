@@ -176,10 +176,6 @@ This document outlines the comprehensive review process for community contributi
 
 ### Issues to Address
 1. **Line 45**: The code example is missing the required import statement
-   ```julia
-   # Add this import at the beginning
-   using Planar.Strategies
-   ```
 
 2. **Section "Configuration"**: The parameter description is incomplete
    - Current: "Set the timeout value"

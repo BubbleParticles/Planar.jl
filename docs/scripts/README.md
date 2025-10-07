@@ -169,10 +169,6 @@ These tools can be integrated into CI/CD pipelines to ensure documentation quali
 
 1. **Always specify language for code blocks:**
    ```markdown
-   ```julia
-   # Good: Language specified
-   println("Hello, World!")
-   ```
    
    ```
    # Bad: No language specified
@@ -196,10 +192,6 @@ These tools can be integrated into CI/CD pipelines to ensure documentation quali
    ```
 
 4. **Mark non-executable examples:**
-   ```julia
-   # This is just an example - not meant to be executed
-   SomeHypotheticalFunction(parameters...)
-   ```
 
 ### For Maintainers
 

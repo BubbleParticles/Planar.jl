@@ -44,7 +44,7 @@ using .TestResultsReporter
 
 function parse_args(args)
     options = Dict(
-        :project_path => "Planar",
+        :project_path => "PlanarDev",
         :docs_path => "docs/src",
         :config_path => "docs/test/config.toml",
         :skip_examples => false,

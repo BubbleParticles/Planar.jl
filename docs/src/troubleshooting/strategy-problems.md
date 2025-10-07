@@ -16,10 +16,6 @@ This guide covers common problems encountered during strategy development, testi
 ## Quick Diagnostics
 
 1. **Check Strategy Loading** - Verify strategy can be loaded without errors
-   ```julia
-   using Strategies
-   strategy = load_strategy(:MyStrategy)
-   ```
 
 2. **Validate Configuration** - Ensure strategy is properly configured in `user/planar.toml`
 
@@ -38,28 +34,6 @@ This guide covers common problems encountered during strategy development, testi
 Incorrect strategy configuration or file structure.
 
 **Solution:**
-```julia
-# Check strategy configuration in user/planar.toml
-[strategies.MyStrategy]
-path = "strategies/MyStrategy"  # Correct path
-# or
-package = "MyStrategy"  # If using package format
-
-# Verify file structure
-# For path-based strategies:
-user/strategies/MyStrategy/
-├── Project.toml
-├── src/
-│   └── MyStrategy.jl
-└── ...
-
-# For package-based strategies:
-MyStrategy/
-├── Project.toml
-├── src/
-│   └── MyStrategy.jl
-└── ...
-```
 
 **Verification:**
 ```julia
@@ -84,32 +58,6 @@ end
 Syntax errors, missing dependencies, or incorrect function signatures.
 
 **Solution:**
-```julia
-# Check for common syntax issues:
-
-# 1. Missing module declaration
-module MyStrategy
-using Planar
-# ... strategy code ...
-end
-
-# 2. Incorrect function signatures
-# Bad: Missing required parameters
-function generate_signals(data)
-    # ...
-end
-
-# Good: Proper signature matching interface
-function generate_signals(strategy, data, timestamp)
-    # ...
-end
-
-# 3. Missing dependencies in Project.toml
-[deps]
-Planar = "..."
-DataFrames = "..."
-# Add all required packages
-```
 
 **Advanced Debugging:**
 ```julia
@@ -133,38 +81,6 @@ include("user/strategies/MyStrategy/src/MyStrategy.jl")
 Strategy doesn't implement required interface methods.
 
 **Solution:**
-```julia
-# Ensure your strategy implements required interface:
-
-module MyStrategy
-using Planar
-
-# Required: Strategy initialization
-function initialize_strategy(config)
-    # Initialize strategy state
-    return strategy_state
-end
-
-# Required: Signal generation
-function generate_signals(strategy, data, timestamp)
-    # Generate trading signals
-    return signals
-end
-
-# Required: Position sizing
-function calculate_position_size(strategy, signal, balance)
-    # Calculate position size
-    return size
-end
-
-# Optional: Custom risk management
-function apply_risk_management(strategy, position, market_data)
-    # Apply risk rules
-    return adjusted_position
-end
-
-end
-```
 
 ## Strategy Execution Issues
 
@@ -226,48 +142,6 @@ end
 Data not fetched, incorrect timeframes, or exchange connectivity issues.
 
 **Solution:**
-```julia
-using Data, Fetch
-
-# Step 1: Verify data availability
-zi = zinstance()
-available_data = Data.list_available_data(zi, :binance)
-@info "Available data" available_data
-
-# Step 2: Fetch missing data
-try
-    data = fetch_ohlcv(:binance, "BTC/USDT", "1h", limit=1000)
-    @info "Data fetch successful" size=size(data)
-    
-    # Save to database
-    Data.save_ohlcv!(zi, :binance, "BTC/USDT", data)
-catch e
-    @error "Data fetch failed" exception=e
-end
-
-# Step 3: Validate data quality
-function validate_ohlcv(data)
-    # Check for missing values
-    if any(ismissing, data)
-        @warn "Missing values detected in data"
-    end
-    
-    # Check for reasonable price ranges
-    prices = data.close
-    if any(p -> p <= 0, prices)
-        @warn "Invalid price data detected"
-    end
-    
-    # Check for proper time ordering
-    if !issorted(data.timestamp)
-        @warn "Data is not properly time-ordered"
-    end
-    
-    return data
-end
-
-validated_data = validate_ohlcv(data)
-```
 
 ### Signal Generation Problems
 
@@ -335,61 +209,6 @@ signals = debug_signal_generation(strategy, sample_data)
 Balance issues, incorrect order parameters, or exchange connectivity problems.
 
 **Solution:**
-```julia
-using OrderTypes
-
-# Step 1: Check account balance
-exchange = getexchange(:binance)
-try
-    balance = exchange.fetch_balance()
-    @info "Account balance" balance
-    
-    # Check specific asset balance
-    btc_balance = get(balance, "BTC", Dict("free" => 0.0))["free"]
-    @info "BTC balance" balance=btc_balance
-catch e
-    @error "Balance check failed" exception=e
-end
-
-# Step 2: Validate order parameters
-function validate_order(order, exchange)
-    # Check order size against minimum requirements
-    market = exchange.fetch_market(order.symbol)
-    min_amount = get(market["limits"]["amount"], "min", 0.0)
-    
-    if order.amount < min_amount
-        @error "Order amount below minimum" amount=order.amount min=min_amount
-        return false
-    end
-    
-    # Check order value against minimum notional
-    if haskey(market["limits"], "cost")
-        min_cost = get(market["limits"]["cost"], "min", 0.0)
-        estimated_cost = order.amount * order.price  # For limit orders
-        
-        if estimated_cost < min_cost
-            @error "Order value below minimum" cost=estimated_cost min=min_cost
-            return false
-        end
-    end
-    
-    return true
-end
-
-# Step 3: Test order execution in paper mode first
-using PaperMode
-paper_exchange = PaperMode.PaperExchange(:binance)
-
-order = MarketOrder(:buy, "BTC/USDT", 0.001)
-if validate_order(order, paper_exchange)
-    try
-        result = place_order(paper_exchange, order)
-        @info "Paper order successful" result
-    catch e
-        @error "Paper order failed" exception=e
-    end
-end
-```
 
 ### Position Management Errors
 

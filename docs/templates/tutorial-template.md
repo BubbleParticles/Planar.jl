@@ -35,10 +35,6 @@ estimated_time: "XX minutes"
 
 [Clear explanation of what to do]
 
-```julia
-# Code example with comments
-example_code()
-```
 
 **Expected output:**
 ```
@@ -49,10 +45,6 @@ Expected result or output
 
 [Continue with numbered steps...]
 
-```julia
-# More code examples
-next_step()
-```
 
 ## Verification
 

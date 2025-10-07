@@ -25,13 +25,6 @@ This guide helps resolve problems related to exchange connectivity, API authenti
 **Problem**: "Rate limit exceeded" errors.
 
 **Solution**:
-```julia
-# Reduce request frequency
-config.exchange.rate_limit = 1000  # milliseconds between requests
-
-# Use built-in rate limiting
-config.exchange.enable_rate_limit = true
-```
 
 ### IP Restrictions
 
@@ -49,23 +42,12 @@ config.exchange.enable_rate_limit = true
 **Problem**: Connection timeouts to exchange APIs.
 
 **Solution**:
-```julia
-# Increase timeout settings
-config.exchange.timeout = 30000  # 30 seconds
-
-# Enable retry logic
-config.exchange.retry_attempts = 3
-```
 
 ### SSL/TLS Issues
 
 **Problem**: SSL certificate verification failures.
 
 **Solution**:
-```julia
-# For development only - not recommended for production
-config.exchange.verify_ssl = false
-```
 
 
 
@@ -79,11 +61,6 @@ config.exchange.verify_ssl = false
 - Symbol format differences
 
 **Solutions**:
-```julia
-# Use correct Binance endpoint
-config.exchanges.binance.sandbox = true  # for testnet
-config.exchanges.binance.futures = true  # for futures trading
-```
 
 ### Coinbase Pro
 
@@ -127,27 +104,12 @@ sandbox = true
 **Problem**: Insufficient historical data for backtesting.
 
 **Solution**:
-```julia
-# Check available data range
-data_range = fetch_available_range(exchange, symbol, timeframe)
-
-# Adjust backtest period
-config.backtest.start_date = data_range.start
-```
 
 ### Data Quality Issues
 
 **Problem**: Gaps or inconsistencies in price data.
 
 **Solution**:
-```julia
-# Enable data validation
-config.data.validate_ohlcv = true
-config.data.fill_gaps = true
-
-# Use data cleaning
-config.data.remove_outliers = true
-```
 
 ## Trading Issues
 
@@ -166,59 +128,23 @@ config.data.remove_outliers = true
 **Problem**: Position size or margin calculations incorrect.
 
 **Solution**:
-```julia
-# Verify margin settings
-config.trading.margin_mode = "isolated"  # or "cross"
-config.trading.leverage = 1  # start with no leverage
-
-# Check position sizing
-config.risk.max_position_size = 0.1  # 10% of portfolio
-```
 
 ### Slippage Issues
 
 **Problem**: Significant price slippage on orders.
 
 **Solution**:
-```julia
-# Use limit orders instead of market orders
-config.trading.default_order_type = "limit"
-
-# Add slippage protection
-config.trading.max_slippage = 0.001  # 0.1%
-```
 
 ## Monitoring and Debugging
 
 ### Enable Debug Logging
 
-```julia
-# Enable detailed exchange logging
-config.logging.exchange_debug = true
-config.logging.level = "DEBUG"
-```
 
 ### Test Exchange Connectivity
 
-```julia
-# Test basic connectivity
-using Planar
-exchange = setup_exchange(:binance, sandbox=true)
-test_connectivity(exchange)
-
-# Test API authentication
-test_authentication(exchange)
-```
 
 ### Monitor API Usage
 
-```julia
-# Check rate limit status
-rate_limit_info = exchange.get_rate_limit_status()
-
-# Monitor API call frequency
-config.monitoring.track_api_calls = true
-```
 
 ## Emergency Procedures
 

@@ -36,10 +36,6 @@ This guide covers:
 
 [Explanation of first major concept]
 
-```julia
-# Code example illustrating the concept
-example_code()
-```
 
 ### Concept 2
 
@@ -51,28 +47,11 @@ example_code()
 
 [Step-by-step walkthrough of common scenario]
 
-```julia
-# Complete working example
-using Planar
-
-# Setup
-setup_code()
-
-# Implementation
-implementation_code()
-
-# Result
-expected_result()
-```
 
 ### Example 2: Advanced Pattern
 
 [More sophisticated example building on basics]
 
-```julia
-# Advanced example with explanation
-advanced_example()
-```
 
 ## Best Practices
 
@@ -88,10 +67,6 @@ advanced_example()
 
 [When to use this pattern and how to implement it]
 
-```julia
-# Pattern implementation
-pattern_example()
-```
 
 ### Pattern 2: [Another Pattern]
 

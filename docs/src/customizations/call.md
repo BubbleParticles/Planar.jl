@@ -17,11 +17,6 @@ To introduce new `call!` functions, adhere to the following procedure:
 
 Conform to the established argument order convention for the [strategy](../guides/strategy-development.md) signature:
 
-```julia
-function call!(s::Strategy, [args...], ::MyNewTrade; kwargs...)
-    # Implement the function body here
-end
-```
 
 Follow these steps carefully to ensure the seamless integration of new `call!` functions into the system.
 

@@ -41,14 +41,6 @@ This document defines the standardized formatting conventions for all Planar.jl 
 - Keep examples concise but complete
 
 ### Code Block Examples
-```julia
-# Good: Complete, commented example
-using Planar
-
-# Create a simple strategy
-s = strategy(:Example)
-start!(s)  # Begin backtesting
-```
 
 ## Lists and Structure
 

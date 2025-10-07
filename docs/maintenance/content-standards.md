@@ -181,16 +181,6 @@ By the end of this tutorial, you will be able to:
 
 ### Code Example
 
-```julia
-# Clear comments explaining the code
-using Planar
-
-# Show realistic, working example
-config = Configuration(
-    exchange = "binance",
-    mode = :paper
-)
-```
 
 ### Expected Output
 
@@ -264,9 +254,6 @@ Brief description (1-2 sentences) of what this is and its primary purpose.
 
 ## Syntax
 
-```julia
-function_name(required_param, another_param; optional_param=default_value)
-```
 
 ## Parameters
 
@@ -298,62 +285,20 @@ Description of what the function returns, including:
 
 ### Basic Usage
 
-```julia
-# Simple, common use case with explanation
-using Planar
-
-result = function_name("example_value", 42)
-println(result)  # Expected output explanation
-```
 
 ### Advanced Usage
 
-```julia
-# More complex example showing optional parameters
-result = function_name(
-    "complex_value", 
-    100; 
-    optional_param = custom_value
-)
-
-# Show how to handle the result
-if result.success
-    println("Operation completed: $(result.data)")
-else
-    println("Error: $(result.error)")
-end
-```
 
 ### Integration Example
 
-```julia
-# Show how this fits into larger workflows
-strategy = create_strategy()
-config = Configuration(exchange="binance")
-
-# Use the function in context
-result = function_name(strategy.symbol, config.timeframe)
-apply_to_strategy(strategy, result)
-```
 
 ## Error Handling
 
 ### Common Errors
 
 **`ErrorType`**: Description of when this occurs
-```julia
-# Example that triggers the error
-try
-    function_name(invalid_input)
-catch e
-    println("Handle the error appropriately")
-end
-```
 
 **`AnotherErrorType`**: Description and resolution
-```julia
-# Prevention or handling example
-```
 
 ## Performance Considerations
 
@@ -434,15 +379,6 @@ High-level explanation of the concept, workflow, or feature being covered.
 
 [Step-by-step instructions for basic implementation]
 
-```julia
-# Complete, working example
-using Planar
-
-# Show realistic setup
-config = Configuration(
-    # Relevant configuration
-)
-```
 
 ### Configuration Options
 
@@ -458,12 +394,6 @@ config = Configuration(
 
 [More complex setup for advanced users]
 
-```julia
-# Advanced example with explanation
-advanced_config = Configuration(
-    # Show sophisticated usage
-)
-```
 
 ## Common Patterns
 
@@ -472,9 +402,6 @@ advanced_config = Configuration(
 **Use Case**: [When to apply this pattern]
 
 **Implementation**:
-```julia
-# Complete example of the pattern
-```
 
 **Benefits**: [Why this approach is recommended]
 
@@ -503,9 +430,6 @@ advanced_config = Configuration(
 ### Feature Integration 1
 [How this works with other Planar features]
 
-```julia
-# Integration example
-```
 
 ### Feature Integration 2
 [Another integration scenario]
@@ -532,9 +456,6 @@ advanced_config = Configuration(
 ### Example 1: [Practical Scenario]
 [Complete, realistic example with context]
 
-```julia
-# Full implementation example
-```
 
 **Explanation**: [Why this approach was chosen]
 
@@ -624,9 +545,6 @@ If you're experiencing [critical issue]:
 ### Step-by-Step Diagnosis
 
 1. **Check [First Thing]**
-   ```julia
-   # Diagnostic command
-   ```
    Expected output: [What to look for]
 
 2. **Verify [Second Thing]**
@@ -642,9 +560,6 @@ If you're experiencing [critical issue]:
 
 For complex issues:
 
-```julia
-# Advanced diagnostic code
-```
 
 ## Error Reference
 

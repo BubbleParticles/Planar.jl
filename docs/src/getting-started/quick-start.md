@@ -78,15 +78,6 @@ using PlanarInteractive
 
 ## Step 3: Create Your First Strategy (1 minute)
 
-```julia
-# Load the built-in demo strategy
-s = strategy(:QuickStart, exchange=:binance)
-
-# Verify it loaded correctly
-println("Strategy: $(s.config.name)")
-println("Exchange: $(s.config.exchange)")
-println("Asset: $(first(s.universe.assets).asset)")
-```
 
 **Expected output**: 
 ```
@@ -126,26 +117,6 @@ end
 
 ## Step 5: Run Your First Backtest (1 minute)
 
-```julia
-# Execute the trading strategy on historical data
-try
-    start!(s)
-    
-    # Check the results immediately
-    initial_balance = s.config.cash
-    final_balance = cash(s)
-    profit_loss = final_balance - initial_balance
-    return_pct = (profit_loss / initial_balance) * 100
-    
-    println("🏦 Initial balance: $(initial_balance)")
-    println("💰 Final balance: $(round(final_balance, digits=2))")
-    println("📈 Profit/Loss: $(round(profit_loss, digits=2)) ($(round(return_pct, digits=2))%)")
-    println("🔄 Number of trades: $(length(s.history.trades))")
-catch e
-    @warn "Strategy execution failed: $e"
-    @info "Check that data was loaded successfully"
-end
-```
 
 **Expected output**: Shows your strategy's performance with profit/loss and trade count.
 
@@ -153,19 +124,6 @@ end
 
 ## Step 6: Visualize Results (3 minutes)
 
-```julia
-# Load plotting system (requires PlanarInteractive)
-try
-    using WGLMakie  # Web-based interactive plots
-    
-    # Create the main visualization
-    balloons(s)
-    @info "Chart should open in your browser"
-catch e
-    @warn "Plotting not available: $e"
-    @info "Try: using GLMakie instead of WGLMakie"
-end
-```
 
 **What you'll see**: An interactive chart with:
 - 📊 Bitcoin price candlesticks
@@ -179,28 +137,6 @@ end
 
 ## Step 7: Analyze Performance (3 minutes)
 
-```julia
-# Quick performance summary
-trades = s.history.trades
-if !isempty(trades)
-    winning_trades = count(t -> t.pnl > 0, trades)
-    win_rate = winning_trades / length(trades) * 100
-    
-    println("📊 PERFORMANCE SUMMARY")
-    println("Win Rate: $(round(win_rate, digits=1))%")
-    println("Total Trades: $(length(trades))")
-    
-    # Show last few trades
-    println("\n🔄 RECENT TRADES:")
-    for trade in trades[max(1, end-2):end]
-        side_emoji = trade.side == "buy" ? "🟢" : "🔴"
-        pnl_emoji = trade.pnl > 0 ? "💚" : "❤️"
-        println("$side_emoji $(trade.side) at \$(round(trade.price, digits=2)) $pnl_emoji P&L: \$(round(trade.pnl, digits=2))")
-    end
-else
-    println("ℹ️  No trades executed - try different [market data](../guides/data-management.md) or strategy parameters")
-end
-```
 
 **✅ Success indicator**: Shows win rate, trade count, and individual trade details.
 
@@ -240,20 +176,12 @@ Now that you have Planar running:
 ## Quick Troubleshooting
 
 **❌ "Package not found" errors** → [Installation Issues](../troubleshooting/installation-issues.md#dependency-conflicts)
-```julia
-# Ensure correct project is active
-using Pkg; Pkg.activate("PlanarInteractive")
-```
 
 **❌ Plotting doesn't work** → [Installation Issues](../troubleshooting/installation-issues.md#plotting-backend-issues)
 - Skip plotting for now - your backtest still worked!
 - Try: `using GLMakie` instead of `WGLMakie`
 
 **❌ No data downloaded** → [Exchange Issues](../troubleshooting/exchange-issues.md#network-connectivity-problems)
-```julia
-# Test internet connection
-fetch_ohlcv(s, from=-10)  # Try smaller download
-```
 
 **❌ No trades executed** → [Strategy Problems](../troubleshooting/strategy-problems.md#signal-generation-problems)
 ```julia
@@ -297,14 +225,5 @@ You just completed your first algorithmic trading backtest! Here's what you acco
 ## Keep Experimenting!
 
 Try modifying the QuickStart strategy:
-```julia
-# Try different assets
-s2 = strategy(:QuickStart, exchange=:binance, asset="ETH/USDT")
-
-# Try different time periods  
-fetch_ohlcv(s2, from=-2000)  # More data
-load_ohlcv(s2)
-start!(s2)
-```
 
 **Ready to build your own strategy?** Continue with [First Strategy Tutorial](first-strategy.md)!

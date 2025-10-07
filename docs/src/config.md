@@ -243,10 +243,6 @@ Planar validates configuration files on startup and provides helpful error messa
 
 Test your configuration before running strategies:
 
-```julia
-using Planar
-validate_config("user/planar.toml")
-```
 
 ## Configuration Examples
 

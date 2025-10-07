@@ -44,13 +44,6 @@ For a complete list of supported exchanges, see the [CCXT documentation](https:/
 
 Planar maintains one exchange instance per exchange configuration (sandbox/production and account combinations). This ensures efficient resource usage and consistent state management.
 
-```julia
-using Planar
-
-# Get exchange instance (creates if doesn't exist)
-binance = getexchange!(:binance)
-bybit_testnet = getexchange!(:bybit, sandbox=true)
-```
 
 ## Exchange Configuration
 
@@ -110,52 +103,16 @@ passphrase = "your_coinbase_passphrase"
 
 Access real-time and historical market data:
 
-```julia
-# Get available markets
-markets = fetch_markets(exchange)
-
-# Get current ticker data
-ticker = fetch_ticker(exchange, "BTC/USDT")
-
-# Get order book
-orderbook = fetch_order_book(exchange, "BTC/USDT")
-
-# Get OHLCV data
-ohlcv = fetch_ohlcv(exchange, "BTC/USDT", "1h")
-```
 
 ### Trading Operations
 
 Execute trades across different exchanges with a unified interface:
 
-```julia
-# Place market order
-order = create_market_buy_order(exchange, "BTC/USDT", 0.001)
-
-# Place limit order
-order = create_limit_sell_order(exchange, "BTC/USDT", 0.001, 50000)
-
-# Check order status
-status = fetch_order_status(exchange, order.id, "BTC/USDT")
-
-# Cancel order
-cancel_order(exchange, order.id, "BTC/USDT")
-```
 
 ### Account Information
 
 Access account balances and trading history:
 
-```julia
-# Get account balance
-balance = fetch_balance(exchange)
-
-# Get trading history
-trades = fetch_my_trades(exchange, "BTC/USDT")
-
-# Get order history
-orders = fetch_orders(exchange, "BTC/USDT")
-```
 
 ## Multi-Exchange Trading
 
@@ -163,49 +120,9 @@ Planar supports trading across multiple exchanges simultaneously:
 
 ### Exchange Selection Strategy
 
-```julia
-# Define exchange preferences
-primary_exchange = :binance
-backup_exchanges = [:bybit, :kucoin]
-
-# Get best available exchange
-function get_best_exchange(symbol)
-    try
-        return getexchange!(primary_exchange)
-    catch
-        for backup in backup_exchanges
-            try
-                return getexchange!(backup)
-            catch
-                continue
-            end
-        end
-        error("No available exchanges for $symbol")
-    end
-end
-```
 
 ### Cross-Exchange Arbitrage
 
-```julia
-# Compare prices across exchanges
-function find_arbitrage_opportunities(symbol)
-    exchanges = [:binance, :bybit, :kucoin]
-    prices = Dict()
-    
-    for exchange_id in exchanges
-        try
-            exchange = getexchange!(exchange_id)
-            ticker = fetch_ticker(exchange, symbol)
-            prices[exchange_id] = ticker.bid
-        catch e
-            @warn "Failed to get price from $exchange_id: $e"
-        end
-    end
-    
-    return prices
-end
-```
 
 ## Sandbox and Testing
 
@@ -241,27 +158,11 @@ secret = "testnet_secret_key"
 
 Planar automatically handles connection issues and retries:
 
-```julia
-# Automatic retry on connection failure
-try
-    ticker = fetch_ticker(exchange, "BTC/USDT")
-catch NetworkError
-    # Automatic reconnection and retry
-    sleep(1)
-    ticker = fetch_ticker(exchange, "BTC/USDT")
-end
-```
 
 ### Rate Limiting
 
 CCXT automatically handles rate limiting for most exchanges:
 
-```julia
-# Rate limiting is handled automatically
-for symbol in ["BTC/USDT", "ETH/USDT", "SOL/USDT"]
-    ticker = fetch_ticker(exchange, symbol)  # Automatically rate limited
-end
-```
 
 ### Error Types
 
@@ -279,31 +180,11 @@ Common exchange-related errors:
 
 Reuse exchange instances for better performance:
 
-```julia
-# Good: Reuse exchange instance
-exchange = getexchange!(:binance)
-for symbol in symbols
-    ticker = fetch_ticker(exchange, symbol)
-end
-
-# Avoid: Creating new instances
-for symbol in symbols
-    exchange = getexchange!(:binance)  # Inefficient
-    ticker = fetch_ticker(exchange, symbol)
-end
-```
 
 ### Batch Operations
 
 Use batch operations when available:
 
-```julia
-# Fetch multiple tickers at once
-tickers = fetch_tickers(exchange, ["BTC/USDT", "ETH/USDT", "SOL/USDT"])
-
-# Batch order placement (exchange-dependent)
-orders = create_orders(exchange, order_list)
-```
 
 ## Troubleshooting
 
@@ -333,10 +214,6 @@ orders = create_orders(exchange, order_list)
 
 Enable debug logging for troubleshooting:
 
-```julia
-ENV["JULIA_DEBUG"] = "Exchanges"
-exchange = getexchange!(:binance)
-```
 
 ## Advanced Usage
 
@@ -344,32 +221,11 @@ exchange = getexchange!(:binance)
 
 Extend Planar with custom exchange support:
 
-```julia
-# Define custom exchange type
-struct MyCustomExchange <: AbstractExchange
-    # Exchange-specific fields
-end
-
-# Implement required interface methods
-function fetch_ticker(exchange::MyCustomExchange, symbol::String)
-    # Custom implementation
-end
-```
 
 ### WebSocket Integration
 
 Use WebSocket connections for real-time data:
 
-```julia
-# Create WebSocket watcher
-watcher = ccxt_ohlcv_watcher(exchange, "BTC/USDT", timeframe="1m")
-
-# Start real-time data collection
-start!(watcher)
-
-# Access real-time data
-current_price = last_price(watcher)
-```
 
 ## Future Developments
 

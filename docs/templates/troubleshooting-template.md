@@ -80,10 +80,6 @@ quick_fix_code()
 
 ### Diagnostic Tool 1
 
-```julia
-# Code to run diagnostics
-diagnostic_code()
-```
 
 ### Log Analysis
 

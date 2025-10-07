@@ -18,6 +18,67 @@ using Pkg
 using Suppressor
 using TOML
 
+# Global flag to track if PlanarDev has been initialized
+const PLANAR_DEV_INITIALIZED = Ref(false)
+
+"""
+    initialize_planar_dev()
+
+Initialize PlanarDev project once for all tests.
+"""
+function initialize_planar_dev()
+    if !PLANAR_DEV_INITIALIZED[]
+        @info "Initializing PlanarDev project for documentation tests..."
+        try
+            Pkg.activate("PlanarDev")
+            Pkg.instantiate()
+            # Import PlanarDev to make Planar available
+            @eval using PlanarDev
+            PLANAR_DEV_INITIALIZED[] = true
+            @info "PlanarDev initialized successfully"
+        catch e
+            @error "Failed to initialize PlanarDev: $e"
+            rethrow(e)
+        end
+    end
+end
+
+"""
+    replace_project_activation(code::String) -> String
+
+Remove project activation statements from code blocks and replace with appropriate imports.
+Returns (cleaned_code, needs_interactive) where needs_interactive indicates if PlanarInteractive is needed.
+"""
+function replace_project_activation(code::String)
+    # Check if code needs PlanarInteractive (plotting, optimization, etc.)
+    needs_interactive = contains(code, "using PlanarInteractive") || 
+                       contains(code, "plot") || 
+                       contains(code, "Plot") ||
+                       contains(code, "Plots") ||
+                       contains(code, "optimize") ||
+                       contains(code, "Optim") ||
+                       contains(code, "@environment!")
+    
+    # Remove common project activation patterns
+    cleaned = code
+    
+    # Remove Pkg.activate statements
+    cleaned = replace(cleaned, r"import Pkg; Pkg\.activate\([^)]+\)\s*\n?" => "")
+    cleaned = replace(cleaned, r"Pkg\.activate\([^)]+\)\s*\n?" => "")
+    
+    # Remove standalone using Planar statements (will be handled by framework)
+    cleaned = replace(cleaned, r"using Planar\s*\n?" => "")
+    
+    # Remove using PlanarInteractive statements (will be handled by framework)
+    cleaned = replace(cleaned, r"using PlanarInteractive\s*\n?" => "")
+    
+    # Clean up extra newlines
+    cleaned = replace(cleaned, r"\n\n\n+" => "\n\n")
+    cleaned = strip(cleaned)
+    
+    return cleaned, needs_interactive
+end
+
 export extract_code_blocks, test_code_block, test_documentation_file, 
        run_all_doc_tests, CodeBlock, TestResult, load_config, 
        validate_output, normalize_output
@@ -269,22 +330,41 @@ function test_code_block(block::CodeBlock; project_path="Planar", config::Dict=l
         return TestResult(true, "SKIPPED", nothing, 0.0)
     end
     
+    # Ensure PlanarDev is initialized
+    initialize_planar_dev()
+    
     start_time = time()
     
     try
         # Create temporary test environment
         temp_env = mktempdir()
         
-        # Set up test environment with required packages
-        test_code = """
-        using Pkg
-        Pkg.activate("$project_path")
+        # Set up test environment - now using PlanarDev approach
+        # Remove any project activation from the code block and check if interactive features needed
+        cleaned_code, needs_interactive = replace_project_activation(block.code)
         
-        # Load required packages
-        $(join(["using " * req for req in block.requirements], "\n"))
+        # Choose appropriate import based on whether interactive features are needed
+        planar_import = if needs_interactive
+            """
+            # Activate PlanarInteractive for plotting/optimization features
+            using Pkg; Pkg.activate("PlanarInteractive")
+            using PlanarInteractive
+            """
+        else
+            """
+            # Import Planar from PlanarDev (already loaded at framework level)
+            using PlanarDev: Planar
+            """
+        end
+        
+        test_code = """
+        $(planar_import)
+        
+        # Load other required packages if specified
+        $(join(["using " * req for req in block.requirements if req != "Planar" && req != "PlanarInteractive"], "\n"))
         
         # Execute the code block
-        $(block.code)
+        $(cleaned_code)
         """
         
         # Execute with timeout and capture output
@@ -388,6 +468,9 @@ function run_all_doc_tests(docs_dir::String="docs/src"; project_path="Planar", c
     total_skipped = 0
     
     @info "Starting documentation tests in $docs_dir"
+    
+    # Initialize PlanarDev once for all tests
+    initialize_planar_dev()
     
     # Find all markdown files
     md_files = String[]
