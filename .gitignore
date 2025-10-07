@@ -51,6 +51,8 @@ TODO.txt
 !user/strategies/TwoParameters
 !user/strategies/SimpleStrategy
 !user/strategies/common.jl
+!docs/Project.toml
+!docs/Manifest.toml
 node_modules
 
 # Ignore symlinked top-level ignore files (moved originals live in .dev/)
