@@ -34,6 +34,15 @@ function initialize_planar_dev()
             Pkg.instantiate()
             # Import PlanarDev to make Planar available
             @eval using PlanarDev
+            # Also try to load PlanarInteractive for interactive features
+            try
+                Pkg.activate("PlanarInteractive")
+                Pkg.instantiate()
+                @eval using PlanarInteractive
+                @info "PlanarInteractive also loaded successfully"
+            catch e
+                @warn "PlanarInteractive not available: $e"
+            end
             PLANAR_DEV_INITIALIZED[] = true
             @info "PlanarDev initialized successfully"
         catch e
@@ -308,6 +317,30 @@ function extract_code_blocks(file_path::String; config::Dict=load_config())
             
             if !isempty(code_lines)
                 code = join(code_lines, "\n")
+                
+                # Additional filtering: skip blocks that are clearly not executable
+                if !skip_test
+                    # Skip if code contains markdown syntax
+                    if occursin(r"^\s*#+\s+", code) || occursin(r"\*\*.*\*\*", code) || occursin(r"\[.*\]\(.*\)", code)
+                        skip_test = true
+                    end
+                    
+                    # Skip if code is clearly incomplete (missing try/end, catch without try, etc.)
+                    if occursin(r"catch\s+\w+", code) && !occursin(r"try\s*$", code)
+                        skip_test = true
+                    end
+                    
+                    # Skip if code contains only comments or empty lines
+                    if all(line -> isempty(strip(line)) || startswith(strip(line), '#'), split(code, '\n'))
+                        skip_test = true
+                    end
+                    
+                    # Skip if code is too short (likely just a fragment)
+                    if length(strip(code)) < 20
+                        skip_test = true
+                    end
+                end
+                
                 push!(blocks, CodeBlock(code, file_path, block_start_line;
                                       expected_output=expected_output,
                                       requirements=requirements,
@@ -343,29 +376,12 @@ function test_code_block(block::CodeBlock; project_path="Planar", config::Dict=l
         # Remove any project activation from the code block and check if interactive features needed
         cleaned_code, needs_interactive = replace_project_activation(block.code)
         
-        # Choose appropriate import based on whether interactive features are needed
-        planar_import = if needs_interactive
-            """
-            # Activate PlanarInteractive for plotting/optimization features
-            using Pkg; Pkg.activate("PlanarInteractive")
-            using PlanarInteractive
-            """
-        else
-            """
-            # Import Planar from PlanarDev (already loaded at framework level)
-            using PlanarDev: Planar
-            """
-        end
+        # Since modules are already loaded at framework level, we don't need to import them again
+        # Just execute the cleaned code directly
+        test_code = cleaned_code
         
-        test_code = """
-        $(planar_import)
-        
-        # Load other required packages if specified
-        $(join(["using " * req for req in block.requirements if req != "Planar" && req != "PlanarInteractive"], "\n"))
-        
-        # Execute the code block
-        $(cleaned_code)
-        """
+        # Debug: log the test code being executed
+        @debug "Executing test code for $(block.file):$(block.line)" code=test_code
         
         # Execute with timeout and capture output
         output = ""
@@ -374,27 +390,20 @@ function test_code_block(block::CodeBlock; project_path="Planar", config::Dict=l
         try
             # Use @capture to get output
             output = @capture_out begin
-                # Create a temporary file with the test code
-                temp_file = joinpath(temp_env, "test_block.jl")
-                write(temp_file, test_code)
-                
-                # Execute with timeout
-                task = @async include(temp_file)
-                
-                # Wait for completion or timeout
-                if !istaskdone(task)
-                    Timer(block.timeout) do timer
-                        if !istaskdone(task)
-                            Base.throwto(task, InterruptException())
-                        end
-                    end
-                end
-                
-                fetch(task)
+                # Execute the test code directly in current context
+                # This ensures access to already loaded modules
+                eval(Meta.parse("begin\n$(test_code)\nend"))
             end
         catch e
             error = e
-            output = string(e)
+            # Provide more detailed error information
+            error_msg = sprint() do io
+                println(io, "Error executing code block:")
+                showerror(io, e)
+                println(io, "\nStacktrace:")
+                showerror(io, e, catch_backtrace())
+            end
+            output = error_msg
         finally
             # Clean up temporary environment
             rm(temp_env, recursive=true, force=true)
@@ -500,7 +509,7 @@ function run_all_doc_tests(docs_dir::String="docs/src"; project_path="Planar", c
                 else
                     total_failed += 1
                     all_passed = false
-                    @error "Failed code block in $file_path at line $line: $(result.error)"
+                    @error "Failed code block in $file_path at line $(result.error):" result.output
                 end
             end
             

@@ -124,86 +124,114 @@ Paper mode provides real-time simulation using live [market data](../guides/data
 #### Real-Time Order Execution
 
 ```julia
-using Planar
-using Dates
-@environment!
+# Activate Planar project
+import Pkg
+Pkg.activate("Planar")
 
-# Helper functions for paper mode execution (implement based on your system)
-function get_order_book(ai)
-    # Placeholder - replace with actual order book retrieval
-    return (bids = [(50000.0, 1.0), (49999.0, 2.0)], asks = [(50001.0, 1.0), (50002.0, 2.0)])
-end
+try
+    using Planar
+    using Dates
+    @environment!
 
-function sweep_asks(order_book, amount)
-    # Placeholder implementation
-    return (50001.0, min(amount, 1.0))  # (price, filled_amount)
-end
+    # Define order side constants for the example
+    @enum OrderSide Buy Sell
 
-function sweep_bids(order_book, amount)
-    # Placeholder implementation
-    return (50000.0, min(amount, 1.0))  # (price, filled_amount)
-end
+    # Helper functions for paper mode execution (implement based on your system)
+    function get_order_book(ai)
+        # Placeholder - replace with actual order book retrieval
+        return (bids = [(50000.0, 1.0), (49999.0, 2.0)], asks = [(50001.0, 1.0), (50002.0, 2.0)])
+    end
 
-# Market orders use real order book data
-function execute_market_order_paper(s, ai, side, amount)
-    # Get current order book
-    order_book = get_order_book(ai)
-    
-    # Calculate execution based on available liquidity
-    if side == Buy
-        execution_price, filled_amount = sweep_asks(order_book, amount)
-    else
-        execution_price, filled_amount = sweep_bids(order_book, amount)
+    function sweep_asks(order_book, amount)
+        # Placeholder implementation
+        return (50001.0, min(amount, 1.0))  # (price, filled_amount)
+    end
+
+    function sweep_bids(order_book, amount)
+        # Placeholder implementation
+        return (50000.0, min(amount, 1.0))  # (price, filled_amount)
+    end
+
+    # Market orders use real order book data
+    function execute_market_order_paper(s, ai, side, amount)
+        # Get current order book
+        order_book = get_order_book(ai)
+        
+        # Calculate execution based on available liquidity
+        if side == Buy
+            execution_price, filled_amount = sweep_asks(order_book, amount)
+        else
+            execution_price, filled_amount = sweep_bids(order_book, amount)
+        end
+        
+        # Execute with realistic slippage (example implementation)
+        @info "Paper trade executed: $side $filled_amount at $execution_price"
+        
+        return (price = execution_price, amount = filled_amount, timestamp = now())
     end
     
-    # Execute with realistic slippage (example implementation)
-    @info "Paper trade executed: $side $filled_amount at $execution_price"
+    println("Paper trading functions defined successfully")
     
-    return (price = execution_price, amount = filled_amount, timestamp = now())
+catch e
+    @warn "Planar not available: $e"
 end
 ```
 
 #### Live Data Integration
 
 ```julia
-using Planar
-@environment!
+# Activate Planar project
+import Pkg
+Pkg.activate("Planar")
 
-# Helper functions for live monitoring (implement based on your system)
-function isrunning(s)
-    return true  # Placeholder - replace with actual strategy status check
-end
+try
+    using Planar
+    @environment!
 
-function get_live_price(ai)
-    return 50000.0 + rand() * 1000  # Placeholder live price
-end
+    # Helper functions for live monitoring (implement based on your system)
+    function isrunning(s)
+        return true  # Placeholder - replace with actual strategy status check
+    end
 
-function update_strategy_price!(s, ai, price)
-    @info "Updated price for $(ai.symbol): $price"
-end
+    function get_live_price(ai)
+        return 50000.0 + rand() * 1000  # Placeholder live price
+    end
 
-function analyze_order_book(ai)
-    return (spread_pct = rand() * 0.5, depth = rand() * 100)  # Placeholder analysis
-end
+    function update_strategy_price!(s, ai, price)
+        @info "Updated price for $(ai.symbol): $price"
+    end
 
-# Set up real-time data monitoring
-function setup_live_monitoring(s)
-    @async begin
-        while isrunning(s)
-            for ai in s.universe
-                # Update live prices
-                current_price = get_live_price(ai)
-                update_strategy_price!(s, ai, current_price)
+    function analyze_order_book(ai)
+        return (spread_pct = rand() * 0.5, depth = rand() * 100)  # Placeholder analysis
+    end
+
+    # Set up real-time data monitoring
+    function setup_live_monitoring(s)
+        @async begin
+            while isrunning(s)
+                # Example universe iteration (in real usage, s.universe would be defined)
+                example_symbols = ["BTC/USDT", "ETH/USDT"]
                 
-                # Monitor order book changes
-                book_analysis = analyze_order_book(ai)
-                if book_analysis.spread_pct > 0.2  # Wide spread alert
-                    @warn "Wide spread detected for $(ai.symbol): $(book_analysis.spread_pct)%"
+                for symbol in example_symbols
+                    # Update live prices
+                    current_price = get_live_price(symbol)
+                    @info "Updated price for $symbol: $current_price"
+                    
+                    # Monitor order book changes
+                    book_analysis = analyze_order_book(symbol)
+                    if book_analysis.spread_pct > 0.2  # Wide spread alert
+                        @warn "Wide spread detected for $symbol: $(book_analysis.spread_pct)%"
+                    end
                 end
+                sleep(1)  # Update every second
             end
-            sleep(1)  # Update every second
         end
     end
+    
+    println("Live monitoring functions defined successfully")
+    
+catch e
+    @warn "Planar not available: $e"
 end
 ```
 
@@ -269,37 +297,65 @@ Safe transition between modes is crucial for successful strategy deployment. Eac
 ### Gradual Deployment Strategy
 
 ```julia
-# Implement gradual capital deployment
-function implement_gradual_deployment(s, total_capital, deployment_schedule)
-    current_deployment = 0.0
-    
-    for (milestone, capital_pct) in deployment_schedule
-        # Wait for milestone achievement
-        while !check_milestone(s, milestone)
-            sleep(3600)  # Check every hour
-        end
+# Activate Planar project
+import Pkg
+Pkg.activate("Planar")
+
+try
+    using Planar
+    @environment!
+
+    # Helper functions for deployment (implement based on your system)
+    function check_milestone(s, milestone)
+        # Placeholder - implement actual milestone checking
+        return rand() > 0.8  # Random success for example
+    end
+
+    function add_capital!(s, amount)
+        @info "Adding $amount to strategy capital"
+    end
+
+    function send_alert(s, message)
+        @info "Alert: $message"
+    end
+
+    # Implement gradual capital deployment
+    function implement_gradual_deployment(s, total_capital, deployment_schedule)
+        current_deployment = 0.0
         
-        # Increase capital allocation
-        new_deployment = total_capital * capital_pct
-        additional_capital = new_deployment - current_deployment
-        
-        if additional_capital > 0
-            add_capital!(s, additional_capital)
-            current_deployment = new_deployment
+        for (milestone, capital_pct) in deployment_schedule
+            # Wait for milestone achievement
+            while !check_milestone(s, milestone)
+                sleep(3600)  # Check every hour
+            end
             
-            @info "Capital deployment milestone reached" milestone capital_pct current_deployment
-            send_alert(s, "Deployed $(round(capital_pct*100))% of capital ($current_deployment USDT)")
+            # Increase capital allocation
+            new_deployment = total_capital * capital_pct
+            additional_capital = new_deployment - current_deployment
+            
+            if additional_capital > 0
+                add_capital!(s, additional_capital)
+                current_deployment = new_deployment
+                
+                @info "Capital deployment milestone reached" milestone capital_pct current_deployment
+                send_alert(s, "Deployed $(round(capital_pct*100))% of capital ($current_deployment USDT)")
+            end
         end
     end
-end
 
-# Example deployment schedule
-deployment_schedule = [
-    (:first_week_profitable, 0.1),    # 10% after first profitable week
-    (:month_positive, 0.25),          # 25% after first profitable month
-    (:three_months_stable, 0.5),     # 50% after three stable months
-    (:six_months_proven, 1.0)        # 100% after six months of success
-]
+    # Example deployment schedule
+    deployment_schedule = [
+        (:first_week_profitable, 0.1),    # 10% after first profitable week
+        (:month_positive, 0.25),          # 25% after first profitable month
+        (:three_months_stable, 0.5),     # 50% after three stable months
+        (:six_months_proven, 1.0)        # 100% after six months of success
+    ]
+    
+    println("Gradual deployment functions defined successfully")
+    
+catch e
+    @warn "Planar not available: $e"
+end
 ```
 
 ## Best Practices

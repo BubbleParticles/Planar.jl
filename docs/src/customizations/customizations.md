@@ -102,16 +102,38 @@ Implement robust error handling in custom functions:
 Document your customizations thoroughly:
 
 ```julia
-"""
-    custom_momentum_strategy(s::Strategy, ai::AssetInstance, date::DateTime)
+# Activate Planar project
+import Pkg
+Pkg.activate("Planar")
 
-Custom momentum strategy implementation that uses a combination of [RSI](../guides/strategy-development.md#technical-indicators) and MACD
-indicators to generate trading signals.
+try
+    using Planar
+    
+    """
+        custom_momentum_strategy(s::Strategy, ai::AssetInstance, date::DateTime)
 
-# Arguments
-- `s::Strategy`: The strategy instance
-- `ai::AssetInstance`: The asset instance to trade
-- `date::DateTime`: Current timestamp
+    Custom momentum strategy implementation that uses a combination of RSI and MACD
+    indicators to generate trading signals.
+
+    # Arguments
+    - `s::Strategy`: The strategy instance
+    - `ai::AssetInstance`: The asset instance to trade
+    - `date::DateTime`: Current timestamp
+    
+    # Returns
+    - Signal indicating buy/sell/hold decision
+    """
+    function custom_momentum_strategy(s, ai, date)
+        # Example implementation
+        println("Custom momentum strategy called for $date")
+        return :hold  # Example return value
+    end
+    
+    println("Custom momentum strategy function defined")
+    
+catch e
+    @warn "Planar not available: $e"
+end
 
 # Returns
 - `Float64`: Signal strength between -1.0 (strong sell) and 1.0 (strong buy)

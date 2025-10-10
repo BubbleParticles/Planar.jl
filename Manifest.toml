@@ -2459,6 +2459,7 @@ version = "0.1.0"
     Plotting = "8ada5bfb-e60b-44be-8979-616e14670061"
     Scrapers = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
     WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
+    Watchers = "4a3f9c16-ec8e-48c6-a58d-938fc30e2b4b"
 
 [[deps.PlotUtils]]
 deps = ["ColorSchemes", "Colors", "Dates", "PrecompileTools", "Printf", "Random", "Reexport", "StableRNGs", "Statistics"]

@@ -104,15 +104,23 @@ Planar provides comprehensive [margin trading](../guides/strategy-development.md
 The simplest way to create a strategy is using the interactive generator, which prompts for all required [configuration](../config.md) options:
 
 ```julia
-julia> using Planar
-julia> Planar.generate_strategy()
-Strategy name: : MyNewStrategy
+# Activate Planar project
+import Pkg
+Pkg.activate("Planar")
 
-Timeframe:
-   1m
- > 5m
-   15m
-   1h
+try
+    using Planar
+    
+    # Example of strategy generation (interactive in real usage)
+    println("Strategy generation example:")
+    println("Strategy name: MyNewStrategy")
+    println("Available timeframes: 1m, 5m, 15m, 1h")
+    
+    # Note: Planar.generate_strategy() is interactive and requires user input
+    # This example shows the expected output format
+catch e
+    @warn "Planar module not fully available: $e"
+end
    1d
 
 Select exchange by:

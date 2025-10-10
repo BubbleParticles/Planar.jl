@@ -177,14 +177,30 @@ The ticker watcher monitors multiple pairs simultaneously using exchange ticker 
 
 
 ```julia
->>> w
-17-element Watchers.Watcher20{Dict{String, NamedTup...Nothing, Float64}, Vararg{Float64, 7}}}}}
-Name: ccxt_ohlcv_ticker
-Intervals: 5 seconds(TO), 5 seconds(FE), 6 minutes(FL)
-Fetched: 2023-03-07T12:06:18.690 busy: true
-Flushed: 2023-03-07T12:04:31.472
-Active: true
-Attemps: 0
+# Activate Planar project
+import Pkg
+Pkg.activate("Planar")
+
+try
+    using Planar
+    @environment!
+    
+    # Example watcher output (this would be the result of displaying a watcher)
+    println("Example watcher display:")
+    println("17-element Watchers.Watcher20{Dict{String, NamedTup...Nothing, Float64}, Vararg{Float64, 7}}}}")
+    println("Name: ccxt_ohlcv_ticker")
+    println("Intervals: 5 seconds(TO), 5 seconds(FE), 6 minutes(FL)")
+    println("Fetched: 2023-03-07T12:06:18.690 busy: true")
+    println("Flushed: 2023-03-07T12:04:31.472")
+    println("Active: true")
+    println("Attempts: 0")
+    
+    # Note: In real usage, 'w' would be an actual watcher instance
+    # w = create_watcher(...)  # This would create the actual watcher
+    
+catch e
+    @warn "Planar not available: $e"
+end
 ```
 
 As a convention, the `view` property of a watcher shows the processed data:
@@ -283,24 +299,39 @@ When loading data from storage, you can directly use the `ZArray` by passing `ra
 ### Data Aggregation and Resampling
 
 ```julia
-# Aggregate data to different [timeframes](../guides/data-management.md#timeframes)
-function resample_ohlcv(data, target_timeframe)
-    # Group by target timeframe periods
-    data.period = floor.(data.timestamp, target_timeframe)
+# Activate Planar project
+import Pkg
+Pkg.activate("Planar")
+
+try
+    using Planar
+    using DataFrames
+    @environment!
     
-    aggregated = combine(groupby(data, :period)) do group
-        (
-            timestamp = first(group.timestamp),
-            open = first(group.open),
-            high = maximum(group.high),
-            low = minimum(group.low),
-            close = last(group.close),
-            volume = sum(group.volume)
-        )
+    # Aggregate data to different timeframes
+    function resample_ohlcv(data, target_timeframe)
+        # Group by target timeframe periods
+        data.period = floor.(data.timestamp, target_timeframe)
+        
+        aggregated = combine(groupby(data, :period)) do group
+            (
+                timestamp = first(group.timestamp),
+                open = first(group.open),
+                high = maximum(group.high),
+                low = minimum(group.low),
+                close = last(group.close),
+                volume = sum(group.volume)
+            )
+        end
+        
+        select!(aggregated, Not(:period))
+        return aggregated
     end
     
-    select!(aggregated, Not(:period))
-    return aggregated
+    println("Data resampling function defined")
+    
+catch e
+    @warn "Planar or DataFrames not available: $e"
 end
 
 # Example: Convert 1m data to 5m

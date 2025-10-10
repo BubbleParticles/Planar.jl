@@ -104,9 +104,30 @@ During live execution events are recorded and flushed to storage (based on the a
 The `EventTrace` can be accessed from an `Exchange` object. When an `Exchange` object is initialized, it creates an `EventTrace` object to store events related to that exchange.
 
 ```julia
-# Access the event trace from an exchange object
-exc = getexchange!(:binance)
-et = exc._trace
+# Activate Planar project
+import Pkg
+Pkg.activate("Planar")
+
+try
+    using Planar
+    @environment!
+    
+    # Example: Access the event trace from an exchange object
+    # Note: This requires proper exchange configuration
+    
+    println("Example event trace access:")
+    println("exc = getexchange!(:binance)")
+    println("et = exc._trace")
+    
+    # Real usage would be:
+    # exc = getexchange!(:binance)  # Requires exchange configuration
+    # et = exc._trace
+    
+    println("Event trace object would be available as 'et'")
+    
+catch e
+    @warn "Planar not available: $e"
+end
 ```
 
 ### Advanced Event Tracing

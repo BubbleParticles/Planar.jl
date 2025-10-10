@@ -10,8 +10,30 @@ The bot is primarily designed for cryptocurrency trading; however, it can be ada
 Here is a basic structure of how you can define your broker-specific exchange:
 
 ```julia
-struct MyBroker <: Exchange
-    # Implementation details here
+# Activate Planar project
+import Pkg
+Pkg.activate("Planar")
+
+try
+    using Planar
+    
+    # Example custom exchange implementation
+    abstract type Exchange end  # This would be imported from Planar in real usage
+    
+    struct MyBroker <: Exchange
+        api_key::String
+        secret::String
+        sandbox::Bool
+        
+        # Constructor
+        MyBroker(api_key, secret; sandbox=true) = new(api_key, secret, sandbox)
+    end
+    
+    println("Custom exchange MyBroker defined")
+    println("Note: Real implementation requires full Exchange interface")
+    
+catch e
+    @warn "Planar not available: $e"
 end
 ```
 

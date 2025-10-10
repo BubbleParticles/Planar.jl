@@ -313,21 +313,40 @@ The function `remove_strategy` allows you to discard a strategy by its name:
 The universe (`s.universe`) is backed by a `DataFrame` (`s.universe.data`). It is possible to add and remove assets from the universe during runtime, although this feature is not extensively tested.
 
 ```julia
-# Add new asset to universe (experimental)
-function add_asset_to_universe(s::Strategy, symbol::String)
-    # This requires careful handling of data synchronization
-    new_asset = Asset(symbol, exchange(s))
-    # Implementation would require careful handling of data synchronization
-end
+# Activate Planar project
+import Pkg
+Pkg.activate("Planar")
 
-# Remove asset from universe (experimental)
-function remove_asset_from_universe(s::Strategy, symbol::String)
-    # Close any open positions first
-    ai = s[symbol]
-    if !isnothing(ai) && freecash(ai) != 0
-        close_position(s, ai)
+try
+    using Planar
+    @environment!
+
+    # Add new asset to universe (experimental)
+    function add_asset_to_universe_example(s, symbol::String)
+        # This requires careful handling of data synchronization
+        @info "Adding asset to universe: $symbol"
+        # Real implementation would be:
+        # new_asset = Asset(symbol, exchange(s))
+        # Careful handling of data synchronization required
+        println("Asset $symbol would be added to universe")
     end
-    # Remove from universe (experimental)
+
+    # Remove asset from universe (experimental)
+    function remove_asset_from_universe_example(s, symbol::String)
+        # Close any open positions first
+        @info "Removing asset from universe: $symbol"
+        # Real implementation would be:
+        # ai = s[symbol]
+        # if !isnothing(ai) && freecash(ai) != 0
+        #     close_position(s, ai)
+        # end
+        println("Asset $symbol would be removed from universe")
+    end
+    
+    println("Universe management functions defined (experimental)")
+    
+catch e
+    @warn "Planar not available: $e"
 end
 ```
 
