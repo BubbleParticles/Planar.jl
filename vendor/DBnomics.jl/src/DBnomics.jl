@@ -88,6 +88,7 @@ module DBnomics
     # Modify global variables
     function options(s::AbstractString, v::Any)
         s = Symbol(s)
+        tmp = 
         tmp = TMP[] = v
 
         if String(s) == "api_version"
