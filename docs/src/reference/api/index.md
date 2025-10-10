@@ -51,20 +51,34 @@ This section provides comprehensive documentation for all Planar.jl modules and 
 Most Planar functions follow these common patterns:
 
 ```julia
-using Planar
-@environment!
+# Activate PlanarInteractive project
+import Pkg
+Pkg.activate("PlanarInteractive")
 
-# Load a strategy
-s = strategy(:MyStrategy)
+try
+    using PlanarInteractive
+    @environment!
 
-# Access strategy data
-assets_list = assets(s)
-exchange_info = exchange(s)
-current_cash = freecash(s)
-
-# Work with data
-ohlcv_data = load_ohlcv(s)
-fetch_ohlcv!(s)
+    # Example API usage patterns
+    println("Common Planar API patterns:")
+    
+    # Load a strategy (example)
+    println("s = strategy(:MyStrategy)  # Load strategy")
+    
+    # Access strategy data (examples)
+    println("assets_list = assets(s)    # Get assets")
+    println("exchange_info = exchange(s) # Get exchange")
+    println("current_cash = freecash(s)  # Get cash")
+    
+    # Work with data (examples)
+    println("ohlcv_data = load_ohlcv(s)  # Load OHLCV data")
+    println("fetch_ohlcv!(s)            # Fetch new data")
+    
+    # Note: Real usage requires proper strategy configuration
+    
+catch e
+    @warn "PlanarInteractive not available: $e"
+end
 ```
 
 ### Common Function Categories

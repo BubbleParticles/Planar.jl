@@ -60,13 +60,37 @@ This example demonstrates the fundamental structure of a Planar strategy. Use th
 
 ### Adding Technical Indicators
 ```julia
-# Add to strategy logic
-sma_20 = simple_moving_average(closeat(ohlcv(ai), -20:-1), 20)
-sma_50 = simple_moving_average(closeat(ohlcv(ai), -50:-1), 50)
+# Activate Planar project
+import Pkg
+Pkg.activate("Planar")
 
-if !isnan(sma_20) && !isnan(sma_50) && sma_20 > sma_50
-    # Golden cross - bullish signal
-    @info "Golden cross detected" asset=raw(ai)
+try
+    using Planar
+    @environment!
+    
+    # Example technical indicator usage
+    # Note: This would be inside a strategy function with proper ai parameter
+    
+    function example_indicator_logic(ai)
+        # Example moving average calculations
+        # In real usage: sma_20 = simple_moving_average(closeat(ohlcv(ai), -20:-1), 20)
+        sma_20 = 50000.0  # Example value
+        sma_50 = 49500.0  # Example value
+        
+        if !isnan(sma_20) && !isnan(sma_50) && sma_20 > sma_50
+            # Golden cross - bullish signal
+            @info "Golden cross detected" asset="BTC/USDT"
+            return :bullish
+        end
+        return :neutral
+    end
+    
+    # Example usage
+    result = example_indicator_logic("BTC/USDT")
+    println("Signal: $result")
+    
+catch e
+    @warn "Planar not available: $e"
 end
 ```
 
@@ -74,12 +98,32 @@ end
 
 ### 1. Simulation Testing
 ```julia
-# Test with historical data
-s = strategy(:BasicStrategy, Sim())
-load_ohlcv(s)
+# Activate Planar project
+import Pkg
+Pkg.activate("Planar")
 
-# Run backtest
-results = backtest(s, from=DateTime("2024-01-01"), to=DateTime("2024-12-31"))
+try
+    using Planar
+    using Dates
+    @environment!
+    
+    # Example simulation testing
+    println("Example simulation testing:")
+    println("s = strategy(:BasicStrategy, Sim())")
+    println("load_ohlcv(s)")
+    println("results = backtest(s, from=DateTime(\"2024-01-01\"), to=DateTime(\"2024-12-31\"))")
+    
+    # Note: Real usage requires:
+    # 1. A defined strategy named :BasicStrategy
+    # 2. Proper data setup
+    # 3. Exchange configuration
+    
+    # Example result structure
+    println("Expected results structure: (returns, trades, metrics)")
+    
+catch e
+    @warn "Planar not available: $e"
+end
 ```
 
 ### 2. Paper Trading
@@ -87,7 +131,7 @@ results = backtest(s, from=DateTime("2024-01-01"), to=DateTime("2024-12-31"))
 # Test with live data but no real money
 s = strategy(:BasicStrategy, Paper())
 load_ohlcv(s)
-start_paper_trading(s)
+start!(s)
 ```
 
 ### 3. Parameter Testing

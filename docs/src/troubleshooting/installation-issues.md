@@ -105,9 +105,23 @@ sandbox = true  # for testing
 **Solution**:
 ```julia
 # Reinstall CCXT
-using Pkg
-Pkg.rm("Ccxt")
-Pkg.add("Ccxt")
+import Pkg
+
+try
+    # Remove and reinstall CCXT
+    Pkg.rm("Ccxt")
+    Pkg.add("Ccxt")
+    
+    println("CCXT package reinstalled successfully")
+    
+    # Test the installation
+    using Ccxt
+    println("CCXT loaded successfully")
+    
+catch e
+    @warn "CCXT installation issue: $e"
+    println("Try manual installation or check network connection")
+end
 ```
 
 ## Docker Issues

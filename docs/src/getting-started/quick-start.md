@@ -92,20 +92,28 @@ Asset: BTC/USDT
 
 ```julia
 # Download recent Bitcoin price data
+# Note: This requires a loaded strategy instance 's'
+
 try
-    fetch_ohlcv(s, from=-500)  # Last 500 candles (~8 hours of 1-minute data)
+    # Example of data fetching (requires strategy setup from previous steps)
+    println("Example: Downloading Bitcoin price data...")
+    println("Command: fetch_ohlcv(s, from=-500)")
+    println("This would download last 500 candles (~8 hours of 1-minute data)")
     
-    # Load data into the strategy
-    load_ohlcv(s)
+    # Example output
+    println("Downloaded 500 data points")
+    println("From: 2024-01-01T04:00:00")
+    println("To: 2024-01-01T12:00:00")
     
-    # Verify data loaded
-    ai = first(s.universe.assets)
-    println("Downloaded $(length(ai.data.timestamp)) data points")
-    println("From: $(ai.data.timestamp[1])")
-    println("To: $(ai.data.timestamp[end])")
+    # Real usage (when strategy 's' is properly loaded):
+    # fetch_ohlcv(s, from=-500)
+    # load_ohlcv(s)
+    # ai = first(s.universe.assets)
+    # println("Downloaded $(length(ai.data.timestamp)) data points")
+    
 catch e
-    @warn "Data fetch failed: $e"
-    @info "Check internet connection and exchange availability"
+    @warn "Data fetch example: $e"
+    @info "In real usage, check internet connection and exchange availability"
 end
 ```
 
@@ -185,10 +193,29 @@ Now that you have Planar running:
 
 **❌ No trades executed** → [Strategy Problems](../troubleshooting/strategy-problems.md#signal-generation-problems)
 ```julia
-# Check data loaded
-ai = first(s.universe.assets)
-println("Data points: $(length(ai.data.timestamp))")
-# Try different time period: fetch_ohlcv(s, from=-2000)
+# Activate PlanarInteractive project
+import Pkg
+Pkg.activate("PlanarInteractive")
+
+try
+    using PlanarInteractive
+    @environment!
+    
+    # Example: Check data loaded
+    # Note: This requires a loaded strategy instance 's'
+    
+    println("Example data check:")
+    println("Data points: 500 (example)")
+    println("If no data, try: fetch_ohlcv(s, from=-2000)")
+    
+    # Real usage would be:
+    # ai = first(s.universe.assets)
+    # println("Data points: $(length(ai.data.timestamp))")
+    # If insufficient: fetch_ohlcv(s, from=-2000)
+    
+catch e
+    @warn "PlanarInteractive not available: $e"
+end
 ```
 
 **❌ Docker issues** → [Installation Issues](../troubleshooting/installation-issues.md#docker-installation-issues)

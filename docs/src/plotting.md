@@ -244,20 +244,29 @@ GLMakie provides the best performance for desktop applications with full GPU acc
 #### Multi-Monitor Support
 
 ```julia
-# Configure for multiple monitors
-function setup_multi_monitor()
-    monitors = GLMakie.GLFW.GetMonitors()
-    println("Available monitors: $(length(monitors))")
+# Activate PlanarInteractive project for plotting features
+import Pkg
+Pkg.activate("PlanarInteractive")
+
+try
+    using GLMakie
     
-    for (i, monitor) in enumerate(monitors)
-        name = GLMakie.GLFW.GetMonitorName(monitor)
-        mode = GLMakie.GLFW.GetVideoMode(monitor)
-        println("Monitor $i: $name ($(mode.width)x$(mode.height))")
+    # Configure for multiple monitors
+    function setup_multi_monitor()
+        monitors = GLMakie.GLFW.GetMonitors()
+        println("Available monitors: $(length(monitors))")
         
-        # Memory management
-        max_texture_size = 4096,
-# Configure for web deployment
-WGLMakie.set_theme!(
+        for (i, monitor) in enumerate(monitors)
+            name = GLMakie.GLFW.GetMonitorName(monitor)
+            mode = GLMakie.GLFW.GetVideoMode(monitor)
+            println("Monitor $i: $name ($(mode.width)x$(mode.height))")
+        end
+    end
+    
+    setup_multi_monitor()
+catch e
+    @warn "GLMakie not available: $e"
+end
     resolution = (1200, 800),
 
 #### Jupyter Notebook Integration

@@ -111,7 +111,7 @@ function main()
     all_tests_passed = true
     test_results = Dict{String, Any}(
         "julia_version" => options[:julia_version],
-        "timestamp" => string(now()),
+        "timestamp" => string(Dates.now()),
         "config" => config,
         "results" => Dict{String, Any}()
     )
@@ -127,7 +127,7 @@ function main()
             all_tests_passed &= examples_passed
             test_results["results"]["code_examples"] = Dict(
                 "passed" => examples_passed,
-                "timestamp" => string(now())
+                "timestamp" => string(Dates.now())
             )
         end
     else
@@ -162,7 +162,7 @@ function main()
                 "valid" => valid_links,
                 "invalid" => invalid_links,
                 "internal_failures" => internal_failures,
-                "timestamp" => string(now())
+                "timestamp" => string(Dates.now())
             )
         end
     else
@@ -200,7 +200,7 @@ function main()
                 "errors" => errors,
                 "warnings" => warnings,
                 "info" => info_issues,
-                "timestamp" => string(now())
+                "timestamp" => string(Dates.now())
             )
         end
     else

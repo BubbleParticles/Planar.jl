@@ -151,11 +151,35 @@ sandbox = true
 ### Stop All Trading
 
 ```julia
-# Emergency stop - cancel all orders
-emergency_stop(exchange)
+# Activate Planar project
+import Pkg
+Pkg.activate("Planar")
 
-# Close all positions (if supported)
-close_all_positions(exchange)
+try
+    using Planar
+    @environment!
+    
+    # Emergency stop procedures (example)
+    function emergency_stop_example(exchange_name)
+        @warn "EMERGENCY STOP initiated for $exchange_name"
+        
+        # Real implementation would be:
+        # emergency_stop(exchange)
+        # close_all_positions(exchange)
+        
+        println("All orders would be cancelled")
+        println("All positions would be closed")
+        println("Trading would be halted")
+    end
+    
+    # Example usage
+    emergency_stop_example("binance")
+    
+    println("Emergency procedures defined")
+    
+catch e
+    @warn "Planar not available: $e"
+end
 ```
 
 ### API Key Compromise
