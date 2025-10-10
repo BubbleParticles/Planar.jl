@@ -101,9 +101,11 @@ If this fails, it then tries to access the `SC` property of the module.
 """
 function _defined_marginmode(mod)
     try
-        marginmode(mod.S)
+        S = invokelatest(getfield, mod, :S)
+        marginmode(S)
     catch
-        marginmode(mod.SC)
+        SC = invokelatest(getfield, mod, :SC)
+        marginmode(SC)
     end
 end
 
@@ -153,10 +155,16 @@ The `sandbox` property is set based on the mode of the configuration.
 Finally, it performs checks on the loaded strategy.
 """
 function bare_load(mod::Module, t::Type, config::Config)
-    syms = invokelatest(mod.call!, t, StrategyMarkets())
+    call_func = if isdefined(mod, :call!)
+        invokelatest(getfield, mod, :call!)
+    else
+        call!
+    end
+    syms = invokelatest(call_func, t, StrategyMarkets())
     exc = Exchanges.getexchange!(config.exchange; sandbox=true, config.account)
-    uni = AssetCollection(syms; load_data=false, timeframe=mod.TF, exc, config.margin)
-    s = Strategy(mod, config.mode, config.margin, mod.TF, exc, uni; config)
+    TF = invokelatest(getfield, mod, :TF)
+    uni = AssetCollection(syms; load_data=false, timeframe=TF, exc, config.margin)
+    s = Strategy(mod, config.mode, config.margin, TF, exc, uni; config)
     _strat_load_checks(s, config)
 end
 
@@ -233,17 +241,23 @@ If this fails, it then tries to access the `SC` property of the module.
 The function also checks if the exchange is specified in the strategy or in the configuration.
 """
 function _strategy_type(mod, cfg)
+    S = if isdefined(mod, :S)
+        invokelatest(getfield, mod, :S)
+    end
+    E = if isdefined(mod, :EXCID)
+        invokelatest(getfield, mod, :EXCID)
+    end
     s_type =
-        if isdefined(mod, :S) &&
-            mod.S isa Type{<:Strategy} &&
-            exchangeid(mod.S) == exchangeid(cfg.exchange)
-            mod.S
+        if S != nothing &&
+            S isa Type{<:Strategy} &&
+            exchangeid(S) == exchangeid(cfg.exchange)
+            S
         else
             if cfg.exchange == Symbol()
-                if isdefined(mod, :EXCID) && mod.EXCID != Symbol()
-                    cfg.exchange = mod.EXCID
-                elseif isdefined(mod, :S)
-                    cfg.exchange = exchangeid(mod.S)
+                if E != nothing && E != Symbol()
+                    cfg.exchange = E
+                elseif S != nothing
+                    cfg.exchange = exchangeid(S)
                 else
                     error(
                         "loading: exchange not specified (neither in strategy nor in config)",
@@ -251,10 +265,10 @@ function _strategy_type(mod, cfg)
                 end
             end
             try
-                if isdefined(mod, :EXCID) && mod.EXCID != cfg.exchange
+                if E != nothing && E != cfg.exchange
                     @warn "loading: overriding default exchange with config" mod.EXCID cfg.exchange
                 end
-                mod.SC{ExchangeID{cfg.exchange}}
+                invokelatest(getfield, mod, :SC){ExchangeID{cfg.exchange}}
             catch
                 error(
                     "loading: strategy main type `S` or `SC` not defined in strategy module.",
@@ -303,7 +317,12 @@ function strategy!(mod::Module, cfg::Config)
         end
     end
     @assert nameof(s_type) isa Symbol "Source $src does not define a strategy name."
-    s = @something invokelatest(mod.call!, s_type, cfg, LoadStrategy()) try
+    call_func = if isdefined(mod, :call!)
+        invokelatest(getfield, mod, :call!)
+    else
+        call!
+    end
+    s = @something invokelatest(call_func, s_type, cfg, LoadStrategy()) try
         default_load(mod, s_type, cfg)
     catch
         @debug_backtrace

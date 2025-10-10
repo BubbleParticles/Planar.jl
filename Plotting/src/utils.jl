@@ -1,7 +1,7 @@
 using .ect.Instruments: compactnum as cn
 
 makefig() = begin
-    Figure(; resolution=(1900, 900))
+    Figure(; size=(1900, 900))
 end
 
 @doc """ Deregisters interactions from an axis

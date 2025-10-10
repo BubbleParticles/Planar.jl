@@ -1,7 +1,7 @@
 name = "Scrapers"
 uuid = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
-authors = ["zbc"]
 version = "0.1.0"
+authors = ["zbc"]
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
