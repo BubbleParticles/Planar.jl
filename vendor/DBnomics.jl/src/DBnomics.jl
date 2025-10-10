@@ -83,10 +83,12 @@ module DBnomics
         ]
     end
 
+    const TMP = Ref{Any}(nothing)
+
     # Modify global variables
     function options(s::AbstractString, v::Any)
         s = Symbol(s)
-        @eval (tmp = ($v))
+        tmp = TMP[] = v
 
         if String(s) == "api_version"
             if !isa(tmp, Int64)

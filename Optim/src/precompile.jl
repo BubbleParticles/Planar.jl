@@ -21,6 +21,7 @@ end
 @preset begin
     st.Instances.Exchanges.Python.py_start_loop()
     s = _precomp_strat()
+    ect = invokelatest(getfield, Optim, :ect)
     function st.call!(::typeof(s), ::ect.OptSetup)
         (;
             ctx=Context(Sim(), tf"1d", dt"2020-", now()),

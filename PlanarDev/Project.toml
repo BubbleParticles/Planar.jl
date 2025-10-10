@@ -16,4 +16,3 @@ Stubs = "19a5ee1f-efca-4178-b297-263c7ceb508d"
 
 [compat]
 BlackBoxOptim = "0.6.3"
-Revise = "3.8.0"

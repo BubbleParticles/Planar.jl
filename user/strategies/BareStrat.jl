@@ -7,7 +7,7 @@ using .st.ExchangeTypes.Ccxt: ccxt_exchange
 using .st.TimeTicks
 using .st: AssetCollection
 import .st: call!
-using .st.Misc: Sim, NoMargin, Paper, call!
+using .st.Misc: Sim, NoMargin, Paper
 using .st.Instances: ByPos, BySide, Isolated, Long, Short, cash, posside, position
 using .st: Buy, Sell
 using .st.OrderTypes: MarketOrder, ShortMarketOrder
