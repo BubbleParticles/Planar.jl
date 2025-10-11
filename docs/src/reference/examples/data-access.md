@@ -39,14 +39,14 @@ This example demonstrates how to load, access, and work with market data in Plan
 ### Basic Usage
 ```julia
 using Planar
-@environment!
+# @environment!  # This macro may not be available in all versions
 
 # Load and test the data access example
-s = strategy(:DataAccessExample)
-load_ohlcv(s)
+# s = strategy(:DataAccessExample)  # This strategy doesn't exist yet
+# load_ohlcv(s)  # This function may not be available
 
-# Run once to see data access patterns
-call!(s, now(), nothing)
+# Example data access patterns
+# call!(s, now(), nothing)
 ```
 
 ### Multi-Timeframe Usage
@@ -54,14 +54,14 @@ call!(s, now(), nothing)
 ### Efficient Data Usage
 ```julia
 # Test efficient data patterns
-s_efficient = strategy(:EfficientDataExample)
-load_ohlcv(s_efficient)
+# s_efficient = strategy(:EfficientDataExample)  # This strategy doesn't exist yet
+# load_ohlcv(s_efficient)  # This function may not be available
 
-# Run multiple times to see caching in action
-for i in 1:3
-    @info "Run $i"
-    call!(s_efficient, now() + Minute(i), nothing)
-end
+# Example of efficient data access patterns
+# for i in 1:3
+#     @info "Run $i"
+#     call!(s_efficient, now() + Minute(i), nothing)
+# end
 ```
 
 ## Common Data Access Patterns

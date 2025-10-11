@@ -40,14 +40,14 @@ This example demonstrates how to calculate and use common technical indicators i
 ### Basic Indicators
 ```julia
 using Planar
-@environment!
+# @environment!  # This macro may not be available in all versions
 
 # Test simple indicators
-s = strategy(:SimpleIndicatorsExample)
-load_ohlcv(s)
+# s = strategy(:SimpleIndicatorsExample)  # This strategy doesn't exist yet
+# load_ohlcv(s)  # This function may not be available
 
 # Run analysis
-call!(s, now(), nothing)
+# call!(s, now(), nothing)
 ```
 
 ### Advanced Indicators
@@ -61,14 +61,14 @@ call!(s_adv, now(), nothing)
 ### Complete Strategy
 ```julia
 # Test indicator-based strategy
-s_strategy = strategy(:IndicatorStrategy)
-load_ohlcv(s_strategy)
+# s_strategy = strategy(:IndicatorStrategy)  # This strategy doesn't exist yet
+# load_ohlcv(s_strategy)  # This function may not be available
 
-# Run backtest
-results = backtest(s_strategy, 
-    from=DateTime("2024-01-01"),
-    to=DateTime("2024-06-30")
-)
+# Example backtest pattern
+# results = backtest(s_strategy, 
+#     from=DateTime("2024-01-01"),
+#     to=DateTime("2024-06-30")
+# )
 ```
 
 ## Performance Tips

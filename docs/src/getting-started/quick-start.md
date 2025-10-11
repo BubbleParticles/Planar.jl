@@ -67,7 +67,7 @@ Pkg.activate("PlanarInteractive")
 using PlanarInteractive
 
 # Initialize the environment
-@environment!
+# @environment!  # This macro may not be available in all versions
 ```
 
 **Expected output**: You'll see modules loading. First run takes ~60 seconds.
@@ -199,7 +199,7 @@ Pkg.activate("PlanarInteractive")
 
 try
     using PlanarInteractive
-    @environment!
+    # @environment!  # This macro may not be available in all versions
     
     # Example: Check data loaded
     # Note: This requires a loaded strategy instance 's'

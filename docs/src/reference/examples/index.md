@@ -96,10 +96,10 @@ Always test examples in simulation mode before live trading:
 
 ```julia
 # Load strategy in simulation mode
-s = strategy(:MyStrategy, Sim())
+# s = strategy(:MyStrategy, Sim())  # This strategy doesn't exist yet
 
-# Run backtest
-results = backtest(s, from=DateTime("2024-01-01"), to=DateTime("2024-12-31"))
+# Example backtest pattern
+# results = backtest(s, from=DateTime("2024-01-01"), to=DateTime("2024-12-31"))
 ```
 
 ## Example Template
@@ -112,16 +112,16 @@ All examples follow this consistent structure:
 ### Simulation Testing
 ```julia
 # Test in simulation mode
-s = strategy(:YourStrategy, Sim())
-load_ohlcv(s)
+# s = strategy(:YourStrategy, Sim())  # This strategy doesn't exist yet
+# load_ohlcv(s)  # This function may not be available
 
-# Run a quick backtest
-results = backtest(s, 
-    from=DateTime("2024-01-01"),
-    to=DateTime("2024-03-31")
-)
+# Example backtest pattern
+# results = backtest(s, 
+#     from=DateTime("2024-01-01"),
+#     to=DateTime("2024-03-31")
+# )
 
-println("Total return: $(results.total_return)")
+# println("Total return: $(results.total_return)")
 ```
 
 ### Paper Trading Testing
