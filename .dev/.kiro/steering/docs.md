@@ -16,7 +16,7 @@ inclusion: always
 - All Julia code must execute successfully and be compatible with current Planar version
 - Include necessary imports and setup: `using Planar`, configuration objects
 - Add clear comments explaining non-obvious parts
-- Test examples with: `julia scripts/validate-examples.jl`
+- Review examples using AI-guided procedures in `docs/maintenance/ai-code-block-review-guide.md`
 - Follow JuliaFormatter standards: Blue style, 92 character margin
 
 ### Frontmatter Requirements
@@ -52,7 +52,7 @@ For comprehensive concept explanations with overview, key concepts, implementati
 
 ### Validation Tools
 - `scripts/check-links.sh`: Validates all documentation links
-- `scripts/validate-examples.jl`: Tests Julia code examples  
+- Manual AI-guided code review: See `docs/maintenance/ai-code-block-review-guide.md`  
 - `scripts/check-templates.sh`: Verifies template compliance
 - `scripts/freshness-report.jl`: Analyzes content currency
 

@@ -58,25 +58,9 @@ julia check_links.jl
 - Console summary with health score
 - Detailed text report at `docs/reports/link_validation_report.txt`
 
-### 2. Code Example Tester (`code_example_tester.jl`)
+### 2. Code Example Review
 
-Extracts and tests all Julia code examples from the documentation to ensure they execute correctly.
-
-**Features:**
-- Extracts Julia code blocks from markdown files
-- Executes each example in isolation
-- Skips examples marked as non-executable
-- Reports execution success/failure with detailed error messages
-- Tracks execution time for performance monitoring
-
-**Usage:**
-```bash
-julia docs/scripts/code_example_tester.jl
-```
-
-**Output:**
-- Console summary with success rate
-- Detailed text report at `docs/reports/code_examples_test_report.txt`
+Code examples are now reviewed using manual AI-guided procedures instead of automated testing. See `docs/maintenance/ai-code-block-review-guide.md` for comprehensive review procedures that ensure code quality while reducing maintenance overhead.
 
 **Example Skipping:**
 Code examples are automatically skipped if they contain:
@@ -141,7 +125,7 @@ These tools can be integrated into CI/CD pipelines to ensure documentation quali
 - name: Validate Documentation
   run: |
     julia docs/scripts/simple_link_validator.jl
-    julia docs/scripts/code_example_tester.jl
+    # Code examples use manual AI-guided review
     julia docs/scripts/content_consistency_validator.jl
 ```
 

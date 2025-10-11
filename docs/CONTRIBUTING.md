@@ -217,8 +217,8 @@ Links to related content and next steps.
 Before submitting, test your code examples:
 
 ```bash
-# Run the code example validator
-julia scripts/validate-examples.jl
+# Review code examples using AI-guided procedures
+# See docs/maintenance/ai-code-block-review-guide.md
 
 # Or test manually in Julia REPL
 julia --project=Planar
@@ -286,7 +286,7 @@ Your contribution will be evaluated on:
    ```bash
    # Run validation tools
    scripts/check-links.sh
-   julia scripts/validate-examples.jl
+   # Use AI-guided code review (see maintenance/ai-code-block-review-guide.md)
    scripts/check-templates.sh
    ```
 
@@ -390,7 +390,7 @@ While not currently supported, we're interested in:
 
 ### Validation Tools
 - `scripts/check-links.sh`: Validates all documentation links
-- `scripts/validate-examples.jl`: Tests all Julia code examples
+- Manual AI-guided code review: See `docs/maintenance/ai-code-block-review-guide.md`
 - `scripts/check-templates.sh`: Verifies template compliance
 - `scripts/freshness-report.jl`: Analyzes content freshness
 

@@ -238,7 +238,7 @@ Integrate with existing QA systems:
 Create scripts for common maintenance tasks:
 
 1. **Link Checker**: `scripts/check-links.sh`
-2. **Code Example Validator**: `scripts/validate-examples.jl`
+2. **Code Example Review**: Manual AI-guided review (see `ai-code-block-review-guide.md`)
 3. **Template Compliance**: `scripts/check-templates.sh`
 4. **Content Freshness Report**: `scripts/freshness-report.jl`
 
