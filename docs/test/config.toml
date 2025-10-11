@@ -17,27 +17,13 @@ skip_files = [
 skip_patterns = [
     "# DOCTEST_SKIP",
     "# Example only",
-    "# Pseudo-code",
+    "# Pseudo-code", 
     "# Fragment",
     "# Incomplete",
-    "catch e",
     "**❌",
     "**✅",
     "## When to Seek Help",
-    "## Getting Help",
-    "strategy(:MyStrategy",
-    "strategy(:YourStrategy",
-    "strategy(:DataAccessExample",
-    "strategy(:SimpleIndicatorsExample",
-    "strategy(:BasicStrategy",
-    "@benchmark",
-    "Interactive[^a-zA-Z]",
-    "^Interactive$",
-    "Interactive",
-    "start_paper_trading",
-    "from=DateTime",
-    "load_ohlcv",
-    "s_strategy"
+    "## Getting Help"
 ]
 # Global requirements for all code examples
 global_requirements = [

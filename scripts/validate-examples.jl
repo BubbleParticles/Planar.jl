@@ -10,7 +10,6 @@ to ensure they work with the current version of Planar.
 using Pkg
 using Markdown
 using Test
-using Dates
 
 const DOCS_DIR = "docs/src"
 const REPORT_FILE = "docs/maintenance/code-validation-report.md"
@@ -24,7 +23,7 @@ struct CodeExample
 end
 
 """
-Extract code blocks from a markdown file with intelligent filtering
+Extract code blocks from a markdown file
 """
 function extract_code_blocks(filepath::String)::Vector{CodeExample}
     examples = CodeExample[]
@@ -32,24 +31,6 @@ function extract_code_blocks(filepath::String)::Vector{CodeExample}
     if !isfile(filepath)
         return examples
     end
-    
-    # Skip patterns for non-executable content
-    skip_patterns = [
-        "strategy(:MyStrategy",
-        "strategy(:YourStrategy", 
-        "strategy(:DataAccessExample",
-        "strategy(:SimpleIndicatorsExample",
-        "strategy(:BasicStrategy",
-        "@benchmark",
-        "Interactive",
-        "start_paper_trading",
-        "from=DateTime",
-        "load_ohlcv",
-        "s_strategy",
-        "catch e",
-        "**❌",
-        "**✅"
-    ]
     
     content = read(filepath, String)
     lines = split(content, '\n')
@@ -65,42 +46,7 @@ function extract_code_blocks(filepath::String)::Vector{CodeExample}
                 # End of code block
                 if code_language == "julia" && !isempty(code_lines)
                     code = join(code_lines, '\n')
-                    
-                    # Check if this code block should be skipped
-                    should_skip = false
-                    for pattern in skip_patterns
-                        if occursin(pattern, code)
-                            should_skip = true
-                            break
-                        end
-                    end
-                    
-                    # Additional filtering: skip if code is too short or incomplete
-                    if !should_skip
-                        # Skip if code contains markdown syntax
-                        if occursin(r"^\s*#+\s+", code) || occursin(r"\*\*.*\*\*", code)
-                            should_skip = true
-                        end
-                        
-                        # Skip if code is clearly incomplete (missing try/end, catch without try, etc.)
-                        if occursin(r"catch\s+\w+", code) && !occursin(r"try\s*$", code)
-                            should_skip = true
-                        end
-                        
-                        # Skip if code contains only comments or empty lines
-                        if all(line -> isempty(strip(line)) || startswith(strip(line), '#'), split(code, '\n'))
-                            should_skip = true
-                        end
-                        
-                        # Skip if code is too short (likely just a fragment)
-                        if length(strip(code)) < 20
-                            should_skip = true
-                        end
-                    end
-                    
-                    if !should_skip
-                        push!(examples, CodeExample(filepath, start_line, i, code, code_language))
-                    end
+                    push!(examples, CodeExample(filepath, start_line, i, code, code_language))
                 end
                 in_code_block = false
                 code_language = ""
@@ -122,41 +68,20 @@ function extract_code_blocks(filepath::String)::Vector{CodeExample}
 end
 
 """
-Test a Julia code example with proper environment setup
+Test a Julia code example
 """
 function test_code_example(example::CodeExample)::Tuple{Bool, String}
     try
-        # Clean the code by removing project activation statements
-        cleaned_code = example.code
+        # Create a temporary module to isolate the code
+        temp_module = Module()
         
-        # Remove Pkg.activate statements
-        cleaned_code = replace(cleaned_code, r"import Pkg; Pkg\.activate\([^)]+\)\s*\n?" => "")
-        cleaned_code = replace(cleaned_code, r"Pkg\.activate\([^)]+\)\s*\n?" => "")
+        # Add common imports that are typically available
+        Core.eval(temp_module, :(using Planar))
         
-        # Remove standalone using Planar statements (will be handled by framework)
-        cleaned_code = replace(cleaned_code, r"using Planar\s*\n?" => "")
-        cleaned_code = replace(cleaned_code, r"using PlanarInteractive\s*\n?" => "")
+        # Try to evaluate the code
+        result = Core.eval(temp_module, Meta.parse(example.code))
         
-        # Clean up extra newlines
-        cleaned_code = replace(cleaned_code, r"\n\n\n+" => "\n\n")
-        cleaned_code = strip(cleaned_code)
-        
-        # Skip if code is empty after cleaning
-        if isempty(cleaned_code)
-            return true, "SKIPPED (empty after cleaning)"
-        end
-        
-        # Try to parse the code to check for syntax errors
-        try
-            parsed = Meta.parse("begin\n$(cleaned_code)\nend")
-        catch parse_error
-            return false, "ParseError: $parse_error"
-        end
-        
-        # For now, just return success if it parses correctly
-        # In a real environment, we would execute it with proper imports
-        return true, "Success (syntax valid)"
-        
+        return true, "Success"
     catch e
         return false, string(e)
     end

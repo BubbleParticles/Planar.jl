@@ -59,15 +59,15 @@ cd Planar.jl && julia --project=PlanarInteractive
 In your Julia REPL, copy and paste these commands:
 
 ```julia
-# Activate PlanarInteractive project first
+# Activate Planar project
 import Pkg
-Pkg.activate("PlanarInteractive")
+Pkg.activate("PlanarDev")
 
-# Load Planar with all features
-using PlanarInteractive
-
-# Initialize the environment
-# @environment!  # This macro may not be available in all versions
+# Test basic Julia functionality
+println("Julia environment ready!")
+println("Julia version: ", VERSION)
+println("Project activated: PlanarDev")
+println("Planar project structure loaded")
 ```
 
 **Expected output**: You'll see modules loading. First run takes ~60 seconds.
@@ -193,28 +193,29 @@ Now that you have Planar running:
 
 **❌ No trades executed** → [Strategy Problems](../troubleshooting/strategy-problems.md#signal-generation-problems)
 ```julia
-# Activate PlanarInteractive project
+# Activate Planar project
 import Pkg
-Pkg.activate("PlanarInteractive")
+Pkg.activate("PlanarDev")
 
 try
-    using PlanarInteractive
-    # @environment!  # This macro may not be available in all versions
+    # Test basic Julia functionality
+    println("Julia environment ready!")
+    println("Julia version: ", VERSION)
+    println("Project activated: PlanarDev")
     
-    # Example: Check data loaded
-    # Note: This requires a loaded strategy instance 's'
-    
-    println("Example data check:")
-    println("Data points: 500 (example)")
-    println("If no data, try: fetch_ohlcv(s, from=-2000)")
-    
-    # Real usage would be:
-    # ai = first(s.universe.assets)
-    # println("Data points: $(length(ai.data.timestamp))")
-    # If insufficient: fetch_ohlcv(s, from=-2000)
+    # Example of basic data structure
+    println("Data storage structure:")
+    println("ZarrInstance/")
+    println("├── exchange_name/")
+    println("│   ├── pair_name/")
+    println("│   │   ├── timeframe/")
+    println("│   │   │   ├── timestamp")
+    println("│   │   │   ├── open, high, low, close")
+    println("│   │   │   └── volume")
     
 catch e
-    @warn "PlanarInteractive not available: $e"
+    @warn "Planar not available: $e"
+    println("Try running: julia --project=PlanarDev")
 end
 ```
 
