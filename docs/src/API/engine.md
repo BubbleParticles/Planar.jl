@@ -96,7 +96,7 @@ Modules = [Planar.Engine]
 ## See Also
 
 - **[Strategies API](strategies.md)** - Strategy base classes and interfaces
-- **[Data API](data.md)** - Data structures and management
+- **[Data API](../data.md)** - Data structures and management
 - **[Executors API](executors.md)** - Order execution and management
 - **[Execution Modes Guide](../guides/execution-modes.md)** - Understanding sim, paper, and live modes
-- **[Data Management Guide](../guides/data-management.md)** - Working with market data
+- **[Data Management Guide](../guides/../guides/../guides/data-management.md)** - Working with market data

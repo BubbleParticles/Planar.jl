@@ -18,48 +18,48 @@ This library provides comprehensive, tested code examples for common Planar.jl u
 ### By Complexity Level
 
 #### Beginner Examples
-- **[Basic Strategy Structure](basic-strategy.md)** - Simple strategy template
+- **[Basic Strategy Structure](../../getting-started/first-strategy.md)** - Simple strategy template
 - **[Data Access](data-access.md)** - Loading and accessing market data
 - **[Simple Indicators](simple-indicators.md)** - Moving averages and basic calculations
-- **[Order Placement](order-placement.md)** - Basic buy/sell order examples
+- **[Order Placement](#order-placement)** - Basic buy/sell order examples
 
 #### Intermediate Examples
-- **[Technical Analysis](technical-analysis.md)** - Advanced indicators and signals
-- **[Risk Management](risk-management.md)** - Position sizing and stop losses
-- **[Multi-Asset Strategies](multi-asset.md)** - Trading multiple assets
-- **[Backtesting Setup](backtesting.md)** - Complete backtesting examples
+- **[Technical Analysis](#technical-analysis)** - Advanced indicators and signals
+- **[Risk Management](../../advanced/risk-management.md)** - Position sizing and stop losses
+- **[Multi-Asset Strategies](#multi-asset)** - Trading multiple assets
+- **Backtesting Setup** - Complete backtesting examples
 
 #### Advanced Examples
-- **[Margin Trading](margin-trading.md)** - Leverage and margin management
-- **[Portfolio Management](portfolio-management.md)** - Advanced portfolio strategies
-- **[Optimization](optimization.md)** - Parameter optimization examples
-- **[Live Trading](live-trading.md)** - Production trading setup
+- **[Margin Trading](#margin-trading)** - Leverage and margin management
+- **Portfolio Management** - Advanced portfolio strategies
+- **[Optimization](../../optimization.md)** - Parameter optimization examples
+- **[Live Trading](#live-trading)** - Production trading setup
 
 ### By Use Case
 
 #### Strategy Development
-- [Trend Following Strategy](strategies/trend-following.md)
-- [Mean Reversion Strategy](strategies/mean-reversion.md)
-- [Arbitrage Strategy](strategies/arbitrage.md)
-- [Grid Trading Strategy](strategies/grid-trading.md)
+- **Trend Following Strategy** - Momentum-based trading
+- **Mean Reversion Strategy** - Contrarian trading approaches
+- **Arbitrage Strategy** - Price difference exploitation
+- **Grid Trading Strategy** - Systematic grid-based trading
 
 #### Data Management
-- [Data Loading and Caching](data/loading-caching.md)
-- [Multi-Timeframe Analysis](data/multi-timeframe.md)
-- [Data Validation](data/validation.md)
-- [Custom Indicators](data/custom-indicators.md)
+- **Data Loading and Caching** - Efficient data handling
+- **Multi-Timeframe Analysis** - Cross-timeframe strategies
+- **Data Validation** - Quality assurance techniques
+- **Custom Indicators** - Building custom technical indicators
 
 #### Risk and Portfolio Management
-- [Position Sizing](risk/position-sizing.md)
-- [Stop Loss Implementation](risk/stop-loss.md)
-- [Portfolio Rebalancing](risk/rebalancing.md)
-- [Risk Metrics Calculation](risk/metrics.md)
+- **Position Sizing** - Dynamic position sizing strategies
+- **Stop Loss Implementation** - Risk management techniques
+- **Portfolio Rebalancing** - Automated portfolio management
+- **[Risk Metrics Calculation](../../metrics.md)** - Performance and risk metrics
 
 #### Exchange Integration
-- [Exchange Setup](exchange/setup.md)
-- [Multi-Exchange Trading](exchange/multi-exchange.md)
-- [Fee Optimization](exchange/fee-optimization.md)
-- [Error Handling](exchange/error-handling.md)
+- **Exchange Setup** - Connecting to trading exchanges
+- **Multi-Exchange Trading** - Cross-exchange strategies
+- **Fee Optimization** - Minimizing trading costs
+- **Error Handling** - Robust error management
 
 ## Example Categories
 

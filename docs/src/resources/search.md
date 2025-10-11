@@ -56,12 +56,12 @@ last_updated: "2025-10-04"
 
 ## Popular Searches
 
-- [Strategy Development](../guides/strategy-development.md)
+- [Strategy Development](../guides/../guides/strategy-development.md)
 - [Installation](../getting-started/installation.md)
 - [API Reference](../reference/api/)
-- [Troubleshooting](../troubleshooting/)
+- [Troubleshooting](../troubleshooting/index.md)
 - [Configuration](../reference/configuration.md)
-- [Data Management](../guides/data-management.md)
+- [Data Management](../guides/../guides/../guides/data-management.md)
 
 ## Search Tips
 
@@ -76,7 +76,7 @@ last_updated: "2025-10-04"
 - **[User Guides](../guides/)** - Comprehensive development guides
 - **[Advanced Topics](../advanced/)** - Expert-level customization
 - **[API Reference](../reference/api/)** - Function documentation
-- **[Troubleshooting](../troubleshooting/)** - Problem resolution
+- **[Troubleshooting](../troubleshooting/index.md)** - Problem resolution
 
 <style>
 .search-box {

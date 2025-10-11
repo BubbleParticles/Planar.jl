@@ -7,7 +7,7 @@ last_updated: "2025-10-04"---
 
 # Control the bot remotely
 
-A planar [strategy](../guides/strategy-development.md) can be controlled with telegram. 
+A planar [strategy](guides/../guides/strategy-development.md) can be controlled with telegram. 
 
 ## Requirements
 Create a new telegram bot:
@@ -20,16 +20,16 @@ Get a `chat_id`:
 - use the `Id` in the response as your `chat_id`
 
 Once you have the token and the id, save them either:
-- in the [strategy](../guides/strategy-development.md) config file as keys `tgtoken` and `tgchat_id`
-- after loading the [strategy](../guides/strategy-development.md) object in the strategy attributes (same keys (`Symbol`) as config)
+- in the [strategy](guides/../guides/strategy-development.md) config file as keys `tgtoken` and `tgchat_id`
+- after loading the [strategy](guides/../guides/strategy-development.md) object in the strategy attributes (same keys (`Symbol`) as config)
 - as env vars `TELEGRAM_BOT_TOKEN` and `TELEGRAM_BOT_CHAT_ID`.
 
 
 ## See Also
 
-- **[Strategy Development](../guides/strategy-development.md)** - Guide: Strategy development and implementation
-- **[Optimization](../optimization.md)** - Strategy development and implementation
-- **[Config](../config.md)** - Configuration and settings
+- **[Strategy Development](guides/../guides/strategy-development.md)** - Guide: Strategy development and implementation
+- **[Optimization](optimization.md)** - Strategy development and implementation
+- **[Config](config.md)** - Configuration and settings
 
 ## The telegram client
 Start listening for commands:

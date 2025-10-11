@@ -83,7 +83,7 @@ Modules = [Planar.Engine.Instances]
 
 - **[Instruments API](instruments.md)** - Financial instrument definitions
 - **[Strategies API](strategies.md)** - Strategy base classes and interfaces
-- **[Data API](data.md)** - Data structures and management
+- **[Data API](../data.md)** - Data structures and management
 - **[Executors API](executors.md)** - Order execution and management
-- **[Strategy Development Guide](../guides/strategy-development.md)** - Building trading strategies
-- **[Advanced Trading Guide](../advanced/margin-trading.md)** - Margin and derivative trading
+- **[Strategy Development Guide](../guides/../guides/strategy-development.md)** - Building trading strategies
+- **[Advanced Trading Guide](../advanced/risk-management.md)** - Margin and derivative trading

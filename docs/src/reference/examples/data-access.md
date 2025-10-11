@@ -23,7 +23,7 @@ This example demonstrates how to load, access, and work with market data in Plan
 - Efficient data access patterns
 
 **Complexity:** Beginner  
-**Prerequisites:** [Basic Strategy Structure](basic-strategy.md)
+**Prerequisites:** [Basic Strategy Structure](../../getting-started/first-strategy.md)
 
 ## Complete Data Access Example
 
@@ -81,6 +81,6 @@ end
 ## See Also
 
 - **[Simple Indicators Example](simple-indicators.md)** - Building technical indicators
-- **[Multi-Asset Strategies](multi-asset.md)** - Working with multiple assets
-- **[Data API Reference](../api/data.md)** - Complete data API documentation
+- **[Multi-Asset Strategies](#multi-asset)** - Working with multiple assets
+- **[Data API Reference](../../data.md)** - Complete data API documentation
 - **[Data Management Guide](../../guides/data-management.md)** - Comprehensive data guide

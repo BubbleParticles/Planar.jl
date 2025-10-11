@@ -186,7 +186,7 @@ docker run -v $(pwd)/user:/app/user planar
 
 If these solutions don't resolve your issue:
 
-1. Check the [main troubleshooting guide](index.md)
+1. Check the [main troubleshooting guide](../index.md)
 2. Review [exchange-specific issues](exchange-issues.md)
 3. Search [GitHub Issues](https://github.com/defnlnotme/Planar.jl/issues)
 4. Create a new issue with detailed error information

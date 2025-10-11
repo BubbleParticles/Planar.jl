@@ -197,7 +197,7 @@ Optimize multiple objectives simultaneously:
 
 ## See Also
 
-- [Strategy Development](guides/strategy-development.md) - Creating optimizable strategies
+- [Strategy Development](guides/../guides/strategy-development.md) - Creating optimizable strategies
 - [Execution Modes](guides/execution-modes.md) - Testing optimized strategies
 - [Performance Analysis](metrics.md) - Analyzing optimization results
 - [Plotting](plotting.md) - Visualizing optimization results

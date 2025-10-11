@@ -90,5 +90,5 @@ Modules = [Planar.Exchanges, Planar.Exchanges.ExchangeTypes]
 - **[CCXT API](ccxt.md)** - CCXT library integration and utilities
 - **[Engine API](engine.md)** - Core execution engine functions
 - **[Strategies API](strategies.md)** - Strategy base classes and interfaces
-- **[Exchange Configuration Guide](../guides/exchanges.md)** - Setting up exchange connections
+- **[Exchange Configuration Guide](../exchanges.md)** - Setting up exchange connections
 - **[Troubleshooting](../troubleshooting/exchange-issues.md)** - Common exchange connection issues

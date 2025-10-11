@@ -87,15 +87,15 @@ This comprehensive index helps you quickly find information across all Planar do
 - **Parameters** - [Strategy Attributes](strategy.md#parameter-management)
 
 ### System Configuration
-- **Environment Variables** - [JULIA_PROJECT, JULIA_NUM_THREADS]([troubleshooting](../troubleshooting/).md#environment-check)
+- **Environment Variables** - [JULIA_PROJECT, JULIA_NUM_THREADS]([troubleshooting](troubleshooting/index.md).md#environment-check)
 - **Exchange APIs** - [API Keys](engine/live.md), [Sandbox Mode](engine/live.md)
 - **Data Storage** - [LMDB Configuration](data.md#storage-architecture)
 
 ## Error Handling
 
 ### Common Issues
-- **Installation Problems** - [Dependency Conflicts]([troubleshooting](../troubleshooting/).md#dependency-conflicts)
-- **Strategy Loading** - [Module Not Found]([troubleshooting](../troubleshooting/).md#strategy-loading-problems)
+- **Installation Problems** - [Dependency Conflicts]([troubleshooting](troubleshooting/index.md).md#dependency-conflicts)
+- **Strategy Loading** - [Module Not Found]([troubleshooting](troubleshooting/index.md).md#strategy-loading-problems)
 - **Data Issues** - [Missing Data](troubleshooting.md#data-access-issues)
 - **Order Execution** - [Insufficient Funds](troubleshooting.md#order-execution-problems)
 
@@ -107,20 +107,20 @@ This comprehensive index helps you quickly find information across all Planar do
 ## File Locations
 
 ### User Files
-- **Strategies** - `user/[strategies](../guides/strategy-development.md)/`
-- **Configuration** - `user/[planar.toml](../config.md#configuration)-file)`
-- **Secrets** - `user/[secrets.toml](../config.md#secrets-management)`
+- **Strategies** - `user/[strategies](guides/../guides/strategy-development.md)/`
+- **Configuration** - `user/[planar.toml](config.md#configuration)-file)`
+- **Secrets** - `user/[secrets.toml](config.md#secrets-management)`
 - **Data** - `user/data.mdb`, `user/lock.mdb`
 
 ### Documentation
 - **Source** - `docs/src/`
 - **API Reference** - `docs/src/API/`
-- **Examples** - `user/[strategies](../guides/strategy-development.md)/QuickStart/examples/`
+- **Examples** - `user/[strategies](guides/../guides/strategy-development.md)/QuickStart/examples/`
 
 ## Search Keywords
 
 ### Trading Concepts
-- [OHLCV](../guides/data-management.md#ohlcv-data), Candlestick, Timeframe, Exchange, Pair, Symbol
+- [OHLCV](guides/../guides/data-management.md#ohlcv-data), Candlestick, Timeframe, Exchange, Pair, Symbol
 - Long, Short, Position, Margin, Leverage, Isolated, Cross
 - Buy, Sell, Order, Trade, Execution, Slippage, Fees
 - Backtest, Paper Trading, Live Trading, Simulation
@@ -139,20 +139,20 @@ This comprehensive index helps you quickly find information across all Planar do
 
 ## See Also
 
-- **[Exchanges](../exchanges.md)** - Exchange integration and configuration
-- **[Config](../config.md)** - Exchange integration and configuration
-- **[Overview](../troubleshooting/index.md)** - Troubleshooting: Troubleshooting and problem resolution
-- **[Optimization](../optimization.md)** - Performance optimization techniques
-- **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
-- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
+- **[Exchanges](exchanges.md)** - Exchange integration and configuration
+- **[Config](config.md)** - Exchange integration and configuration
+- **[Overview](troubleshooting/index.md)** - Troubleshooting: Troubleshooting and problem resolution
+- **[Optimization](optimization.md)** - Performance optimization techniques
+- **[Performance Issues](troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
+- **[Data Management](guides/../guides/data-management.md)** - Guide: Data handling and management
 
 ## Quick Reference
 
 ### Essential Commands
 
 ### Key File Paths
-- Strategy files: `user/[strategies](../guides/strategy-development.md)/StrategyName.jl`
-- Configuration: `user/[planar.toml](../config.md#configuration-file)`
+- Strategy files: `user/[strategies](guides/../guides/strategy-development.md)/StrategyName.jl`
+- Configuration: `user/[planar.toml](config.md#configuration-file)`
 - Documentation: `docs/src/`
 - Examples: `user/strategies/QuickStart/examples/`
 

@@ -149,13 +149,13 @@ start!(s)
 After mastering this basic structure:
 
 1. **Add Indicators**: Learn [Simple Indicators](simple-indicators.md)
-2. **Implement Orders**: See [Order Placement](order-placement.md)
-3. **Add Risk Management**: Check [Risk Management](risk-management.md)
-4. **Multi-Asset Trading**: Explore [Multi-Asset Strategies](multi-asset.md)
+2. **Implement Orders**: See [Order Placement](#order-placement)
+3. **Add Risk Management**: Check [Risk Management](../../advanced/risk-management.md)
+4. **Multi-Asset Trading**: Explore [Multi-Asset Strategies](#multi-asset)
 
 ## See Also
 
 - **[Strategy Development Guide](../../guides/strategy-development.md)** - Complete strategy development guide
 - **[Getting Started](../../getting-started/first-strategy.md)** - Your first strategy tutorial
-- **[Strategies API](../api/strategies.md)** - Strategy API reference
+- **[Strategies API](../../API/strategies.md)** - Strategy API reference
 - **[Simple Indicators Example](simple-indicators.md)** - Adding technical indicators

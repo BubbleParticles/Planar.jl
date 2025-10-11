@@ -70,7 +70,7 @@ jobs:
           limit-access-to-actor: true
         timeout-minutes: 300
 
-      - name: Upload validation reports
+      - name: Upload valierrordation reports
         uses: actions/upload-artifact@v4
         if: always()
         with:

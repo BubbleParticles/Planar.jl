@@ -11,10 +11,10 @@ last_updated: "2025-10-04"
 
 <!--
 Keywords: execution modes, [simulation](../guides/execution-modes.md#simulation-mode), [backtesting](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode), [paper trading](../guides/execution-modes.md#paper-mode), [live trading](../guides/execution-modes.md#live-mode), mode transition, risk management
-Description: Comprehensive guide to Planar's three execution modes - Sim, Paper, and Live - covering setup, [configuration](../config.md), transition [strategies](../guides/strategy-development.md), and best practices.
+Description: Comprehensive guide to Planar's three execution modes - Sim, Paper, and Live - covering setup, [configuration](../config.md), transition [strategies](../guides/../guides/strategy-development.md), and best practices.
 -->
 
-This comprehensive guide covers Planar's three execution modes and how to safely transition between them. Learn how to develop [strategies](../guides/strategy-development.md) in [simulation](../guides/execution-modes.md#simulation-mode), validate them in paper mode, and deploy them for [live trading](../guides/execution-modes.md#live-mode) with proper risk management.
+This comprehensive guide covers Planar's three execution modes and how to safely transition between them. Learn how to develop [strategies](../guides/../guides/strategy-development.md) in [simulation](../guides/execution-modes.md#simulation-mode), validate them in paper mode, and deploy them for [live trading](../guides/execution-modes.md#live-mode) with proper risk management.
 
 ## Quick Navigation
 
@@ -24,23 +24,23 @@ This comprehensive guide covers Planar's three execution modes and how to safely
 - **[Live Mode](#live-mode)** - Real trading with actual capital
 - **[Mode Transitions](#mode-transitions)** - Safe progression between modes
 - **[Best Practices](#best-practices)** - Guidelines for each mode
-- **[Troubleshooting](#[troubleshooting](../troubleshooting/))** - Common issues and solutions
+- **[Troubleshooting](#[troubleshooting](../troubleshooting/index.md))** - Common issues and solutions
 
 ## Prerequisites
 
 - Completed the [Getting Started Guide](../getting-started/index.md)
-- Basic understanding of [Strategy Development]([strategy](../guides/strategy-development.md)-development.md)
-- Familiarity with [Data Management](data-management.md)
+- Basic understanding of [Strategy Development]([strategy](../guides/../guides/strategy-development.md)-development.md)
+- Familiarity with [Data Management](../guides/../guides/data-management.md)
 
 ## Related Topics
 
-- **[Strategy Development]([strategy](../guides/strategy-development.md)-development.md)** - Building trading [strategies](../guides/strategy-development.md)
+- **[Strategy Development]([strategy](../guides/../guides/strategy-development.md)-development.md)** - Building trading [strategies](../guides/../guides/strategy-development.md)
 - **[Risk Management](../advanced/risk-management.md)** - Managing trading risks
 - **[Optimization](../[optimization](../optimization.md).md)** - Parameter tuning and [backtesting](../guides/execution-modes.md#simulation-mode)
 
 ## Mode Overview
 
-Planar supports three distinct execution modes, each designed for different stages of [strategy](../guides/strategy-development.md) development and deployment:
+Planar supports three distinct execution modes, each designed for different stages of [strategy](../guides/../guides/strategy-development.md) development and deployment:
 
 ### Mode Comparison Matrix
 
@@ -111,7 +111,7 @@ Simulation mode (Sim) is designed for strategy development and [backtesting](../
 
 ## Paper Mode
 
-Paper mode provides real-time simulation using live [market data](../guides/data-management.md) without risking actual capital. It's essential for validating strategies with current market conditions before live deployment.
+Paper mode provides real-time simulation using live [market data](../guides/../guides/../guides/data-management.md) without risking actual capital. It's essential for validating strategies with current market conditions before live deployment.
 
 ### Basic Paper Mode Setup
 

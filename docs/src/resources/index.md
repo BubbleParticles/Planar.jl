@@ -11,8 +11,8 @@ Additional resources and reference materials for Planar users.
 
 ## Available Resources
 
-- [Glossary](glossary.md) - Terms and concepts
-- [Migration Guides](migration-guides.md) - Version update guides
+- **Glossary** - Terms and concepts
+- **Migration Guides** - Version update guides
 - [Community](community.md) - Support and contacts
 
 ## External Resources

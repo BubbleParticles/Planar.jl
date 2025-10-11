@@ -32,7 +32,7 @@ last_updated: "2025-10-04"
 **Quick access**: [📚 API Docs](reference/api/) | [🔍 Search](resources/search.md) | [💬 Community](resources/community.md)
 
 ### 🎯 Ready to Build?
-**Jump to**: [🏗️ Strategy Development](guides/strategy-development.md) | [📊 Examples](getting-started/first-strategy.md) | [⚙️ Configuration](getting-started/installation.md)
+**Jump to**: [🏗️ Strategy Development](guides/../guides/strategy-development.md) | [📊 Examples](getting-started/first-strategy.md) | [⚙️ Configuration](getting-started/installation.md)
 
 ### 🚀 Going Live?
-**Essential**: [🔄 Execution Modes](guides/execution-modes.md) | [🛡️ Risk Management](advanced/risk-management.md) | [📊 Monitoring](guides/monitoring.md)
+**Essential**: [🔄 Execution Modes](guides/execution-modes.md) | [🛡️ Risk Management](advanced/../advanced/risk-management.md) | [📊 Monitoring](guides/monitoring.md)

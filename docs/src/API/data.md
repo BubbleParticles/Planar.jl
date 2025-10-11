@@ -92,7 +92,7 @@ Modules = [Planar.Data]
 
 ## See Also
 
-- **[Data Management Guide](../guides/data-management.md)** - Complete guide to working with market data
+- **[Data Management Guide](../guides/../guides/../guides/data-management.md)** - Complete guide to working with market data
 - **[Processing API](processing.md)** - Data processing and transformation functions
 - **[DFUtils API](dfutils.md)** - DataFrame manipulation utilities
 - **[Engine API](engine.md)** - Core execution engine functions

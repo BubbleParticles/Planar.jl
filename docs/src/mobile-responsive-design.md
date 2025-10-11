@@ -196,12 +196,12 @@ The Planar documentation uses Documenter.jl's default HTML theme, which includes
 
 ## See Also
 
-- **[Optimization](../optimization.md)** - Performance optimization techniques
-- **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
-- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
-- **[Exchanges](../exchanges.md)** - Data handling and management
-- **[Strategy Development](../guides/strategy-development.md)** - Guide: Strategy development and implementation
-- **[Optimization](../optimization.md)** - Strategy development and implementation
+- **[Optimization](optimization.md)** - Performance optimization techniques
+- **[Performance Issues](troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
+- **[Data Management](guides/../guides/data-management.md)** - Guide: Data handling and management
+- **[Exchanges](exchanges.md)** - Data handling and management
+- **[Strategy Development](guides/../guides/strategy-development.md)** - Guide: Strategy development and implementation
+- **[Optimization](optimization.md)** - Strategy development and implementation
 
 ## Resources
 

@@ -90,6 +90,6 @@ results = backtest(s_strategy,
 ## See Also
 
 - **[Data Access Examples](data-access.md)** - Working with market data
-- **[Technical Analysis Examples](technical-analysis.md)** - Advanced analysis techniques
-- **[Risk Management Examples](risk-management.md)** - Position sizing and stops
-- **[Multi-Asset Strategies](multi-asset.md)** - Trading multiple assets
+- **[Technical Analysis Examples](#technical-analysis)** - Advanced analysis techniques
+- **[Risk Management Examples](../../advanced/risk-management.md)** - Position sizing and stops
+- **[Multi-Asset Strategies](#multi-asset)** - Trading multiple assets

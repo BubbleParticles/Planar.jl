@@ -13,22 +13,22 @@ Complete reference documentation for Planar APIs, [configuration](../config.md),
 
 - [API Documentation](api/) - Complete function reference
 - [Configuration]([configuration](../config.md).md) - All [configuration](../config.md) options
-- [Types](types.md) - Type system reference
+- [Types](../types.md) - Type system reference
 - [Examples](examples/) - Code examples library
 
 ## Quick Links
 
-- [Core API](api/core.md) - Essential functions
-- [Strategy API](api/[strategies](../guides/strategy-development.md).md) - Strategy development
-- [Exchange API](api/[exchanges](../exchanges.md).md) - Exchange integration
-- [Data API](api/data.md) - Data management
+- **Core API** - Essential functions
+- **[Strategy API](../API/strategies.md)** - Strategy development
+- **[Exchange API](../exchanges.md)** - Exchange integration
+- **[Data API](../data.md)** - Data management
 
 
 ## See Also
 
 - **[](../reference/api/)** - Complete API documentation
-- **[Strategy Development](../guides/strategy-development.md)** - Learn to use the APIs
-- **[](../troubleshooting/)** - API troubleshooting
+- **[Strategy Development](../guides/../guides/strategy-development.md)** - Learn to use the APIs
+- **[](../troubleshooting/index.md)** - API troubleshooting
 - **[Exchanges](../exchanges.md)** - Exchange integration and configuration
 - **[Config](../config.md)** - Exchange integration and configuration
 - **[Optimization](../optimization.md)** - Performance optimization techniques

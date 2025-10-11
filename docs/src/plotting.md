@@ -12,12 +12,12 @@ The Plotting module utilizes [Makie](https://docs.makie.org/stable/) for creatin
 
 Planar enhances Makie with specialized plotting recipes for financial analysis:
 
-- [OHLCV](../guides/data-management.md#ohlcv-data) (Open-High-Low-Close Volume) charts
+- [OHLCV](guides/../guides/data-management.md#ohlcv-data) (Open-High-Low-Close Volume) charts
 - Detailed trade history visualization
 - Summarized trade history with volume and balance insights
 - Custom indicator overlays and channels
 - Multi-asset portfolio visualization
-- Performance and [optimization](../optimization.md) result analysis
+- Performance and [optimization](optimization.md) result analysis
 
 !!! info "Interactive Features"
     Interactive backends, such as GLMakie and WGLMakie, allow for dynamic plots that can be clicked-and-dragged or zoomed. Additionally, interactive elements like tooltips are available on hover for candlesticks, trades, and balance charts.
@@ -40,11 +40,11 @@ For generating static images or when interactive features are not needed:
 
 For generating static images, use CairoMakie and save with `save("chart.png", figure)`.
 
-## [OHLCV](../guides/data-management.md#ohlcv-data) Charts
+## [OHLCV](guides/../guides/data-management.md#ohlcv-data) Charts
 
-[OHLCV data](../guides/data-management.md#ohlcv-data) is represented using candlesticks to indicate price movement, with red signifying a price decrease and green an increase. Volume is depicted as bars in the background of the chart.
+[OHLCV data](guides/../guides/data-management.md#ohlcv-data) is represented using candlesticks to indicate price movement, with red signifying a price decrease and green an increase. Volume is depicted as bars in the background of the chart.
 
-### Basic [OHLCV](../guides/data-management.md#ohlcv-data) Chart
+### Basic [OHLCV](guides/../guides/data-management.md#ohlcv-data) Chart
 
 ![OHLCV Plot](./assets/ohlcv.gif)
 
@@ -61,7 +61,7 @@ Display specific time periods:
 
 ### Multiple Timeframes
 
-Compare different [timeframes](../guides/data-management.md#timeframes) on the same chart:
+Compare different [timeframes](guides/../guides/data-management.md#timeframes) on the same chart:
 
 Create multi-timeframe layouts using `Figure()` and `Axis()` with `Plotting.ohlcv!()` for each subplot.
 
@@ -124,7 +124,7 @@ Group assets by categories and plot with different colors using loops and subplo
 
 ## Custom Indicators
 
-Custom indicators enhance chart analysis and can be integrated into plots. Planar provides several functions for adding [technical indicators](../guides/strategy-development.md#technical-indicators) to your charts.
+Custom indicators enhance chart analysis and can be integrated into plots. Planar provides several functions for adding [technical indicators](guides/../guides/strategy-development.md#technical-indicators) to your charts.
 
 ### Line Indicators
 
@@ -278,12 +278,12 @@ end
 
 ## See Also
 
-- **[Exchanges](../exchanges.md)** - Exchange integration and configuration
-- **[Config](../config.md)** - Exchange integration and configuration
-- **[Overview](../troubleshooting/index.md)** - Troubleshooting: Troubleshooting and problem resolution
-- **[Optimization](../optimization.md)** - Performance optimization techniques
-- **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
-- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
+- **[Exchanges](exchanges.md)** - Exchange integration and configuration
+- **[Config](config.md)** - Exchange integration and configuration
+- **[Overview](troubleshooting/index.md)** - Troubleshooting: Troubleshooting and problem resolution
+- **[Optimization](optimization.md)** - Performance optimization techniques
+- **[Performance Issues](troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
+- **[Data Management](guides/../guides/data-management.md)** - Guide: Data handling and management
 
 ## Advanced Interactive Features
 
@@ -308,7 +308,7 @@ This completes the advanced plotting and backend documentation. The enhanced plo
 8. **Large dataset handling** with progressive loading and memory optimization
 9. **Interactive features** with widgets and real-time updates
 10. **Advanced backend configuration** for GLMakie, WGLMakie, and CairoMakie
-11. **Performance optimization** and [troubleshooting](../troubleshooting/) guidance
+11. **Performance optimization** and [troubleshooting](troubleshooting/index.md) guidance
 12. **Multi-window management** for complex analysis workflows
 
 <function_calls>

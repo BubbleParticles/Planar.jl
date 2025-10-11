@@ -16,33 +16,33 @@ This section provides comprehensive documentation for all Planar.jl modules and 
 ## Quick Navigation
 
 ### Core Trading Components
-- **[Strategies](strategies.md)** - Strategy base classes, interfaces, and core functionality
-- **[Engine](engine.md)** - Core execution engine for backtesting, paper trading, and live trading
-- **[Executors](executors.md)** - Order execution and trade management
-- **[Instances](instances.md)** - Strategy instance management and asset handling
+- **[Strategies](../../API/strategies.md)** - Strategy base classes, interfaces, and core functionality
+- **[Engine](../../API/engine.md)** - Core execution engine for backtesting, paper trading, and live trading
+- **[Executors](../../API/executors.md)** - Order execution and trade management
+- **[Instances](../../API/instances.md)** - Strategy instance management and asset handling
 
 ### Data Management
-- **[Data](data.md)** - Data structures, persistence, and OHLCV data handling
-- **[Fetch](fetch.md)** - Data fetching and retrieval utilities
-- **[Processing](processing.md)** - Data processing and transformation functions
-- **[Collections](collections.md)** - Specialized collection types and utilities
+- **[Data](../../data.md)** - Data structures, persistence, and OHLCV data handling
+- **[Fetch](../../API/fetch.md)** - Data fetching and retrieval utilities
+- **[Processing](../../API/processing.md)** - Data processing and transformation functions
+- **[Collections](../../API/collections.md)** - Specialized collection types and utilities
 
 ### Exchange Integration
-- **[Exchanges](exchanges.md)** - Exchange interfaces and connectivity
-- **[CCXT Integration](ccxt.md)** - CCXT library integration and utilities
-- **[Instruments](instruments.md)** - Financial instrument definitions and management
+- **[Exchanges](../../exchanges.md)** - Exchange interfaces and connectivity
+- **[CCXT Integration](../../API/ccxt.md)** - CCXT library integration and utilities
+- **[Instruments](../../API/instruments.md)** - Financial instrument definitions and management
 
 ### Analysis & Optimization
-- **[Metrics](metrics.md)** - Performance metrics and analysis
-- **[Optimization](optimization.md)** - Parameter optimization and hyperparameter tuning
-- **[Strategy Tools](strategytools.md)** - Utilities for strategy development
-- **[Strategy Statistics](strategystats.md)** - Statistical analysis of strategy performance
+- **[Metrics](../../metrics.md)** - Performance metrics and analysis
+- **[Optimization](../../optimization.md)** - Parameter optimization and hyperparameter tuning
+- **[Strategy Tools](../../API/strategytools.md)** - Utilities for strategy development
+- **[Strategy Statistics](../../API/strategystats.md)** - Statistical analysis of strategy performance
 
 ### Visualization & Utilities
-- **[Plotting](plotting.md)** - Charting and visualization functions
-- **[DataFrame Utils](dfutils.md)** - DataFrame manipulation utilities
-- **[Python Integration](python.md)** - Python interoperability functions
-- **[Miscellaneous](misc.md)** - Additional utility functions and helpers
+- **[Plotting](../../plotting.md)** - Charting and visualization functions
+- **[DataFrame Utils](../../API/dfutils.md)** - DataFrame manipulation utilities
+- **[Python Integration](../../API/python.md)** - Python interoperability functions
+- **[Miscellaneous](../../API/misc.md)** - Additional utility functions and helpers
 
 ## Getting Started with the API
 
@@ -124,4 +124,4 @@ If you find missing or incorrect information in the API documentation, please:
 3. Follow the established documentation format and style
 4. Include working examples for new functions
 
-For more information on contributing, see the [Contributing Guide](../../resources/contributing.md).
+For more information on contributing, see the Contributing Guide.

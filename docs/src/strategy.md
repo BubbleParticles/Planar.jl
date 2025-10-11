@@ -8,11 +8,11 @@ last_updated: "2025-10-04"---
 # Strategy Development Guide
 
 <!--
-Keywords: [strategy](../guides/strategy-development.md) development, call! function, [dispatch system](../guides/[strategy](../guides/strategy-development.md)-development.md#dispatch-system), [margin trading](../guides/[strategy](../guides/strategy-development.md)-development.md#margin-trading-concepts), [backtesting](../guides/execution-modes.md#simulation)-mode), [optimization](../optimization.md), [Julia](https://julialang.org/) modules, trading logic
-Description: Comprehensive guide to developing trading [strategies](../guides/strategy-development.md) in Planar using [Julia](https://julialang.org/)'s [dispatch system](../guides/strategy-development.md#dispatch-system), covering everything from basic concepts to advanced patterns.
+Keywords: [strategy](guides/../guides/strategy-development.md) development, call! function, [dispatch system](../guides/[strategy](guides/../guides/strategy-development.md)-development.md#dispatch-system), [margin trading](../guides/[strategy](guides/../guides/strategy-development.md)-development.md#margin-trading-concepts), [backtesting](guides/execution-modes.md#simulation)-mode), [optimization](optimization.md), [Julia](https://julialang.org/) modules, trading logic
+Description: Comprehensive guide to developing trading [strategies](guides/../guides/strategy-development.md) in Planar using [Julia](https://julialang.org/)'s [dispatch system](guides/../guides/strategy-development.md#dispatch-system), covering everything from basic concepts to advanced patterns.
 -->
 
-This comprehensive guide covers everything you need to know about developing trading [strategies](../guides/strategy-development.md) in Planar. From basic concepts to advanced patterns, you'll learn how to build robust, profitable trading systems.
+This comprehensive guide covers everything you need to know about developing trading [strategies](guides/../guides/strategy-development.md) in Planar. From basic concepts to advanced patterns, you'll learn how to build robust, profitable trading systems.
 
 ## Quick Navigation
 
@@ -33,7 +33,7 @@ Before diving into strategy development, ensure you have:
 
 ## Related Topics
 
-- **[Optimization](../optimization.md)** - Parameter tuning and backtesting
+- **[Optimization](optimization.md)** - Parameter tuning and backtesting
 - **[Plotting](plotting.md)** - Visualizing strategy performance
 - **[Customization](customizations/customizations.md)** - Extending strategy functionality
 
@@ -41,15 +41,15 @@ Before diving into strategy development, ensure you have:
 
 ### Architecture Overview
 
-Planar strategies are built around [Julia](https://julialang.org/)'s powerful [dispatch system](../guides/strategy-development.md#dispatch-system), enabling clean separation of concerns and easy customization. Each strategy is a Julia module that implements specific interface methods through the `call!` function dispatch pattern.
+Planar strategies are built around [Julia](https://julialang.org/)'s powerful [dispatch system](guides/../guides/strategy-development.md#dispatch-system), enabling clean separation of concerns and easy customization. Each strategy is a Julia module that implements specific interface methods through the `call!` function dispatch pattern.
 
 #### Core Components
 
-- **Strategy Module**: Contains your trading logic and [configuration](../config.md)
+- **Strategy Module**: Contains your trading logic and [configuration](config.md)
 - **Dispatch System**: Uses `call!` methods to handle different strategy events
 - **Asset Universe**: Collection of tradeable assets managed by the strategy
-- **Execution Modes**: Sim ([backtesting](../guides/execution-modes.md#simulation)-mode)), Paper (simulated live), and Live trading
-- **Margin Support**: Full support for isolated and [cross margin](../guides/strategy-development.md#margin-modes) trading
+- **Execution Modes**: Sim ([backtesting](guides/execution-modes.md#simulation)-mode)), Paper (simulated live), and Live trading
+- **Margin Support**: Full support for isolated and [cross margin](guides/../guides/strategy-development.md#margin-modes) trading
 
 #### Strategy Type Hierarchy
 
@@ -63,7 +63,7 @@ Where:
 
 ### Dispatch System
 
-The strategy interface uses Julia's [multiple dispatch](../guides/strategy-development.md#dispatch-system) through the `call!` function. This pattern allows you to define different behaviors for different contexts while maintaining clean, extensible code.
+The strategy interface uses Julia's [multiple dispatch](guides/../guides/strategy-development.md#dispatch-system) through the `call!` function. This pattern allows you to define different behaviors for different contexts while maintaining clean, extensible code.
 
 #### Key Dispatch Patterns
 
@@ -76,12 +76,12 @@ The strategy interface uses Julia's [multiple dispatch](../guides/strategy-devel
 
 #### Exchange-Specific Dispatch
 
-You can customize behavior for specific [exchanges](../exchanges.md):
+You can customize behavior for specific [exchanges](exchanges.md):
 
 
 ### Margin Trading Concepts
 
-Planar provides comprehensive [margin trading](../guides/strategy-development.md#margin-trading-concepts) support with proper position management and risk controls.
+Planar provides comprehensive [margin trading](guides/../guides/strategy-development.md#margin-trading-concepts) support with proper position management and risk controls.
 
 #### Margin Modes
 
@@ -101,7 +101,7 @@ Planar provides comprehensive [margin trading](../guides/strategy-development.md
 
 ### Interactive Strategy Generator
 
-The simplest way to create a strategy is using the interactive generator, which prompts for all required [configuration](../config.md) options:
+The simplest way to create a strategy is using the interactive generator, which prompts for all required [configuration](config.md) options:
 
 ```julia
 # Activate Planar project
@@ -154,8 +154,8 @@ Add project dependencies (comma separated): Indicators
 
 ┌ Info: New Strategy
 │   name = "MyNewStrategy"
-│   [exchange](../exchanges.md) = :binance
-└   [timeframe](../guides/data-management.md#timeframes) = "5m"
+│   [exchange](exchanges.md) = :binance
+└   [timeframe](guides/../guides/data-management.md#timeframes) = "5m"
 [ Info: Config file updated
 
 Load strategy? [y]/n: 
@@ -294,7 +294,7 @@ user/strategies/MyStrategy/
 
 ### Strategy Configuration
 
-Strategies can be configured through `user/[planar.toml](../config.md#configuration-file)`:
+Strategies can be configured through `user/[planar.toml](config.md#configuration-file)`:
 
 ```toml
 [strategies.MyStrategy]
@@ -370,7 +370,7 @@ The universe (`s.universe`) is backed by a `DataFrame` (`s.universe.data`). It i
 
 #### 2. Data Access Issues
 
-**Issue**: [OHLCV data](../guides/data-management.md#ohlcv-data) is empty or missing
+**Issue**: [OHLCV data](guides/../guides/data-management.md#ohlcv-data) is empty or missing
 
 **Solutions**:
 - Check data availability for your timeframe and date range
@@ -505,18 +505,18 @@ e Also
 ### API Reference
 - **[Strategy API](API/strategies.md)** - Complete strategy function reference
 - **[Engine API](API/engine.md)** - Core engine functions
-- **[Strategy Tools](API/strategytools.md)** - Utility functions for strategies
-- **[Strategy Stats](API/strategystats.md)** - Performance analysis functions
+- **[Strategy Tools](API/../API/strategytools.md)** - Utility functions for strategies
+- **[Strategy Stats](API/../API/strategystats.md)** - Performance analysis functions
 
 ### Support
-- **[Troubleshooting](../troubleshooting/index.md)** - Common strategy development issues
+- **[Troubleshooting](troubleshooting/index.md)** - Common strategy development issues
 - **[Community](contacts.md)** - Getting help and sharing strategies
 
 ## Next Steps
 
 After mastering strategy development:
 
-1. **[Optimize Your Strategies](../optimization.md)** - Learn parameter optimization techniques
+1. **[Optimize Your Strategies](optimization.md)** - Learn parameter optimization techniques
 2. **[Visualize Performance](plotting.md)** - Create compelling performance charts
 3. **[Deploy Live](engine/live.md)** - Move from backtesting to live trading
 4. **[Extend Functionality](customizations/customizations.md)** - Customize Planar for your needs
