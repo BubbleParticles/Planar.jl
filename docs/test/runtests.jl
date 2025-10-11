@@ -79,7 +79,24 @@ function parse_args(args)
 end
 
 function show_help()
-    println(__doc__)
+    println("""
+Documentation Test Runner
+
+This script runs all documentation tests, including:
+1. Link checking
+2. Format consistency validation
+
+Usage:
+    julia docs/test/runtests.jl [options]
+
+Options:
+    --project=PATH    Path to Julia project (default: Planar)
+    --docs=PATH       Path to docs directory (default: docs/src)
+    --skip-links      Skip link validation
+    --skip-format     Skip format validation
+    --verbose         Enable verbose output
+    --help            Show this help message
+""")
 end
 
 function main()

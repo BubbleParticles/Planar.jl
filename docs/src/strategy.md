@@ -161,6 +161,8 @@ Add project dependencies (comma separated): Indicators
 Load strategy? [y]/n: 
 
 julia> s = ans
+```
+
 ### Non-Interactive Strategy Creation
 
 You can also create strategies programmatically without user interaction:
@@ -199,7 +201,7 @@ If you want to create a strategy manually you can either:
 
 For more advanced setups you can also use `Planar` as a library, and construct the strategy object directly from your own module:
 
-``` julia
+```julia
 using Planar
 using MyDownStreamModule
 s = Planar.Engine.Strategies.strategy(MyDownStreamModule)
@@ -253,7 +255,7 @@ Engine.Strategies.call!
 ## Removing a strategy
 The function `remove_strategy` allows to discard a strategy by its name. It will delete the julia file or the project directory and optionally the config entry.
 
-``` julia
+```julia
 julia> Planar.remove_strategy("MyNewStrategy")
 Really delete strategy located at /run/media/fra/stateful-1/dev/Planar.jl/user/strategies/MyNewStrategy? [n]/y: y
 [ Info: Strategy removed
