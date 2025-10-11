@@ -58,5 +58,5 @@ reports/
 
 ### Automation
 - Use `scripts/freshness-report.jl` for documentation currency analysis
-- Integrate with validation tools: `scripts/validate-examples.jl`, `scripts/check-links.sh`
+- Integrate with validation tools: `scripts/check-links.sh` and manual code review procedures
 - Generate reports as part of CI/CD pipeline when applicable

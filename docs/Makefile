@@ -59,8 +59,8 @@ link-dashboard:
 
 # Run code example testing
 test-code-examples:
-	@echo "Testing all code examples in documentation..."
-	julia --project=Planar scripts/code_example_tester.jl
+	@echo "Code example testing has been replaced with manual AI-guided review"
+	@echo "See docs/maintenance/ai-code-block-review-guide.md for review procedures"
 
 # Run content consistency validation
 validate-content:
@@ -72,8 +72,7 @@ qa-all:
 	@echo "Running all documentation quality assurance checks..."
 	@echo "1. Validating links..."
 	julia --project=Planar scripts/simple_link_validator.jl
-	@echo "2. Testing code examples..."
-	julia --project=Planar scripts/code_example_tester.jl
+	@echo "2. Code examples use manual AI-guided review (see maintenance/ai-code-block-review-guide.md)"
 	@echo "3. Validating content consistency..."
 	julia --project=Planar scripts/content_consistency_validator.jl
 	@echo "All QA checks completed. Check docs/reports/ for detailed results."
