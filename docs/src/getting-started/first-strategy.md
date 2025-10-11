@@ -23,7 +23,7 @@ By the end of this tutorial, you'll understand:
 
 - How Planar strategies are structured
 - The three core functions every strategy needs
-- How to add [technical indicators](../guides/strategy-development.md#technical-indicators)
+- How to add [technical indicators](../guides/../guides/strategy-development.md#technical-indicators)
 - How to implement buy/sell logic
 - How to test and debug your strategy
 - How to analyze performance results
@@ -334,9 +334,9 @@ Use `s.attrs` to store strategy-specific data:
 
 ## See Also
 
-- **[Quick Start](getting-started/quick-start.md)** - 15-minute getting started tutorial
-- **[Strategy Development](guides/strategy-development.md)** - Complete strategy development guide
-- **[Data Management](guides/data-management.md)** - Working with market data
+- **[Quick Start](../getting-started/quick-start.md)** - 15-minute getting started tutorial
+- **[Strategy Development](../guides/strategy-development.md)** - Complete strategy development guide
+- **[Data Management](../guides/data-management.md)** - Working with market data
 
 ## Next Steps: From Beginner to Advanced
 
@@ -352,14 +352,14 @@ Congratulations! You've built your first custom Planar strategy from scratch. He
 
 ### Short-term Learning (Next Week)
 
-#### 1. **[Strategy Development Guide](../guides/strategy-development.md)**
+#### 1. **[Strategy Development Guide](../guides/../guides/strategy-development.md)**
 Learn advanced patterns:
 - Multi-timeframe analysis
 - Portfolio strategies
 - Advanced indicators
 - Risk management systems
 
-#### 2. **[Parameter Optimization](../guides/strategy-development.md).md)**
+#### 2. **Parameter Optimization**
 Systematic improvement:
 - Grid search [optimization](../optimization.md)
 - Genetic algorithms
@@ -382,16 +382,16 @@ Test with live data:
 - Slippage and fees
 - Performance monitoring
 
-#### 2. **[Multi-Exchange Trading](../advanced/multi-exchange.md)**
+#### 2. **Multi-Exchange Trading**
 Scale your operations:
 - Arbitrage opportunities
 - Risk diversification
 - Exchange-specific features
 - Portfolio management
 
-#### 3. **[Custom Indicators](../customizations/indicators.md)**
+#### 3. **Custom Indicators**
 Build proprietary signals:
-- Custom [technical indicators](../guides/strategy-development.md#technical-indicators)
+- Custom [technical indicators](../guides/../guides/strategy-development.md#technical-indicators)
 - Machine learning integration
 - Alternative data sources
 - Signal combination techniques
@@ -405,14 +405,14 @@ Deploy for real money:
 - Emergency stop procedures
 - Performance monitoring
 
-#### 2. **[Optimization at Scale](../advanced/optimization.md)**
+#### 2. **Optimization at Scale**
 Professional-grade optimization:
 - Cloud computing integration
 - Parallel backtesting
 - Statistical significance testing
 - Production deployment
 
-#### 3. **[Custom Exchange Integration](../customizations/exchanges.md)**
+#### 3. **Custom Exchange Integration**
 Expand your reach:
 - New exchange APIs
 - Custom order types
@@ -423,18 +423,18 @@ Expand your reach:
 
 ### 📚 Beginner Resources
 - **[Strategy Examples](../strategy.md#examples)** - Study proven patterns
-- **[Common Patterns](../guides/common-patterns.md)** - Reusable strategy components
-- **[Troubleshooting Guide](../troubleshooting/index.md).md)** - Solve common issues
+- **[Common Patterns](../common-patterns.md)** - Reusable strategy components
+- **[Troubleshooting Guide](../troubleshooting/index.md)** - Solve common issues
 
 ### 🔬 Intermediate Resources
-- **[Advanced Indicators](../reference/indicators.md)** - Technical analysis deep dive
-- **[Backtesting Best Practices](../guides/strategy-development.md).md)** - Avoid common pitfalls
-- **[Performance Analysis](../guides/performance.md)** - Professional metrics
+- **Advanced Indicators** - Technical analysis deep dive
+- **[Backtesting Best Practices](../guides/strategy-development.md)** - Avoid common pitfalls
+- **Performance Analysis** - Professional metrics
 
 ### 🚀 Advanced Resources
 - **[API Reference](../reference/api/)** - Complete function documentation
-- **[Architecture Guide](../advanced/architecture.md)** - Understand Planar internals
-- **[Contributing Guide](../resources/contributing.md)** - Extend Planar itself
+- **Architecture Guide** - Understand Planar internals
+- **Contributing Guide** - Extend Planar itself
 
 ## Community and Support
 

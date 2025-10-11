@@ -226,7 +226,7 @@ export JULIA_GC_THREADS=2
 
 After successful installation:
 
-1. [Configure your first strategy](../guides/strategy-development.md)
+1. [Configure your first strategy](../guides/../guides/strategy-development.md)
 2. [Set up exchange connections](../exchanges.md)
 3. [Run your first backtest](../guides/execution-modes.md)
 4. [Explore optimization features](../optimization.md)

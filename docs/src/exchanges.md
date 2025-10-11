@@ -239,7 +239,7 @@ Planned enhancements to exchange integration:
 ## See Also
 
 - [Configuration Guide](config.md) - Exchange configuration details
-- [Strategy Development](guides/strategy-development.md) - Using exchanges in strategies
+- [Strategy Development](guides/../guides/strategy-development.md) - Using exchanges in strategies
 - [Troubleshooting](troubleshooting/exchange-issues.md) - Exchange-specific problem resolution
 - [API Reference](API/exchanges.md) - Exchange API documentation
 - [CCXT Documentation](https://docs.ccxt.com/) - Underlying CCXT library reference

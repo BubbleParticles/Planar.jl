@@ -7,11 +7,11 @@ last_updated: "2025-10-04"---
 
 # Running in Paper Mode
 
-Paper mode provides a realistic [simulation](../guides/execution-modes.md#simulation-mode) environment that uses live [market data](../guides/data-management.md) while simulating order execution. This allows you to test [strategies](../guides/strategy-development.md) with real market conditions without risking actual capital.
+Paper mode provides a realistic [simulation](../guides/execution-modes.md#simulation-mode) environment that uses live [market data](../guides/../guides/../guides/data-management.md) while simulating order execution. This allows you to test [strategies](../guides/../guides/strategy-development.md) with real market conditions without risking actual capital.
 
 ## Configuration Options
 
-In order to configure a [strategy](../guides/strategy-development.md) in paper mode, you can define the default mode in `user/[planar.toml](../config.md#configuration)-file)` or in your [strategy](../guides/strategy-development.md) project's `Project.toml` file. Alternatively, pass the mode as a keyword argument:
+In order to configure a [strategy](../guides/../guides/strategy-development.md) in paper mode, you can define the default mode in `user/[planar.toml](../config.md#configuration)-file)` or in your [strategy](../guides/../guides/strategy-development.md) project's `Project.toml` file. Alternatively, pass the mode as a keyword argument:
 
 ### Configuration via TOML Files
 
@@ -20,7 +20,7 @@ In order to configure a [strategy](../guides/strategy-development.md) in paper m
 [Example]
 mode = "Paper"
 [exchange]([exchanges](../exchanges.md).md) = "binance"
-throttle = 5  # seconds between [strategy](../guides/strategy-development.md) calls
+throttle = 5  # seconds between [strategy](../guides/../guides/strategy-development.md) calls
 initial_cash = 10000.0
 ```
 
@@ -99,7 +99,7 @@ When you initiate paper mode, asset prices are monitored in real-time from the e
 - **[Config](../config.md)** - Exchange integration and configuration
 - **[Optimization](../optimization.md)** - Performance optimization techniques
 - **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
-- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
+- **[Data Management](../guides/../guides/../guides/data-management.md)** - Guide: Data handling and management
 - **[Exchanges](../exchanges.md)** - Data handling and management
 
 ## Risk Management in Paper Mode

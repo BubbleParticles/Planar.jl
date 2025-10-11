@@ -12,7 +12,7 @@ Keywords: OHLCV data, Zarr storage, LMDB, data fetching, scrapers, watchers, his
 Description: Comprehensive data management system for OHLCV and time-series market data using Zarr storage, LMDB backend, and multiple data collection methods.
 -->
 
-The Data module provides comprehensive storage and management of [OHLCV](data-management.md#ohlcv-data) (Open, High, Low, Close, Volume) data and other time-series [market data](data-management.md).
+The Data module provides comprehensive storage and management of [OHLCV](guides/data-management.md#ohlcv-data) (Open, High, Low, Close, Volume) data and other time-series [market data](guides/data-management.md).
 
 ## Quick Navigation
 
@@ -28,7 +28,7 @@ The Data module provides comprehensive storage and management of [OHLCV](data-ma
 
 ## Related Topics
 
-- **[Strategy Development](strategy-development.md)** - Using data in trading strategies
+- **[Strategy Development](guides/strategy-development.md)** - Using data in trading strategies
 - **[Watchers](watchers/watchers.md)** - Real-time data monitoring
 - **[Processing](API/processing.md)** - Data transformation and analysis
 
@@ -47,15 +47,15 @@ The framework wraps a Zarr subtype of `AbstractStore` in a [`Planar.Data.ZarrIns
 
 ### Data Organization
 
-[OHLCV data](data-management.md#ohlcv-data) is organized hierarchically using [`Planar.Data.key_path`](@ref):
+[OHLCV data](guides/data-management.md#ohlcv-data) is organized hierarchically using [`Planar.Data.key_path`](@ref):
 
 ## Data Architecture Overview
 
-The Data module provides a comprehensive [data management](../guides/data-management.md) system with the following key components:
+The Data module provides a comprehensive [data management](guides/data-management.md) system with the following key components:
 
 - **Storage Backend**: Zarr arrays with LMDB as the default store
 - **Data Organization**: Hierarchical structure by exchange/source, pair, and timeframe
-- **Data Types**: [OHLCV data](../guides/data-management.md#ohlcv-data), generic time-series data, and cached metadata
+- **Data Types**: [OHLCV data](guides/data-management.md#ohlcv-data), generic time-series data, and cached metadata
 - **Access Patterns**: Progressive loading for large datasets, contiguous time-series validation
 - **Performance**: Chunked storage, compression, and optimized indexing
 
@@ -66,7 +66,7 @@ Data is organized in a hierarchical structure:
 ZarrInstance/
 ├── exchange_name/
 │   ├── pair_name/
-│   │   ├── [timeframe](../guides/data-management.md#timeframes)/
+│   │   ├── [timeframe](guides/data-management.md#timeframes)/
 │   │   │   ├── timestamp
 │   │   │   ├── open
 │   │   │   ├── high
@@ -107,17 +107,17 @@ Use different market types (`:spot`, `:um`, `:cm`), frequencies (`:daily`, `:mon
     If data becomes corrupted, pass `reset=true` to force a complete redownload.
 
 !!! tip "Performance Optimization"
-    - **Monthly Archives**: Use for historical [backtesting](../guides/execution-modes.md#simulation)-mode) (faster download, larger chunks)
+    - **Monthly Archives**: Use for historical [backtesting](guides/execution-modes.md#simulation)-mode) (faster download, larger chunks)
     - **Daily Archives**: Use for recent data or frequent updates
-    - **Parallel Downloads**: Consider for multiple symbols, but respect [exchange](../exchanges.md) rate limits 
+    - **Parallel Downloads**: Consider for multiple symbols, but respect [exchange](exchanges.md) rate limits 
 
 ## Real-Time Data with Fetch
 
-The Fetch module downloads data directly from exchanges using [CCXT](../exchanges.md#ccxt-integration), making it ideal for:
+The Fetch module downloads data directly from exchanges using [CCXT](exchanges.md#ccxt-integration), making it ideal for:
 
 - Getting the most recent market data
 - Filling gaps in historical data
-- Real-time data updates for [live trading](../guides/execution-modes.md#live-mode)
+- Real-time data updates for [live trading](guides/execution-modes.md#live-mode)
 
 ### Basic Fetch Usage
 
@@ -133,13 +133,13 @@ The Fetch module downloads data directly from exchanges using [CCXT](../exchange
 Use delays between requests and validate data quality. Implement error handling for failed requests.
 
 !!! warning "Rate Limit Considerations"
-    Direct exchange fetching is heavily rate-limited, especially for smaller [timeframes](../guides/data-management.md#timeframes).
+    Direct exchange fetching is heavily rate-limited, especially for smaller [timeframes](guides/data-management.md#timeframes).
     Use archives for bulk historical data collection.
 
 !!! tip "Fetch Best Practices"
     - **Recent Updates**: Use fetch for recent data updates and gap filling
     - **Rate Limiting**: Implement delays between requests to respect exchange limits
-    - **Data Validation**: Always validate fetched data before using in [strategies](../guides/strategy-development.md)
+    - **Data Validation**: Always validate fetched data before using in [strategies](guides/strategy-development.md)
     - **Raw Data**: Use `fetch_candles` for unchecked data when you need raw exchange responses
 
 ## Live Data Streaming with Watchers
@@ -352,5 +352,5 @@ This section covers advanced real-time data collection, processing, and monitori
     - Use multiple watchers per exchange for redundancy
     - Monitor data quality continuously to catch issues early
     - Implement automatic restart mechanisms for failed watchers
-    - Cache processed data for quick access by trading [strategies](../guides/strategy-development.md)
+    - Cache processed data for quick access by trading [strategies](guides/strategy-development.md)
     - Set up proper logging and error handling for debugging issues

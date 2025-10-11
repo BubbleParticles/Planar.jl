@@ -7,7 +7,7 @@ last_updated: "2025-10-04"---
 
 # Running a Backtest
 
-To perform a [backtest](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode), you need to construct a [strategy](../guides/strategy-development.md) by following the guidelines in the [Strategy Documentation](../[strategy](../guides/strategy-development.md).md). Once the [strategy](../guides/strategy-development.md) is created, you can call the `start!` function on it to begin the [backtest](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode).
+To perform a [backtest](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode), you need to construct a [strategy](../guides/../guides/strategy-development.md) by following the guidelines in the [Strategy Documentation](../[strategy](../guides/../guides/strategy-development.md).md). Once the [strategy](../guides/../guides/strategy-development.md) is created, you can call the `start!` function on it to begin the [backtest](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode).
 
 The entry function that is called in all modes is `call!(s::Strategy, ts::DateTime, ctx)`. This function takes three arguments:
 - `s`: The strategy object that you have created.
@@ -74,7 +74,7 @@ A limit order call might return a trade if the order was queued correctly. If th
 
 In addition to GTC (Good Till Canceled) orders, there are also IOC (Immediate Or Cancel) and FOK (Fill Or Kill) orders:
 
-- **GTC (Good Till Canceled)**: This order remains active until it is either filled or canceled. Best for [strategies](../guides/strategy-development.md) that can wait for favorable prices.
+- **GTC (Good Till Canceled)**: This order remains active until it is either filled or canceled. Best for [strategies](../guides/../guides/strategy-development.md) that can wait for favorable prices.
 - **IOC (Immediate Or Cancel)**: This order must be executed immediately. Any portion of the order that cannot be filled immediately will be canceled. Useful for capturing immediate opportunities.
 - **FOK (Fill Or Kill)**: This order must be executed in its entirety or not at all. Ideal when you need exact position sizes.
 
@@ -139,9 +139,9 @@ Slippage is factored into the trade execution process. Here's how it works for d
 
 ## Liquidations
 
-In [isolated margin](../guides/strategy-development.md#margin-modes) mode, liquidations are triggered by checking the `LIQUIDATION_BUFFER`. You can customize the buffer size by setting the value of the environment variable `PLANAR_LIQUIDATION_BUFFER`. This allows you to adjust the threshold at which liquidations are triggered.
+In [isolated margin](../guides/../guides/strategy-development.md#margin-modes) mode, liquidations are triggered by checking the `LIQUIDATION_BUFFER`. You can customize the buffer size by setting the value of the environment variable `PLANAR_LIQUIDATION_BUFFER`. This allows you to adjust the threshold at which liquidations are triggered.
 
-To obtain more accurate estimations, you can utilize the effective funding rate. This can be done by downloading the funding rate history using the `Fetch` module. By analyzing the funding rate history, you can gain insights into the funding costs associated with trading in [isolated margin](../guides/strategy-development.md#margin-modes) mode.
+To obtain more accurate estimations, you can utilize the effective funding rate. This can be done by downloading the funding rate history using the `Fetch` module. By analyzing the funding rate history, you can gain insights into the funding costs associated with trading in [isolated margin](../guides/../guides/strategy-development.md#margin-modes) mode.
 
 ### Liquidation Mechanics
 
@@ -164,7 +164,7 @@ To obtain more accurate estimations, you can utilize the effective funding rate.
 - **[Config](../config.md)** - Exchange integration and configuration
 - **[Optimization](../optimization.md)** - Performance optimization techniques
 - **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
-- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
+- **[Data Management](../guides/../guides/../guides/data-management.md)** - Guide: Data handling and management
 - **[Exchanges](../exchanges.md)** - Data handling and management
 
 ## Backtesting Performance

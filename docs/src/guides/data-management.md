@@ -10,11 +10,11 @@ last_updated: "2025-10-04"
 # Data Management Guide
 
 <!--
-Keywords: [OHLCV data](../guides/data-management.md#ohlcv-data), Zarr storage, LMDB, data fetching, scrapers, watchers, historical data, real-time data, [market data](../guides/data-management.md)
-Description: Comprehensive [data management](../guides/data-management.md) system for [OHLCV](../guides/data-management.md#ohlcv-data) and time-series [market data](../guides/data-management.md) using Zarr storage, LMDB backend, and multiple data collection methods.
+Keywords: [OHLCV data](../guides/../guides/../guides/data-management.md#ohlcv-data), Zarr storage, LMDB, data fetching, scrapers, watchers, historical data, real-time data, [market data](../guides/../guides/../guides/data-management.md)
+Description: Comprehensive [data management](../guides/../guides/../guides/data-management.md) system for [OHLCV](../guides/../guides/../guides/data-management.md#ohlcv-data) and time-series [market data](../guides/../guides/../guides/data-management.md) using Zarr storage, LMDB backend, and multiple data collection methods.
 -->
 
-This comprehensive guide covers Planar's [data management](../guides/data-management.md) system for [OHLCV](../guides/data-management.md#ohlcv-data) (Open, High, Low, Close, Volume) data and other time-series [market data](../guides/data-management.md). Learn how to efficiently collect, store, and access market data using multiple collection methods and storage backends.
+This comprehensive guide covers Planar's [data management](../guides/../guides/../guides/data-management.md) system for [OHLCV](../guides/../guides/../guides/data-management.md#ohlcv-data) (Open, High, Low, Close, Volume) data and other time-series [market data](../guides/../guides/../guides/data-management.md). Learn how to efficiently collect, store, and access market data using multiple collection methods and storage backends.
 
 ## Quick Navigation
 
@@ -25,8 +25,8 @@ This comprehensive guide covers Planar's [data management](../guides/data-manage
 - **[Live Streaming](#live-data-streaming)** - Continuous data monitoring with Watchers
 - **[Custom Data Sources](#custom-data-sources)** - Integrating your own data
 - **[Data Access Patterns](#data-access-patterns)** - Efficient data querying and indexing
-- **[Performance Optimization](#performance-[optimization](../optimization.md))** - Caching and [optimization](../optimization.md) [strategies](../guides/strategy-development.md)
-- **[Troubleshooting](#[troubleshooting](../troubleshooting/))** - Common issues and solutions
+- **[Performance Optimization](#performance-[optimization](../optimization.md))** - Caching and [optimization](../optimization.md) [strategies](../guides/../guides/strategy-development.md)
+- **[Troubleshooting](#[troubleshooting](../troubleshooting/index.md))** - Common issues and solutions
 
 ## Prerequisites
 
@@ -35,7 +35,7 @@ This comprehensive guide covers Planar's [data management](../guides/data-manage
 
 ## Related Topics
 
-- **[Strategy Development]([strategy](../guides/strategy-development.md)-development.md)** - Using data in trading [strategies](../guides/strategy-development.md)
+- **[Strategy Development]([strategy](../guides/../guides/strategy-development.md)-development.md)** - Using data in trading [strategies](../guides/../guides/strategy-development.md)
 - **[Watchers](../watchers/watchers.md)** - Real-time data monitoring
 - **[Processing](../API/processing.md)** - Data transformation and analysis
 
@@ -55,13 +55,13 @@ The framework wraps a Zarr subtype of `AbstractStore` in a [`Planar.Data.ZarrIns
 
 ### Data Organization
 
-[OHLCV data](../guides/data-management.md#ohlcv-data) is organized hierarchically using [`Planar.Data.key_path`](@ref):
+[OHLCV data](../guides/../guides/../guides/data-management.md#ohlcv-data) is organized hierarchically using [`Planar.Data.key_path`](@ref):
 
 ```
 ZarrInstance/
 ├── exchange_name/
 │   ├── pair_name/
-│   │   ├── [timeframe](../guides/data-management.md#timeframes)/
+│   │   ├── [timeframe](../guides/../guides/../guides/data-management.md#timeframes)/
 │   │   │   ├── timestamp
 │   │   │   ├── open
 │   │   │   ├── high
@@ -77,9 +77,9 @@ ZarrInstance/
 
 This hierarchical organization provides:
 
-- **Logical Grouping**: Data organized by source, instrument, and [timeframe](../guides/data-management.md#timeframes)
+- **Logical Grouping**: Data organized by source, instrument, and [timeframe](../guides/../guides/../guides/data-management.md#timeframes)
 - **Efficient Queries**: Fast access to specific data subsets
-- **Scalability**: Easy addition of new [exchanges](../exchanges.md), pairs, and [timeframes](../guides/data-management.md#timeframes)
+- **Scalability**: Easy addition of new [exchanges](../exchanges.md), pairs, and [timeframes](../guides/../guides/../guides/data-management.md#timeframes)
 - **Data Integrity**: Consistent structure across all data sources
 - **Performance**: Optimized for common access patterns
 
@@ -155,13 +155,13 @@ The Fetch module downloads data directly from exchanges using [CCXT](../exchange
 
 
 !!! warning "Rate Limit Considerations"
-    Direct [exchange](../exchanges.md) fetching is heavily rate-limited, especially for smaller [timeframes](../guides/data-management.md#timeframes).
+    Direct [exchange](../exchanges.md) fetching is heavily rate-limited, especially for smaller [timeframes](../guides/../guides/../guides/data-management.md#timeframes).
     Use archives for bulk historical data collection.
 
 !!! tip "Fetch Best Practices"
     - **Recent Updates**: Use fetch for recent data updates and gap filling
     - **Rate Limiting**: Implement delays between requests to respect exchange limits
-    - **Data Validation**: Always validate fetched data before using in [strategies](../guides/strategy-development.md)
+    - **Data Validation**: Always validate fetched data before using in [strategies](../guides/../guides/strategy-development.md)
     - **Raw Data**: Use `fetch_candles` for unchecked data when you need raw exchange responses## L
 ive Data Streaming
 
@@ -171,7 +171,7 @@ The Watchers module enables real-time data tracking from exchanges and other sou
 - Real-time data analysis
 - Continuous market monitoring
 
-### [OHLCV](../guides/data-management.md#ohlcv-data) Ticker Watcher
+### [OHLCV](../guides/../guides/../guides/data-management.md#ohlcv-data) Ticker Watcher
 
 The ticker watcher monitors multiple pairs simultaneously using exchange ticker endpoints:
 
@@ -342,4 +342,4 @@ five_min_data = resample_ohlcv(minute_data, Minute(5))
 Data is returned as a `DataFrame` with `open,high,low,close,volume,timestamp` columns.
 Since these save/load functions require a timestamp column, they check that the provided index is contiguous, it should not have missing timestamps, according to the subject timeframe. It is possible to disable those checks by passing `check=:none`.
 
-This comprehensive [data management](../guides/data-management.md) guide provides everything you need to efficiently collect, store, and access market data in Planar. Start with the basic collection methods and gradually explore more advanced features as your data requirements grow.
+This comprehensive [data management](../guides/../guides/../guides/data-management.md) guide provides everything you need to efficiently collect, store, and access market data in Planar. Start with the basic collection methods and gradually explore more advanced features as your data requirements grow.

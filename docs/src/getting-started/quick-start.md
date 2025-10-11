@@ -21,7 +21,7 @@ Get your first Planar strategy running in 15 minutes! This streamlined guide foc
 In the next 15 minutes, you will:
 - ✅ Install and run Planar
 - ✅ Load a pre-built trading strategy  
-- ✅ Download real [market data](../guides/data-management.md)
+- ✅ Download real [market data](../guides/../guides/../guides/data-management.md)
 - ✅ Execute your first [backtest](../guides/execution-modes.md#simulation-mode)
 - ✅ View interactive results and performance metrics
 
@@ -86,7 +86,7 @@ Exchange: binance
 Asset: BTC/USDT
 ```
 
-**What this does**: Creates a simple [moving average](../guides/strategy-development.md#technical-indicators) strategy that trades Bitcoin.
+**What this does**: Creates a simple [moving average](../guides/../guides/strategy-development.md#technical-indicators) strategy that trades Bitcoin.
 
 ## Step 4: Download Market Data (2 minutes)
 
@@ -152,8 +152,8 @@ end
 
 Congratulations! You just:
 
-1. **Loaded a strategy** - The QuickStart strategy uses [moving average](../guides/strategy-development.md#technical-indicators) crossovers to generate buy/sell signals
-2. **Downloaded data** - Real [market data](../guides/data-management.md) from Binance for backtesting
+1. **Loaded a strategy** - The QuickStart strategy uses [moving average](../guides/../guides/strategy-development.md#technical-indicators) crossovers to generate buy/sell signals
+2. **Downloaded data** - Real [market data](../guides/../guides/../guides/data-management.md) from Binance for backtesting
 3. **Ran a simulation** - The strategy made trading decisions based on historical price movements
 4. **Visualized results** - Interactive plots show exactly when and why trades were made
 5. **Analyzed performance** - Metrics help you understand if the strategy was profitable
@@ -162,7 +162,7 @@ Congratulations! You just:
 
 - **Strategy**: A Julia module that defines trading logic
 - **Universe**: The set of assets (trading pairs) your strategy trades
-- **[OHLCV](../guides/data-management.md#ohlcv-data) Data**: Open, High, Low, Close, Volume - the basic market data
+- **[OHLCV](../guides/../guides/../guides/data-management.md#ohlcv-data) Data**: Open, High, Low, Close, Volume - the basic market data
 - **Backtest**: Running your strategy against historical data to see how it would have performed
 - **Simulation Mode**: Planar's default mode that simulates trades without real money
 
@@ -170,7 +170,7 @@ Congratulations! You just:
 
 - **[Installation](installation.md)** - Setup and installation guide
 - **[First Strategy](first-strategy.md)** - Build your first trading strategy
-- **[Strategy Development](guides/strategy-development.md)** - Complete strategy development guide
+- **[Strategy Development](../guides/../guides/strategy-development.md)** - Complete strategy development guide
 
 ## Next Steps
 
@@ -179,7 +179,7 @@ Now that you have Planar running:
 1. **[Complete Installation](installation.md)** - Set up a proper development environment
 2. **[Build Your First Strategy](first-strategy.md)** - Learn to create custom trading logic
 3. **[Explore Examples](../strategy.md#examples)** - Study more complex strategy patterns
-4. **[Learn About Data](../data.md)** - Understand Planar's [data management](../guides/data-management.md) capabilities
+4. **[Learn About Data](../data.md)** - Understand Planar's [data management](../guides/../guides/../guides/data-management.md) capabilities
 
 ## Quick Troubleshooting
 
@@ -225,14 +225,14 @@ docker system prune
 docker run -it --rm docker.io/psydyllic/planar-sysimage-interactive julia
 ```
 
-**Need more help?** Visit the [Troubleshooting Guide](../troubleshooting/) for comprehensive solutions.
+**Need more help?** Visit the [Troubleshooting Guide](../troubleshooting/index.md) for comprehensive solutions.
 
 ## 🎉 Congratulations!
 
 You just completed your first algorithmic trading backtest! Here's what you accomplished:
 
 ✅ **Ran a real trading strategy** on actual Bitcoin market data  
-✅ **Executed simulated trades** based on [technical indicators](../guides/strategy-development.md#technical-indicators)  
+✅ **Executed simulated trades** based on [technical indicators](../guides/../guides/strategy-development.md#technical-indicators)  
 ✅ **Analyzed performance** with profit/loss and win rates  
 ✅ **Visualized results** with interactive charts  
 
@@ -244,8 +244,8 @@ You just completed your first algorithmic trading backtest! Here's what you acco
 3. **[Explore Examples](../strategy.md#examples)** - Study more complex strategies
 
 ### When You're Ready for More
-- **[Strategy Development Guide](../guides/strategy-development.md)** - Advanced patterns and best practices
-- **[Parameter Optimization](../guides/strategy-development.md).md)** - Systematically improve your strategies  
+- **[Strategy Development Guide](../guides/../guides/strategy-development.md)** - Advanced patterns and best practices
+- **[Parameter Optimization](../guides/../guides/strategy-development.md).md)** - Systematically improve your strategies  
 - **[Paper Trading](../engine/paper.md)** - Test with live market data
 - **[Live Trading](../engine/live.md)** - Deploy for real money (when you're ready!)
 

@@ -323,7 +323,7 @@ If you encounter configuration issues:
 ## See Also
 
 - [Getting Started Guide](getting-started/installation.md) - Initial setup and installation
-- [Strategy Development](guides/strategy-development.md) - Creating and configuring strategies
+- [Strategy Development](guides/../guides/strategy-development.md) - Creating and configuring strategies
 - [Exchange Integration](exchanges.md) - Exchange-specific configuration details
 - [Troubleshooting](troubleshooting/index.md) - Common configuration problems
 - [API Reference](API/api.md) - Configuration API documentation

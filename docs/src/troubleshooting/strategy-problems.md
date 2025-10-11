@@ -522,12 +522,12 @@ Contact the community if:
 
 - [Community Resources](../resources/community.md)
 - [GitHub Issues](https://github.com/defnlnotme/Planar.jl/issues)
-- [Strategy Development Guide](../guides/strategy-development.md)
+- [Strategy Development Guide](../guides/../guides/strategy-development.md)
 - [API Reference](../reference/) for function details
 
 ## See Also
 
-- [Strategy Development](../guides/strategy-development.md) - Comprehensive development guide
+- [Strategy Development](../guides/../guides/strategy-development.md) - Comprehensive development guide
 - [Execution Modes](../guides/execution-modes.md) - Testing and deployment
 - [Performance Issues](performance-issues.md) - Optimization techniques
 - [Installation Issues](installation-issues.md) - Setup problems

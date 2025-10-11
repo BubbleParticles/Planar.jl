@@ -133,7 +133,7 @@ julia --project=Planar -e "using Pkg; Pkg.precompile()"
 
 ### Debug Symbol Issues
 
-**Symptoms**: `_debug_` not found errors during [strategy](../guides/strategy-development.md) execution
+**Symptoms**: `_debug_` not found errors during [strategy](guides/../guides/strategy-development.md) execution
 
 **Diagnostic Steps**:
 1. Check if `JULIA_DEBUG="all"` is set
@@ -160,7 +160,7 @@ julia --project=Planar -e "using Pkg; Pkg.precompile()"
 **Symptoms**: Persistent Python module resolution failures, environment conflicts
 
 **Diagnostic Steps**:
-1. Check CondaPkg status and [configuration](../config.md)
+1. Check CondaPkg status and [configuration](config.md)
 2. Verify environment variables are set correctly
 3. Look for conflicting Python installations
 
@@ -202,7 +202,7 @@ julia --project=Planar -e "using Pkg; Pkg.precompile()"
 **Symptoms**: Authentication errors, invalid API key messages, permission denied
 
 **Diagnostic Steps**:
-1. Verify API credentials in `[secrets.toml](../config.md#secrets-management)`
+1. Verify API credentials in `[secrets.toml](config.md#secrets-management)`
 2. Check API key permissions on exchange
 3. Verify IP whitelist settings if applicable
 
@@ -228,7 +228,7 @@ julia --project=Planar -e "using Pkg; Pkg.precompile()"
 **Diagnostic Steps**:
 1. Check current database size usage
 2. Monitor available disk space
-3. Verify LMDB [configuration](../config.md)
+3. Verify LMDB [configuration](config.md)
 
 **Solutions**:
 
@@ -239,7 +239,7 @@ julia --project=Planar -e "using Pkg; Pkg.precompile()"
 
 ### Data Corruption Issues
 
-**Symptoms**: Segfaults when saving [OHLCV](../guides/data-management.md#ohlcv-data), corrupted data reads, database errors
+**Symptoms**: Segfaults when saving [OHLCV](guides/../guides/data-management.md#ohlcv-data), corrupted data reads, database errors
 
 **Diagnostic Steps**:
 1. Check for incomplete write operations
@@ -289,7 +289,7 @@ julia --project=Planar -e "using Pkg; Pkg.precompile()"
 
 **Diagnostic Steps**:
 1. Check if required system libraries are installed
-2. Verify display server [configuration](../config.md) (Linux)
+2. Verify display server [configuration](config.md) (Linux)
 3. Test graphics driver compatibility
 
 **Solutions**:
@@ -357,7 +357,7 @@ brew install --cask xquartz
 
 **Diagnostic Steps**:
 1. Check strategy logic and data dependencies
-2. Verify [market data](../guides/data-management.md) availability
+2. Verify [market data](guides/../guides/data-management.md) availability
 3. Look for timing or synchronization issues
 
 **Solutions**:
@@ -517,7 +517,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ### Strategy Execution Performance
 
-**Symptoms**: Slow [backtesting](../guides/execution-modes.md#simulation)-mode), high CPU usage, long execution times
+**Symptoms**: Slow [backtesting](guides/execution-modes.md#simulation)-mode), high CPU usage, long execution times
 
 **Diagnostic Steps**:
 1. Profile strategy execution to identify bottlenecks
@@ -560,7 +560,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 **Symptoms**: Slow parameter optimization, long backtesting times, inefficient search
 
 **Diagnostic Steps**:
-1. Profile [optimization](../optimization.md) algorithms
+1. Profile [optimization](optimization.md) algorithms
 2. Check parameter space size and search efficiency
 3. Monitor parallel execution utilization
 
@@ -599,18 +599,18 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ## See Also
 
-- **[Exchanges](../exchanges.md)** - Exchange integration and configuration
-- **[Config](../config.md)** - Exchange integration and configuration
-- **[Overview](../troubleshooting/index.md)** - Troubleshooting: Troubleshooting and problem resolution
-- **[Optimization](../optimization.md)** - Performance optimization techniques
-- **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
-- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
+- **[Exchanges](exchanges.md)** - Exchange integration and configuration
+- **[Config](config.md)** - Exchange integration and configuration
+- **[Overview](troubleshooting/index.md)** - Troubleshooting: Troubleshooting and problem resolution
+- **[Optimization](optimization.md)** - Performance optimization techniques
+- **[Performance Issues](troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
+- **[Data Management](guides/../guides/data-management.md)** - Guide: Data handling and management
 
 ## Getting Help
 
 ### Before Seeking Help
 
-1. **Check this [troubleshooting](../troubleshooting/) guide** for your specific issue
+1. **Check this [troubleshooting](troubleshooting/index.md) guide** for your specific issue
 2. **Search existing GitHub issues** for similar problems
 3. **Try the diagnostic steps** provided for your issue category
 4. **Gather relevant information**:

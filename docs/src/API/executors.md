@@ -76,8 +76,8 @@ Modules = [Planar.Engine.Executors]
 ## See Also
 
 - **[Strategies API](strategies.md)** - Strategy base classes and interfaces
-- **[OrderTypes API](../reference/ordertypes.md)** - Order types and structures
+- **[OrderTypes API](../customizations/orders.md)** - Order types and structures
 - **[Engine API](engine.md)** - Core execution engine functions
 - **[Instances API](instances.md)** - Asset instance management
-- **[Strategy Development Guide](../guides/strategy-development.md)** - Building trading strategies
+- **[Strategy Development Guide](../guides/../guides/strategy-development.md)** - Building trading strategies
 - **[Execution Modes Guide](../guides/execution-modes.md)** - Understanding different execution modes

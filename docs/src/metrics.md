@@ -7,11 +7,11 @@ last_updated: "2025-10-04"---
 
 # Metrics Module Documentation
 
-The `Metrics` module provides functions for analyzing the outcomes of [backtest](../guides/execution-modes.md#[simulation](../guides/execution-modes.md#simulation-mode)-mode) runs within the trading [strategy](../guides/strategy-development.md) framework.
+The `Metrics` module provides functions for analyzing the outcomes of [backtest](guides/execution-modes.md#[simulation](guides/execution-modes.md#simulation-mode)-mode) runs within the trading [strategy](guides/../guides/strategy-development.md) framework.
 
 ### Resampling Trades
 
-Using the [`Metrics.resample_trades`](@ref) function, trades can be resampled to a specified time frame. This aggregates the profit and loss (PnL) of each trade for every asset in the [strategy](../guides/strategy-development.md) over the given period.
+Using the [`Metrics.resample_trades`](@ref) function, trades can be resampled to a specified time frame. This aggregates the profit and loss (PnL) of each trade for every asset in the [strategy](guides/../guides/strategy-development.md) over the given period.
 
 
 In the example above, all trades are resampled to a daily resolution (`1d`), summing the PnL for each asset within the strategy.
@@ -37,9 +37,9 @@ The `normalize` option normalizes the metric values by dividing by a predefined 
 
 ## See Also
 
-- **[Exchanges](../exchanges.md)** - Exchange integration and configuration
-- **[Config](../config.md)** - Exchange integration and configuration
-- **[Optimization](../optimization.md)** - Performance optimization techniques
-- **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
-- **[Strategy Development](../guides/strategy-development.md)** - Guide: Strategy development and implementation
-- **[Optimization](../optimization.md)** - Strategy development and implementation
+- **[Exchanges](exchanges.md)** - Exchange integration and configuration
+- **[Config](config.md)** - Exchange integration and configuration
+- **[Optimization](optimization.md)** - Performance optimization techniques
+- **[Performance Issues](troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
+- **[Strategy Development](guides/../guides/strategy-development.md)** - Guide: Strategy development and implementation
+- **[Optimization](optimization.md)** - Strategy development and implementation

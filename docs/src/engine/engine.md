@@ -7,9 +7,9 @@ last_updated: "2025-10-04"---
 
 # Engine
 
-Within the Planar "model", we use the _call!_ and _call!_ functions to communicate between _strategies_ and _executors_. The executor calls the [strategy](../guides/strategy-development.md), implying that the [strategy](../guides/strategy-development.md) should do or return something. The [strategy](../guides/strategy-development.md) calls the executor, expecting it to do or return something.
+Within the Planar "model", we use the _call!_ and _call!_ functions to communicate between _strategies_ and _executors_. The executor calls the [strategy](../guides/../guides/strategy-development.md), implying that the [strategy](../guides/../guides/strategy-development.md) should do or return something. The [strategy](../guides/../guides/strategy-development.md) calls the executor, expecting it to do or return something.
 
-In the Planar framework, the user generally only writes `call!` functions within their [strategies](../guides/strategy-development.md).
+In the Planar framework, the user generally only writes `call!` functions within their [strategies](../guides/../guides/strategy-development.md).
 
 Unlike other trading bots that offer a set of methods for tuning purposes, usually tied to the super class of the strategy, Planar conventionally deals only with `call!` functions. This allows you to know that whenever a _call!_ call is made from the strategy, it is a point where [simulation](../guides/execution-modes.md#simulation-mode) and live execution may diverge.
 
@@ -36,5 +36,5 @@ To follow the `call!` dispatch convention, you can expect the first argument of 
 - **[Config](../config.md)** - Exchange integration and configuration
 - **[Optimization](../optimization.md)** - Performance optimization techniques
 - **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
-- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
+- **[Data Management](../guides/../guides/../guides/data-management.md)** - Guide: Data handling and management
 - **[Exchanges](../exchanges.md)** - Data handling and management

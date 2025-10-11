@@ -99,10 +99,10 @@ check_code_blocks() {
         fi
         
         # Check for code blocks without language specification
-        grep -n "^```$" "$file" | while read -r line; do
+        while IFS= read -r line; do
             line_num=$(echo "$line" | cut -d: -f1)
             echo "- ⚠️ **$file:$line_num**: Code block without language specification" >> "$REPORT_FILE"
-        done
+        done < <(grep -n "^```$" "$file" 2>/dev/null)
     done
     
     echo "" >> "$REPORT_FILE"

@@ -44,26 +44,26 @@ Planar follows a modular architecture with clear separation of concerns:
 #### Engine Module
 The foundation of Planar, providing:
 - **Asset Management**: `AbstractAsset`, `Asset`, `Derivative` types
-- **Instance System**: `AssetInstance` linking assets to [exchanges](../exchanges.md)
+- **Instance System**: `AssetInstance` linking assets to [exchanges](exchanges.md)
 - **Strategy Framework**: `Strategy{Mode}` parametric types
 - **Core Abstractions**: Base types and interfaces
 
 #### Execution Modes
 Three distinct execution environments:
-- **SimMode**: Fast synchronous [backtesting](../guides/execution-modes.md#simulation)-mode) with [OHLCV data](../guides/data-management.md#ohlcv-data)
-- **PaperMode**: Real-time [simulation](../guides/execution-modes.md#simulation-mode) with live data feeds
-- **LiveMode**: Actual trading with [exchange]([exchanges](../exchanges.md).md) APIs
+- **SimMode**: Fast synchronous [backtesting](guides/execution-modes.md#simulation)-mode) with [OHLCV data](guides/../guides/data-management.md#ohlcv-data)
+- **PaperMode**: Real-time [simulation](guides/execution-modes.md#simulation-mode) with live data feeds
+- **LiveMode**: Actual trading with [exchange]([exchanges](exchanges.md).md) APIs
 
 #### Data Pipeline
-Comprehensive [data management](../guides/data-management.md):
-- **Fetch**: Data acquisition from [exchanges](../exchanges.md) and external sources
+Comprehensive [data management](guides/../guides/data-management.md):
+- **Fetch**: Data acquisition from [exchanges](exchanges.md) and external sources
 - **Processing**: Data cleaning, resampling, and transformation
 - **Storage**: Zarr-based large dataset storage with LMDB indexing
 - **Watchers**: Real-time data monitoring and alerting
 
 #### Exchange Integration
-Unified [exchange](../exchanges.md) interface:
-- **[CCXT](../exchanges.md#ccxt-integration) Integration**: 100+ [exchange](../exchanges.md) support via Ccxt.jl
+Unified [exchange](exchanges.md) interface:
+- **[CCXT](exchanges.md#ccxt-integration) Integration**: 100+ [exchange](exchanges.md) support via Ccxt.jl
 - **Custom Exchanges**: Framework for implementing proprietary APIs
 - **Order Management**: Unified order types across exchanges
 
@@ -115,7 +115,7 @@ sequenceDiagram
     
     U->>S: Initialize Strategy
     S->>D: Load Historical Data
-    D->>S: Return [OHLCV](../guides/data-management.md#ohlcv-data) Data
+    D->>S: Return [OHLCV](guides/../guides/data-management.md#ohlcv-data) Data
     
     loop Trading Loop
         S->>U: Call Strategy Logic
@@ -134,7 +134,7 @@ sequenceDiagram
 
 - **[Julia](https://julialang.org/) 1.11+**: Latest stable [Julia](https://julialang.org/) version
 - **Git**: With submodule support
-- **Python 3.8+**: For [CCXT](../exchanges.md#ccxt-integration) integration (managed via CondaPkg)
+- **Python 3.8+**: For [CCXT](exchanges.md#ccxt-integration) integration (managed via CondaPkg)
 - **Docker** (optional): For containerized development
 
 ### Initial Setup
@@ -228,7 +228,7 @@ To reduce invalidations, include external modules in only one local package and 
 In rare cases involving complex multi-threaded scenarios, disable and re-enable the garbage collector (GC) around the loading of Planar to avoid segmentation faults:
 
 
-Refer to https://github.com/cjdoris/PythonCall.jl/issues/201 for more details.
+Refer to [PythonCall.jl issue #201](https://github.com/cjdoris/PythonCall.jl/issues/201) for more details.
 
 ### Dependency Management
 
@@ -239,12 +239,12 @@ The order of `using` or `import` statements within packages is crucial. Always i
 
 ## See Also
 
-- **[Exchanges](../exchanges.md)** - Exchange integration and configuration
-- **[Config](../config.md)** - Exchange integration and configuration
-- **[Overview](../troubleshooting/index.md)** - Troubleshooting: Troubleshooting and problem resolution
-- **[Optimization](../optimization.md)** - Performance optimization techniques
-- **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
-- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
+- **[Exchanges](exchanges.md)** - Exchange integration and configuration
+- **[Config](config.md)** - Exchange integration and configuration
+- **[Overview](troubleshooting/index.md)** - Troubleshooting: Troubleshooting and problem resolution
+- **[Optimization](optimization.md)** - Performance optimization techniques
+- **[Performance Issues](troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
+- **[Data Management](guides/../guides/data-management.md)** - Guide: Data handling and management
 
 ## Contribution Guidelines
 
