@@ -349,10 +349,10 @@ end
 Profile.print()
 
 # Step 2: Benchmark specific functions
-strategy = load_strategy(:MyStrategy)
-sample_data = get_sample_data()
+# strategy = load_strategy(:MyStrategy)  # This function may not exist
+# sample_data = get_sample_data()  # This function may not exist
 
-@benchmark generate_signals($strategy, $sample_data, $(now()))
+# @benchmark generate_signals($strategy, $sample_data, $(now()))  # BenchmarkTools.jl required
 
 # Step 3: Optimize common bottlenecks
 
