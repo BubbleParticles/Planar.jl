@@ -157,11 +157,11 @@ function check_format_consistency(file_path::String, config::Dict)
 end
 
 """
-    check_heading_format(lines::Vector{String}, file_path::String) -> Vector{ConsistencyResult}
+    check_heading_format(lines::Vector{<:AbstractString}, file_path::String) -> Vector{ConsistencyResult}
 
 Check heading format consistency.
 """
-function check_heading_format(lines::Vector{String}, file_path::String)
+function check_heading_format(lines::Vector{<:AbstractString}, file_path::String)
     results = ConsistencyResult[]
     
     for (line_num, line) in enumerate(lines)
@@ -209,11 +209,11 @@ function check_heading_format(lines::Vector{String}, file_path::String)
 end
 
 """
-    check_code_block_format(lines::Vector{String}, file_path::String) -> Vector{ConsistencyResult}
+    check_code_block_format(lines::Vector{<:AbstractString}, file_path::String) -> Vector{ConsistencyResult}
 
 Check code block format consistency.
 """
-function check_code_block_format(lines::Vector{String}, file_path::String)
+function check_code_block_format(lines::Vector{<:AbstractString}, file_path::String)
     results = ConsistencyResult[]
     in_code_block = false
     code_block_start = 0
@@ -276,11 +276,11 @@ function check_code_block_format(lines::Vector{String}, file_path::String)
 end
 
 """
-    check_list_format(lines::Vector{String}, file_path::String) -> Vector{ConsistencyResult}
+    check_list_format(lines::Vector{<:AbstractString}, file_path::String) -> Vector{ConsistencyResult}
 
 Check list format consistency.
 """
-function check_list_format(lines::Vector{String}, file_path::String)
+function check_list_format(lines::Vector{<:AbstractString}, file_path::String)
     results = ConsistencyResult[]
     
     for (line_num, line) in enumerate(lines)

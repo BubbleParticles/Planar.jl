@@ -445,4 +445,3 @@ When reporting issues, include:
 - **Breaking Changes**: Are breaking changes justified and documented?
 
 This comprehensive development guide ensures consistent, high-quality contributions to the Planar ecosystem.
-```
