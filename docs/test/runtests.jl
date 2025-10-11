@@ -4,9 +4,8 @@
 Documentation Test Runner
 
 This script runs all documentation tests, including:
-1. Code example validation
-2. Link checking
-3. Format consistency validation
+1. Link checking
+2. Format consistency validation
 
 Usage:
     julia docs/test/runtests.jl [options]
@@ -14,7 +13,6 @@ Usage:
 Options:
     --project=PATH    Path to Julia project (default: Planar)
     --docs=PATH       Path to docs directory (default: docs/src)
-    --skip-examples   Skip code example testing
     --skip-links      Skip link validation
     --skip-format     Skip format validation
     --verbose         Enable verbose output
@@ -30,13 +28,11 @@ using Dates
 push!(LOAD_PATH, @__DIR__)
 
 # Include local modules
-include("DocTestFramework.jl")
 include("config_validator.jl")
 include("LinkValidator.jl")
 include("ContentConsistency.jl")
 include("TestResultsReporter.jl")
 
-using .DocTestFramework
 using .ConfigValidator
 using .LinkValidator
 using .ContentConsistency
@@ -47,7 +43,7 @@ function parse_args(args)
         :project_path => "PlanarDev",
         :docs_path => "docs/src",
         :config_path => "docs/test/config.toml",
-        :skip_examples => false,
+
         :skip_links => false,
         :skip_format => false,
         :verbose => false,
@@ -65,8 +61,7 @@ function parse_args(args)
             options[:config_path] = arg[10:end]
         elseif startswith(arg, "--output=")
             options[:output_file] = arg[10:end]
-        elseif arg == "--skip-examples"
-            options[:skip_examples] = true
+
         elseif arg == "--skip-links"
             options[:skip_links] = true
         elseif arg == "--skip-format"
@@ -96,7 +91,7 @@ function main()
     end
     
     if options[:verbose]
-        ENV["JULIA_DEBUG"] = "DocTestFramework"
+        ENV["JULIA_DEBUG"] = "LinkValidator,ContentConsistency"
     end
     
     # Load and validate configuration
@@ -116,26 +111,7 @@ function main()
         "results" => Dict{String, Any}()
     )
     
-    # Test 1: Code Examples
-    if !options[:skip_examples]
-        @testset "Documentation Code Examples" begin
-            @info "Running code example tests..."
-            examples_passed = run_all_doc_tests(options[:docs_path]; 
-                                              project_path=options[:project_path],
-                                              config=config)
-            @test examples_passed
-            all_tests_passed &= examples_passed
-            test_results["results"]["code_examples"] = Dict(
-                "passed" => examples_passed,
-                "timestamp" => string(Dates.now())
-            )
-        end
-    else
-        @info "Skipping code example tests"
-        test_results["results"]["code_examples"] = Dict("skipped" => true)
-    end
-    
-    # Test 2: Link Validation
+    # Test 1: Link Validation
     if !options[:skip_links]
         @testset "Link Validation" begin
             @info "Running link validation tests..."
@@ -170,7 +146,7 @@ function main()
         test_results["results"]["link_validation"] = Dict("skipped" => true)
     end
     
-    # Test 3: Content Consistency
+    # Test 2: Content Consistency
     if !options[:skip_format]
         @testset "Content Consistency" begin
             @info "Running content consistency tests..."

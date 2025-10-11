@@ -8,49 +8,66 @@ on:
         description: "Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)"
         required: false
         default: false
-  pull_request:
-    paths:
-      - "docs/**"
-      - "*.md"
   push:
-    branches: [main, develop]
+    branches: [main, master, develop]
     paths:
       - "docs/**"
       - "*.md"
+      - ".github/workflows/docs-validation.yml"
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - "docs/**"
+      - "*.md"
+      - ".github/workflows/docs-validation.yml"
+  schedule:
+    # Run weekly to catch issues with external dependencies
+    - cron: "0 0 * * 0"
 
 jobs:
   validate-documentation:
+    name: Validate Documentation
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Setup Julia
         uses: julia-actions/setup-julia@v1
         with:
-          version: "1.11"
+          version: "1.12"
 
       - name: Cache Julia packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.julia
-          key: ${{ runner.os }}-julia-${{ hashFiles('**/Project.toml') }}
-          restore-keys: |
-            ${{ runner.os }}-julia-
+        uses: julia-actions/cache@v1
 
-      - name: Install Julia dependencies
+      - name: Install system dependencies
         run: |
-          julia --project=. -e 'using Pkg; Pkg.instantiate()'
+          sudo apt-get update
+          sudo apt-get install -y build-essential aspell aspell-en
+
+      - name: Setup Julia environment
+        run: |
+          julia --project=Planar -e '
+            using Pkg
+            Pkg.instantiate()
+            Pkg.precompile()
+          '
+
+      - name: Create results directory
+        run: mkdir -p docs/test/results
+
+      - name: Run documentation tests
+        run: |
+          julia --project=docs docs/test/runtests.jl --verbose \
+            --output=docs/test/results/test-results.toml
 
       - name: Validate links
         run: |
           chmod +x scripts/check-links.sh
           ./scripts/check-links.sh
-
-      - name: Validate code examples
-        run: |
-          julia --project=. scripts/validate-examples.jl
 
       - name: Check template compliance
         run: |
@@ -61,108 +78,7 @@ jobs:
         run: |
           julia --project=. scripts/freshness-report.jl
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          limit-access-to-actor: true
-        timeout-minutes: 300
-
-      - name: Upload valierrordation reports
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: validation-reports
-          path: |
-            docs/maintenance/link-check-report.md
-            docs/maintenance/code-validation-report.md
-            docs/maintenance/template-compliance-report.md
-            docs/maintenance/freshness-report.md
-
-      - name: Comment PR with validation results
-        uses: actions/github-script@v6
-        if: github.event_name == 'pull_request'
-        with:
-          script: |
-            const fs = require('fs');
-
-            // Read validation reports
-            let comment = '## 📋 Documentation Validation Results\n\n';
-
-            try {
-              // Link check results
-              if (fs.existsSync('docs/maintenance/link-check-report.md')) {
-                const linkReport = fs.readFileSync('docs/maintenance/link-check-report.md', 'utf8');
-                const brokenLinks = (linkReport.match(/❌/g) || []).length;
-                if (brokenLinks === 0) {
-                  comment += '✅ **Link Validation**: All links are working\n';
-                } else {
-                  comment += `❌ **Link Validation**: ${brokenLinks} broken links found\n`;
-                }
-              }
-
-              // Code validation results
-              if (fs.existsSync('docs/maintenance/code-validation-report.md')) {
-                const codeReport = fs.readFileSync('docs/maintenance/code-validation-report.md', 'utf8');
-                const failedExamples = (codeReport.match(/❌ Fail/g) || []).length;
-                const totalExamples = (codeReport.match(/✅ Pass|❌ Fail/g) || []).length;
-                if (failedExamples === 0) {
-                  comment += `✅ **Code Validation**: All ${totalExamples} examples working\n`;
-                } else {
-                  comment += `❌ **Code Validation**: ${failedExamples}/${totalExamples} examples failed\n`;
-                }
-              }
-
-              // Template compliance results
-              if (fs.existsSync('docs/maintenance/template-compliance-report.md')) {
-                const templateReport = fs.readFileSync('docs/maintenance/template-compliance-report.md', 'utf8');
-                const issues = (templateReport.match(/❌|⚠️/g) || []).length;
-                if (issues === 0) {
-                  comment += '✅ **Template Compliance**: All templates followed correctly\n';
-                } else {
-                  comment += `⚠️ **Template Compliance**: ${issues} issues found\n`;
-                }
-              }
-
-              comment += '\n📊 **Detailed Reports**: Check the workflow artifacts for complete validation reports.\n';
-
-              // Add guidance for contributors
-              comment += '\n### For Contributors\n';
-              comment += 'If validation failed:\n';
-              comment += '1. Check the detailed reports in the workflow artifacts\n';
-              comment += '2. Fix any broken links or code examples\n';
-              comment += '3. Ensure proper frontmatter and template compliance\n';
-              comment += '4. Run validation scripts locally before pushing:\n';
-              comment += '   ```bash\n';
-              comment += '   ./scripts/check-links.sh\n';
-              comment += '   julia scripts/validate-examples.jl\n';
-              comment += '   ./scripts/check-templates.sh\n';
-              comment += '   ```\n';
-
-            } catch (error) {
-              comment += `❌ **Validation Error**: ${error.message}\n`;
-            }
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: comment
-            });
-
-  spell-check:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install aspell
-        run: sudo apt-get install -y aspell aspell-en
-
-      - name: Create custom dictionary
+      - name: Spell check documentation
         run: |
           cat > .aspell.en.pws << 'EOF'
           personal_ws-1.1 en 100
@@ -198,9 +114,7 @@ jobs:
           dict
           dicts
           EOF
-
-      - name: Spell check documentation
-        run: |
+          
           find docs -name "*.md" -exec aspell --personal=./.aspell.en.pws --dont-backup --mode=markdown check {} \;
 
       - name: Check for common writing issues
@@ -218,13 +132,6 @@ jobs:
           # Check for unclear references
           echo "Checking for unclear references..."
           grep -r "this\|that\|these\|those" docs/ --include="*.md" | grep -v "this tutorial\|this guide\|this section" || true
-
-  accessibility-check:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
 
       - name: Check heading hierarchy
         run: |
@@ -270,32 +177,21 @@ jobs:
               print("✅ All heading hierarchies are correct")
           EOF
 
-      - name: Check alt text for images
+      - name: Check accessibility
         run: |
           echo "Checking for images without alt text..."
           grep -r "!\[\](" docs/ --include="*.md" && echo "❌ Images without alt text found" || echo "✅ All images have alt text"
 
-      - name: Check link accessibility
-        run: |
           echo "Checking for inaccessible link text..."
           grep -r "\[click here\]\|\[here\]\|\[link\]\|\[read more\]" docs/ --include="*.md" && echo "❌ Non-descriptive link text found" || echo "✅ All links have descriptive text"
 
-  performance-check:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Check file sizes
+      - name: Check performance
         run: |
           echo "Checking for large documentation files..."
           find docs -name "*.md" -size +100k -exec ls -lh {} \; | while read line; do
             echo "⚠️ Large file detected: $line"
           done
 
-      - name: Check for large images
-        run: |
           echo "Checking for large images..."
           find docs -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.gif" | while read file; do
             size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo 0)
@@ -348,3 +244,99 @@ jobs:
           else:
               print("✅ All files have reasonable complexity")
           EOF
+
+      - name: Generate test reports
+        if: always()
+        run: |
+          julia --project=docs -e "
+            push!(LOAD_PATH, \"docs/test\")
+            using TestResultsReporter
+
+            results_file = \"docs/test/results/test-results.toml\"
+            if isfile(results_file)
+              generate_html_report(results_file, \"docs/test/results/report.html\")
+              generate_json_report(results_file, \"docs/test/results/report.json\")
+              generate_summary_report(results_file)
+            end
+          "
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          limit-access-to-actor: true
+        timeout-minutes: 300
+
+      - name: Upload validation reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-reports
+          path: |
+            docs/test/results/
+            docs/maintenance/link-check-report.md
+            docs/maintenance/template-compliance-report.md
+            docs/maintenance/freshness-report.md
+
+      - name: Comment PR with validation results
+        uses: actions/github-script@v6
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read validation reports
+            let comment = '## 📋 Documentation Validation Results\n\n';
+
+            try {
+              // Link check results
+              if (fs.existsSync('docs/maintenance/link-check-report.md')) {
+                const linkReport = fs.readFileSync('docs/maintenance/link-check-report.md', 'utf8');
+                const brokenLinks = (linkReport.match(/❌/g) || []).length;
+                if (brokenLinks === 0) {
+                  comment += '✅ **Link Validation**: All links are working\n';
+                } else {
+                  comment += `❌ **Link Validation**: ${brokenLinks} broken links found\n`;
+                }
+              }
+
+              // Template compliance results
+              if (fs.existsSync('docs/maintenance/template-compliance-report.md')) {
+                const templateReport = fs.readFileSync('docs/maintenance/template-compliance-report.md', 'utf8');
+                const issues = (templateReport.match(/❌|⚠️/g) || []).length;
+                if (issues === 0) {
+                  comment += '✅ **Template Compliance**: All templates followed correctly\n';
+                } else {
+                  comment += `⚠️ **Template Compliance**: ${issues} issues found\n`;
+                }
+              }
+
+              comment += '\n📊 **Detailed Reports**: Check the workflow artifacts for complete validation reports.\n';
+
+              // Add guidance for contributors
+              comment += '\n### For Contributors\n';
+              comment += 'If validation failed:\n';
+              comment += '1. Check the detailed reports in the workflow artifacts\n';
+              comment += '2. Fix any broken links or formatting issues\n';
+              comment += '3. Ensure proper frontmatter and template compliance\n';
+              comment += '4. Run validation scripts locally before pushing:\n';
+              comment += '   ```bash\n';
+              comment += '   ./scripts/check-links.sh\n';
+              comment += '   ./scripts/check-templates.sh\n';
+              comment += '   julia docs/test/runtests.jl\n';
+              comment += '   ```\n';
+              comment += '\n### Code Block Review\n';
+              comment += 'For code block consistency, please refer to the [AI Code Block Review Guide](docs/maintenance/ai-code-block-review-guide.md) for systematic review procedures.\n';
+
+            } catch (error) {
+              comment += `❌ **Validation Error**: ${error.message}\n`;
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

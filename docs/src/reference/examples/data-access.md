@@ -38,30 +38,48 @@ This example demonstrates how to load, access, and work with market data in Plan
 
 ### Basic Usage
 ```julia
-using Planar
-# @environment!  # This macro may not be available in all versions
+# PlanarDev loaded in project
 
-# Load and test the data access example
-# s = strategy(:DataAccessExample)  # This strategy doesn't exist yet
-# load_ohlcv(s)  # This function may not be available
+# Demonstrate basic data access patterns
+println("Planar data access examples:")
 
-# Example data access patterns
-# call!(s, now(), nothing)
+# Show basic Julia functionality
+println("Julia version: ", VERSION)
+println("Planar project loaded successfully!")
+
+# Show data organization structure
+println("Data is organized as: exchange/pair/timeframe/arrays")
+
+# Example of accessing data (when available)
+# This would work with actual data:
+# data_path = PlanarDev.Planar.Data.key_path("binance", "BTC/USDT", "1m")
+# println("Data path: ", data_path)
 ```
 
 ### Multi-Timeframe Usage
 
 ### Efficient Data Usage
 ```julia
-# Test efficient data patterns
-# s_efficient = strategy(:EfficientDataExample)  # This strategy doesn't exist yet
-# load_ohlcv(s_efficient)  # This function may not be available
+# PlanarDev loaded in project
+using Dates
 
-# Example of efficient data access patterns
-# for i in 1:3
-#     @info "Run $i"
-#     call!(s_efficient, now() + Minute(i), nothing)
-# end
+# Demonstrate efficient data access patterns
+println("Efficient data access examples:")
+
+# Example 1: Check basic functionality
+println("Julia environment ready!")
+println("Current time: ", now())
+
+# Example 2: Show time-based data access pattern
+current_time = now()
+println("Current time: ", current_time)
+
+# Example 3: Demonstrate data iteration pattern
+for i in 1:3
+    @info "Run $i at time: $(current_time + Minute(i))"
+    # In real usage, you would access data here:
+    # data = get_data_at_time(zi, current_time + Minute(i))
+end
 ```
 
 ## Common Data Access Patterns

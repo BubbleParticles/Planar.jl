@@ -32,7 +32,7 @@ This document provides guidelines for writing testable code blocks in Planar doc
 
 **Problem**: Specific modules or submodules cannot be loaded.
 
-**Error Pattern**: `WARNING: could not import X.Y into DocTestFramework`
+**Error Pattern**: `WARNING: could not import X.Y`
 
 **Solution**:
 
