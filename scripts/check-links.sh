@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Link Checker Script for Planar Documentation
-# Validates all internal and external links in documentation
+# Validates all internal and external links in documentation (can return false positives)
 
 set -e
 

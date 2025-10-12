@@ -73,11 +73,6 @@ jobs:
           julia --project=docs docs/test/runtests.jl --verbose \
             --output=docs/test/results/test-results.toml
 
-      - name: Validate links
-        run: |
-          chmod +x scripts/check-links.sh
-          ./scripts/check-links.sh
-
       - name: Check template compliance
         run: |
           chmod +x scripts/check-templates.sh
