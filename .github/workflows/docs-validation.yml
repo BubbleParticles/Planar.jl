@@ -56,6 +56,15 @@ jobs:
             Pkg.precompile()
           '
 
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          limit-access-to-actor: true
+        timeout-minutes: 300
+
       - name: Create results directory
         run: mkdir -p docs/test/results
 
@@ -259,15 +268,6 @@ jobs:
               generate_summary_report(results_file)
             end
           "
-
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          limit-access-to-actor: true
-        timeout-minutes: 300
 
       - name: Upload validation reports
         uses: actions/upload-artifact@v4
