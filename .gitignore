@@ -22,6 +22,7 @@ PlanarInteractive/test/
 user/Load/test/
 reports/
 docs/maintenance/*-report.md
+docs/test/results/
 TODO.txt
 
 !/**/deps/precompiles/*_Planar*.jl
