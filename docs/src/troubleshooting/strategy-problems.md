@@ -1,4 +1,4 @@
----
+<!--
 title: "Troubleshooting: Strategy Development Issues"
 description: "Solutions for strategy development and execution problems"
 category: "troubleshooting"
@@ -7,7 +7,7 @@ prerequisites: ["installation", "basic-strategy-concepts"]
 related_topics: ["strategy-development", "execution-modes", "debugging"]
 last_updated: "2025-10-04"
 estimated_time: "20 minutes"
----
+-->
 
 # Troubleshooting: Strategy Development Issues
 

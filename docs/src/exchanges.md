@@ -1,9 +1,9 @@
----
+<!--
 title: "Exchange Integration"
 description: "Complete guide to exchange integration in Planar, including CCXT support, configuration, and troubleshooting"
 category: "reference"
 difficulty: "intermediate"
----
+-->
 
 # Exchange Integration
 

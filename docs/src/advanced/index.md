@@ -1,9 +1,9 @@
----
+<!--
 category: "optimization"
 difficulty: "advanced"
 topics: [exchanges, optimization, troubleshooting]
-last_updated: "2025-10-04"---
----
+last_updated: "2025-10-04"
+-->
 
 # Advanced Topics
 

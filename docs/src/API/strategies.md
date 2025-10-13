@@ -1,4 +1,4 @@
----
+<!--
 title: "Strategies API"
 description: "Strategy base classes, interfaces, and core functionality"
 category: "api-reference"
@@ -7,7 +7,7 @@ prerequisites: ["getting-started", "strategy-development"]
 topics: ["api-reference", "strategies", "trading"]
 last_updated: "2025-10-04"
 estimated_time: "Reference material"
----
+-->
 
 # Strategies API
 

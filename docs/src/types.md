@@ -1,9 +1,9 @@
----
+<!--
 category: "strategy-development"
 difficulty: "advanced"
 topics: [execution-modes, margin-trading, exchanges, data-management, optimization, strategy-development, troubleshooting]
-last_updated: "2025-10-04"---
----
+last_updated: "2025-10-04"
+-->
 
 # Types
 By learning the main types you get to know the building blocks to start composing your [strategy](guides/../guides/strategy-development.md) for [backtesting](guides/execution-modes.md#simulation)-mode) and/or [live trading](guides/execution-modes.md#live-mode).

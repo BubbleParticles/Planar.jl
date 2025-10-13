@@ -1,4 +1,4 @@
----
+<!--
 title: "Getting Started with Planar"
 description: "Complete beginner's guide to Planar trading framework"
 category: "getting-started"
@@ -9,8 +9,8 @@ user_personas: ["new-user", "beginner-trader"]
 next_steps: ["quick-start", "installation", "first-strategy"]
 related_topics: ["strategy-development", "data-management"]
 topics: [execution-modes, margin-trading, exchanges, data-management, optimization, getting-started, strategy-development, troubleshooting, visualization, configuration]
-last_updated: "2025-10-04"---
----
+last_updated: "2025-10-04"
+-->
 
 # Getting Started with Planar
 

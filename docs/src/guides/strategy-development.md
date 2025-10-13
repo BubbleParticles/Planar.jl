@@ -1,11 +1,11 @@
----
+<!--
 title: "Strategy Development Guide"
 description: "Complete guide to developing trading strategies in Planar"
 category: "guides"
 difficulty: "intermediate"
 topics: [strategy-development, technical-indicators, backtesting]
 last_updated: "2025-10-04"
----
+-->
 
 # Strategy Development Guide
 

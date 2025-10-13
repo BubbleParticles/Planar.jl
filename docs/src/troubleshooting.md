@@ -1,4 +1,4 @@
----
+<!--
 title: "Troubleshooting Overview"
 description: "Quick access to troubleshooting resources and common solutions"
 category: "troubleshooting"
@@ -7,7 +7,7 @@ prerequisites: []
 related_topics: ["getting-started", "configuration", "strategy-development"]
 last_updated: "2025-10-04"
 estimated_time: "5 minutes"
----
+-->
 
 # Troubleshooting Overview
 

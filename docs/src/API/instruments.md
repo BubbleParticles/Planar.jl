@@ -1,4 +1,4 @@
----
+<!--
 title: "Instruments API"
 description: "Financial instrument definitions and management"
 category: "api-reference"
@@ -7,7 +7,7 @@ prerequisites: ["getting-started", "strategy-development"]
 topics: ["api-reference", "instruments", "assets", "derivatives"]
 last_updated: "2025-10-04"
 estimated_time: "Reference material"
----
+-->
 
 # Instruments API
 

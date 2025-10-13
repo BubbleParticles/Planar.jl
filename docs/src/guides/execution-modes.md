@@ -1,11 +1,11 @@
----
+<!--
 title: "Execution Modes Guide"
 description: "Understanding simulation, paper, and live trading modes"
 category: "guides"
 difficulty: "intermediate"
 topics: [execution-modes, simulation, paper-trading, live-trading]
 last_updated: "2025-10-04"
----
+-->
 
 # Execution Modes Guide
 

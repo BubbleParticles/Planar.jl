@@ -1,4 +1,4 @@
----
+<!--
 title: "Quick Start Guide"
 description: "Get your first Planar strategy running in 15 minutes"
 category: "getting-started"
@@ -10,7 +10,7 @@ next_steps: ["first-strategy", "strategy-development"]
 related_topics: ["installation", "data-management"]
 topics: [execution-modes, margin-trading, exchanges, data-management, optimization, getting-started, strategy-development, troubleshooting, visualization, configuration]
 last_updated: "2025-10-04"
----
+-->
 
 # Quick Start Guide
 
