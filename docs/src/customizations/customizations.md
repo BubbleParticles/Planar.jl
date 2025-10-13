@@ -67,12 +67,12 @@ You can customize behavior for specific exchanges using dispatch:
 
 ### Strategy-Specific Functions
 
-Create "snowflake" functions for specific [strategies](../guides/../guides/strategy-development.md):
+Create "snowflake" functions for specific [strategies](../guides/strategy-development.md):
 
 
 ### Custom Indicators and Signals
 
-Extend the framework with custom [technical indicators](../guides/../guides/strategy-development.md#technical-indicators):
+Extend the framework with custom [technical indicators](../guides/strategy-development.md#technical-indicators):
 
 
 ### Custom Risk Management
@@ -158,13 +158,13 @@ Be mindful of performance in hot paths:
 - **[Overview](../troubleshooting/index.md)** - Troubleshooting: Troubleshooting and problem resolution
 - **[Optimization](../optimization.md)** - Performance optimization techniques
 - **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
-- **[Data Management](../guides/../guides/../guides/data-management.md)** - Guide: Data handling and management
+- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
 
 ## Troubleshooting Customizations
 
 ### Common Issues
 
-1. **Method Ambiguity**: When [multiple dispatch](../guides/../guides/strategy-development.md#dispatch-system) signatures could match
+1. **Method Ambiguity**: When [multiple dispatch](../guides/strategy-development.md#dispatch-system) signatures could match
 
 2. **Type Piracy**: Extending methods you don't own on types you don't own
 
@@ -177,4 +177,4 @@ Be mindful of performance in hot paths:
 3. Use `methodswith` to find all methods for a type
 4. Use `@which` to determine which method will be called
 
-Remember to [leverage](../guides/../guides/strategy-development.md#margin-modes) this flexibility to enhance functionality without overcomplicating the system, thus avoiding "complexity bankruptcy."
+Remember to [leverage](../guides/strategy-development.md#margin-modes) this flexibility to enhance functionality without overcomplicating the system, thus avoiding "complexity bankruptcy."

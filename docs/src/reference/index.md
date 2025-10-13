@@ -11,10 +11,10 @@ Complete reference documentation for Planar APIs, [configuration](../config.md),
 
 ## Sections
 
-- [API Documentation](api/) - Complete function reference
-- [Configuration]([configuration](../config.md).md) - All [configuration](../config.md) options
+- [API Documentation](api/index.md) - Complete function reference
+- [configuration](../config.md) - All [configuration](../config.md) options
 - [Types](../types.md) - Type system reference
-- [Examples](examples/) - Code examples library
+- [Examples](examples/index.md) - Code examples library
 
 ## Quick Links
 
@@ -26,8 +26,8 @@ Complete reference documentation for Planar APIs, [configuration](../config.md),
 
 ## See Also
 
-- **[](../reference/api/)** - Complete API documentation
-- **[Strategy Development](../guides/../guides/strategy-development.md)** - Learn to use the APIs
+- **[](../reference/api/index.md)** - Complete API documentation
+- **[Strategy Development](../guides/strategy-development.md)** - Learn to use the APIs
 - **[](../troubleshooting/index.md)** - API troubleshooting
 - **[Exchanges](../exchanges.md)** - Exchange integration and configuration
 - **[Config](../config.md)** - Exchange integration and configuration
@@ -35,4 +35,4 @@ Complete reference documentation for Planar APIs, [configuration](../config.md),
 
 ## Usage
 
-This reference is designed for quick lookup of specific functions and their parameters. For learning-oriented content, see the [Development Guides](../guides/).
+This reference is designed for quick lookup of specific functions and their parameters. For learning-oriented content, see the [Development Guides](../guides/index.md).

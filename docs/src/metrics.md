@@ -7,7 +7,7 @@ last_updated: "2025-10-04"---
 
 # Metrics Module Documentation
 
-The `Metrics` module provides functions for analyzing the outcomes of [backtest](guides/execution-modes.md#[simulation](guides/execution-modes.md#simulation-mode)-mode) runs within the trading [strategy](guides/../guides/strategy-development.md) framework.
+The `Metrics` module provides functions for analyzing the outcomes of [backtest](guides/execution-modes.md#simulation-mode) runs within the trading [strategy](guides/../guides/strategy-development.md) framework.
 
 ### Resampling Trades
 
@@ -23,7 +23,7 @@ The [`Metrics.trades_balance`](@ref) function calculates the cumulative balance 
 
 ### Performance Metrics
 
-The module includes implementations of common trading performance [metrics](./API/metrics.md) such as Sharpe ratio (`sharpe`), Sortino ratio (`sortino`), Calmar ratio (`calmar`), and expectancy (`expectancy`).
+The module includes implementations of common trading performance [metrics](API/metrics.md) such as Sharpe ratio (`sharpe`), Sortino ratio (`sortino`), Calmar ratio (`calmar`), and expectancy (`expectancy`).
 
 
 Each of these functions calculates the respective metric over a daily time frame, with `rfr` representing the risk-free rate, which is an optional parameter for the Sharpe and Sortino ratios.

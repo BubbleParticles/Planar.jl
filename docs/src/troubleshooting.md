@@ -11,7 +11,7 @@ estimated_time: "5 minutes"
 
 # Troubleshooting Overview
 
-This page provides quick access to troubleshooting resources. For detailed solutions, visit the specific troubleshooting guides in the [troubleshooting section](troubleshooting/).
+This page provides quick access to troubleshooting resources. For detailed solutions, visit the specific troubleshooting guides in the [troubleshooting section](troubleshooting/index.md).
 
 ## Quick Access to Solutions
 
@@ -34,7 +34,7 @@ This page provides quick access to troubleshooting resources. For detailed solut
 
 For detailed solutions with step-by-step instructions, platform-specific guidance, and advanced diagnostics, see:
 
-- **[Troubleshooting Index](troubleshooting/)** - Complete troubleshooting guide with all categories
+- **[Troubleshooting Index](troubleshooting/index.md)** - Complete troubleshooting guide with all categories
 - **[Installation Issues](troubleshooting/installation-issues.md)** - Setup, dependencies, environment configuration
 - **[Strategy Problems](troubleshooting/strategy-problems.md)** - Development, execution, debugging
 - **[Performance Issues](troubleshooting/performance-issues.md)** - Optimization, memory, speed
@@ -386,7 +386,7 @@ brew install --cask xquartz
 
 **Solutions**:
 ```json
-// In VSCode user settings.json
+/ In VSCode user settings.json
 {
     "julia.debuggerDefaultCompiled": [
         "ALL_MODULES_EXCEPT_MAIN",

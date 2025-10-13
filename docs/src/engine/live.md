@@ -7,11 +7,11 @@ last_updated: "2025-10-04"---
 
 # Running in Live Mode
 
-A [strategy](../guides/../guides/strategy-development.md) in live mode operates against the [exchange](../[exchanges](../exchanges.md).md) API defined by the [strategy](../guides/../guides/strategy-development.md). This mode executes real trades with actual capital, so proper [configuration](../config.md) and risk management are critical.
+A [exchange](../[exchanges](../exchanges.md) API defined by the [strategy](../guides/strategy-development.md). This mode executes real trades with actual capital, so proper [configuration](../config.md) and risk management are critical.
 
 ## Initial Setup and Configuration
 
-To construct the [strategy](../guides/../guides/strategy-development.md), use the same methods as in [paper mode](./paper.md), but with additional security considerations:
+To construct the [strategy](../guides/strategy-development.md), use the same methods as in [paper mode](paper.md), but with additional security considerations:
 
 
 ### API Configuration and Security
@@ -96,7 +96,7 @@ The local state is *not persisted*. Nothing is saved or loaded from storage. Ins
 - **[Overview](../troubleshooting/index.md)** - Troubleshooting: Troubleshooting and problem resolution
 - **[Optimization](../optimization.md)** - Performance optimization techniques
 - **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
-- **[Data Management](../guides/../guides/../guides/data-management.md)** - Guide: Data handling and management
+- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
 
 ## Event Tracing
 

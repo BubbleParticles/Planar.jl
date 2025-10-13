@@ -85,22 +85,22 @@ Additional materials and community resources.
 ## Common Cross-References
 
 ### From Getting Started
-- **Next:** [Development Guides](guides/) for building strategies
+- **Next:** [Development Guides](guides/index.md) for building strategies
 - **Reference:** [API Documentation](reference/api/) for function details
-- **Help:** [Troubleshooting](troubleshooting/) for common issues
+- **Help:** [Troubleshooting](troubleshooting/index.md) for common issues
 
 ### From Guides
-- **Prerequisites:** [Getting Started](getting-started/) for basics
-- **Advanced:** [Advanced Topics](advanced/) for customization
+- **Prerequisites:** [Getting Started](getting-started/index.md) for basics
+- **Advanced:** [Advanced Topics](advanced/index.md) for customization
 - **Reference:** [API Documentation](reference/api/) for function details
 
 ### From Advanced Topics
-- **Basics:** [Development Guides](guides/) for fundamentals
+- **Basics:** [Development Guides](guides/index.md) for fundamentals
 - **Reference:** [API Documentation](reference/api/) for implementation details
-- **Help:** [Troubleshooting](troubleshooting/) for complex issues
+- **Help:** [Troubleshooting](troubleshooting/index.md) for complex issues
 
 ### From Troubleshooting
-- **Learn:** [Getting Started](getting-started/) and [Guides](guides/)
+- **Learn:** [Getting Started](getting-started/index.md) and [Guides](guides/index.md)
 - **Reference:** [API Documentation](reference/api/) for correct usage
 - **Community:** [Resources](resources/community.md) for additional help
 
@@ -121,7 +121,7 @@ Additional materials and community resources.
 - [See all [Section] topics](section-index.md)
 
 ### Need Help?
-- [Troubleshooting](../troubleshooting/)
+- [Troubleshooting](../troubleshooting/index.md)
 - [Community Support](../resources/community.md)
 - [API Reference](../reference/api/)
 ```

@@ -8,7 +8,7 @@ last_updated: "2025-10-04"---
 # Strategy Development Guide
 
 <!--
-Keywords: [strategy](guides/../guides/strategy-development.md) development, call! function, [dispatch system](../guides/[strategy](guides/../guides/strategy-development.md)-development.md#dispatch-system), [margin trading](../guides/[strategy](guides/../guides/strategy-development.md)-development.md#margin-trading-concepts), [backtesting](guides/execution-modes.md#simulation)-mode), [optimization](optimization.md), [Julia](https://julialang.org/) modules, trading logic
+Keywords: [strategy](guides/../guides/strategy-development.md) development, call! function, [dispatch system](guides/../guides/strategy-development.md), [margin trading](guides/../guides/strategy-development.md), [backtesting](guides/execution-modes.md#simulation)-mode), [optimization](optimization.md), [Julia](https://julialang.org/) modules, trading logic
 Description: Comprehensive guide to developing trading [strategies](guides/../guides/strategy-development.md) in Planar using [Julia](https://julialang.org/)'s [dispatch system](guides/../guides/strategy-development.md#dispatch-system), covering everything from basic concepts to advanced patterns.
 -->
 

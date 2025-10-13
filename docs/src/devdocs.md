@@ -52,7 +52,7 @@ The foundation of Planar, providing:
 Three distinct execution environments:
 - **SimMode**: Fast synchronous [backtesting](guides/execution-modes.md#simulation)-mode) with [OHLCV data](guides/../guides/data-management.md#ohlcv-data)
 - **PaperMode**: Real-time [simulation](guides/execution-modes.md#simulation-mode) with live data feeds
-- **LiveMode**: Actual trading with [exchange]([exchanges](exchanges.md).md) APIs
+- **LiveMode**: Actual trading with [exchanges](exchanges.md) APIs
 
 #### Data Pipeline
 Comprehensive [data management](guides/../guides/data-management.md):

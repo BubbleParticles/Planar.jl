@@ -258,7 +258,7 @@ With ohlcv data, we can access the timeframe of the series directly from the dat
 
 ## Caching and Performance Optimization
 
-`Data.Cache.save_cache` and `Data.Cache.load_cache` can be used to store generic metadata like JSON payloads. The data is saved in the Planar data directory which is either under the `XDG_CACHE_DIR`[^1] if set or under `$HOME/.cache` by default.
+`Data.Cache.save_cache` and `Data.Cache.load_cache` can be used to store generic metadata like JSON payloads. The data is saved in the Planar data directory which is either under the `XDG_CACHE_DIR` if set or under `$HOME/.cache` by default.
 
 ### Basic Caching Usage
 

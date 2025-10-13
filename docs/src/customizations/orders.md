@@ -25,7 +25,7 @@ We can extend instruments to create new types such as `Asset` and `Derivative`, 
 
 - **[Exchanges](../exchanges.md)** - Exchange integration and configuration
 - **[Config](../config.md)** - Exchange integration and configuration
-- **[Strategy Development](../guides/../guides/strategy-development.md)** - Guide: Strategy development and implementation
+- **[Strategy Development](../guides/strategy-development.md)** - Guide: Strategy development and implementation
 - **[Optimization](../optimization.md)** - Strategy development and implementation
 
 ## Instances and Exchanges

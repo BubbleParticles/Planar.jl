@@ -17,9 +17,9 @@ last_updated: "2025-10-04"---
 
 - for each `timestamp`:
   - while true:
-    - process(`[strategy](../guides/../guides/strategy-development.md)`, `timestamp`, `context`)
+    - process(`[strategy](../guides/strategy-development.md)`, `timestamp`, `context`)
     
-The loop is just a timestamp feeder!, and the [strategy](../guides/../guides/strategy-development.md) holds all the state.
+The loop is just a timestamp feeder!, and the [strategy](../guides/strategy-development.md) holds all the state.
 
 - Because we use the `TimeFrames` abstraction, the step can be arbitrary, the strategy will just index into ohlcv data according to the last candle compatible with the given timestamp. This is a performance trade-off, we prefer to always index with dates, and never with integers, because it reduces the assumptions to _the row data must match its timestamp_ (its not corrupted!) compared to spurious bugs that might arise by integer indexing.
 - The simulation is adversarial to the strategy, it is the job of the simulation to decide __how much__ loss a trade has incurred.
@@ -33,9 +33,9 @@ The loop is just a timestamp feeder!, and the [strategy](../guides/../guides/str
 
 - **[Optimization](../optimization.md)** - Performance optimization techniques
 - **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
-- **[Data Management](../guides/../guides/../guides/data-management.md)** - Guide: Data handling and management
+- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
 - **[Exchanges](../exchanges.md)** - Data handling and management
-- **[Strategy Development](../guides/../guides/strategy-development.md)** - Guide: Strategy development and implementation
+- **[Strategy Development](../guides/strategy-development.md)** - Guide: Strategy development and implementation
 - **[Optimization](../optimization.md)** - Strategy development and implementation
 
 ## What does executing an order mean?
