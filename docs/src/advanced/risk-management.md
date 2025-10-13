@@ -11,5 +11,5 @@ last_updated: "2025-10-04"
 Advanced risk management techniques for trading strategies.
 
 ## See Also
-- [Strategy Development](../guides/../guides/strategy-development.md)
+- [Strategy Development](../guides/strategy-development.md)
 - [Live Trading](#live-trading)

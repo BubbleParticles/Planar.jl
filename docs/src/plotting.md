@@ -46,7 +46,7 @@ For generating static images, use CairoMakie and save with `save("chart.png", fi
 
 ### Basic [OHLCV](guides/../guides/data-management.md#ohlcv-data) Chart
 
-![OHLCV Plot](./assets/ohlcv.gif)
+![OHLCV Plot](assets/ohlcv.gif)
 
 ### Customizing OHLCV Charts
 
@@ -71,7 +71,7 @@ The history of trades is illustrated using triangles, with upwards pointing tria
 
 ### Basic Trade Visualization
 
-![TradesTicks](./assets/tradesticks.jpg)
+![TradesTicks](assets/tradesticks.jpg)
 
 ### Advanced Trade Analysis
 
@@ -92,7 +92,7 @@ The `balloons` function provides an aggregated view of trade density within a sp
 
 ### Basic Balloons Chart
 
-![Balloons](./assets/balloons.jpg)
+![Balloons](assets/balloons.jpg)
 
 ### Customizing Balloons Visualization
 
@@ -108,7 +108,7 @@ For a comprehensive analysis, aggregated trade history can plot multiple assets.
 
 ### Basic Multi-Asset Balloons
 
-![Balloons Multi](./assets/balloons-multi.jpg)
+![Balloons Multi](assets/balloons-multi.jpg)
 
 ### Portfolio-Wide Analysis
 
@@ -130,7 +130,7 @@ Custom indicators enhance chart analysis and can be integrated into plots. Plana
 
 Moving averages and other line-based indicators can be added using the `line_indicator` function:
 
-![Line Indicator](./assets/line-indicator.jpg)
+![Line Indicator](assets/line-indicator.jpg)
 
 ### Advanced Line Indicators
 
@@ -139,7 +139,7 @@ Moving averages and other line-based indicators can be added using the `line_ind
 
 Channels or envelopes can be visualized using the `channel_indicator` function. This tool is useful for identifying trends and potential breakouts:
 
-![Channel Indicator](./assets/channel-indicator.jpg)
+![Channel Indicator](assets/channel-indicator.jpg)
 
 ### Advanced Channel Indicators
 

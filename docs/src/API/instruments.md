@@ -92,5 +92,5 @@ Order = [:macro, :constant]
 - **[Instances API](instances.md)** - Asset instance management
 - **[Strategies API](strategies.md)** - Strategy base classes and interfaces
 - **[Data API](../data.md)** - Data structures and management
-- **[Strategy Development Guide](../guides/../guides/strategy-development.md)** - Building trading strategies
+- **[Strategy Development Guide](../guides/strategy-development.md)** - Building trading strategies
 - **[Advanced Trading Guide](../advanced/risk-management.md)** - Margin and derivative trading

@@ -56,12 +56,12 @@ last_updated: "2025-10-04"
 
 ## Popular Searches
 
-- [Strategy Development](../guides/../guides/strategy-development.md)
+- [Strategy Development](../guides/strategy-development.md)
 - [Installation](../getting-started/installation.md)
-- [API Reference](../reference/api/)
+- [API Reference](../reference/api/index.md)
 - [Troubleshooting](../troubleshooting/index.md)
 - [Configuration](../reference/configuration.md)
-- [Data Management](../guides/../guides/../guides/data-management.md)
+- [Data Management](../guides/data-management.md)
 
 ## Search Tips
 
@@ -72,10 +72,10 @@ last_updated: "2025-10-04"
 
 ## Browse by Category
 
-- **[Getting Started](../getting-started/)** - New user guides and tutorials
-- **[User Guides](../guides/)** - Comprehensive development guides
-- **[Advanced Topics](../advanced/)** - Expert-level customization
-- **[API Reference](../reference/api/)** - Function documentation
+- **[Getting Started](../getting-started/index.md)** - New user guides and tutorials
+- **[User Guides](../guides/index.md)** - Comprehensive development guides
+- **[Advanced Topics](../advanced/index.md)** - Expert-level customization
+- **[API Reference](../reference/api/index.md)** - Function documentation
 - **[Troubleshooting](../troubleshooting/index.md)** - Problem resolution
 
 <style>

@@ -12,7 +12,7 @@ This section provides comprehensive documentation for all Planar.jl modules and 
 ## Core Modules
 
 ### [Data Management](../data.md)
-Data structures, persistence, and [OHLCV data](../guides/../guides/../guides/data-management.md#ohlcv-data) handling.
+Data structures, persistence, and [OHLCV data](../guides/data-management.md#ohlcv-data) handling.
 
 ### [Engine](engine.md)
 Core execution engine for backtesting, paper trading, and live trading.
@@ -60,10 +60,10 @@ Performance metrics and analysis.
 Parameter optimization and hyperparameter tuning.
 
 ### [Strategy Tools](../API/strategytools.md)
-Utilities for [strategy](../guides/../guides/strategy-development.md) development.
+Utilities for [strategy](../guides/strategy-development.md) development.
 
 ### [Strategy Statistics](../API/strategystats.md)
-Statistical analysis of [strategy](../guides/../guides/strategy-development.md) performance.
+Statistical analysis of [strategy](../guides/strategy-development.md) performance.
 
 ## Visualization & UI
 
@@ -88,7 +88,7 @@ Additional utility functions and helpers.
 
 - **Getting Started**: See the [Getting Started Guide](../getting-started/index.md)
 - **Type System**: Learn about [Planar's Type System](../types.md)
-- **Strategy Development**: Read the [Strategy Guide](../guides/../guides/strategy-development.md)
+- **Strategy Development**: Read the [Strategy Guide](../guides/strategy-development.md)
 - **Troubleshooting**: Check the [Troubleshooting Guide](../troubleshooting/index.md)
 
 
@@ -98,7 +98,7 @@ Additional utility functions and helpers.
 - **[Config](../config.md)** - Exchange integration and configuration
 - **[Optimization](../optimization.md)** - Performance optimization techniques
 - **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
-- **[Data Management](../guides/../guides/../guides/data-management.md)** - Guide: Data handling and management
+- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
 - **[Exchanges](../exchanges.md)** - Data handling and management
 
 ## Function Index

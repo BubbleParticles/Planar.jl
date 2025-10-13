@@ -87,15 +87,15 @@ This comprehensive index helps you quickly find information across all Planar do
 - **Parameters** - [Strategy Attributes](strategy.md#parameter-management)
 
 ### System Configuration
-- **Environment Variables** - [JULIA_PROJECT, JULIA_NUM_THREADS]([troubleshooting](troubleshooting/index.md).md#environment-check)
+- **Environment Variables** - [JULIA_PROJECT, JULIA_NUM_THREADS](troubleshooting/index.md)
 - **Exchange APIs** - [API Keys](engine/live.md), [Sandbox Mode](engine/live.md)
 - **Data Storage** - [LMDB Configuration](data.md#storage-architecture)
 
 ## Error Handling
 
 ### Common Issues
-- **Installation Problems** - [Dependency Conflicts]([troubleshooting](troubleshooting/index.md).md#dependency-conflicts)
-- **Strategy Loading** - [Module Not Found]([troubleshooting](troubleshooting/index.md).md#strategy-loading-problems)
+- **Installation Problems** - [Dependency Conflicts](troubleshooting/index.md)
+- **Strategy Loading** - [Module Not Found](troubleshooting/index.md)
 - **Data Issues** - [Missing Data](troubleshooting.md#data-access-issues)
 - **Order Execution** - [Insufficient Funds](troubleshooting.md#order-execution-problems)
 

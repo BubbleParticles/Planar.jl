@@ -11,11 +11,11 @@ This guide provides a comprehensive comparison of Planar's three execution modes
 
 ## Mode Overview
 
-Planar supports three distinct execution modes, each designed for different stages of [strategy](../guides/../guides/strategy-development.md) development and deployment:
+Planar supports three distinct execution modes, each designed for different stages of [strategy](../guides/strategy-development.md) development and deployment:
 
-- **Sim Mode (Simulation/Backtesting)**: Historical data [simulation](../guides/execution-modes.md#simulation-mode) for [strategy](../guides/../guides/strategy-development.md) development and testing
-- **Paper Mode**: Real-time [simulation](../guides/execution-modes.md#simulation-mode) with live [market data](../guides/../guides/../guides/data-management.md) but no actual trades
-- **Live Mode**: Real trading with actual capital and [exchange](../[exchanges](../exchanges.md).md) APIs
+- **Sim Mode (Simulation/Backtesting)**: Historical data [simulation](../guides/execution-modes.md#simulation-mode) for [strategy](../guides/strategy-development.md) development and testing
+- **Paper Mode**: Real-time [simulation](../guides/execution-modes.md#simulation-mode) with live [market data](../guides/data-management.md) but no actual trades
+- **Live Mode**: Real trading with actual capital and [exchanges](../exchanges.md) APIs
 
 ## Detailed Mode Comparison
 
@@ -61,7 +61,7 @@ Planar supports three distinct execution modes, each designed for different stag
 - Strategy parameter fine-tuning
 
 **Performance Characteristics:**
-- Speed: Real-time (limited by [market data](../guides/../guides/../guides/data-management.md) frequency)
+- Speed: Real-time (limited by [market data](../guides/data-management.md) frequency)
 - Memory: 1-4GB depending on complexity
 - Latency: Network + processing delays
 
@@ -70,14 +70,14 @@ Planar supports three distinct execution modes, each designed for different stag
 **Best Use Cases:**
 - Production trading
 - Real capital deployment
-- Market making [strategies](../guides/../guides/strategy-development.md)
+- Market making [strategies](../guides/strategy-development.md)
 - Arbitrage opportunities
 - Professional trading operations
 
 **Performance Characteristics:**
-- Speed: Limited by [exchange](../[exchanges](../exchanges.md).md) APIs
-- Memory: 1-2GB for typical [strategies](../guides/../guides/strategy-development.md)
-- Latency: Network + [exchange](../[exchanges](../exchanges.md).md) processing
+- Speed: Limited by [exchanges](../exchanges.md) APIs
+- Memory: 1-2GB for typical [strategies](../guides/strategy-development.md)
+- Latency: Network + [exchanges](../exchanges.md) processing
 
 ## Transition Strategies
 
@@ -159,11 +159,11 @@ graph TD
 - **[Overview](../troubleshooting/index.md)** - Troubleshooting: Troubleshooting and problem resolution
 - **[Optimization](../optimization.md)** - Performance optimization techniques
 - **[Performance Issues](../troubleshooting/performance-issues.md)** - Troubleshooting: Performance optimization techniques
-- **[Data Management](../guides/../guides/../guides/data-management.md)** - Guide: Data handling and management
+- **[Data Management](../guides/data-management.md)** - Guide: Data handling and management
 
 ## Monitoring and Alerting Across Modes
 
 ### Cross-Mode Performance Tracking
 
 
-This comprehensive mode comparison and transition guide provides traders with the knowledge needed to safely and effectively move their [strategies](../guides/../guides/strategy-development.md) from development through to [live trading](../guides/execution-modes.md#live-mode), while avoiding common pitfalls and maintaining proper risk management throughout the process.
+This comprehensive mode comparison and transition guide provides traders with the knowledge needed to safely and effectively move their [strategies](../guides/strategy-development.md) from development through to [live trading](../guides/execution-modes.md#live-mode), while avoiding common pitfalls and maintaining proper risk management throughout the process.

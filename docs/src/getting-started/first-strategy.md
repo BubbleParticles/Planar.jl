@@ -23,7 +23,7 @@ By the end of this tutorial, you'll understand:
 
 - How Planar strategies are structured
 - The three core functions every strategy needs
-- How to add [technical indicators](../guides/../guides/strategy-development.md#technical-indicators)
+- How to add [technical indicators](../guides/strategy-development.md#technical-indicators)
 - How to implement buy/sell logic
 - How to test and debug your strategy
 - How to analyze performance results
@@ -352,7 +352,7 @@ Congratulations! You've built your first custom Planar strategy from scratch. He
 
 ### Short-term Learning (Next Week)
 
-#### 1. **[Strategy Development Guide](../guides/../guides/strategy-development.md)**
+#### 1. **[Strategy Development Guide](../guides/strategy-development.md)**
 Learn advanced patterns:
 - Multi-timeframe analysis
 - Portfolio strategies
@@ -391,7 +391,7 @@ Scale your operations:
 
 #### 3. **Custom Indicators**
 Build proprietary signals:
-- Custom [technical indicators](../guides/../guides/strategy-development.md#technical-indicators)
+- Custom [technical indicators](../guides/strategy-development.md#technical-indicators)
 - Machine learning integration
 - Alternative data sources
 - Signal combination techniques
@@ -432,7 +432,7 @@ Expand your reach:
 - **Performance Analysis** - Professional metrics
 
 ### 🚀 Advanced Resources
-- **[API Reference](../reference/api/)** - Complete function documentation
+- **[API Reference](../reference/api/index.md)** - Complete function documentation
 - **Architecture Guide** - Understand Planar internals
 - **Contributing Guide** - Extend Planar itself
 

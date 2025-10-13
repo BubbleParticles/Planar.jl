@@ -8,7 +8,7 @@ last_updated: "2025-10-04"---
 # Types
 By learning the main types you get to know the building blocks to start composing your [strategy](guides/../guides/strategy-development.md) for [backtesting](guides/execution-modes.md#simulation)-mode) and/or [live trading](guides/execution-modes.md#live-mode).
 
-The main type is the `Strategy` and it has its own [page](./[strategy](guides/../guides/strategy-development.md).md).
+The main type is the `Strategy` and it has its own [strategy](guides/../guides/strategy-development.md).
 Other important types follow.
 
 ## Instruments
@@ -32,7 +32,7 @@ Other important types follow.
 
 ## Asset instances
 
-The `AssetInstance` is a rich type that refers to a particular asset. It is not parametrized over a specific asset, but rather over the `AbstractAsset` implementation, the [exchange]([exchanges](exchanges.md).md), and the margin mode. An asset instance's information is always related to a specific [exchange]([exchanges](exchanges.md).md). For example, `cash(ai)` should return the amount of cash available for that asset on the [exchange]([exchanges](exchanges.md).md) matching the instance's ExchangeID parameter.
+The `AssetInstance` is a rich type that refers to a particular asset. It is not parametrized over a specific asset, but rather over the `AbstractAsset` implementation, the [exchanges](exchanges.md), and the margin mode. An asset instance's information is always related to a specific [exchanges](exchanges.md). For example, `cash(ai)` should return the amount of cash available for that asset on the [exchanges](exchanges.md) matching the instance's ExchangeID parameter.
 
 Here are the properties of the `AssetInstance`:
 
@@ -42,7 +42,7 @@ Here are the properties of the `AssetInstance`:
 - `cash`: The amount of owned cash.
 - `cash_committed`: The total amount of cash used by pending orders.
 - `exchange`: The exchange of this asset instance.
-- `longpos/shortpos`: The `Position`s when the margin mode is activated. `committed/cash` refers to the position cash within [margin trading](../guides/[strategy](guides/../guides/strategy-development.md)-development.md#margin-trading-concepts).
+- `longpos/shortpos`: The `Position`s when the margin mode is activated. `committed/cash` refers to the position cash within [margin trading](guides/../guides/strategy-development.md).
 - `limits/precision`: See [ccxt](https://docs.ccxt.com/#/README?id=precision-and-limits).
 - `fees`: The trading fees as a decimal percentage for takers or makers.
 

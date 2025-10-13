@@ -18,9 +18,9 @@ This section covers advanced Planar usage patterns and customization techniques.
 
 ## Prerequisites
 
-These topics assume familiarity with basic Planar concepts covered in the [Development Guides](../guides/).
+These topics assume familiarity with basic Planar concepts covered in the [Development Guides](../guides/index.md).
 
 ## See Also
 
-- [API Reference](../reference/) - Complete function documentation
+- [API Reference](../reference/index.md) - Complete function documentation
 - [Troubleshooting](../troubleshooting/index.md) - Problem resolution

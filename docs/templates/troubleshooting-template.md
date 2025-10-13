@@ -108,4 +108,4 @@ Error patterns to look for
 
 - [Installation Guide](../getting-started/installation.md)
 - [Configuration Reference](../reference/configuration.md)
-- [Other Troubleshooting Topics](../troubleshooting/)
+- [Other Troubleshooting Topics](../troubleshooting/index.md)

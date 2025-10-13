@@ -85,5 +85,5 @@ Modules = [Planar.Engine.Instances]
 - **[Strategies API](strategies.md)** - Strategy base classes and interfaces
 - **[Data API](../data.md)** - Data structures and management
 - **[Executors API](executors.md)** - Order execution and management
-- **[Strategy Development Guide](../guides/../guides/strategy-development.md)** - Building trading strategies
+- **[Strategy Development Guide](../guides/strategy-development.md)** - Building trading strategies
 - **[Advanced Trading Guide](../advanced/risk-management.md)** - Margin and derivative trading
