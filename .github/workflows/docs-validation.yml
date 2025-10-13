@@ -118,7 +118,7 @@ jobs:
           dict
           dicts
           EOF
-          
+
           find docs -name "*.md" -exec aspell --personal=./.aspell.en.pws --dont-backup --mode=markdown check {} \;
 
       - name: Check for common writing issues
@@ -253,14 +253,16 @@ jobs:
         if: always()
         run: |
           julia --project=docs -e "
-            push!(LOAD_PATH, \"docs/test\")
-            using TestResultsReporter
+            include(\"docs/test/TestResultsReporter.jl\")
+            using .TestResultsReporter
 
             results_file = \"docs/test/results/test-results.toml\"
             if isfile(results_file)
               generate_html_report(results_file, \"docs/test/results/report.html\")
               generate_json_report(results_file, \"docs/test/results/report.json\")
               generate_summary_report(results_file)
+            else
+              println(\"Results file not found: \$results_file\")
             end
           "
 
