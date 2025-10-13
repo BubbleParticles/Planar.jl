@@ -233,8 +233,11 @@ docker run -it --rm docker.io/psydyllic/planar-sysimage-interactive julia
 You just completed your first algorithmic trading backtest! Here's what you accomplished:
 
 ✅ **Ran a real trading strategy** on actual Bitcoin market data  
+
 ✅ **Executed simulated trades** based on [technical indicators](../guides/strategy-development.md#technical-indicators)  
+
 ✅ **Analyzed performance** with profit/loss and win rates  
+
 ✅ **Visualized results** with interactive charts  
 
 ## What's Next?
