@@ -1,9 +1,9 @@
----
+<!--
 title: "Parameter Optimization"
 description: "Complete guide to parameter optimization in Planar, including grid search, Bayesian optimization, and performance tuning"
 category: "advanced"
 difficulty: "advanced"
----
+-->
 
 # Parameter Optimization
 

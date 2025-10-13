@@ -1,9 +1,9 @@
----
+<!--
 category: "api-reference"
 difficulty: "advanced"
 topics: [strategy-development]
-last_updated: "2025-10-04"---
----
+last_updated: "2025-10-04"
+-->
 
 # StrategyTools
 

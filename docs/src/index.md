@@ -1,11 +1,11 @@
----
+<!--
 title: "Planar Trading Framework"
 description: "Planar is a sophisticated trading bot framework built in Julia for automated cryptocurrency trading with support for backtesting, paper trading, and live execution."
 category: "getting-started"
 difficulty: "beginner"
 topics: [customization, data-management, getting-started, visualization, configuration, execution-modes, troubleshooting, api-reference, optimization, strategy-development, exchanges]
 last_updated: "2025-10-04"
----
+-->
 
 # Build Sophisticated Trading Strategies with Julia's Power
 

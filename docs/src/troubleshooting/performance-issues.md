@@ -1,8 +1,8 @@
----
+<!--
 title: "Performance Issues"
 description: "Solutions for performance optimization and speed problems"
 category: "troubleshooting"
----
+-->
 
 # Performance Issues
 

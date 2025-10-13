@@ -1,11 +1,11 @@
----
+<!--
 title: "Data Management Guide"
 description: "Comprehensive guide to data handling and management in Planar"
 category: "guides"
 difficulty: "intermediate"
 topics: [data-management, ohlcv, timeframes]
 last_updated: "2025-10-04"
----
+-->
 
 # Data Management Guide
 

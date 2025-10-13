@@ -1,8 +1,8 @@
----
+<!--
 title: "Troubleshooting Guide"
 description: "Comprehensive troubleshooting guide for Planar trading bot issues"
 category: "troubleshooting"
----
+-->
 
 # Troubleshooting Guide
 

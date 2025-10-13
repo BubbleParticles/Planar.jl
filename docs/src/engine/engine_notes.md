@@ -1,9 +1,9 @@
----
+<!--
 category: "strategy-development"
 difficulty: "advanced"
 topics: [execution-modes, data-management, optimization, strategy-development, troubleshooting]
-last_updated: "2025-10-04"---
----
+last_updated: "2025-10-04"
+-->
 
 # Backtesting overview
 

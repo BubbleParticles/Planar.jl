@@ -1,4 +1,4 @@
----
+<!--
 title: "Instances API"
 description: "Asset instance management and position tracking"
 category: "api-reference"
@@ -7,7 +7,7 @@ prerequisites: ["getting-started", "strategy-development"]
 topics: ["api-reference", "instances", "positions", "assets"]
 last_updated: "2025-10-04"
 estimated_time: "Reference material"
----
+-->
 
 # Instances API
 

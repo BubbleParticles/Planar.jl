@@ -1,4 +1,4 @@
----
+<!--
 title: "Basic Strategy Structure"
 description: "Simple strategy template and structure"
 category: "examples"
@@ -7,7 +7,7 @@ prerequisites: ["getting-started"]
 topics: ["examples", "strategy", "template"]
 last_updated: "2025-10-04"
 estimated_time: "10 minutes"
----
+-->
 
 # Basic Strategy Structure
 

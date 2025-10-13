@@ -1,4 +1,4 @@
----
+<!--
 title: "API Reference"
 description: "Complete API reference for Planar.jl modules and functions"
 category: "reference"
@@ -7,7 +7,7 @@ prerequisites: ["getting-started", "strategy-development"]
 topics: ["api-reference", "functions", "modules"]
 last_updated: "2025-10-04"
 estimated_time: "Reference material"
----
+-->
 
 # API Reference
 

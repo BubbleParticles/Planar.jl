@@ -1,4 +1,4 @@
----
+<!--
 title: "Executors API"
 description: "Order execution and trade management"
 category: "api-reference"
@@ -7,7 +7,7 @@ prerequisites: ["getting-started", "strategy-development"]
 topics: ["api-reference", "orders", "execution", "trading"]
 last_updated: "2025-10-04"
 estimated_time: "Reference material"
----
+-->
 
 # Executors API
 

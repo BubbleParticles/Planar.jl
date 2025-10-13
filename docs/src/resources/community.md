@@ -1,10 +1,10 @@
----
+<!--
 title: "Community Resources"
 category: "resources"
 difficulty: "beginner"
 topics: [community, support]
 last_updated: "2025-10-04"
----
+-->
 
 # Community Resources
 

@@ -1,9 +1,9 @@
----
+<!--
 category: "strategy-development"
 difficulty: "advanced"
 topics: [execution-modes, margin-trading, exchanges, data-management, optimization, strategy-development, troubleshooting, visualization]
-last_updated: "2025-10-04"---
----
+last_updated: "2025-10-04"
+-->
 
 # API Reference
 

@@ -1,9 +1,9 @@
----
+<!--
 category: "configuration"
 difficulty: "beginner"
 topics: [strategy-development, configuration]
-last_updated: "2025-10-04"---
----
+last_updated: "2025-10-04"
+-->
 
 # Control the bot remotely
 

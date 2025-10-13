@@ -1,9 +1,9 @@
----
+<!--
 category: "strategy-development"
 difficulty: "advanced"
 topics: [execution-modes, margin-trading, exchanges, optimization, strategy-development]
-last_updated: "2025-10-04"---
----
+last_updated: "2025-10-04"
+-->
 
 # Engine
 

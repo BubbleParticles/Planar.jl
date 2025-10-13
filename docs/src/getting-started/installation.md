@@ -1,8 +1,8 @@
----
+<!--
 title: "Installation Guide"
 description: "Complete installation guide for Planar trading bot"
 category: "getting-started"
----
+-->
 
 # Installation Guide
 

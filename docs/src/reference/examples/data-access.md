@@ -1,4 +1,4 @@
----
+<!--
 title: "Data Access Examples"
 description: "Loading and accessing market data in Planar strategies"
 category: "examples"
@@ -7,7 +7,7 @@ prerequisites: ["getting-started", "basic-strategy"]
 topics: ["examples", "data", "ohlcv", "market-data"]
 last_updated: "2025-10-04"
 estimated_time: "15 minutes"
----
+-->
 
 # Data Access Examples
 

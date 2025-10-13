@@ -1,9 +1,9 @@
----
+<!--
 title: "Configuration Guide"
 description: "Complete guide to configuring Planar for trading, including strategy setup, exchange configuration, and secrets management"
 category: "reference"
 difficulty: "beginner"
----
+-->
 
 # Configuration Guide
 

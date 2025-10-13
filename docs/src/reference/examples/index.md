@@ -1,4 +1,4 @@
----
+<!--
 title: "Code Examples Library"
 description: "Comprehensive library of working code examples for Planar.jl"
 category: "reference"
@@ -7,7 +7,7 @@ prerequisites: ["getting-started"]
 topics: ["examples", "code-samples", "tutorials"]
 last_updated: "2025-10-04"
 estimated_time: "Reference material"
----
+-->
 
 # Code Examples Library
 
