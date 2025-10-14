@@ -142,12 +142,4 @@ julia
 using Planar  # or PlanarInteractive for plotting and optimization
 ```
 
-Read the :book: documentation ([link](https://defnlnotme.github.io/Planar.jl/)) to learn how to get started with the bot.
-
-## TODO
-- finish working on third party apis and implement watchers/scrapers (DBNomics, alpha_vantage, newsdata.io)
-- finish working on blockchain features (active addresses, total value locked, stablecoin supply, supply ratio, large movements, holders in profit)
-- make a QuickStart strategy from private code (which includes lots of pre-built checks for live robustness)
-- Decide if we want to remove the Plotting module altogether or improve it
-- Decide if we want a Cli package and if yes what features (currently it is an outdated OHLCV downloader)
-- Other stuff in the [issues](https://github.com/psydyllic/Planar.jl/issues)
+Read the :book: documentation ([link](https://bubbleparticles.github.io/Planar.jl/)) to learn how to get started with the bot.
