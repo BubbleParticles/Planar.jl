@@ -11,8 +11,20 @@ on:
   push:
     tags:
       - "v*"
+    branches: [main, master, develop]
     paths:
       - "docs/**"
+      - "*.md"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - "docs/**"
+      - "*.md"
+      - ".github/workflows/docs.yml"
+  schedule:
+    # Run weekly to catch issues with external dependencies
+    - cron: "0 0 * * 0"
 
 jobs:
   build:
