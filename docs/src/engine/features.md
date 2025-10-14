@@ -1,10 +1,3 @@
-<!--
-category: "strategy-development"
-difficulty: "advanced"
-topics: [margin-trading, troubleshooting, strategy-development]
-last_updated: "2025-10-04"
--->
-
 # Strategy Combination
 
 The types considered for possible combinations are:

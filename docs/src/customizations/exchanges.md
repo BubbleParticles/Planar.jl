@@ -1,10 +1,3 @@
-<!--
-category: "exchanges"
-difficulty: "advanced"
-topics: [exchanges]
-last_updated: "2025-10-04"
--->
-
 The bot is primarily designed for cryptocurrency trading; however, it can be adapted for stock trading by interfacing with various brokers' APIs. To do this, you will need to create a custom implementation of the `Exchange` abstract type.
 
 Here is a basic structure of how you can define your broker-specific exchange:

@@ -1,10 +1,3 @@
-<!--
-category: "strategy-development"
-difficulty: "advanced"
-topics: [execution-modes, margin-trading, exchanges, data-management, optimization, strategy-development, troubleshooting, visualization]
-last_updated: "2025-10-04"
--->
-
 # API Reference
 
 This section provides comprehensive documentation for all Planar.jl modules and functions.

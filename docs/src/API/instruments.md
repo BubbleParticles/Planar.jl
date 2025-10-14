@@ -1,14 +1,3 @@
-<!--
-title: "Instruments API"
-description: "Financial instrument definitions and management"
-category: "api-reference"
-difficulty: "advanced"
-prerequisites: ["getting-started", "strategy-development"]
-topics: ["api-reference", "instruments", "assets", "derivatives"]
-last_updated: "2025-10-04"
-estimated_time: "Reference material"
--->
-
 # Instruments API
 
 The Instruments module provides definitions and management for financial instruments in Planar. It handles different asset types, currency management, and derivative instruments for advanced trading strategies.

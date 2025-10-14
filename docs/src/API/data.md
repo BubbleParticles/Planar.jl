@@ -1,14 +1,3 @@
-<!--
-title: "Data API"
-description: "Data structures, persistence, and OHLCV data handling"
-category: "api-reference"
-difficulty: "advanced"
-prerequisites: ["getting-started", "data-management"]
-topics: ["api-reference", "data", "ohlcv", "storage"]
-last_updated: "2025-10-04"
-estimated_time: "Reference material"
--->
-
 # Data API
 
 The Data module provides comprehensive functionality for managing market data in Planar. It handles OHLCV (Open, High, Low, Close, Volume) data storage, retrieval, and manipulation using efficient storage formats like Zarr and LMDB.

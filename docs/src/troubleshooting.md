@@ -1,14 +1,3 @@
-<!--
-title: "Troubleshooting Overview"
-description: "Quick access to troubleshooting resources and common solutions"
-category: "troubleshooting"
-difficulty: "beginner"
-prerequisites: []
-related_topics: ["getting-started", "configuration", "strategy-development"]
-last_updated: "2025-10-04"
-estimated_time: "5 minutes"
--->
-
 # Troubleshooting Overview
 
 This page provides quick access to troubleshooting resources. For detailed solutions, visit the specific troubleshooting guides in the [troubleshooting section](troubleshooting/index.md).

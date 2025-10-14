@@ -1,10 +1,3 @@
-<!--
-category: "strategy-development"
-difficulty: "advanced"
-topics: [margin-trading, optimization, strategy-development, troubleshooting, visualization]
-last_updated: "2025-10-04"
--->
-
 # Mobile-Responsive Design Considerations
 
 This document outlines design considerations for ensuring Planar documentation is accessible and usable across different devices and screen sizes.
@@ -109,7 +102,6 @@ The Planar documentation uses Documenter.jl's default HTML theme, which includes
 
 ### HTML Structure
 ```html
-<!-- Semantic navigation -->
 <nav aria-label="Main navigation">
   <ul role="menubar">
     <li role="menuitem">
@@ -118,10 +110,8 @@ The Planar documentation uses Documenter.jl's default HTML theme, which includes
   </ul>
 </nav>
 
-<!-- Skip link for accessibility -->
 <a href="#main-content" class="skip-link">Skip to main content</a>
 
-<!-- Main content with proper heading hierarchy -->
 <main id="main-content">
   <h1>Page Title</h1>
   <h2>Section Title</h2>
@@ -130,16 +120,13 @@ The Planar documentation uses Documenter.jl's default HTML theme, which includes
 
 ### Image Optimization
 ```html
-<!-- Responsive images with appropriate alt text -->
 <img src="image.jpg" 
      alt="Descriptive alt text explaining the image content"
      loading="lazy"
      width="800" 
      height="600">
 
-<!-- SVG icons with accessibility -->
 <svg aria-hidden="true" focusable="false">
-  <!-- Icon content -->
 </svg>
 ```
 

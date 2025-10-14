@@ -1,14 +1,3 @@
-<!--
-title: "Simple Indicators Examples"
-description: "Moving averages and basic technical indicator calculations"
-category: "examples"
-difficulty: "beginner"
-prerequisites: ["getting-started", "basic-strategy", "data-access"]
-topics: ["examples", "indicators", "technical-analysis", "moving-averages"]
-last_updated: "2025-10-04"
-estimated_time: "20 minutes"
--->
-
 # Simple Indicators Examples
 
 This example demonstrates how to calculate and use common technical indicators in Planar strategies. Learn to implement moving averages, RSI, MACD, and other essential indicators.

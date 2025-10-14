@@ -1,10 +1,3 @@
-<!--
-category: "configuration"
-difficulty: "beginner"
-topics: [strategy-development, configuration]
-last_updated: "2025-10-04"
--->
-
 # Control the bot remotely
 
 A planar [strategy](guides/../guides/strategy-development.md) can be controlled with telegram. 

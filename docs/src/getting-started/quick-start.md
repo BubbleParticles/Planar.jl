@@ -1,17 +1,3 @@
-<!--
-title: "Quick Start Guide"
-description: "Get your first Planar strategy running in 15 minutes"
-category: "getting-started"
-difficulty: "beginner"
-estimated_time: "15 minutes"
-prerequisites: ["julia-installed"]
-user_personas: ["new-user", "experienced-trader"]
-next_steps: ["first-strategy", "strategy-development"]
-related_topics: ["installation", "data-management"]
-topics: [execution-modes, margin-trading, exchanges, data-management, optimization, getting-started, strategy-development, troubleshooting, visualization, configuration]
-last_updated: "2025-10-04"
--->
-
 # Quick Start Guide
 
 Get your first Planar strategy running in 15 minutes! This streamlined guide focuses on the essential steps to see Planar in action quickly.

@@ -1,10 +1,3 @@
-<!--
-category: "strategy-development"
-difficulty: "advanced"
-topics: [execution-modes, margin-trading, exchanges, data-management, optimization, strategy-development, troubleshooting, visualization, configuration]
-last_updated: "2025-10-04"
--->
-
 # Running a Backtest
 
 To perform a [backtest](../guides/execution-modes.md#simulationmode), you need to construct a [Strategy Documentation](../[strategy](../guides/strategy-development.md). Once the [strategy](../guides/strategy-development.md) is created, you can call the `start!` function on it to begin the [backtest](../guides/execution-modes.md#simulationmode).

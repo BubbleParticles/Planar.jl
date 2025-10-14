@@ -1,9 +1,3 @@
-<!--
-title: "Installation Guide"
-description: "Complete installation guide for Planar trading bot"
-category: "getting-started"
--->
-
 # Installation Guide
 
 This guide walks you through installing and setting up Planar on your system.

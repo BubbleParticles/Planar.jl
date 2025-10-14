@@ -1,18 +1,6 @@
-<!--
-title: "Strategy Development Guide"
-description: "Complete guide to developing trading strategies in Planar"
-category: "guides"
-difficulty: "intermediate"
-topics: [strategy-development, technical-indicators, backtesting]
-last_updated: "2025-10-04"
--->
-
 # Strategy Development Guide
 
-<!--
-Keywords: [strategy](../guides/strategy-development.md) development, call! function, [dispatch system](../guides/strategy-development.md#dispatch-system), [margin trading](../guides/strategy-development.md#margin-trading-concepts), [backtesting](../guides/execution-modes.md#simulation), [optimization](../optimization.md), [Julia](https://julialang.org/) modules, trading logic
-Description: Comprehensive guide to developing trading [strategies](../guides/strategy-development.md) in Planar using [Julia](https://julialang.org/)'s [dispatch system](../guides/strategy-development.md#dispatch-system), covering everything from basic concepts to advanced patterns.
--->
+
 
 This comprehensive guide covers everything you need to know about developing trading [strategies](../guides/strategy-development.md) in Planar. From basic concepts to advanced patterns, you'll learn how to build robust, profitable trading systems using [Julia](https://julialang.org/)'s powerful [dispatch system](../guides/strategy-development.md#dispatch-system).
 

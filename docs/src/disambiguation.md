@@ -1,10 +1,3 @@
-<!--
-category: "strategy-development"
-difficulty: "advanced"
-topics: [execution-modes, margin-trading, exchanges, data-management, optimization, strategy-development, visualization, configuration]
-last_updated: "2025-10-04"
--->
-
 # Glossary and Disambiguation
 
 This glossary defines key terms and concepts used throughout Planar documentation and codebase.

@@ -1,10 +1,3 @@
-<!--
-category: "optimization"
-difficulty: "advanced"
-topics: [exchanges, optimization, troubleshooting]
-last_updated: "2025-10-04"
--->
-
 # Advanced Topics
 
 This section covers advanced Planar usage patterns and customization techniques.

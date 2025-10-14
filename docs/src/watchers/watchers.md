@@ -1,10 +1,3 @@
-<!--
-category: "data-management"
-difficulty: "advanced"
-topics: [exchanges, data-management]
-last_updated: "2025-10-04"
--->
-
 # Watchers
 
 A `Watcher` type serves as an interface over a data feed. Implementations are available for certain third-party APIs, [exchanges](../exchanges.md) [OHLCV](../guides/data-management.md#ohlcv-data) (Open, High, Low, Close, Volume) data construction, and order books.

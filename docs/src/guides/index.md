@@ -1,10 +1,3 @@
-<!--
-category: "strategy-development"
-difficulty: "advanced"
-topics: [execution-modes, exchanges, data-management, optimization, strategy-development, troubleshooting, visualization]
-last_updated: "2025-10-04"
--->
-
 # Development Guides
 
 This section contains comprehensive guides for developing with Planar. These guides provide in-depth coverage of core concepts and practical implementation details.

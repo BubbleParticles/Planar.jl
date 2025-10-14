@@ -1,14 +1,3 @@
-<!--
-title: "API Reference"
-description: "Complete API reference for Planar.jl modules and functions"
-category: "reference"
-difficulty: "advanced"
-prerequisites: ["getting-started", "strategy-development"]
-topics: ["api-reference", "functions", "modules"]
-last_updated: "2025-10-04"
-estimated_time: "Reference material"
--->
-
 # API Reference
 
 This section provides comprehensive documentation for all Planar.jl modules and functions. Each module page includes function signatures, detailed descriptions, working code examples, and usage patterns.

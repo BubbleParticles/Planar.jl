@@ -1,14 +1,3 @@
-<!--
-title: "Instances API"
-description: "Asset instance management and position tracking"
-category: "api-reference"
-difficulty: "advanced"
-prerequisites: ["getting-started", "strategy-development"]
-topics: ["api-reference", "instances", "positions", "assets"]
-last_updated: "2025-10-04"
-estimated_time: "Reference material"
--->
-
 # Instances API
 
 The Instances module manages asset instances within strategies, handling position tracking, margin management, and asset-specific data. It provides the bridge between abstract assets and their concrete usage in trading strategies.
