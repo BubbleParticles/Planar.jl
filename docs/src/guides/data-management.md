@@ -1,18 +1,6 @@
-<!--
-title: "Data Management Guide"
-description: "Comprehensive guide to data handling and management in Planar"
-category: "guides"
-difficulty: "intermediate"
-topics: [data-management, ohlcv, timeframes]
-last_updated: "2025-10-04"
--->
-
 # Data Management Guide
 
-<!--
-Keywords: [OHLCV data](../guides/data-management.md#ohlcv-data), Zarr storage, LMDB, data fetching, scrapers, watchers, historical data, real-time data, [market data](../guides/data-management.md)
-Description: Comprehensive [data management](../guides/data-management.md) system for [OHLCV](../guides/data-management.md#ohlcv-data) and time-series [market data](../guides/data-management.md) using Zarr storage, LMDB backend, and multiple data collection methods.
--->
+
 
 This comprehensive guide covers Planar's [data management](../guides/data-management.md) system for [OHLCV](../guides/data-management.md#ohlcv-data) (Open, High, Low, Close, Volume) data and other time-series [market data](../guides/data-management.md). Learn how to efficiently collect, store, and access market data using multiple collection methods and storage backends.
 

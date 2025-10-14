@@ -1,10 +1,3 @@
-<!--
-category: "getting-started"
-difficulty: "advanced"
-topics: [execution-modes, margin-trading, exchanges, data-management, optimization, getting-started, strategy-development, troubleshooting, visualization, configuration]
-last_updated: "2025-10-04"
--->
-
 # Plotting and Visualization
 
 The Plotting module utilizes [Makie](https://docs.makie.org/stable/) for creating visualizations. It is important to note that graphical backends are not automatically included with the module and must be installed manually:

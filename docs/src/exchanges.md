@@ -1,10 +1,3 @@
-<!--
-title: "Exchange Integration"
-description: "Complete guide to exchange integration in Planar, including CCXT support, configuration, and troubleshooting"
-category: "reference"
-difficulty: "intermediate"
--->
-
 # Exchange Integration
 
 Planar provides unified access to 100+ cryptocurrency exchanges through the CCXT library integration. This guide covers exchange setup, configuration, and advanced usage patterns for trading across multiple exchanges.

@@ -1,14 +1,3 @@
-<!--
-title: "Exchanges API"
-description: "Exchange interfaces and connectivity"
-category: "api-reference"
-difficulty: "advanced"
-prerequisites: ["getting-started", "exchanges"]
-topics: ["api-reference", "exchanges", "connectivity", "ccxt"]
-last_updated: "2025-10-04"
-estimated_time: "Reference material"
--->
-
 # Exchanges API
 
 The Exchanges module provides unified interfaces for connecting to cryptocurrency exchanges through the CCXT library. It handles exchange connectivity, market data access, and order management across multiple exchanges.

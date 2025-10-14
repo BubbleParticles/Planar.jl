@@ -1,14 +1,3 @@
-<!--
-title: "Basic Strategy Structure"
-description: "Simple strategy template and structure"
-category: "examples"
-difficulty: "beginner"
-prerequisites: ["getting-started"]
-topics: ["examples", "strategy", "template"]
-last_updated: "2025-10-04"
-estimated_time: "10 minutes"
--->
-
 # Basic Strategy Structure
 
 This example demonstrates the fundamental structure of a Planar strategy. Use this as a starting template for your own strategies.

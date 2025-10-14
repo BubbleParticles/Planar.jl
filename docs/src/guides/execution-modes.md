@@ -1,18 +1,6 @@
-<!--
-title: "Execution Modes Guide"
-description: "Understanding simulation, paper, and live trading modes"
-category: "guides"
-difficulty: "intermediate"
-topics: [execution-modes, simulation, paper-trading, live-trading]
-last_updated: "2025-10-04"
--->
-
 # Execution Modes Guide
 
-<!--
-Keywords: execution modes, [simulation](../guides/execution-modes.md#simulation-mode), [backtesting](../guides/execution-modes.md#simulationmode), [paper trading](../guides/execution-modes.md#paper-mode), [live trading](../guides/execution-modes.md#live-mode), mode transition, risk management
-Description: Comprehensive guide to Planar's three execution modes - Sim, Paper, and Live - covering setup, [configuration](../config.md), transition [strategies](../guides/strategy-development.md), and best practices.
--->
+
 
 This comprehensive guide covers Planar's three execution modes and how to safely transition between them. Learn how to develop [strategies](../guides/strategy-development.md) in [simulation](../guides/execution-modes.md#simulation-mode), validate them in paper mode, and deploy them for [live trading](../guides/execution-modes.md#live-mode) with proper risk management.
 

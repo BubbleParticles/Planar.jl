@@ -1,10 +1,3 @@
-<!--
-category: "getting-started"
-difficulty: "advanced"
-topics: [execution-modes, margin-trading, exchanges, data-management, optimization, getting-started, strategy-development, troubleshooting, visualization, configuration]
-last_updated: "2025-10-04"
--->
-
 # Running in Live Mode
 
 A [exchange](../[exchanges](../exchanges.md) API defined by the [strategy](../guides/strategy-development.md). This mode executes real trades with actual capital, so proper [configuration](../config.md) and risk management are critical.

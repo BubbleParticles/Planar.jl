@@ -1,10 +1,3 @@
-<!--
-category: "strategy-development"
-difficulty: "advanced"
-topics: [execution-modes, margin-trading, exchanges, data-management, optimization, strategy-development, troubleshooting, visualization, configuration]
-last_updated: "2025-10-04"
--->
-
 # Running in Paper Mode
 
 Paper mode provides a realistic [simulation](../guides/execution-modes.md#simulation-mode) environment that uses live [market data](../guides/data-management.md) while simulating order execution. This allows you to test [strategies](../guides/strategy-development.md) with real market conditions without risking actual capital.

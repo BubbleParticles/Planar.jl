@@ -1,10 +1,3 @@
-<!--
-category: "optimization"
-difficulty: "advanced"
-topics: [exchanges, optimization, strategy-development]
-last_updated: "2025-10-04"
--->
-
 # Reference Documentation
 
 Complete reference documentation for Planar APIs, [configuration](../config.md), and types.

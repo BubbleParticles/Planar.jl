@@ -1,10 +1,3 @@
-<!--
-category: "strategy-development"
-difficulty: "advanced"
-topics: [execution-modes, margin-trading, exchanges, data-management, optimization, strategy-development, troubleshooting]
-last_updated: "2025-10-04"
--->
-
 # Comprehensive Customization Guide
 
 Planar's architecture is built around Julia's powerful dispatch system, enabling deep customization without modifying core framework code. This guide provides detailed instructions for extending Planar's functionality through custom implementations.

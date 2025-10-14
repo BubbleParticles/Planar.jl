@@ -1,14 +1,3 @@
-<!--
-title: "Engine API"
-description: "Core execution engine for backtesting, paper trading, and live trading"
-category: "api-reference"
-difficulty: "advanced"
-prerequisites: ["getting-started", "strategy-development"]
-topics: ["api-reference", "engine", "execution", "backtesting"]
-last_updated: "2025-10-04"
-estimated_time: "Reference material"
--->
-
 # Engine API
 
 The Engine module provides the core execution framework for Planar strategies. It handles data management, order execution, and coordinates between different execution modes (simulation, paper trading, and live trading).

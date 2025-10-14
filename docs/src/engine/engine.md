@@ -1,10 +1,3 @@
-<!--
-category: "strategy-development"
-difficulty: "advanced"
-topics: [execution-modes, margin-trading, exchanges, optimization, strategy-development]
-last_updated: "2025-10-04"
--->
-
 # Engine
 
 Within the Planar "model", we use the _call!_ and _call!_ functions to communicate between _strategies_ and _executors_. The executor calls the [strategy](../guides/strategy-development.md), implying that the [strategy](../guides/strategy-development.md) should do or return something. The [strategy](../guides/strategy-development.md) calls the executor, expecting it to do or return something.

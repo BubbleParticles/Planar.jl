@@ -1,10 +1,3 @@
-<!--
-category: "strategy-development"
-difficulty: "advanced"
-topics: [execution-modes, exchanges, optimization, strategy-development, troubleshooting, visualization]
-last_updated: "2025-10-04"
--->
-
 # Metrics Module Documentation
 
 The `Metrics` module provides functions for analyzing the outcomes of [backtest](guides/execution-modes.md#simulation-mode) runs within the trading [strategy](guides/../guides/strategy-development.md) framework.

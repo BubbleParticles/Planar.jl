@@ -1,16 +1,3 @@
-<!--
-title: "Your First Strategy Tutorial"
-description: "Build a custom RSI trading strategy from scratch"
-category: "getting-started"
-difficulty: "beginner"
-estimated_time: "20 minutes"
-prerequisites: ["quick-start", "julia-basics"]
-user_personas: ["new-user", "strategy-developer"]
-next_steps: ["strategy-development", "data-management", "optimization"]
-related_topics: ["technical-indicators", "backtesting", "performance-analysis"]
-topics: [execution-modes, exchanges, data-management, optimization, getting-started, strategy-development, troubleshooting, visualization, configuration]
-last_updated: "2025-10-04"
--->
 completion_rate: "92%"
 ---
 

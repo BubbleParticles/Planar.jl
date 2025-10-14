@@ -1,17 +1,3 @@
-<!--
-title: "Getting Started with Planar"
-description: "Complete beginner's guide to Planar trading framework"
-category: "getting-started"
-difficulty: "beginner"
-estimated_time: "30 minutes"
-prerequisites: []
-user_personas: ["new-user", "beginner-trader"]
-next_steps: ["quick-start", "installation", "first-strategy"]
-related_topics: ["strategy-development", "data-management"]
-topics: [execution-modes, margin-trading, exchanges, data-management, optimization, getting-started, strategy-development, troubleshooting, visualization, configuration]
-last_updated: "2025-10-04"
--->
-
 # Getting Started with Planar
 
 Welcome to Planar! This section will help you get up and running quickly with the Planar trading framework. Whether you're new to algorithmic trading or experienced with other platforms, these guides will help you understand Planar's unique approach and get your first [strategy](../guides/strategy-development.md) running.

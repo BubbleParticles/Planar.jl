@@ -1,12 +1,3 @@
-<!--
-title: "Documentation Search"
-description: "Search across all Planar documentation"
-category: "resources"
-difficulty: "beginner"
-topics: [search, navigation, documentation]
-last_updated: "2025-10-04"
--->
-
 # Documentation Search
 
 <div id="search-container">

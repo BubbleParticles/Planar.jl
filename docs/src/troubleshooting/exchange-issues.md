@@ -1,9 +1,3 @@
-<!--
-title: "Exchange Issues"
-description: "Solutions for exchange API and connectivity problems"
-category: "troubleshooting"
--->
-
 # Exchange Issues
 
 This guide helps resolve problems related to exchange connectivity, API authentication, and trading operations.

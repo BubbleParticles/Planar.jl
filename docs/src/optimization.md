@@ -1,10 +1,3 @@
-<!--
-title: "Parameter Optimization"
-description: "Complete guide to parameter optimization in Planar, including grid search, Bayesian optimization, and performance tuning"
-category: "advanced"
-difficulty: "advanced"
--->
-
 # Parameter Optimization
 
 Parameter optimization is a crucial aspect of strategy development that helps you find the best configuration for your trading strategies. Planar provides sophisticated optimization tools including grid search, Bayesian optimization, and custom optimization algorithms.

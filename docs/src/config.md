@@ -1,10 +1,3 @@
-<!--
-title: "Configuration Guide"
-description: "Complete guide to configuring Planar for trading, including strategy setup, exchange configuration, and secrets management"
-category: "reference"
-difficulty: "beginner"
--->
-
 # Configuration Guide
 
 Planar uses a flexible configuration system based on TOML files to manage strategies, exchanges, and sensitive credentials. This guide covers all aspects of configuration from basic setup to advanced customization.

@@ -1,16 +1,6 @@
-<!--
-category: "strategy-development"
-difficulty: "advanced"
-topics: [execution-modes, margin-trading, exchanges, data-management, optimization, strategy-development, troubleshooting, visualization, configuration]
-last_updated: "2025-10-04"
--->
-
 # Strategy Development Guide
 
-<!--
-Keywords: [strategy](guides/../guides/strategy-development.md) development, call! function, [dispatch system](guides/../guides/strategy-development.md), [margin trading](guides/../guides/strategy-development.md), [backtesting](guides/execution-modes.md#simulation)-mode), [optimization](optimization.md), [Julia](https://julialang.org/) modules, trading logic
-Description: Comprehensive guide to developing trading [strategies](guides/../guides/strategy-development.md) in Planar using [Julia](https://julialang.org/)'s [dispatch system](guides/../guides/strategy-development.md#dispatch-system), covering everything from basic concepts to advanced patterns.
--->
+
 
 This comprehensive guide covers everything you need to know about developing trading [strategies](guides/../guides/strategy-development.md) in Planar. From basic concepts to advanced patterns, you'll learn how to build robust, profitable trading systems.
 

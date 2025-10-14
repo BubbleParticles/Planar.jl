@@ -1,14 +1,3 @@
-<!--
-title: "Executors API"
-description: "Order execution and trade management"
-category: "api-reference"
-difficulty: "advanced"
-prerequisites: ["getting-started", "strategy-development"]
-topics: ["api-reference", "orders", "execution", "trading"]
-last_updated: "2025-10-04"
-estimated_time: "Reference material"
--->
-
 # Executors API
 
 The Executors module handles order execution and trade management in Planar. It provides the interface between strategy logic and actual order placement, managing the execution lifecycle across different trading modes.

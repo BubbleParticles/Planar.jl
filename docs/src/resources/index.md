@@ -1,10 +1,3 @@
-<!--
-category: "exchanges"
-difficulty: "advanced"
-topics: [exchanges]
-last_updated: "2025-10-04"
--->
-
 # Resources
 
 Additional resources and reference materials for Planar users.

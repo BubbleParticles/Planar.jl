@@ -1,9 +1,3 @@
-<!--
-title: "Installation Issues"
-description: "Solutions for common installation and setup problems"
-category: "troubleshooting"
--->
-
 # Installation Issues
 
 This guide helps resolve common problems during Planar installation and setup.

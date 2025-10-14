@@ -1,10 +1,3 @@
-<!--
-category: "api-reference"
-difficulty: "advanced"
-topics: [strategy-development]
-last_updated: "2025-10-04"
--->
-
 # StrategyTools
 
 This module implements routines common to many [strategies](../guides/strategy-development.md).

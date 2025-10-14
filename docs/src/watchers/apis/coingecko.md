@@ -1,10 +1,3 @@
-<!--
-category: "exchanges"
-difficulty: "intermediate"
-topics: [exchanges]
-last_updated: "2025-10-04"
--->
-
 # CoinGecko
 
 ### API

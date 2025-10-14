@@ -1,9 +1,3 @@
-<!--
-title: "Performance Issues"
-description: "Solutions for performance optimization and speed problems"
-category: "troubleshooting"
--->
-
 # Performance Issues
 
 This guide helps optimize Planar performance and resolve speed-related problems.

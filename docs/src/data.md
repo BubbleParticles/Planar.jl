@@ -1,16 +1,6 @@
-<!--
-category: "strategy-development"
-difficulty: "advanced"
-topics: [execution-modes, margin-trading, exchanges, data-management, optimization, strategy-development, troubleshooting, visualization, configuration]
-last_updated: "2025-10-04"
--->
-
 # Data Management
 
-<!--
-Keywords: OHLCV data, Zarr storage, LMDB, data fetching, scrapers, watchers, historical data, real-time data, market data
-Description: Comprehensive data management system for OHLCV and time-series market data using Zarr storage, LMDB backend, and multiple data collection methods.
--->
+
 
 The Data module provides comprehensive storage and management of [OHLCV](guides/data-management.md#ohlcv-data) (Open, High, Low, Close, Volume) data and other time-series [market data](guides/data-management.md).
 

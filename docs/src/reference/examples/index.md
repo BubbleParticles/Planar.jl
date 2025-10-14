@@ -1,14 +1,3 @@
-<!--
-title: "Code Examples Library"
-description: "Comprehensive library of working code examples for Planar.jl"
-category: "reference"
-difficulty: "beginner"
-prerequisites: ["getting-started"]
-topics: ["examples", "code-samples", "tutorials"]
-last_updated: "2025-10-04"
-estimated_time: "Reference material"
--->
-
 # Code Examples Library
 
 This library provides comprehensive, tested code examples for common Planar.jl use cases. All examples are organized by complexity and use case, with complete working code that you can copy and adapt for your own strategies.

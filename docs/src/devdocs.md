@@ -1,10 +1,3 @@
-<!--
-category: "getting-started"
-difficulty: "advanced"
-topics: [execution-modes, margin-trading, exchanges, data-management, optimization, getting-started, strategy-development, troubleshooting, visualization, configuration]
-last_updated: "2025-10-04"
--->
-
 # Development Documentation
 
 This comprehensive guide covers Planar's architecture, development setup, contribution guidelines, and best practices for extending the framework.
