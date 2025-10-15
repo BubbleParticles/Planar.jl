@@ -6,13 +6,13 @@ This comprehensive guide covers Planar's [data management](../guides/data-manage
 
 ## Quick Navigation
 
-- **[Storage Architecture](#storage-architecture)** - Understanding Zarr and LMDB backends
-- **[Data Collection Methods](#data-collection-methods)** - Overview of collection approaches
-- **[Historical Data](#historical-data-collection)** - Using Scrapers for bulk data collection
-- **[Real-Time Data](#real-time-data-fetching)** - Fetching live data from [exchanges](../exchanges.md)
-- **[Live Streaming](#live-data-streaming)** - Continuous data monitoring with Watchers
-- **[Custom Data Sources](#custom-data-sources)** - Integrating your own data
-- **[Data Access Patterns](#data-access-patterns)** - Efficient data querying and indexing
+- **[Storage Architecture](#Storage-Architecture)** - Understanding Zarr and LMDB backends
+- **[Data Collection Methods](#Data-Collection-Methods)** - Overview of collection approaches
+- **[Historical Data](#Historical-Data-Collection)** - Using Scrapers for bulk data collection
+- **[Real-Time Data](#Real-Time-Data-Fetching)** - Fetching live data from [exchanges](../exchanges.md)
+- **[Live Streaming](#Live-Data-Streaming)** - Continuous data monitoring with Watchers
+- **[Custom Data Sources](#Custom-Data-Sources)** - Integrating your own data
+- **[Data Access Patterns](#Data-Access-Patterns)** - Efficient data querying and indexing
 - **[optimization](../optimization.md)** - Caching and [optimization](../optimization.md) [strategies](../guides/strategy-development.md)
 - **[troubleshooting](../troubleshooting/index.md)** - Common issues and solutions
 

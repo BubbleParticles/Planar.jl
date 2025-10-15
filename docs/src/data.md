@@ -6,10 +6,10 @@ The Data module provides comprehensive storage and management of [OHLCV](guides/
 
 ## Quick Navigation
 
-- **[Storage Architecture](#storage-architecture)** - Understanding Zarr and LMDB backends
-- **[Historical Data](#historical-data-with-scrapers)** - Using Scrapers for bulk data collection
-- **[Real-Time Data](#real-time-data-with-fetch)** - Fetching live data from exchanges
-- **[Live Streaming](#live-data-streaming-with-watchers)** - Continuous data monitoring
+- **[Storage Architecture](#Storage-Architecture)** - Understanding Zarr and LMDB backends
+- **[Historical Data](#Historical-Data-with-Scrapers)** - Using Scrapers for bulk data collection
+- **[Real-Time Data](#Real-Time-Data-with-Fetch)** - Fetching live data from exchanges
+- **[Live Streaming](#Live-Data-Streaming-with-Watchers)** - Continuous data monitoring
 
 ## Prerequisites
 

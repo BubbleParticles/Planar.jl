@@ -6,12 +6,12 @@ This comprehensive guide covers everything you need to know about developing tra
 
 ## Quick Navigation
 
-- **[Strategy Fundamentals](#strategy-fundamentals)** - Core concepts and architecture
-- **[Creating Strategies](#creating-a-new-strategy)** - Interactive and manual setup
-- **[Loading Strategies](#loading-a-strategy)** - Runtime instantiation
-- **[Advanced Examples](#advanced-strategy-examples)** - Multi-timeframe, portfolio, and optimization strategies
-- **[Best Practices](#best-practices)** - Code organization and performance tips
-- **[Troubleshooting](#troubleshooting-and-debugging)** - Common issues and solutions
+- **[Strategy Fundamentals](#Strategy-Fundamentals)** - Core concepts and architecture
+- **[Creating Strategies](#Creating-a-New-Strategy)** - Interactive and manual setup
+- **[Loading Strategies](#Loading-a-Strategy)** - Runtime instantiation
+- **[Advanced Examples](#Advanced-Strategy-Examples)** - Multi-timeframe, portfolio, and optimization strategies
+- **[Best Practices](#Best-Practices)** - Code organization and performance tips
+- **[Troubleshooting](#Troubleshooting-and-Debugging)** - Common issues and solutions
 
 ## Prerequisites
 
