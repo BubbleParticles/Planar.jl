@@ -98,7 +98,7 @@ macro strategyenv!()
         using .pc: resample, islast, iscomplete, isincomplete
         using .Data: propagate_ohlcv!, stub!, load_ohlcv
         using .Data.DataStructures: CircularBuffer
-        using .Misc: after, before, rangeafter, rangebefore, LittleDict
+        using .Misc: after, before, rangeafter, rangebefore, LittleDict, DFT
         using .Misc: istaskrunning, start_task, stop_task
         using .inst: AssetInstance
         using .inst: asset, ohlcv, ohlcv_dict, raw, lastprice, bc, qc
