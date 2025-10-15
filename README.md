@@ -6,7 +6,6 @@
 [![Discord](https://img.shields.io/discord/1422807942800867351?color=7289da&label=Discord&logo=discord&logoColor=white)](https://discord.gg/3C7YpTMXqJ)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/BubbleParticles/Planar.jl)
 
-<!-- PRESENTATION BEGIN -->
 
 <div align="center">
   <img src="docs/src/assets/logo_small.png" alt="Planar.jl Logo" />
@@ -16,6 +15,8 @@
 
 <br>
 <br>
+
+<!-- PRESENTATION BEGIN -->
 
 Planar is a framework designed to help you build your own trading bot. While it is primarily built around the [CCXT](https://github.com/ccxt/ccxt) API, it can be extended to work with any custom exchange, albeit with some effort.
 
@@ -143,3 +144,5 @@ using Planar  # or PlanarInteractive for plotting and optimization
 ```
 
 Read the :book: documentation ([link](https://bubbleparticles.github.io/Planar.jl/)) to learn how to get started with the bot.
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/A0A81M3SML)
