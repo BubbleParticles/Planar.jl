@@ -6,12 +6,12 @@ This comprehensive guide covers Planar's three execution modes and how to safely
 
 ## Quick Navigation
 
-- **[Mode Overview](#mode-overview)** - Understanding the three execution modes
-- **[Simulation Mode](#simulation-mode)** - Backtesting with historical data
-- **[Paper Mode](#paper-mode)** - Real-time simulation without capital risk
-- **[Live Mode](#live-mode)** - Real trading with actual capital
-- **[Mode Transitions](#mode-transitions)** - Safe progression between modes
-- **[Best Practices](#best-practices)** - Guidelines for each mode
+- **[Mode Overview](#Mode-Overview)** - Understanding the three execution modes
+- **[Simulation Mode](#Simulation-Mode)** - Backtesting with historical data
+- **[Paper Mode](#Paper-Mode)** - Real-time simulation without capital risk
+- **[Live Mode](#Live-Mode)** - Real trading with actual capital
+- **[Mode Transitions](#Mode-Transitions)** - Safe progression between modes
+- **[Best Practices](#Best-Practices)** - Guidelines for each mode
 - **[troubleshooting](../troubleshooting/index.md)** - Common issues and solutions
 
 ## Prerequisites

@@ -6,7 +6,7 @@
 [![Discord](https://img.shields.io/discord/1422807942800867351?color=7289da&label=Discord&logo=discord&logoColor=white)](https://discord.gg/3C7YpTMXqJ)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/BubbleParticles/Planar.jl)
 
-
+<!-- PRESENTATION BEGIN -->
 
 <div align="center">
   <img src="docs/src/assets/logo_small.png" alt="Planar.jl Logo" />
@@ -95,7 +95,7 @@ Here's a comparison of features with other popular trading frameworks:
 
 *Note: OHLCV data can be shared among strategies.*
 
-
+<!-- PRESENTATION END -->
 
 ## Install
 ### With docker

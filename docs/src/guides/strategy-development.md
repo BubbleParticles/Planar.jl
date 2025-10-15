@@ -2,15 +2,15 @@
 
 
 
-This comprehensive guide covers everything you need to know about developing trading [strategies](../guides/strategy-development.md) in Planar. From basic concepts to advanced patterns, you'll learn how to build robust, profitable trading systems using [Julia](https://julialang.org/)'s powerful [dispatch system](../guides/strategy-development.md#dispatch-system).
+This comprehensive guide covers everything you need to know about developing trading [strategies](../guides/strategy-development.md) in Planar. From basic concepts to advanced patterns, you'll learn how to build robust, profitable trading systems using [Julia](https://julialang.org/)'s powerful [dispatch system](../guides/strategy-development.md#Dispatch-System).
 
 ## Quick Navigation
 
-- **[Strategy Fundamentals](#strategy-fundamentals)** - Core concepts and architecture
+- **[Strategy Fundamentals](#Strategy-Fundamentals)** - Core concepts and architecture
 - **[strategies](../guides/strategy-development.md)** - Interactive and manual setup
-- **[Strategy Interface](#strategy-interface)** - Understanding the call! dispatch system
-- **[Advanced Examples](#advanced-examples)** - Multi-[timeframe](../guides/data-management.md#timeframes), portfolio, and [optimization](../optimization.md) strategies
-- **[Best Practices](#best-practices)** - Code organization and performance tips
+- **[Strategy Interface](#Strategy-Interface)** - Understanding the call! dispatch system
+- **[Advanced Examples](#Advanced-Examples)** - Multi-[timeframe](../guides/data-management.md#timeframes), portfolio, and [optimization](../optimization.md) strategies
+- **[Best Practices](#Best-Practices)** - Code organization and performance tips
 - **[troubleshooting](../troubleshooting/index.md)** - Common issues and solutions
 
 ## Prerequisites
@@ -39,7 +39,7 @@ Planar strategies are built around Julia's powerful dispatch system, enabling cl
 - **Dispatch System**: Uses `call!` methods to handle different strategy events
 - **Asset Universe**: Collection of tradeable assets managed by the strategy
 - **Execution Modes**: Sim ([backtesting](../guides/execution-modes.md#simulation)-mode)), Paper (simulated live), and Live trading
-- **Margin Support**: Full support for isolated and [cross margin](../guides/strategy-development.md#margin-modes) trading
+- **Margin Support**: Full support for isolated and [cross margin](../guides/strategy-development.md#Margin-Modes) trading
 
 #### Strategy Type Hierarchy
 
@@ -53,7 +53,7 @@ Where:
 
 ### Dispatch System
 
-The strategy interface uses Julia's [multiple dispatch](../guides/strategy-development.md#dispatch-system) through the `call!` function. This pattern allows you to define different behaviors for different contexts while maintaining clean, extensible code.
+The strategy interface uses Julia's [multiple dispatch](../guides/strategy-development.md#Dispatch-System) through the `call!` function. This pattern allows you to define different behaviors for different contexts while maintaining clean, extensible code.
 
 #### Key Dispatch Patterns
 
@@ -71,7 +71,7 @@ You can customize behavior for specific [exchanges](../exchanges.md):
 
 ### Margin Trading Concepts
 
-Planar provides comprehensive [margin trading](../guides/strategy-development.md#margin-trading-concepts) support with proper position management and risk controls.
+Planar provides comprehensive [margin trading](../guides/strategy-development.md#Margin-Trading-Concepts) support with proper position management and risk controls.
 
 #### Margin Modes
 
