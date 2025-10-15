@@ -1,4 +1,4 @@
-FROM julia:1.11 AS base
+FROM julia:1.12 AS base
 RUN mkdir /planar \
     && apt-get update \
     && apt-get -y install sudo direnv git \
