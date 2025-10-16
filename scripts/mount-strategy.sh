@@ -52,3 +52,4 @@ if ! mount --rbind "$SOURCE_STRATEGY_DIR" "$TARGET_STRATEGY_DIR"; then
 fi
 
 echo "Successfully mounted $SOURCE_STRATEGY_DIR to $TARGET_STRATEGY_DIR"
+echo "Remember to link keys folder to user/keys"
