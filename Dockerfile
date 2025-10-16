@@ -25,6 +25,8 @@ ENV JULIA_LOAD_PATH=:/planar
 ENV JULIA_CONDAPKG_ENV=/planar/user/.conda
 # avoids progressbar spam
 ENV CI=true
+COPY --chown=plnuser:plnuser ./Project.toml /planar/
+COPY --chown=plnuser:plnuser ./Manifest.toml /planar/
 COPY --chown=plnuser:plnuser ./Lang/ /planar/Lang/
 COPY --chown=plnuser:plnuser ./Python/*.toml /planar/Python/
 # Instantiate python env since CondaPkg is pulled from master
