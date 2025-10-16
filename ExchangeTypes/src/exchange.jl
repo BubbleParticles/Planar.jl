@@ -190,7 +190,10 @@ params(exc::Exchange) = getfield(exc, :params)
 
 function _first(exc::Exchange, args::Vararg{Symbol})
     for name in args
-        has(exc, name) && return getproperty(getfield(exc, :py), name)
+        if has(exc, name)
+            py = getfield(exc, :py)
+            return getproperty(py, name)
+        end
     end
 end
 
