@@ -49,7 +49,7 @@ jobs:
         name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
-          username: psydyllic
+          username: bubbleparticles
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       -
         name: Setup tmate session
@@ -66,7 +66,7 @@ jobs:
         with:
           # list of Docker images to use as base name for tags
           images: |
-            psydyllic/planar-precomp
+            bubbleparticles/planar-precomp
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule
@@ -100,7 +100,7 @@ jobs:
         with:
           # list of Docker images to use as base name for tags
           images: |
-            psydyllic/planar-sysimage
+            bubbleparticles/planar-sysimage
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule
@@ -135,7 +135,7 @@ jobs:
         with:
           # list of Docker images to use as base name for tags
           images: |
-            psydyllic/planar-precomp-interactive
+            bubbleparticles/planar-precomp-interactive
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule
@@ -169,7 +169,7 @@ jobs:
         with:
           # list of Docker images to use as base name for tags
           images: |
-            psydyllic/planar-sysimage-interactive
+            bubbleparticles/planar-sysimage-interactive
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule
