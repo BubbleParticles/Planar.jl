@@ -15,6 +15,10 @@ using .Lang: @preset, @precomp
         end
     end
     s = strategy()
+    if get(ENV, "CI", "") != ""
+        e = exchange(s)
+        setexchange!(e, markets=:force)
+    end
     @precomp begin
         assets(s)
         instances(s)
