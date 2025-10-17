@@ -394,7 +394,7 @@ function strategy(src::Union{Symbol,Module,String}, cfg::Config; save=false)
 end
 
 @doc """ Returns the default strategy (`BareStrat`). """
-strategy() = strategy(:BareStrat; parent_module=Strategies)
+strategy(; kwargs...) = strategy(:BareStrat; parent_module=Strategies, kwargs...)
 
 @doc """ Saves the state of a strategy.
 
