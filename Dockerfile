@@ -60,6 +60,7 @@ ARG PLANAR_PHEMEX_SANDBOX_APIKEY
 ARG PLANAR_PHEMEX_SANDBOX_SECRET
 ARG PLANAR_PHEMEX_SANDBOX_PASSWORD
 ENV JULIA_PROJECT=/planar/Planar
+ENV CI=true
 RUN $JULIA_CMD -e "import Pkg; Pkg.instantiate()"
 RUN $JULIA_CMD -e "using Planar; using Metrics"
 RUN $JULIA_CMD -e "using Metrics"

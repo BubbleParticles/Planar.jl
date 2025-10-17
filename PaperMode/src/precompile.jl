@@ -2,7 +2,8 @@ using .Misc.Lang: Lang, @preset, @precomp, @m_str, @ignore
 
 @preset let
     st.Instances.Exchanges.Python.py_start_loop()
-    s = st.strategy(st.BareStrat; mode=Paper())
+    kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binanceusdm) : (;)
+    s = st.strategy(st.BareStrat; mode=Paper(), kwargs...)
     s[:log_to_stdout] = true
     sml = SimMode.sml
     for ai in s.universe
