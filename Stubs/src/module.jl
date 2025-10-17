@@ -84,12 +84,14 @@ end
 
 @preset let
     Python.py_start_loop()
+    kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binanceusdm) : (;)
+    cfg = Config(; kwargs...)
     @precomp let
         try
-            s = stub_strategy()
+            s = stub_strategy(; cfg)
             gensave_trades(; s, dosave=true)
         catch
-            s = stub_strategy(; dostub=false)
+            s = stub_strategy(; cfg, dostub=false)
             while any(isempty(ai.history) for ai in s.universe)
                 gensave_trades(; s, dosave=true)
             end
@@ -97,7 +99,7 @@ end
                 save_stubtrades(ai)
             end
             try
-                stub_strategy(; dostub=true)
+                stub_strategy(; cfg, dostub=true)
             catch e
                 if e isa UndefVarError
                     stub_strategy(; dostub=false)
