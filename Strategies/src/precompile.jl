@@ -14,11 +14,9 @@ using .Lang: @preset, @precomp
             tries += 1
         end
     end
-    s = strategy()
-    if get(ENV, "CI", "") != ""
-        e = exchange(s)
-        setexchange!(e, markets=:force)
-    end
+    # binance bans CI ips, use binanceusdm instead
+    kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binanceusdm) : (;)
+    s = strategy(; kwargs...)
     @precomp begin
         assets(s)
         instances(s)
