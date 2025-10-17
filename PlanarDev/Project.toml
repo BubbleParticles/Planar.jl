@@ -1,7 +1,7 @@
 name = "PlanarDev"
 uuid = "df15b565-ff7f-4c64-9bc8-38e9343ea891"
-authors = ["zbc"]
 version = "0.1.0"
+authors = ["zbc"]
 
 [deps]
 BlackBoxOptim = "a134a8b2-14d6-55f6-9291-3336d3ab0209"
@@ -10,7 +10,6 @@ Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
-Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 Scrapers = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
 Stubs = "19a5ee1f-efca-4178-b297-263c7ceb508d"
 
