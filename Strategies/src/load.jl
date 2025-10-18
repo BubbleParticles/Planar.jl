@@ -136,7 +136,12 @@ The `sandbox` property is set based on the mode of the configuration.
 Finally, it performs checks on the loaded strategy.
 """
 function default_load(mod::Module, t::Type, config::Config)
-    assets = invokelatest(mod.call!, t, StrategyMarkets())
+    call_func = if isdefined(mod, :call!)
+        invokelatest(getfield, mod, :call!)
+    else
+        call!
+    end
+    assets = invokelatest(call_func, t, StrategyMarkets())
     if config.mode == Paper()
         config.sandbox = true
     end
@@ -266,7 +271,7 @@ function _strategy_type(mod, cfg)
             end
             try
                 if E != nothing && E != cfg.exchange
-                    @warn "loading: overriding default exchange with config" mod.EXCID cfg.exchange
+                    @warn "loading: overriding default exchange with config" E cfg.exchange
                 end
                 invokelatest(getfield, mod, :SC){ExchangeID{cfg.exchange}}
             catch
