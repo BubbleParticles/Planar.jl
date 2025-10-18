@@ -24,7 +24,7 @@ const CACHE = Dict{Symbol,Any}()
 Strategies.@interface
 
 const DESCRIPTION = "Strategy to generate stub data"
-const EXC = :binance
+const EXC = :binanceusdm
 const EXCID = ExchangeID(EXC)
 const S{M} = Strategy{M,nameof(@__MODULE__),typeof(EXCID),NoMargin}
 const SC{E,M,R} = Strategy{M,nameof(@__MODULE__()),E,R}

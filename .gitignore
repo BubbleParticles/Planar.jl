@@ -24,6 +24,8 @@ reports/
 docs/maintenance/*-report.md
 docs/test/results/
 TODO.txt
+Stubs/test/stubs/trades_stub_*.jls
+PlanarDev/test/stubs/trades_stub_*.jls
 
 !/**/deps/precompiles/*_Planar*.jl
 !Data/vendor/.gitkeep
