@@ -84,8 +84,7 @@ end
 
 @preset let
     Python.py_start_loop()
-    kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binanceusdm) : (;)
-    cfg = Config(; kwargs...)
+    cfg = Config()
     @precomp let
         try
             s = stub_strategy(; cfg)
