@@ -60,10 +60,10 @@ using .Misc.Lang: @preset, @precomp, @ignore
     empty!(TASK_STATE) # NOTE: Required to avod spurious errors
     empty!(CLIENTS) # NOTE: Required to avod spurious errors
     empty!(RUNNING) # NOTE: Required to avod spurious errors
+    @debug "PRECOMP: remote 5" # lm.positions_watcher(s) lm.balance_watcher(s)
+    dostop()
     HTTP.Connections.closeall()
     LiveMode.ExchangeTypes._closeall()
     Base.GC.gc(true) # trigger finalizer
     LiveMode.ExchangeTypes.Python.py_stop_loop()
-    @debug "PRECOMP: remote 5" # lm.positions_watcher(s) lm.balance_watcher(s)
-    dostop()
 end
