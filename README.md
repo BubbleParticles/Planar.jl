@@ -1,7 +1,6 @@
 [![build-status-docs](https://github.com/bubbleparticles/Planar.jl/actions/workflows/docs.yml/badge.svg?branch=master)](https://bubbleparticles.github.io/Planar.jl/)
 [![docs-validation](https://github.com/bubbleparticles/Planar.jl/actions/workflows/docs-validation.yml/badge.svg?branch=master)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/docs-validation.yml)
 [![build-status-docker](https://github.com/bubbleparticles/Planar.jl/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/build.yml)
-[![build-status-docker-v1.0.1](https://github.com/bubbleparticles/Planar.jl/actions/workflows/build.yml/badge.svg?branch=v1.0.1)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/build.yml)
 [![tests](https://github.com/bubbleparticles/Planar.jl/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/tests.yml)
 [![Discord](https://img.shields.io/discord/1422807942800867351?color=7289da&label=Discord&logo=discord&logoColor=white)](https://discord.gg/3C7YpTMXqJ)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/BubbleParticles/Planar.jl)
