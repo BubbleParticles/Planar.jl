@@ -6,6 +6,7 @@ function recurse_projects(
     io=stdout,
     top=true,
     exclude=("test", "docs", "deps", "user", ".conda", ".CondaPkg", ".git"),
+    include=(),
     top_proj=Base.active_project(),
     kwargs...,
 )
@@ -18,6 +19,14 @@ function recurse_projects(
             if !startswith(fullpath, ".") && all(!endswith(fullpath, e) for e in exclude)
                 recurse_projects(f, fullpath; io, top=false, top_proj, kwargs...)
             end
+        end
+    end
+    for path in include
+        if isdir(path)
+            fullpath = joinpath(path, "Project.toml")
+            f(path, fullpath; io, kwargs...)
+        else
+            @warn "path does not exist" path
         end
     end
     top && Pkg.activate(top_proj)
@@ -43,7 +52,7 @@ function _update_project(path, fullpath; precomp, inst, doupdate, io=stdout)
 end
 
 function update_projects(path="."; io=stdout, doupdate=false, inst=false, precomp=false)
-    recurse_projects(_update_project, path; io, doupdate, inst, precomp)
+    recurse_projects(_update_project, path; io, doupdate, inst, precomp, include="PlanarDev/test")
 end
 
 function _project_name!(path, fullpath; io, projects)
