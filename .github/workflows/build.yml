@@ -71,6 +71,7 @@ jobs:
           tags: |
             type=schedule
             type=ref,event=tag
+            type=ref,event=tag,suffix=,event=latest
             type=ref,event=branch
             type=ref,event=pr
             type=semver,pattern={{version}}
@@ -105,6 +106,7 @@ jobs:
           tags: |
             type=schedule
             type=ref,event=tag
+            type=ref,event=tag,suffix=,event=latest
             type=ref,event=branch
             type=ref,event=pr
             type=semver,pattern={{version}}
@@ -140,6 +142,7 @@ jobs:
           tags: |
             type=schedule
             type=ref,event=tag
+            type=ref,event=tag,suffix=,event=latest
             type=ref,event=branch
             type=ref,event=pr
             type=semver,pattern={{version}}
@@ -174,6 +177,7 @@ jobs:
           tags: |
             type=schedule
             type=ref,event=tag
+            type=ref,event=tag,suffix=,event=latest
             type=ref,event=branch
             type=ref,event=pr
             type=semver,pattern={{version}}
