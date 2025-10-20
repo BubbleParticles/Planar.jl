@@ -2,32 +2,32 @@ name = "Planar"
 uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 authors = [""]
 data_store = ""
-version = "1.5.30"
+version = "1.6.0"
 
 [deps]
-Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
-Engine = "2ee4d486-7c03-4138-87ff-17a01ae58543"
-MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-Preferences = "21216c6a-2e73-6563-6e65-726566657250"
-REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
-Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-Remote = "711acd30-27b5-475d-809f-796ffbe15f78"
 URIs = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
+Engine = "2ee4d486-7c03-4138-87ff-17a01ae58543"
 YAML = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
+Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
+Preferences = "21216c6a-2e73-6563-6e65-726566657250"
+MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 Zarr = "0a941bbe-ad1d-11e8-39d9-ab76183a1d99"
-
-[weakdeps]
-CausalityTools = "01837fd2-c099-442f-ae89-75fa208aad36"
-
-[compat]
-Clustering = "0.15.8"
-URIs = "1.6.1"
-YAML = "0.4.14"
+Remote = "711acd30-27b5-475d-809f-796ffbe15f78"
 
 [extras]
 Data = "934a4ae5-3fdb-4fa4-b6dd-2cd889d3d27b"
 SnoopPrecompile = "66db9d55-30c0-4569-8b51-7e840670fc0c"
+
+[compat]
+URIs = "1.6.1"
+YAML = "0.4.14"
+Clustering = "0.15.8"
+
+[weakdeps]
+CausalityTools = "01837fd2-c099-442f-ae89-75fa208aad36"
 
 [preferences.Data]
 data_store = "lmdb"
