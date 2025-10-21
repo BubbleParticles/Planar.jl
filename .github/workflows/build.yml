@@ -69,6 +69,7 @@ jobs:
             bubbleparticles/planar-precomp
           # generate Docker tags based on the following events/attributes
           tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
             type=schedule
             type=ref,event=tag
             type=ref,event=branch
@@ -103,6 +104,7 @@ jobs:
             bubbleparticles/planar-sysimage
           # generate Docker tags based on the following events/attributes
           tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
             type=schedule
             type=ref,event=tag
             type=ref,event=branch
@@ -172,6 +174,7 @@ jobs:
             bubbleparticles/planar-sysimage-interactive
           # generate Docker tags based on the following events/attributes
           tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
             type=schedule
             type=ref,event=tag
             type=ref,event=branch
