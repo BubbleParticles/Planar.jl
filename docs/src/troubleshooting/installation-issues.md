@@ -130,7 +130,7 @@ end
 docker build --no-cache -t planar .
 
 # Or use pre-built image
-docker pull docker.io/psydyllic/planar-sysimage
+docker pull docker.io/bubbleparticles/planar-sysimage
 ```
 
 ### Volume Mount Issues
