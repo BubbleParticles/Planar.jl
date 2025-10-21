@@ -56,10 +56,10 @@ using PlanarInteractive
 ### Docker Usage
 ```bash
 # Development with interactive features
-docker pull docker.io/psydyllic/planar-sysimage-interactive
+docker pull docker.io/bubbleparticles/planar-sysimage-interactive
 
 # Production deployment
-docker pull docker.io/psydyllic/planar-sysimage
+docker pull docker.io/bubbleparticles/planar-sysimage
 
 # Build custom image
 scripts/build.sh

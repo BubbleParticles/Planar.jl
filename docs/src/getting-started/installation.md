@@ -41,7 +41,7 @@ julia --project=Planar
 
 ```bash
 # Pull pre-built image
-docker pull docker.io/psydyllic/planar-sysimage
+docker pull docker.io/bubbleparticles/planar-sysimage
 
 # Or build locally
 scripts/build.sh

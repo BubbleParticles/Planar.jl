@@ -102,22 +102,22 @@ Here's a comparison of features with other popular trading frameworks:
 For developing strategies:
 ``` bash
 # Sysimage build (the largest number of methods precompiled) plus interactive modules (plotting and optimization)
-docker pull docker.io/psydyllic/planar-sysimage-interactive
+docker pull docker.io/bubbleparticles/planar-sysimage-interactive
 
 ```
 For running live strategies
 ``` bash
 # Sysimage build with only the core components, better for live deployments
-docker pull docker.io/psydyllic/planar-sysimage
+docker pull docker.io/bubbleparticles/planar-sysimage
 ```
 
 For developing planar
 
 ``` bash
 # Precomp build. Slower loading times, smaller image
-docker pull docker.io/psydyllic/planar-precomp-interactive
+docker pull docker.io/bubbleparticles/planar-precomp-interactive
 # Precomp build without interactive modules
-docker pull docker.io/psydyllic/planar-precomp
+docker pull docker.io/bubbleparticles/planar-precomp
 ```
 
 ### From sources
