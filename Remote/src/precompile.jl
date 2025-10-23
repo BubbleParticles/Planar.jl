@@ -1,7 +1,7 @@
 using .Misc.Lang: @preset, @precomp, @ignore
 
 @preset let
-    using Telegram.HTTP
+    using Telegram.HTTP, Telegram.API
     # ENV["JULIA_DEBUG"] = "Remote,LiveMode,LogWatchBalance"
     function closeconn_layer(handler)
         return function (req; kw...)
@@ -19,9 +19,12 @@ using .Misc.Lang: @preset, @precomp, @ignore
     chat_id = ENV["TELEGRAM_BOT_CHAT_ID"] = "-1001996551827"
     Remote.TIMEOUT[] = 1
     @debug "PRECOMP: remote 2"
+    
     @precomp begin
+        cl = tgclient(s)
+        # Delete any existing webhook to avoid 409 conflicts during precompilation
+        Remote.safe_delete_webhook(cl)
         tgstart!(s)
-        tgclient(s)
     end
     cl = tgclient(s)
     text = "abc123"
