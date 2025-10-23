@@ -111,6 +111,29 @@ This function sends a message to the user indicating that the command they attem
 function invalid(cl, text, chat_id)
     sendMessage(cl; text=string("invalid command: ", text), chat_id)
 end
+
+@doc """ Safely deletes webhook to avoid conflicts with polling mode.
+
+$(TYPEDSIGNATURES)
+
+This function attempts to delete any existing webhook on the bot to prevent HTTP 409 conflicts
+when using polling mode (getUpdates). It handles common error cases gracefully.
+"""
+function safe_delete_webhook(client::TelegramClient)
+    try
+        Telegram.API.deleteWebhook(client)
+        @debug "tg: webhook deleted successfully"
+        return true
+    catch e
+        if e isa HTTP.StatusError && e.status == 400
+            @debug "tg: no webhook to delete (expected)"
+            return true
+        else
+            @warn "tg: failed to delete webhook" exception=e
+            return false
+        end
+    end
+end
 @doc """ Creates an asynchronous task for handling Telegram messages.
 
 $(TYPEDSIGNATURES)
@@ -214,6 +237,8 @@ This function checks if a Telegram client for the provided strategy already exis
 """
 function tgstart!(s::Strategy)
     cl = tgclient(s)
+    # Ensure no webhook conflicts when starting polling mode
+    safe_delete_webhook(cl)
     state = _get_state(s)
     state = if isnothing(state) || istaskdone(state.task)
         setMyCommands(cl; commands=tgcommands())
@@ -305,6 +330,18 @@ function tgrun(
                 err.error isa InterruptException
             )
                 break
+            elseif err isa HTTP.StatusError && err.status == 409
+                # Handle webhook conflict by deleting webhook and retrying
+                @warn "tg: webhook conflict detected, attempting to delete webhook"
+                try
+                    Telegram.API.deleteWebhook(tg)
+                    @info "tg: webhook deleted successfully, retrying..."
+                    # Continue the loop to retry
+                catch delete_err
+                    @error "tg: failed to delete webhook" exception = delete_err
+                    @debug_backtrace
+                    # Still continue the loop in case the issue resolves itself
+                end
             else
                 @error "tg: error" exception = err
                 @debug_backtrace
