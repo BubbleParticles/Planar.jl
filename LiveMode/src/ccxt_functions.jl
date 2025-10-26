@@ -224,7 +224,8 @@ end
 issupported(exc, syms::Vararg{Symbol}) = begin
     all(let
         this_syms = (Symbol(sym, :Ws), sym)
-        !isnothing(first(exc, this_syms...))
+        f = first(exc, this_syms...)
+        !isnothing(f)
     end
         for sym in syms)
 end
@@ -308,15 +309,13 @@ function ccxt_create_order_func!(a, exc)
 end
 
 function positions_func(exc::Exchange, ais, args...; timeout, kwargs...)
-    _execfunc_timeout(
-        first(exc, :fetchPositionsWs, :fetchPositions), _syms(ais), args...; timeout, kwargs...
-    )
+    f = first(exc, :fetchPositionsWs, :fetchPositions)
+    _execfunc_timeout(f, _syms(ais), args...; timeout, kwargs...)
 end
 
 function position_func(exc::Exchange, ai, args...; timeout, kwargs...)
-    _execfunc_timeout(
-        first(exc, :fetchPositionWs, :fetchPosition), raw(ai), args...; timeout, kwargs...
-    )
+    f = first(exc, :fetchPositionWs, :fetchPosition)
+    _execfunc_timeout(f, raw(ai), args...; timeout, kwargs...)
 end
 
 function watch_positions_handler(exc::Exchange, ais, args...; f_push, kwargs...)
