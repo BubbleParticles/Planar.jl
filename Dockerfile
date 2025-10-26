@@ -101,6 +101,9 @@ CMD $JULIA_CMD --sysimage "/planar/Planar.so"
 FROM planar-precomp-interactive AS planar-sysimage-interactive
 USER root
 ENV JULIA_PROJECT=/planar/PlanarInteractive
+ARG CPU_TARGET=aes
+ARG JULIA_CMD="$JULIA_BIN -C $CPU_TARGET"
+ENV JULIA_CPU_TARGET ${CPU_TARGET}
 RUN apt-get install -y gcc g++
 ARG COMPILE_SCRIPT
 RUN scripts/docker_compile.sh; \
