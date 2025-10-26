@@ -6,7 +6,9 @@ function _precomp_strat(mod=Optim)
         using .SimMode: Executors as ect, sml
         using .SimMode.Misc: ZERO
 
-        s = st.strategy(st.BareStrat)
+        s = let kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binanceusdm) : (;)
+            st.strategy(st.BareStrat)
+        end
         for ai in s.universe
             append!(
                 st.Instances.ohlcv_dict(ai)[s.timeframe],
