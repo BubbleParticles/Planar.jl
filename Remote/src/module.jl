@@ -332,7 +332,7 @@ function tgrun(
                 break
             elseif err isa HTTP.StatusError && err.status == 409
                 # Handle webhook conflict by deleting webhook and retrying
-                @warn "tg: webhook conflict detected, attempting to delete webhook"
+                @warn "tg: webhook conflict detected, attempting to delete webhook" msg = err.body
                 try
                     Telegram.API.deleteWebhook(tg)
                     @info "tg: webhook deleted successfully, retrying..."
