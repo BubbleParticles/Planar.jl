@@ -4,7 +4,7 @@ include("precompile_call.jl")
 
 @preset let
     st.Instances.Exchanges.Python.py_start_loop()
-    kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binance) : (;)
+    kwargs = get(ENV, "CI", "") != "" ? (; exchange = :bitmex) : (;)
     s = st.strategy(st.BareStrat; kwargs...)
     @precomp begin
         ohlcv_dict(s[m"btc"])[s.timeframe]

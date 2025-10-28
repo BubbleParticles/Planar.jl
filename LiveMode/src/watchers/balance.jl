@@ -253,6 +253,7 @@ function _balance_setup_stall_guard!(state)
             end
             sleep(10)
         end
+        @debug "balance watcher: stall guard task stopped" _module = LogWatchBalProcess
     end
 end
 

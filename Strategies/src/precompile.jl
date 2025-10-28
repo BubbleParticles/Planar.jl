@@ -15,7 +15,7 @@ using .Lang: @preset, @precomp
         end
     end
     # binance bans CI ips, use binanceusdm instead
-    kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binance) : (;)
+    kwargs = get(ENV, "CI", "") != "" ? (; exchange = :bitmex) : (;)
     s = strategy(; kwargs...)
     @precomp begin
         assets(s)

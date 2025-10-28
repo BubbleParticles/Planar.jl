@@ -12,7 +12,7 @@ using .Misc.Lang: @preset, @precomp, @ignore
     HTTP.pushlayer!(closeconn_layer)
     LiveMode.ExchangeTypes.Python.py_start_loop()
     mod = LiveMode.st.BareStrat
-    kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binance) : (;)
+    kwargs = get(ENV, "CI", "") != "" ? (; exchange = :bitmex) : (;)
     s = LiveMode.st.strategy(mod, Config(; mode=Live(), kwargs...))
     # NOTE: needs a telegram token bot
     ENV["TELEGRAM_BOT_TOKEN"] = "6911910250:AAERDZD9hc8e33_c63Wyw6xyWVXn_DhdHyU"

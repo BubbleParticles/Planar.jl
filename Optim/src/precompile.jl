@@ -6,7 +6,7 @@ function _precomp_strat(mod=Optim)
         using .SimMode: Executors as ect, sml
         using .SimMode.Misc: ZERO
 
-        s = let kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binance) : (;)
+        s = let kwargs = get(ENV, "CI", "") != "" ? (; exchange = :bitmex) : (;)
             st.strategy(st.BareStrat)
         end
         for ai in s.universe
