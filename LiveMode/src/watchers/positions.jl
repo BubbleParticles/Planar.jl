@@ -151,6 +151,7 @@ function _start_stall_guard!(w, s, kwargs)
             end
             sleep(10)
         end
+        @debug "positions watcher: stall guard task stopped" _module = LogWatchPosProcess
     end
 end
 
