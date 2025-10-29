@@ -741,7 +741,7 @@ weakdeps = ["REPL"]
 deps = ["Clustering", "Engine", "MacroTools", "Pkg", "Preferences", "REPL", "Random", "Remote", "URIs", "YAML", "Zarr"]
 path = "../Planar"
 uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
-version = "1.6.5"
+version = "1.6.6"
 
     [deps.Planar.weakdeps]
     CausalityTools = "01837fd2-c099-442f-ae89-75fa208aad36"
