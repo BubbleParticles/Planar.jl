@@ -100,6 +100,7 @@ CMD $JULIA_CMD --sysimage "/planar/Planar.so"
 
 FROM planar-precomp-interactive AS planar-sysimage-interactive
 USER root
+ENV CI=true
 ENV JULIA_PROJECT=/planar/PlanarInteractive
 ARG CPU_TARGET=generic,+aes
 ARG JULIA_CMD="$JULIA_BIN -C $CPU_TARGET"
