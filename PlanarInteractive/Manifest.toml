@@ -2355,7 +2355,7 @@ version = "0.3.3"
 [[deps.Planar]]
 path = "../Planar"
 uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
-version = "1.6.6"
+version = "1.6.7"
 
     [deps.Planar.deps]
     Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
