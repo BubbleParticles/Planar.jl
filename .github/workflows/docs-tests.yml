@@ -1,0 +1,176 @@
+name: docs-tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        type: boolean
+        description: "Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)"
+        required: false
+        default: false
+  push:
+    branches: [main, master, develop]
+    paths:
+      - "docs/**"
+      - "*.md"
+      - ".github/workflows/docs-tests.yml"
+  pull_request:
+    branches: [main, master, develop]
+    paths:
+      - "docs/**"
+      - "*.md"
+      - ".github/workflows/docs-tests.yml"
+  schedule:
+    # Run weekly to catch issues with external dependencies
+    - cron: "0 0 * * 0"
+
+jobs:
+  validate-documentation:
+    name: Validate Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.x"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y aspell aspell-en
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          limit-access-to-actor: true
+        timeout-minutes: 300
+
+      - name: Setup Julia
+        uses: julia-actions/setup-julia@v1
+        with:
+          version: "1.12"
+
+      - name: Cache Julia packages
+        uses: julia-actions/cache@v1
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r scripts/validation/requirements.txt
+
+      - name: Make scripts executable
+        run: chmod +x scripts/validation/*.sh
+
+      - name: Setup Julia environment
+        run: |
+          julia --project=Planar -e '
+            using Pkg
+            Pkg.instantiate()
+            Pkg.precompile()
+          '
+      - name: Create results directory
+        run: mkdir -p docs/test/results
+
+      - name: Run documentation tests
+        run: |
+          julia --project=docs docs/test/runtests.jl --verbose \
+            --output=docs/test/results/test-results.toml
+
+      - name: Run Markdown complexity check
+        run: python scripts/validation/markdown_complexity.py || true
+
+      - name: Run heading hierarchy check
+        run: python scripts/validation/heading_hierarchy.py || true
+
+      - name: Run accessibility check
+        run: bash scripts/validation/accessibility.sh || true
+
+      - name: Run performance check
+        run: bash scripts/validation/performance.sh || true
+
+      - name: Run spell check
+        run: bash scripts/validation/spellcheck.sh || true
+
+      - name: Run writing issues check
+        run: bash scripts/validation/writing_issues.sh || true
+
+      - name: Upload validation reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-reports
+          path: |
+            docs/test/results/
+            docs/maintenance/link-check-report.md
+            docs/maintenance/template-compliance-report.md
+            docs/maintenance/freshness-report.md
+
+      - name: Comment PR with validation results
+        uses: actions/github-script@v6
+        if: github.event_name == 'pull_request'
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read validation reports
+            let comment = '## 📋 Documentation Validation Results\n\n';
+
+            try {
+              // Link check results
+              if (fs.existsSync('docs/maintenance/link-check-report.md')) {
+                const linkReport = fs.readFileSync('docs/maintenance/link-check-report.md', 'utf8');
+                const brokenLinks = (linkReport.match(/❌/g) || []).length;
+                if (brokenLinks === 0) {
+                  comment += '✅ **Link Validation**: All links are working\n';
+                } else {
+                  comment += `❌ **Link Validation**: ${brokenLinks} broken links found\n`;
+                }
+              }
+
+              // Template compliance results
+              if (fs.existsSync('docs/maintenance/template-compliance-report.md')) {
+                const templateReport = fs.readFileSync('docs/maintenance/template-compliance-report.md', 'utf8');
+                const issues = (templateReport.match(/❌|⚠️/g) || []).length;
+                if (issues === 0) {
+                  comment += '✅ **Template Compliance**: All templates followed correctly\n';
+                } else {
+                  comment += `⚠️ **Template Compliance**: ${issues} issues found\n`;
+                }
+              }
+
+              comment += '\n📊 **Detailed Reports**: Check the workflow artifacts for complete validation reports.\n';
+
+              // Add guidance for contributors
+              comment += '\n### For Contributors\n';
+              comment += 'If validation failed:\n';
+              comment += '1. Check the detailed reports in the workflow artifacts\n';
+              comment += '2. Fix any broken links or formatting issues\n';
+              comment += '3. Ensure proper frontmatter and template compliance\n';
+              comment += '4. Run validation scripts locally before pushing:\n';
+              comment += '   ```bash\n';
+              comment += '   ./scripts/check-links.sh\n';
+              comment += '   ./scripts/check-templates.sh\n';
+              comment += '   julia docs/test/runtests.jl\n';
+              comment += '   ```\n';
+              comment += '\n### Code Block Review\n';
+              comment += 'For code block consistency, please refer to the [AI Code Block Review Guide](docs/maintenance/ai-code-block-review-guide.md) for systematic review procedures.\n';
+
+            } catch (error) {
+              comment += `❌ **Validation Error**: ${error.message}\n`;
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

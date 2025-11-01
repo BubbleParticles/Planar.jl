@@ -42,8 +42,9 @@ jobs:
         uses: actions/cache/restore@v3
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          key: ${{ runner.os }}-buildx-${{ env.JULIA_VERSION }}-${{ github.sha }}
           restore-keys: |
+            ${{ runner.os }}-buildx-${{ env.JULIA_VERSION }}-
             ${{ runner.os }}-buildx-
       -
         name: Login to Docker Hub
@@ -217,7 +218,7 @@ jobs:
         if: ${{ !cancelled() }}
         with:
           path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
+          key: ${{ runner.os }}-buildx-${{ env.JULIA_VERSION }}-${{ github.sha }}
       - name: Cleanup
         if: always()
         run: |
