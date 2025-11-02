@@ -119,20 +119,30 @@ $(TYPEDSIGNATURES)
 This function attempts to delete any existing webhook on the bot to prevent HTTP 409 conflicts
 when using polling mode (getUpdates). It handles common error cases gracefully.
 """
-function safe_delete_webhook(client::TelegramClient)
-    try
-        Telegram.API.deleteWebhook(client)
-        @debug "tg: webhook deleted successfully"
-        return true
-    catch e
-        if e isa HTTP.StatusError && e.status == 400
-            @debug "tg: no webhook to delete (expected)"
+function safe_delete_webhook(client::TelegramClient; max_retries=3)
+    retry_count = 0
+    while retry_count < max_retries
+        try
+            Telegram.API.deleteWebhook(client)
+            @debug "tg: webhook deleted successfully"
             return true
-        else
-            @warn "tg: failed to delete webhook" exception=e
-            return false
+        catch e
+            if e isa HTTP.StatusError && e.status == 400
+                @debug "tg: no webhook to delete (expected)"
+                return true
+            else
+                retry_count += 1
+                if retry_count >= max_retries
+                    @debug "tg: failed to delete webhook after $max_retries attempts" exception=e
+                    return false
+                else
+                    @debug "tg: failed to delete webhook (attempt $retry_count/$max_retries)" exception=(e,)
+                    sleep(1)  # Wait a bit before retrying
+                end
+            end
         end
     end
+    return false
 end
 @doc """ Creates an asynchronous task for handling Telegram messages.
 
@@ -155,9 +165,11 @@ function tgtask(cl, s, running::Ref{Bool}, offset::Ref{Int})
         RUNNING[cl] = current_task()
         user = _getoption(s, :tgusername)
         if !(user isa String) || isempty(user)
-            @warn "tg: no telegram user name set (bot will refuse to reply) \
-            either use env var `$(_envvar(:tgusername))` \
-            or the `tgusername` key in the strategy config file"
+            if istaskrunning()
+                @warn "tg: no telegram user name set (bot will refuse to reply) \
+                either use env var `$(_envvar(:tgusername))` \
+                or the `tgusername` key in the strategy config file"
+            end
         end
         running[] = true
         f_last = Ref{Option{Function}}(nothing)
@@ -332,16 +344,13 @@ function tgrun(
                 break
             elseif err isa HTTP.StatusError && err.status == 409
                 # Handle webhook conflict by deleting webhook and retrying
-                @warn "tg: webhook conflict detected, attempting to delete webhook" msg = err.response
-                try
-                    Telegram.API.deleteWebhook(tg)
-                    @info "tg: webhook deleted successfully, retrying..."
-                    # Continue the loop to retry
-                catch delete_err
-                    @error "tg: failed to delete webhook" exception = delete_err
-                    @debug_backtrace
-                    # Still continue the loop in case the issue resolves itself
+                @debug "tg: webhook conflict detected, attempting to delete webhook" msg = err.response
+                if !safe_delete_webhook(tg)
+                    error("Failed to resolve webhook conflict after maximum retry attempts")
                 end
+                # Even if webhook deletion was successful, something else might be wrong
+                # since we're still getting 409 after deletion
+                error("Webhook conflict persists after successful webhook deletion. Another process might be using the same token.")
             else
                 @error "tg: error" exception = err
                 @debug_backtrace

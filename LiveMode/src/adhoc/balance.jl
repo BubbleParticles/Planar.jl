@@ -147,6 +147,24 @@ function _fetch_balance(
     _parse_balance(exc, resp)
 end
 
+function _fetch_balance(
+    exc::Exchange{<:eids(:bitmex)},
+    qc,
+    syms,
+    args...;
+    timeout=gettimeout(exc),
+    type=nothing,
+    code=nothing,
+    params=pydict(),
+    kwargs...,
+)
+    # BitMEX doesn't support the 'type' parameter, so we remove it
+    if haskey(params, "type")
+        delete!(params, "type")
+    end
+    _execfunc_timeout(_exc_balance_func(exc); timeout, params, kwargs...)
+end
+
 _exc_balance_func(exc::Exchange{<:eids(:binanceusdm)}) = exc.fetchBalance # FIXME
 
 function fetch_balance(s::Strategy{Live,<:Any,<:ExchangeID{:phemex}}, args...; kwargs...)

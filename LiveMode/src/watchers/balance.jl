@@ -474,7 +474,7 @@ function Watchers._process!(w::Watcher, ::CcxtBalanceVal; fetched=false)
     w.view.date = date
     _lastprocessed!(w, data_date)
     _lastcount!(w, data)
-    @debug "balance watcher data:" _module = LogWatchBalProcess date get(bal, :BTC, nothing) 
+    @debug "balance watcher data:" _module = LogWatchBalProcess date get(baldict, :BTC, nothing) 
 end
 
 @doc """ Starts a watcher for balance in a live strategy.

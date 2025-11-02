@@ -18,20 +18,20 @@ using .Misc.Lang: @preset, @precomp, @ignore
     ENV["TELEGRAM_BOT_TOKEN"] = "6911910250:AAERDZD9hc8e33_c63Wyw6xyWVXn_DhdHyU"
     chat_id = ENV["TELEGRAM_BOT_CHAT_ID"] = "-1001996551827"
     Remote.TIMEOUT[] = 1
-    @debug "PRECOMP: remote 2"
-    
+    @debug "PRECOMP: remote 1"
     @precomp begin
         cl = tgclient(s)
-        # Delete any existing webhook to avoid 409 conflicts during precompilation
+        # # Delete any existing webhook to avoid 409 conflicts during precompilation
         Remote.safe_delete_webhook(cl)
         tgstart!(s)
+        tgstop!(s)
     end
     cl = tgclient(s)
     text = "abc123"
     @debug "PRECOMP: remote 2"
     @precomp @ignore begin
-        @ignore start_strategy(cl, s; text, chat_id)
-        @ignore stop_strategy(cl, s; text="now", chat_id)
+        start_strategy(cl, s; text, chat_id)
+        stop_strategy(cl, s; text="now", chat_id)
         status(cl, s; text, chat_id)
         daily(cl, s; text, chat_id)
         weekly(cl, s; text, chat_id)
@@ -41,9 +41,9 @@ using .Misc.Lang: @preset, @precomp, @ignore
         @ignore config(cl, s; isinput=true, text, chat_id)
         logs(cl, s; isinput=true, text, chat_id)
 
-        # can't be precompiled because rely on multiple getUpdates
-        # set(cl, s; text, chat_id)
-        # get(cl, s; text, chat_id)
+        # # can't be precompiled because rely on multiple getUpdates
+        set(cl, s; text, chat_id)
+        get(cl, s; text, chat_id)
         tgstop!(s)
     end
     @debug "PRECOMP: remote 3"
@@ -58,15 +58,19 @@ using .Misc.Lang: @preset, @precomp, @ignore
             @warn "failed to stop strategy during precompilation"
         end
     end
-    dostop()
+    # dostop()
+    stop!(s)
     @debug "PRECOMP: remote 4"
     empty!(TASK_STATE) # NOTE: Required to avod spurious errors
     empty!(CLIENTS) # NOTE: Required to avod spurious errors
     empty!(RUNNING) # NOTE: Required to avod spurious errors
     @debug "PRECOMP: remote 5" # lm.positions_watcher(s) lm.balance_watcher(s)
-    dostop()
     HTTP.Connections.closeall()
     LiveMode.ExchangeTypes._closeall()
     Base.GC.gc(true) # trigger finalizer
     LiveMode.ExchangeTypes.Python.py_stop_loop()
+    @debug "PRECOMP: remote 6" # lm.positions_watcher(s) lm.balance_watcher(s)
+    # dostop()
+    stop!(s)
+    @debug "PRECOMP: remote 7" # lm.positions_watcher(s) lm.balance_watcher(s)
 end
