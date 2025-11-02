@@ -399,6 +399,10 @@ function Watchers._stop!(w::Watcher, ::CcxtBalanceVal)
     if !isnothing(handler)
         stop_handler!(handler)
     end
+    bt = attr(w, :balance_task, nothing)
+    if istaskrunning(bt)
+        kill_task(bt)
+    end
     if haskey(w, :stall_guard_task)
         stop_task(w[:stall_guard_task])
         delete!(w, :stall_guard_task)

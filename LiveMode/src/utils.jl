@@ -260,6 +260,19 @@ function stop_all_tasks(s::RTStrategy; reset=true)
     @debug "strategy: stopping watch balance" _module = LogTasks s = nameof(s)
     stop_watch_balance!(s)
 
+    # Stop any user-defined watchers stored in strategy attributes
+    @debug "strategy: stopping user watchers" _module = LogTasks s = nameof(s)
+    for (k, v) in pairs(s.attrs)
+        if v isa Watcher && isstarted(v)
+            @debug "strategy: stopping user watcher" _module = LogTasks k
+            try
+                stop!(v)
+            catch e
+                @debug "strategy: error stopping user watcher" _module = LogTasks k exception = e
+            end
+        end
+    end
+
     @debug "strategy: stopping all asset tasks" _module = LogTasks s = nameof(s)
     while true
         try

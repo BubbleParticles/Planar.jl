@@ -36,6 +36,17 @@ function Base.deleteat!(w::Watcher, range::DateTuple)
     _deleteat!(w, _val(w); from=range.start, to=range.stop)
 end
 
+"""
+Delete a key from the watcher attribute dictionary.
+
+# Arguments
+- `w::Watcher`: The watcher.
+- `k::Symbol`: The key to delete.
+"""
+function Base.delete!(w::Watcher, k::Symbol)
+    delete!(attrs(w), k)
+end
+
 function Base.haskey(w::Watcher, k)
     haskey(attrs(w), k)
 end
