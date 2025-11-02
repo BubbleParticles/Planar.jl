@@ -253,10 +253,14 @@ This function stops all tasks associated with strategy `s`. If the `reset` flag 
 function stop_all_tasks(s::RTStrategy; reset=true)
     @debug "strategy: stopping all tasks" _module = LogTasks s = nameof(s)
     # these are non blocking
+    @debug "strategy: stopping watch ohlcv" _module = LogTasks s = nameof(s)
     stop_watch_ohlcv!(s)
+    @debug "strategy: stopping watch positions" _module = LogTasks s = nameof(s)
     stop_watch_positions!(s)
+    @debug "strategy: stopping watch balance" _module = LogTasks s = nameof(s)
     stop_watch_balance!(s)
 
+    @debug "strategy: stopping all asset tasks" _module = LogTasks s = nameof(s)
     while true
         try
             @sync begin
@@ -273,6 +277,7 @@ function stop_all_tasks(s::RTStrategy; reset=true)
             end
         end
     end
+    @debug "strategy: stopping handlers" _module = LogTasks s = nameof(s)
     stop_handlers!(s)
     @debug "strategy: stopped all tasks" _module = LogTasks s = nameof(s)
 end
@@ -747,12 +752,15 @@ This function stops a live strategy `s`.
 
 """
 function stop!(s::LiveStrategy; kwargs...)
+    @debug "stop! 1" _module = LogTasks
     try
         invoke(stop!, Tuple{Strategy{<:Union{Paper,Live}}}, s; kwargs...)
     catch
         @debug_backtrace LogTasks
     end
+    @debug "stop! 2" _module = LogTasks
     stop_all_tasks(s)
+    @debug "stop! 3" _module = LogTasks
 end
 
 function _last_posside(ai)
