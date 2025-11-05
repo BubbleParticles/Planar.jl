@@ -1,5 +1,5 @@
 [![build-status-docs](https://github.com/bubbleparticles/Planar.jl/actions/workflows/docs.yml/badge.svg?branch=master)](https://bubbleparticles.github.io/Planar.jl/)
-[![docs-validation](https://github.com/bubbleparticles/Planar.jl/actions/workflows/docs-validation.yml/badge.svg?branch=master)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/docs-validation.yml)
+[![docs-tests](https://github.com/bubbleparticles/Planar.jl/actions/workflows/docs-tests.yml/badge.svg?branch=master)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/docs-tests.yml)
 [![build-status-docker](https://github.com/bubbleparticles/Planar.jl/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/build.yml)
 [![tests](https://github.com/bubbleparticles/Planar.jl/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/tests.yml)
 [![Discord](https://img.shields.io/discord/1422807942800867351?color=7289da&label=Discord&logo=discord&logoColor=white)](https://discord.gg/3C7YpTMXqJ)
