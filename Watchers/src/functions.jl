@@ -141,13 +141,16 @@ function Base.close(w::Watcher; doflush=true)
     lb = trylock(w._exec.buffer_lock)
     try
         if !isstopped(w)
+            @debug "watchers: stopping from close" w.name
             stop!(w)
         end
+        @debug "watchers: flushing from close" w.name
         doflush && flush!(w)
         global_w = get(WATCHERS, w.name, missing)
         if global_w === w
             delete!(WATCHERS, w.name)
         end
+        @debug "watchers: closed" w.name
         nothing
     catch
     finally

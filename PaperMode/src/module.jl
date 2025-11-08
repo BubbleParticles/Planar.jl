@@ -281,6 +281,7 @@ function stop!(s::Strategy{<:Union{Paper,Live}})
             end
         end
     end
+    @debug "strategy: calling StopStrategy" mode = execmode(s)
     call!(s, StopStrategy())
     @info "strategy: stopped" mode = execmode(s) elapsed(s)
 end

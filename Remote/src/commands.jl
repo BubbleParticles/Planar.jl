@@ -92,6 +92,7 @@ function stop_strategy(cl::TelegramClient, s; text, chat_id, kwargs...)
         sendMessage(cl; text="""
         $YC Strategy already stopped: *$(nameof(s))*
         """, chat_id, parse_mode="markdown")
+        nothing
     else
         delay = if text == "1h"
             Hour(1)
@@ -110,8 +111,10 @@ function stop_strategy(cl::TelegramClient, s; text, chat_id, kwargs...)
                 chat_id,
                 parse_mode="markdown",
             )
+            @debug "tg: stopping strategy" s = nameof(s)
             stop!(s)
             tot = st.current_total(s) |> cnum
+            @debug "tg: sending stop message" s = nameof(s)
             @sync begin
                 @async sendMessage(
                     cl;
@@ -122,10 +125,10 @@ function stop_strategy(cl::TelegramClient, s; text, chat_id, kwargs...)
                 )
                 @async _set_info(cl, s)
             end
+            @debug "tg: stop_strategy function done" s = nameof(s)
         end
         @async (sleep(delay); dostop())
     end
-    true
 end
 
 @doc """ Provides the status of a strategy

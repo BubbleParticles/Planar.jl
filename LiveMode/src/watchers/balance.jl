@@ -396,18 +396,23 @@ _balance_task(w) = @lget! attrs(w) :balance_task _balance_task!(w)
 
 function Watchers._stop!(w::Watcher, ::CcxtBalanceVal)
     handler = attr(w, :balance_handler, nothing)
+    @debug "balance watcher: stopping handler" _module = LogWatchBalance handler
     if !isnothing(handler)
         stop_handler!(handler)
     end
+    @debug "balance watcher: stopping task" _module = LogWatchBalance isstarted(w)
     bt = attr(w, :balance_task, nothing)
     if istaskrunning(bt)
-        kill_task(bt)
+        stop_task(bt)
     end
+    @debug "balance watcher: stopping stall guard task" _module = LogWatchBalance
     if haskey(w, :stall_guard_task)
         stop_task(w[:stall_guard_task])
         delete!(w, :stall_guard_task)
     end
+    @debug "balance watcher: notifying buffer" _module = LogWatchBalance
     notify(w.buf_notify)
+    @debug "balance watcher: stopped" _module = LogWatchBalance
     nothing
 end
 
@@ -509,6 +514,7 @@ function watch_balance!(s::LiveStrategy; interval=st.throttle(s), wait=false)
         @debug "live: waiting for initial balance" _module = LogWatchBalance
         safewait(w.beacon.process)
     end
+    @debug "live: balance watcher" _module = LogWatchBalance isstopped(w)
     w
 end
 
