@@ -96,22 +96,32 @@ function sendrequest!(
 end
 
 function handle_events(obj, events=get_events(obj), cond=condition(obj))
-    while !isempty(events)
-        req = first(events)
-        diff = req.date - now()
-        if diff <= Second(0)
-            try
-                req.func()
-            catch
-                @debug_backtrace LogEvents
+    while true
+        # Atomically check and retrieve the next due event
+        req = lock(events_lock(obj)) do
+            if isempty(events)
+                return nothing
             end
-            popfirst!(events)
-            lasteventrun!(obj, req.date)
-        else
-            @debug "events: waiting for the future" _module = LogEvents req.date
-            @async (sleep(abs(diff)); safenotify(cond))
+
+            next_req = first(events)
+            diff = next_req.date - now()
+
+            if diff <= Second(0)
+                # Event is ready, pop it and return
+                return popfirst!(events)
+            else
+                # Event is in the future, schedule a wakeup and signal no work for now
+                @debug "events: waiting for the future" _module = LogEvents next_req.date
+                @async (sleep(abs(diff)); safenotify(cond))
+                return nothing
+            end
+        end
+
+        if isnothing(req)
             break
         end
+
+        _execute_event(obj, req)
     end
 end
 
@@ -203,4 +213,14 @@ function restart_handlers!(s::LiveStrategy)
     stop_handlers!(s)
     start_handlers!(s)
 end
+
+function _execute_event(obj, req::SyncRequest1)
+    try
+        req.func()
+    catch
+        @debug_backtrace LogEvents
+    end
+    lasteventrun!(obj, req.date)
+end
+
 

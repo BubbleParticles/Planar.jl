@@ -31,7 +31,12 @@ using .Misc.Lang: @preset, @precomp, @ignore
     @debug "PRECOMP: remote 2"
     @precomp @ignore begin
         start_strategy(cl, s; text, chat_id)
-        stop_strategy(cl, s; text="now", chat_id)
+        while !isrunning(s)
+            @info "PRECOMP: remote sleep"
+            sleep(0.1)
+        end
+        t = stop_strategy(cl, s; text="now", chat_id)
+        wait(t)
         status(cl, s; text, chat_id)
         daily(cl, s; text, chat_id)
         weekly(cl, s; text, chat_id)
@@ -52,25 +57,25 @@ using .Misc.Lang: @preset, @precomp, @ignore
         start = now()
         while !istaskdone(t)
             sleep(0.1)
-            now() - start > Second(3) && break
+            now() - start > Second(8) && break
         end
         if !istaskdone(t)
             @warn "failed to stop strategy during precompilation"
         end
     end
-    # dostop()
-    stop!(s)
+    dostop()
     @debug "PRECOMP: remote 4"
     empty!(TASK_STATE) # NOTE: Required to avod spurious errors
     empty!(CLIENTS) # NOTE: Required to avod spurious errors
     empty!(RUNNING) # NOTE: Required to avod spurious errors
     @debug "PRECOMP: remote 5" # lm.positions_watcher(s) lm.balance_watcher(s)
     HTTP.Connections.closeall()
+    @debug "PRECOMP: remote 6" # LiveMode.Watchers._closeall()
+    LiveMode.Watchers._closeall()
+    @debug "PRECOMP: remote 7" # LiveMode.ExchangeTypes._closeall()
     LiveMode.ExchangeTypes._closeall()
-    Base.GC.gc(true) # trigger finalizer
+    @debug "PRECOMP: remote 8" # lm.positions_watcher(s) lm.balance_watcher(s)
+    dostop()
+    @debug "PRECOMP: remote 9" # lm.positions_watcher(s) lm.balance_watcher(s)
     LiveMode.ExchangeTypes.Python.py_stop_loop()
-    @debug "PRECOMP: remote 6" # lm.positions_watcher(s) lm.balance_watcher(s)
-    # dostop()
-    stop!(s)
-    @debug "PRECOMP: remote 7" # lm.positions_watcher(s) lm.balance_watcher(s)
 end
