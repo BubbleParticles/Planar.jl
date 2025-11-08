@@ -258,7 +258,9 @@ end
 
 @doc "Close all watchers."
 _closeall() = begin
+    @debug "watchers: closing all watchers" n_watchers = length(collect(values(WATCHERS)))
     asyncmap(close, values(WATCHERS))
+    @debug "watchers: closed all watchers" n_watchers = length(collect(values(WATCHERS)))
     # Only clear cache if WatchersImpls is loaded
     if isdefined(@__MODULE__, :WatchersImpls)
         empty!(WatchersImpls.OHLCV_CACHE)

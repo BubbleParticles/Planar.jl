@@ -66,7 +66,7 @@ using .Misc.Lang: Lang, @preset, @precomp, @m_str, @ignore
             stop!(s)
             for ai in s.universe
                 tasks = asset_tasks(ai)
-                reset_asset_tasks!(task)
+                reset_asset_tasks!(s, tasks)
             end
             reset!(s)
         end

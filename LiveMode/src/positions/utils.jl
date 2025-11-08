@@ -290,7 +290,7 @@ It then extracts the notional value from the position update.
 
 """
 function live_notional(s::LiveStrategy, ai, args...; kwargs...)
-    @debug "live: notional" _module = LogPosSync ai
+    @debug "live notional:" _module = LogPosSync ai
     pup = _pup(s, ai, args...; kwargs...)
     if isnothing(pup) || pup.closed[]
         0.0

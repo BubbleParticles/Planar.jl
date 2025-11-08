@@ -6,7 +6,7 @@ using Telegram, Telegram.API, Telegram.JSON3, Telegram.HTTP
 const lm = LiveMode
 const ect = lm.Executors
 using .Misc.Lang: @lget!, @debug_backtrace, Option, @ifdebug
-using .Misc: LittleDict
+using .Misc: LittleDict, kill_task
 using .ect: cnum
 
 @doc """ The `TaskState` type is used to store the state of a task. """
@@ -175,7 +175,7 @@ function tgtask(cl, s, running::Ref{Bool}, offset::Ref{Int})
         f_last = Ref{Option{Function}}(nothing)
         f_resp = Ref(false)
         _init(cl, s)
-        tgrun(cl; offset) do msg
+        tgrun(cl; offset, running) do msg
             @debug "tg: new message" msg
             running[] || throw(InterruptException())
             message = get(msg, :message, nothing)
@@ -280,14 +280,18 @@ $(TYPEDSIGNATURES)
 
 This function checks if a Telegram client for the provided strategy is running. If it is, the function stops it and throws an InterruptException to the task associated with the client.
 """
-function tgstop!(s::Strategy)
+function tgstop!(s::Strategy, timeout=Second(5))
     state = _get_state(s)
     if state isa TaskState && !istaskdone(state.task)
         state.running[] = false
-        try
-            @async Base.throwto(state.task, InterruptException())
-            wait(state.task)
-        catch
+        stop_task(state.task)
+        to_time = now() + timeout
+        while now() < to_time && istaskrunning(state.task)
+            sleep(0.1)
+        end
+        if istaskrunning(state.task)
+            @warn "tg: stopping task by exception" s = nameof(s)
+            kill_task(state.task)
         end
     end
 end
@@ -310,16 +314,27 @@ $(TYPEDSIGNATURES)
 This function runs the Telegram bot in a loop, processing incoming messages. If an error occurs, it is logged and the loop continues. If an InterruptException is thrown, the loop breaks.
 """
 function tgrun(
-    f, tg::TelegramClient=Telegram.DEFAULT_OPTS.client; timeout=TIMEOUT[], offset=Ref(-1)
+    f, tg::TelegramClient=Telegram.DEFAULT_OPTS.client; timeout=TIMEOUT[], offset=Ref(-1), running::Ref{Bool}
 )
-    while true
+    while running[]
         try
             ignore_errors = true
-            res = if offset[] == -1
+            res = nothing
+            t = @async if offset[] == -1
                 getUpdates(tg; timeout=timeout)
             else
                 (ignore_errors = false; getUpdates(tg; timeout=timeout, offset=offset[]))
             end
+            while !istaskdone(t)
+                if !running[]
+                    break
+                end
+                sleep(0.1)
+            end
+            if !running[]
+                break
+            end
+            res = fetch(t)
             # @ifdebug Main.e = res
             for msg in res
                 try

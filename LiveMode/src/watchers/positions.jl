@@ -111,6 +111,7 @@ function _w_positions_func(s, w, interval; iswatch, kwargs)
     s[:positions_notify] = w[:buf_notify] = buf_notify = Condition()
     sizehint!(buf, buffer_size)
     # delegate per-mode
+    @debug "watchers pos process: delegate" _module = LogWatchPos iswatch
     if iswatch
         return _w_positions_watch_mode(
             s, w, exc, timeout, params, rest, buf, buf_notify, tasks, errors, kwargs
@@ -305,8 +306,11 @@ function _positions_task!(w)
     errors = w.errors_count
     w[:positions_task] = (@async while isstarted(w)
         try
+            @debug "watchers pos: fetching/watching" _module = LogWatchPos
             f(w)
+            @debug "watchers pos: fetched/watched" _module = LogWatchPos
             safenotify(w.beacon.fetch)
+            @debug "watchers pos: notified" _module = LogWatchPos
         catch e
             if e isa InterruptException
                 break
@@ -346,7 +350,16 @@ function Watchers._stop!(w::Watcher, ::CcxtPositionsVal)
     end
     pt = attr(w, :positions_task, nothing)
     if istaskrunning(pt)
-        kill_task(pt)
+        stop_task(pt)
+        interval = attr(w, :interval, Second(5))
+        to_time = now() + interval
+        while !istaskdone(pt) && now() < to_time
+            sleep(0.1)
+        end
+        if !istaskdone(pt)
+            @warn "positions watcher: stopping task by exception" w = w.name
+            kill_task(pt)
+        end
     end
     if haskey(w, :stall_guard_task)
         stop_task(w[:stall_guard_task])
