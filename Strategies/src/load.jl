@@ -333,8 +333,10 @@ function strategy!(mod::Module, cfg::Config)
         @debug_backtrace
         nothing
     end bare_load(mod, s_type, cfg)
-    # ensure strategy is stopped on process termination
-    atexit(() -> stop!(s))
+    # ensure strategy is stopped on process termination is paper or live
+    if cfg.mode in (Paper(), Live())
+        atexit(() -> stop!(s))
+    end
     return s
 end
 

@@ -1,7 +1,7 @@
 FROM julia:1.12 AS base
 RUN mkdir /planar \
     && apt-get update \
-    && apt-get -y install sudo direnv git \
+    && apt-get -y install sudo direnv jq git \
     && useradd -u 1000 -G sudo -U -m -s /bin/bash plnuser \
     && chown plnuser:plnuser /planar \
     # Allow sudoers
