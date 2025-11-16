@@ -4,3 +4,4 @@ Dockerfile
 docs/
 deps/
 pyrightconfig.json
+user/.envrc
