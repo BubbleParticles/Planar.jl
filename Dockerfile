@@ -44,6 +44,7 @@ RUN JULIA_PROJECT= $JULIA_CMD -e "import Pkg; Pkg.add([\"DataFrames\", \"CSV\", 
 
 FROM precompile2 AS precompile3
 COPY --chown=plnuser:plnuser ./ /planar/
+RUN touch /planar/user/.envrc
 RUN git submodule update --init
 
 FROM precompile3 AS precomp-base
@@ -107,6 +108,13 @@ ARG JULIA_CMD="$JULIA_BIN -C $CPU_TARGET"
 ENV JULIA_CPU_TARGET ${CPU_TARGET}
 RUN apt-get install -y gcc g++
 ARG COMPILE_SCRIPT
+ARG NTHREADS=auto
+ARG PLANAR_BITMEX_SANDBOX_APIKEY
+ARG PLANAR_BITMEX_SANDBOX_SECRET
+ARG PLANAR_BITMEX_SANDBOX_PASSWORD
+ARG PLANAR_PHEMEX_SANDBOX_APIKEY
+ARG PLANAR_PHEMEX_SANDBOX_SECRET
+ARG PLANAR_PHEMEX_SANDBOX_PASSWORD
 RUN scripts/docker_compile.sh; \
     su plnuser -c "cd /planar; \
     . .envrc; \
