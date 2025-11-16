@@ -81,6 +81,31 @@ using .Misc.Lang: Lang, @preset, @precomp, @m_str, @ignore
         end
     catch e
         @error exception = (e, catch_backtrace())
+    finally
+        # Remove log files matching patterns in project root
+        root_dir = dirname(dirname(@__DIR__))
+        log_patterns = [
+            r"^misc\.live-error-.*\.log$",
+            r"^misc\.live-info-.*\.log$",
+            r"^misc\.live-warn-.*\.log$",
+        ]
+        try
+            files = readdir(root_dir)
+            for file in files
+                for pattern in log_patterns
+                    if occursin(pattern, file)
+                        filepath = joinpath(root_dir, file)
+                        if isfile(filepath)
+                            rm(filepath; force=true)
+                            @debug "Removed log file" file = filepath
+                        end
+                        break
+                    end
+                end
+            end
+        catch e
+            @warn "Failed to remove log files" exception = e
+        end
     end
     @debug "PRECOMP: live mode closing"
     Watchers._closeall()
