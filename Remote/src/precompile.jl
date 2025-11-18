@@ -33,7 +33,7 @@ using .Misc.Lang: @preset, @precomp, @ignore
         @precomp @ignore begin
             start_strategy(cl, s; text, chat_id)
             while !isrunning(s)
-                @info "PRECOMP: remote sleep"
+                @debug "PRECOMP: remote sleep"
                 sleep(0.1)
             end
             t = stop_strategy(cl, s; text="now", chat_id)

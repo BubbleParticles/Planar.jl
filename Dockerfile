@@ -8,7 +8,7 @@ RUN mkdir /planar \
     && echo "plnuser ALL=(ALL) NOPASSWD: /bin/chown" >> /etc/sudoers
 WORKDIR /planar
 USER plnuser
-ARG CPU_TARGET=generic
+ARG CPU_TARGET=generic,+aes
 ENV JULIA_BIN=/usr/local/julia/bin/julia
 ARG JULIA_CMD="$JULIA_BIN -C $CPU_TARGET"
 ENV JULIA_CMD=$JULIA_CMD
@@ -103,9 +103,6 @@ FROM planar-precomp-interactive AS planar-sysimage-interactive
 USER root
 ENV CI=true
 ENV JULIA_PROJECT=/planar/PlanarInteractive
-ARG CPU_TARGET="generic,+aes"
-ARG JULIA_CMD="$JULIA_BIN -C $CPU_TARGET"
-ENV JULIA_CPU_TARGET ${CPU_TARGET}
 RUN apt-get install -y gcc g++
 ARG COMPILE_SCRIPT
 ARG NTHREADS=auto
@@ -125,5 +122,7 @@ RUN scripts/docker_compile.sh; \
     rm -rf /tmp/compile.jl
 USER plnuser
 # Resets condapkg env
+#
+FROM planar-precomp-interactive as planar-interactive
 RUN $JULIA_CMD --sysimage "/planar/Planar.so" -e "using PlanarInteractive"
 CMD $JULIA_CMD --sysimage Planar.so
