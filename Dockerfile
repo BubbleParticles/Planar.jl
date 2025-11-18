@@ -103,7 +103,7 @@ FROM planar-precomp-interactive AS planar-sysimage-interactive
 USER root
 ENV CI=true
 ENV JULIA_PROJECT=/planar/PlanarInteractive
-ARG CPU_TARGET=generic,+aes
+ARG CPU_TARGET="generic,+aes"
 ARG JULIA_CMD="$JULIA_BIN -C $CPU_TARGET"
 ENV JULIA_CPU_TARGET ${CPU_TARGET}
 RUN apt-get install -y gcc g++
@@ -118,6 +118,7 @@ ARG PLANAR_PHEMEX_SANDBOX_PASSWORD
 RUN scripts/docker_compile.sh; \
     su plnuser -c "cd /planar; \
     . .envrc; \
+    echo \"compiling with cpu target $JULIA_CPU_TARGET\"; \
     cat /tmp/compile.jl; \
     $JULIA_CMD -e \
     'include(\"/tmp/compile.jl\"); compile(\"PlanarInteractive\"; cpu_target=\"$JULIA_CPU_TARGET\")'"; \
