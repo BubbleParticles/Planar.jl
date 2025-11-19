@@ -4,7 +4,11 @@ version = "0.1.0"
 authors = ["zbc"]
 
 [deps]
+OnlineTechnicalIndicators = "dc2d07fb-478f-4566-8417-81bb3e5a7af1"
 Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
+
+[compat]
+OnlineTechnicalIndicators = "0.1.2"
 
 [strategy]
 include_file = "src/TwoParameters.jl"

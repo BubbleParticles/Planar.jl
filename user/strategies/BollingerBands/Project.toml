@@ -1,12 +1,15 @@
 name = "BollingerBands"
 uuid = "10b1af8b-f1db-49c2-b9bb-56825b35e338"
-authors = ["zbc"]
 version = "0.1.0"
+authors = ["zbc"]
 
 [deps]
-Indicators = "70c4c096-89a6-5ec6-8236-da8aa3bd86fd"
+OnlineTechnicalIndicators = "dc2d07fb-478f-4566-8417-81bb3e5a7af1"
+Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
+
+[compat]
+OnlineTechnicalIndicators = "0.1.2"
 
 [strategy]
-# include_file = "src/ExampleMargin.jl"
 margin = "Isolated"
-mode = "Paper" # "Sim", "Live"
+mode = "Paper"
