@@ -5,3 +5,4 @@ docs/
 deps/
 pyrightconfig.json
 user/.envrc
+.conda/

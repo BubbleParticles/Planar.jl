@@ -44,7 +44,7 @@ RUN JULIA_PROJECT= $JULIA_CMD -e "import Pkg; Pkg.add([\"DataFrames\", \"CSV\", 
 
 FROM precompile2 AS precompile3
 COPY --chown=plnuser:plnuser ./ /planar/
-RUN touch /planar/user/.envrc
+RUN touch /planar/user/.envrc; mkdir /planar/.conda
 RUN git submodule update --init
 
 FROM precompile3 AS precomp-base
@@ -124,5 +124,6 @@ USER plnuser
 # Resets condapkg env
 #
 FROM planar-precomp-interactive as planar-interactive
+USER plnuser
 RUN $JULIA_CMD --sysimage "/planar/Planar.so" -e "using PlanarInteractive"
 CMD $JULIA_CMD --sysimage Planar.so
