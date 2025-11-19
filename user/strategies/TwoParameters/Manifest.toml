@@ -2,7 +2,7 @@
 
 julia_version = "1.12.1"
 manifest_format = "2.0"
-project_hash = "699c6a91b3044ebfdd31c778a5e1d1a06f4dd721"
+project_hash = "dcb3f120551e08b82b64699e61a1ffbfc5c385ba"
 
 [[deps.AWS]]
 deps = ["Base64", "Compat", "Dates", "Downloads", "GitHub", "HTTP", "IniFile", "JSON", "MbedTLS", "Mocking", "OrderedCollections", "Random", "SHA", "ScopedValues", "Sockets", "URIs", "UUIDs", "XMLDict"]
@@ -598,6 +598,18 @@ version = "1.17.0"
     [deps.OffsetArrays.weakdeps]
     Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 
+[[deps.OnlineStatsBase]]
+deps = ["AbstractTrees", "Dates", "LinearAlgebra", "OrderedCollections", "Statistics", "StatsBase"]
+git-tree-sha1 = "a5a5a68d079ce531b0220e99789e0c1c8c5ed215"
+uuid = "925886fa-5bf2-5e8e-b522-a9147a512338"
+version = "1.7.1"
+
+[[deps.OnlineTechnicalIndicators]]
+deps = ["Dates", "OnlineStatsBase", "Tables"]
+git-tree-sha1 = "778e958802493156c0f340f2a91d102b47901630"
+uuid = "dc2d07fb-478f-4566-8417-81bb3e5a7af1"
+version = "0.1.2"
+
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
@@ -972,6 +984,7 @@ uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
 version = "0.11.3"
 
 [[deps.TwoParameters]]
+deps = ["Planar"]
 path = "."
 uuid = "c1ae5a22-cd03-426d-8e7b-ac28392c777f"
 version = "0.1.0"

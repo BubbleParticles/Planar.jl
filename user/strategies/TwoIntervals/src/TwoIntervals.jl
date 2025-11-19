@@ -7,7 +7,7 @@ const TF = tf"15m"
 const MARGIN = NoMargin
 
 @strategyenv!
-using Indicators: ema, rsi, Indicators
+using OnlineTechnicalIndicators: EMA, RSI, fit!
 @enum Trend Down = 0 Up = 1
 
 function call!(s::SC, ::ResetStrategy)
@@ -48,13 +48,13 @@ function handler(s, ai, ats, date)
     if this_trend == Up && this_rsi < 40
         price = closeat(ohlcv, ats)
         amount = freecash(s) / price
-        @linfo "Buying" asset = raw(ai) amount price
+        @linfo 1 "Buying" asset = raw(ai) amount price
         call!(s, ai, MarketOrder{Buy}; date, amount)
     elseif this_trend == Down && this_rsi > 60
         price = closeat(ohlcv, ats)
         if !isdust(ai, price)
             amount = float(ai)
-            @linfo "Selling" asset = raw(ai) amount price
+            @linfo 1 "Selling" asset = raw(ai) amount price
             call!(s, ai, CancelOrders())
             call!(s, ai, MarketOrder{Sell}; date, amount)
         end
@@ -73,13 +73,24 @@ end
 
 function ind_ema(ohlcv, from_date; n)
     ohlcv = viewfrom(ohlcv, from_date; offset=-n)
-    vec = ema(ohlcv.close; n)
+    ema = EMA{DFT}(period=n)
+    vec = Union{Missing,DFT}[]
+    for price in ohlcv.close
+        fit!(ema, price)
+        push!(vec, ema.value)
+    end
     [vec;;]
 end
-function ind_rsi(ohlcv, from_date)
+
+function ind_rsi(ohlcv, from_date; n=14)
     @assert timeframe!(ohlcv) == tf"15m"
-    ohlcv = viewfrom(ohlcv, from_date; offset=-14)
-    vec = rsi(ohlcv.close; n=14)
+    ohlcv = viewfrom(ohlcv, from_date; offset=-n)
+    rsi = RSI{DFT}(period=n)
+    vec = Union{Missing,DFT}[]
+    for price in ohlcv.close
+        fit!(rsi, price)
+        push!(vec, rsi.value)
+    end
     [vec;;]
 end
 end
