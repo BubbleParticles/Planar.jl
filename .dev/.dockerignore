@@ -9,4 +9,3 @@ user/logs/*
 .conda/
 *.so
 scripts/*build*
-scripts/*compile*
