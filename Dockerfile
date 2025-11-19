@@ -8,7 +8,7 @@ RUN mkdir /planar \
     && echo "plnuser ALL=(ALL) NOPASSWD: /bin/chown" >> /etc/sudoers
 WORKDIR /planar
 USER plnuser
-ARG CPU_TARGET=generic,+aes
+ARG CPU_TARGET="generic,+aes"
 ENV JULIA_BIN=/usr/local/julia/bin/julia
 ARG JULIA_CMD="$JULIA_BIN -C $CPU_TARGET"
 ENV JULIA_CMD=$JULIA_CMD

@@ -52,7 +52,7 @@ function _update_project(path, fullpath; precomp, inst, doupdate, io=stdout)
 end
 
 function update_projects(path="."; io=stdout, doupdate=false, inst=false, precomp=false)
-    recurse_projects(_update_project, path; io, doupdate, inst, precomp, include="PlanarDev/test")
+    recurse_projects(_update_project, path; io, doupdate, inst, precomp, include=("PlanarDev/test",))
 end
 
 function _project_name!(path, fullpath; io, projects)
