@@ -766,9 +766,9 @@ version = "1.5.0"
 
 [[deps.PrettyTables]]
 deps = ["Crayons", "LaTeXStrings", "Markdown", "PrecompileTools", "Printf", "REPL", "Reexport", "StringManipulation", "Tables"]
-git-tree-sha1 = "6b8e2f0bae3f678811678065c09571c1619da219"
+git-tree-sha1 = "2542fd0b9476562d80b65d00968c9c5286d5917b"
 uuid = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
-version = "3.1.0"
+version = "3.1.1"
 
 [[deps.Printf]]
 deps = ["Unicode"]
@@ -800,9 +800,9 @@ version = "0.1.0"
 
 [[deps.PythonCall]]
 deps = ["CondaPkg", "Dates", "Libdl", "MacroTools", "Markdown", "Pkg", "Serialization", "Tables", "UnsafePointers"]
-git-tree-sha1 = "e6bba29a71959561b55e342e295c1f5c01af7027"
+git-tree-sha1 = "c576260774cc832998c2a9d1b2efc9452c172d35"
 uuid = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
-version = "0.9.29"
+version = "0.9.30"
 
     [deps.PythonCall.extensions]
     CategoricalArraysExt = "CategoricalArrays"

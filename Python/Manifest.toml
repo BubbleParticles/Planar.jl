@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.12.0"
+julia_version = "1.12.1"
 manifest_format = "2.0"
 project_hash = "0c7f10cfb60650a6236c6f625047febff27edfc9"
 
@@ -219,9 +219,9 @@ version = "0.1.0"
 
 [[deps.PythonCall]]
 deps = ["CondaPkg", "Dates", "Libdl", "MacroTools", "Markdown", "Pkg", "Serialization", "Tables", "UnsafePointers"]
-git-tree-sha1 = "34510e11cabd7964291f32f14d28b367e9960e6e"
+git-tree-sha1 = "c576260774cc832998c2a9d1b2efc9452c172d35"
 uuid = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
-version = "0.9.28"
+version = "0.9.30"
 
     [deps.PythonCall.extensions]
     CategoricalArraysExt = "CategoricalArrays"
