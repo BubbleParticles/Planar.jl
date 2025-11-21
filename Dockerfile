@@ -20,7 +20,7 @@ ENV JULIA_NOPRECOMP=""
 ENV JULIA_PRECOMP=Remote,PaperMode,LiveMode,Fetch,Optim,Plotting
 CMD $JULIA_BIN -C $JULIA_CPU_TARGET
 
-FROM base AS python1
+FROM base AS python
 ENV JULIA_LOAD_PATH=:/planar
 ENV JULIA_CONDAPKG_ENV=/planar/user/.conda
 # avoids progressbar spam
@@ -33,24 +33,16 @@ RUN $JULIA_CMD --project=/planar/Python -e "import Pkg; Pkg.instantiate()"
 COPY --chown=plnuser:plnuser ./Python /planar/Python
 RUN $JULIA_CMD --project=/planar/Python -e "using Python"
 
-FROM python1 AS precompile1
-COPY --chown=plnuser:plnuser ./Planar/*.toml /planar/Planar/
-ENV JULIA_PROJECT=/planar/Planar
+FROM python AS precomp-base
 ARG CACHE=1
-RUN $JULIA_CMD --project=/planar/Planar -e "import Pkg; Pkg.instantiate()"
-
-FROM precompile1 AS precompile2
+ENV JULIA_NUM_THREADS=auto
+ENV JULIA_PROJECT=/planar/Planar
+USER plnuser
+WORKDIR /planar
 RUN JULIA_PROJECT= $JULIA_CMD -e "import Pkg; Pkg.add([\"DataFrames\", \"CSV\", \"ZipFile\"])"
-
-FROM precompile2 AS precompile3
 COPY --chown=plnuser:plnuser ./ /planar/
 RUN touch /planar/user/.envrc; mkdir /planar/.conda
 RUN git submodule update --init
-
-FROM precompile3 AS precomp-base
-USER plnuser
-WORKDIR /planar
-ENV JULIA_NUM_THREADS=auto
 CMD $JULIA_BIN -C $JULIA_CPU_TARGET
 
 FROM precomp-base AS planar-precomp
