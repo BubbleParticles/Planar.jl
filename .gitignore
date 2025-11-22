@@ -13,7 +13,6 @@
 /render.html
 /src/__pycache__/
 /user/strategies/*
-/user/.envrc
 !/user/scripts/
 Planar.so
 test/test.jlo
@@ -36,7 +35,6 @@ PlanarDev/test/stubs/trades_stub_*.jls
 !vendor/DBnomics.jl/
 !PlanarDev/
 !PlanarInteractive/
-!user/.envrc
 !user/Load
 !user/planar.toml
 !user/strategies
