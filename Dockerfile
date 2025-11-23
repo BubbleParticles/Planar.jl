@@ -18,7 +18,7 @@ ENV JULIA_CPU_TARGET ${CPU_TARGET}
 ENV PLANAR_LIQUIDATION_BUFFER=0.02
 ENV JULIA_NOPRECOMP=""
 ENV JULIA_PRECOMP=Remote,PaperMode,LiveMode,Fetch,Optim,Plotting
-CMD $JULIA_BIN -C $JULIA_CPU_TARGET
+CMD $JULIA_BIN -C "$JULIA_CPU_TARGET"
 
 FROM base AS python
 ENV JULIA_LOAD_PATH=:/planar
@@ -43,7 +43,7 @@ RUN JULIA_PROJECT= $JULIA_CMD -e "import Pkg; Pkg.add([\"DataFrames\", \"CSV\", 
 COPY --chown=plnuser:plnuser ./ /planar/
 RUN touch /planar/user/.envrc; mkdir /planar/.conda
 RUN git submodule update --init
-CMD $JULIA_BIN -C $JULIA_CPU_TARGET
+CMD $JULIA_BIN -C "$JULIA_CPU_TARGET"
 
 FROM precomp-base AS planar-precomp
 ARG PLANAR_BITMEX_SANDBOX_APIKEY
@@ -55,7 +55,7 @@ ARG PLANAR_PHEMEX_SANDBOX_PASSWORD
 ENV JULIA_PROJECT=/planar/Planar
 ENV CI=true
 RUN $JULIA_CMD -e "import Pkg; Pkg.instantiate()"
-RUN $JULIA_CMD -e "using Planar; using Metrics"
+RUN $JULIA_CMD -e "using Planar"
 RUN $JULIA_CMD -e "using Metrics"
 
 FROM planar-precomp AS planar-precomp-interactive
