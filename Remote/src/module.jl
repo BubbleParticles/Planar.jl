@@ -1,6 +1,6 @@
 using LiveMode
-using LiveMode.st
 using LiveMode: st
+using .st: Strategy
 using LiveMode.Misc
 using Telegram, Telegram.API, Telegram.JSON3, Telegram.HTTP
 const lm = LiveMode
