@@ -13,5 +13,11 @@ Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 Scrapers = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
 Stubs = "19a5ee1f-efca-4178-b297-263c7ceb508d"
 
+[sources]
+Metrics = {path = "../Metrics"}
+Planar = {path = "../Planar"}
+Scrapers = {path = "../Scrapers"}
+Stubs = {path = "../Stubs"}
+
 [compat]
 BlackBoxOptim = "0.6.3"
