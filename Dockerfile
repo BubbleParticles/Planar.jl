@@ -113,9 +113,5 @@ RUN scripts/docker_compile.sh; \
     'include(\"/tmp/compile.jl\"); compile(\"PlanarInteractive\"; cpu_target=\"$JULIA_CPU_TARGET\")'"; \
     rm -rf /tmp/compile.jl
 USER plnuser
-# Resets condapkg env
-#
-FROM planar-precomp-interactive as planar-interactive
-USER plnuser
 RUN $JULIA_CMD --sysimage "/planar/Planar.so" -e "using PlanarInteractive"
 CMD $JULIA_CMD --sysimage Planar.so
