@@ -19,7 +19,7 @@ for src in "$DEV_DIR"/.*ignore; do
 done
 
 # Also link dev directories/files that live under .dev/
-for d in "$DEV_DIR"/.cursor "$DEV_DIR"/.windsurf "$DEV_DIR"/.kilo "$DEV_DIR"/.kiro "$DEV_DIR"/.kilocode "$DEV_DIR"/mcp.json "$DEV_DIR"/pyrightconfig.json; do
+for d in "$DEV_DIR"/.cursor "$DEV_DIR"/.windsurf "$DEV_DIR"/.kilo "$DEV_DIR"/.kiro "$DEV_DIR"/.kilocode "$DEV_DIR"/.agent "$DEV_DIR"/mcp.json "$DEV_DIR"/pyrightconfig.json; do
   [[ -e "$d" ]] || continue
   base="$(basename -- "$d")"
   dst="$REPO_ROOT/$base"
