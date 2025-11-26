@@ -65,6 +65,7 @@ node_modules
 /.cursor
 /.windsurf
 /.kilo
+/.agent
 /mcp.json
 /pyrightconfig.json
 /.kiro

@@ -78,8 +78,8 @@ main() {
     move_one_file "$f"
   done
 
-  # Move dev directories (.cursor, .windsurf, .kilo, .kiro, .kilocode) into .dev
-  for d in ./.cursor ./.windsurf ./.kilo ./.kiro ./.kilocode; do
+  # Move dev directories (.cursor, .windsurf, .kilo, .kiro, .kilocode, .agent) into .dev
+  for d in ./.cursor ./.windsurf ./.kilo ./.kiro ./.kilocode ./.agent; do
     [[ -e "$d" ]] || continue
     move_one_dir "$d"
   done
