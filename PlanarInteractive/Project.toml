@@ -5,7 +5,7 @@ authors = ["zbc"]
 
 [deps]
 Metrics = "3fcce980-bff0-41b4-8aec-9cac67d74284"
-Optim = "01837fd2-c099-442f-ae89-75fa208aad36"
+Opt = "01937fd2-c099-442f-ae89-75fa208aad36"
 PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
@@ -16,7 +16,7 @@ Watchers = "4a3f9c16-ec8e-48c6-a58d-938fc30e2b4b"
 
 [sources]
 Metrics = {path = "../Metrics"}
-Optim = {path = "../Optim"}
+Opt = {path = "../Opt"}
 Planar = {path = "../Planar"}
 Plotting = {path = "../Plotting"}
 Scrapers = {path = "../Scrapers"}

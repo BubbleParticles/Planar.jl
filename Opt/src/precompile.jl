@@ -1,7 +1,7 @@
 using SimMode.Misc.Lang: @precomp, @preset, @ignore
 using Metrics: sharpe
 
-function _precomp_strat(mod=Optim)
+function _precomp_strat(mod=Opt)
     @eval mod begin
         using .SimMode: Executors as ect, sml
         using .SimMode.Misc: ZERO
@@ -23,7 +23,7 @@ end
 @preset begin
     st.Instances.Exchanges.Python.py_start_loop()
     s = _precomp_strat()
-    ect = invokelatest(getfield, Optim, :ect)
+    ect = invokelatest(getfield, Opt, :ect)
     function st.call!(::typeof(s), ::ect.OptSetup)
         (;
             ctx=Context(Sim(), tf"1d", dt"2020-", now()),

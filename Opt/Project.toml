@@ -1,7 +1,7 @@
-name = "Optim"
-uuid = "01837fd2-c099-442f-ae89-75fa208aad36"
-authors = ["zbc"]
+name = "Opt"
+uuid = "01937fd2-c099-442f-ae89-75fa208aad36"
 version = "0.1.0"
+authors = ["zbc"]
 
 [deps]
 BlackBoxOptim = "a134a8b2-14d6-55f6-9291-3336d3ab0209"
@@ -25,6 +25,11 @@ Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 [weakdeps]
 BayesianOptimization = "4c6ed407-134f-591c-93fa-e0f7c164a0ec"
 
+[sources]
+Metrics = {path = "../Metrics"}
+Pbar = {path = "../Pbar"}
+SimMode = {path = "../SimMode"}
+
 [extensions]
 BayesExt = "BayesianOptimization"
 
@@ -36,5 +41,5 @@ OptimizationCMAEvolutionStrategy = "0.3.0"
 OptimizationEvolutionary = "0.4.1"
 OptimizationManopt = "0.0.4"
 OptimizationMetaheuristics = "0.3.0"
-OptimizationOptimJL = "0.4.3"
+OptimizationOptimJL = "0.4.1"
 Symbolics = "6.54.0"

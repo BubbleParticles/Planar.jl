@@ -154,7 +154,7 @@ When reporting issues, use this format:
 - **Core modules**: Engine, Strategies, Exchanges, Executors
 - **Data modules**: Data, Fetch, Processing, Metrics
 - **Utility modules**: Collections, Misc, Lang, TimeTicks
-- **Interactive modules**: Plotting, Optim, PlanarInteractive
+- **Interactive modules**: Plotting, Opt, PlanarInteractive
 
 ### Configuration Patterns
 - **User directory**: Examples should reference `user/` directory structure
