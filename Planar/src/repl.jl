@@ -82,8 +82,8 @@ engine!() = module!(:Engine, :egn)
 analysis!() = module!(:StrategyStats, :sst)
 @doc """ Imports the `Stubs` module. """
 stubs!() = module!(:Stubs, :stubs)
-@doc """ Activates and Imports the `Optimn` module. """
-optim!() = _activate_and_import(:Optim, :opt)
+@doc """ Activates and Imports the `Opt` module. """
+optim!() = _activate_and_import(:Opt, :opt)
 @doc """ Activates and Imports the `PlanarInteractive` module. """
 interactive!() = _activate_and_import(:PlanarInteractive, :plni)
 @doc """ Activates and Imports the `Scrapers` module. """

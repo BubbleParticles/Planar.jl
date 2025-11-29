@@ -59,7 +59,7 @@ This function returns the `value` field of the `RUNNING` instance, indicating wh
 """
 isrunning() = @atomic RUNNING.value
 
-@doc """ Returns `Optim.ContextSpace` for backtesting
+@doc """ Returns `Opt.ContextSpace` for backtesting
 
 $(TYPEDSIGNATURES)
 
@@ -917,7 +917,7 @@ If not, it prompts the user to add it to the main environment.
 function extbayes!()
     let prev = Pkg.project().path
         try
-            Pkg.activate("Optim"; io=devnull)
+            Pkg.activate("Opt"; io=devnull)
             if isnothing(@eval Main Base.find_package("BayesianOptimization"))
                 if Base.prompt(
                     "BayesianOptimization package not found, add it to the main env? y/[n]"
@@ -926,7 +926,7 @@ function extbayes!()
                         Pkg.activate(; io=devnull)
                         Pkg.add("BayesianOptimization")
                     finally
-                        Pkg.activate("Optim"; io=devnull)
+                        Pkg.activate("Opt"; io=devnull)
                     end
                 end
             end

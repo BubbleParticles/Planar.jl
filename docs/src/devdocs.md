@@ -93,7 +93,7 @@ graph TD
     
     O[PlanarInteractive.jl] --> A
     O --> P[Plotting.jl]
-    O --> Q[Optim.jl]
+    O --> Q[Opt.jl]
 ```
 
 ### Data Flow Architecture

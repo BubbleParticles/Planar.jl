@@ -1,6 +1,6 @@
 module BayesExt
-using Optim
-using Optim:
+using Opt
+using Opt:
     running!,
     stopcall!,
     isrunning,
@@ -123,10 +123,10 @@ end
 
 export boptimize!
 
-if occursin("Optim", get(ENV, "JULIA_PRECOMP", ""))
+if occursin("Opt", get(ENV, "JULIA_PRECOMP", ""))
     @preset begin
         st.Instances.Exchanges.Python.py_start_loop()
-        s = Optim._precomp_strat(BayesExt)
+        s = Opt._precomp_strat(BayesExt)
 
         @precomp boptimize!(s, maxiterations=10)
         st.Instances.Exchanges.Python.py_stop_loop()

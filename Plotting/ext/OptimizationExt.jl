@@ -2,7 +2,7 @@ module OptimizationExt
 
 using Plotting
 using .Plotting: normalize, normalize!, scatter, surface, DataInspector
-using Optim: OptSession, Optim
+using Opt: OptSession, Opt
 using Metrics: mean
 using Makie
 using Metrics.Data: Not, DataFrame, groupby, combine, nrow
@@ -242,7 +242,7 @@ function by_plot_coords(f, args...; kwargs...)
 end
 
 using .Plotting.Misc.Lang: @preset, @precomp
-using Optim: Optim as opt, SimMode, st
+using Opt: Opt as opt, SimMode, st
 if occursin("Plotting", get(ENV, "JULIA_PRECOMP", ""))
     @preset begin
         py = opt.st.Instances.Exchanges.Python

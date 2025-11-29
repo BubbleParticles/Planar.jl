@@ -7,7 +7,7 @@ using .Planar.Engine.Strategies: Strategies as st
 using .Planar.Engine.Executors: Executors as ex
 using .Planar.Engine.Misc: Misc as ms
 using .Planar.Engine.Lang: Lang as lg
-using Optim: Optim as opt
+using Opt: Opt as opt
 
 function test_session_attributes()
     @eval begin

@@ -62,7 +62,7 @@ get(ENV, "PLANAR_DOCS_LOADED", "false") == "true" || begin
     use(:Engine, "Engine")
     use(:Pbar, "Pbar")
     use(:Metrics, "Metrics")
-    use(:Optim, "Optim")
+    use(:Opt, "Opt")
     use(:Ccxt, "Ccxt")
     use(:Python, "Python")
     use(:Strategies, "Strategies")
