@@ -8,6 +8,10 @@ OnlineTechnicalIndicators = "dc2d07fb-478f-4566-8417-81bb3e5a7af1"
 Opt = "01937fd2-c099-442f-ae89-75fa208aad36"
 Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 
+[sources]
+Opt = {path = "../../../Opt"}
+Planar = {path = "../../../Planar"}
+
 [compat]
 OnlineTechnicalIndicators = "0.1.2"
 
