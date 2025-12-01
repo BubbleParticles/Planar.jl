@@ -1,7 +1,16 @@
 using TOML
 using Pkg
+include("../resolve.jl")
 
 function tag_repo(; major=nothing, minor=nothing, patch=nothing)
+    # Check for unstaged changes
+    status = read(`git status --porcelain`, String)
+    if !isempty(strip(status))
+        error(
+            "Working directory is not clean. Please commit or stash changes before tagging.\nUnstaged changes:\n$status",
+        )
+    end
+
     Pkg.activate("Planar")
     p = Pkg.project()
     v = p.version
@@ -24,12 +33,19 @@ function tag_repo(; major=nothing, minor=nothing, patch=nothing)
     open(p.path, "w") do f
         TOML.print(f, toml)
     end
-    Pkg.activate("PlanarInteractive")
-    Pkg.resolve()
-    Pkg.activate("PlanarDev")
-    Pkg.resolve()
+    # Update all projects including strategies
+    recurse_projects(
+        _update_project,
+        ".";
+        io=stdout,
+        doupdate=false,
+        inst=false,
+        precomp=false,
+        exclude=("test", "docs", "deps", ".conda", ".CondaPkg", ".git"),
+        include=("PlanarDev/test",),
+    )
     Pkg.activate("Planar")
-    run(`git add Planar/Project.toml PlanarDev/Manifest.toml PlanarInteractive/Manifest.toml`)
+    run(`git add -u`)
     run(`git commit -m "v$v_string"`)
     run(`git tag v$v_string`)
 end

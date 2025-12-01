@@ -9,3 +9,6 @@ Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 PlanarDev = "df15b565-ff7f-4c64-9bc8-38e9343ea891"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[sources]
+PlanarDev = {path = ".."}
