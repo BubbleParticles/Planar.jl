@@ -1,14 +1,36 @@
 using Test
 
-# Preload marketsid into Main to avoid world-age binding issues
+# Preload Planar.Exchanges bindings into Main to avoid world-age binding issues
 @eval begin
     try
         using Planar.Exchanges
+        # Bind commonly used functions/modules into Main
         if !isdefined(Main, :marketsid)
             @eval Main const marketsid = Planar.Exchanges.marketsid
         end
+        if !isdefined(Main, :sandbox!)
+            @eval Main const sandbox! = Planar.Exchanges.sandbox!
+        end
+        if !isdefined(Main, :ratelimit!)
+            @eval Main const ratelimit! = Planar.Exchanges.ratelimit!
+        end
+        if !isdefined(Main, :setexchange!)
+            @eval Main const setexchange! = Planar.Exchanges.setexchange!
+        end
+        if !isdefined(Main, :getexchange!)
+            @eval Main const getexchange! = Planar.Exchanges.getexchange!
+        end
+        if !isdefined(Main, :issandbox)
+            @eval Main const issandbox = Planar.Exchanges.issandbox
+        end
+        if !isdefined(Main, :Exchanges)
+            @eval Main const Exchanges = Planar.Exchanges.Exchanges
+        end
+        if !isdefined(Main, :ExchangeTypes)
+            @eval Main const ExchangeTypes = Planar.Exchanges.ExchangeTypes
+        end
     catch e
-        @warn "Preloading marketsid failed" exception=(e,catch_backtrace())
+        @warn "Preloading Planar.Exchanges bindings failed" exception=(e,catch_backtrace())
     end
 end
 
