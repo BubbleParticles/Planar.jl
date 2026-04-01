@@ -11,11 +11,8 @@ function test_processing()
         try
             # Load Processing into local scope and bind to Main safely
         try
-            @eval begin
-                import Planar.Engine.Processing: Processing as _proc_mod
-                if !isdefined(Main, :Processing)
-                    @eval Main const Processing = _proc_mod
-                end
+            if !isdefined(Main, :Processing)
+                @eval Main const Processing = Planar.Engine.Processing
             end
         catch e
             @warn "Preloading Processing failed" exception=(e,catch_backtrace())
