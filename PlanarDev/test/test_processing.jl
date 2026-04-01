@@ -9,7 +9,8 @@ function test_processing()
         using Planar.Engine.Lang: Lang as lg
         # Ensure Processing is loaded into Main before defining test functions
         try
-            using Planar.Engine.Processing: Processing as pr
+            using Planar.Engine.Processing: Processing
+            @eval Main const Processing = Processing
         catch e
             @warn "Preloading Processing failed" exception=(e,catch_backtrace())
         end
