@@ -9,8 +9,6 @@ function test_processing()
         using Planar.Engine.Lang: Lang as lg
         # Ensure Processing is loaded into Main before defining test functions
         try
-            # Load Processing into local scope and bind to Main safely
-        try
             if !isdefined(Main, :Processing)
                 @eval Main const Processing = Planar.Engine.Processing
             end
