@@ -51,12 +51,12 @@ _exchange_pairs(exc) = begin
 end
 
 _exchange_sbox(exc) = begin
-    @assert !issandbox(exc)
-    sandbox!(exc, flag=false)
-    @assert !issandbox(exc)
-    sandbox!(exc)
-    @assert issandbox(exc)
-    ratelimit!(exc)
+    @assert !Planar.Exchanges.issandbox(exc)
+    Planar.Exchanges.sandbox!(exc, flag=false)
+    @assert !Planar.Exchanges.issandbox(exc)
+    Planar.Exchanges.sandbox!(exc)
+    @assert Planar.Exchanges.issandbox(exc)
+    Planar.Exchanges.ratelimit!(exc)
 end
 
 _exchanges_test_env() = begin
