@@ -63,7 +63,9 @@ tests(selected=ARGS) = begin
                 push!(_INCLUDED_TEST_FILES, file_name)
                 (isdefined(Main, :Revise) ? includet : include)(file_name)
             end
-            getproperty(@__MODULE__, name) |> invokelatest
+            f = getproperty(@__MODULE__, name)
+            # Use invokelatest to call test functions to avoid Julia world-age issues when globals are defined during test loading
+            invokelatest(f)
         end
     end
 end
