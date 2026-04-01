@@ -3,12 +3,12 @@ using Test
 
 function test_processing()
     @eval begin
-        using PlanarDev.Planar.Engine: Engine as egn
-        using .egn.Misc: Misc as ms
-        using .egn.Data: Data as da
-        using .egn.Lang: Lang as lg
-        using .egn.Processing: Processing as pr
-        using .egn.Data.TimeTicks: TimeFrame
+        using Planar.Engine: Engine as egn
+        using Planar.Engine.Misc: Misc as ms
+        using Planar.Engine.Data: Data as da
+        using Planar.Engine.Lang: Lang as lg
+        using Planar.Engine.Processing: Processing as pr
+        using Planar.Engine.Data.TimeTicks: TimeFrame
         PlanarDev.@environment!
     end
 
