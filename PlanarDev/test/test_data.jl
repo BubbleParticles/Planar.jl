@@ -33,11 +33,15 @@ test_zarrinstance() = begin
     zi
 end
 
+# Preload JSON and Mmap at top-level so JSON binding exists before test function definitions
+try
+    using PlanarDev.Misc.JSON
+    using Mmap
+catch e
+    @warn "Preloading PlanarDev.Misc.JSON or Mmap failed; tests may error." exception=(e,catch_backtrace())
+end
+
 function test_save_json(zi=nothing, key="coingecko/markets/all")
-    @eval begin
-        using PlanarDev.Misc.JSON
-        using Mmap
-    end
     filepath = joinpath(PROJECT_PATH, "test/stubs/cg_markets.json")
     data = JSON.parsefile(filepath)
     if isnothing(zi)
