@@ -7,7 +7,12 @@ function test_processing()
         using Planar.Engine.Misc: Misc as ms
         using Planar.Engine.Data: Data as da
         using Planar.Engine.Lang: Lang as lg
-        using Planar.Engine.Processing: Processing as pr
+        # Ensure Processing is loaded into Main before defining test functions
+        try
+            using Planar.Engine.Processing: Processing as pr
+        catch e
+            @warn "Preloading Processing failed" exception=(e,catch_backtrace())
+        end
         using Planar.Engine.Data.TimeTicks: TimeFrame
         PlanarDev.@environment!
     end
