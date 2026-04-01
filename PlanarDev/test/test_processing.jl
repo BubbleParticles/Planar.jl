@@ -9,8 +9,14 @@ function test_processing()
         using Planar.Engine.Lang: Lang as lg
         # Ensure Processing is loaded into Main before defining test functions
         try
-            using Planar.Engine.Processing: Processing
-            @eval Main const Processing = Processing
+            # Load Processing into local scope and bind to Main safely
+        try
+            @eval begin
+                import Planar.Engine.Processing: Processing as _proc_mod
+                if !isdefined(Main, :Processing)
+                    @eval Main const Processing = _proc_mod
+                end
+            end
         catch e
             @warn "Preloading Processing failed" exception=(e,catch_backtrace())
         end
