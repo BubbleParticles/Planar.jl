@@ -1,5 +1,17 @@
 using Test
 
+# Preload marketsid into Main to avoid world-age binding issues
+@eval begin
+    try
+        using Planar.Exchanges
+        if !isdefined(Main, :marketsid)
+            @eval Main const marketsid = Planar.Exchanges.marketsid
+        end
+    catch e
+        @warn "Preloading marketsid failed" exception=(e,catch_backtrace())
+    end
+end
+
 test_exch() = let exc = getexchange!(EXCHANGE, sandbox=false)
     Symbol(lowercase(exc.name)) == EXCHANGE
 end
