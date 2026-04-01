@@ -57,11 +57,11 @@ function test_processing()
 
         # 5. Equal timeframes (should throw)
         tf_equal = TimeFrame(Minute(1))
-        @test_throws AssertionError pr.upsample(df1, tf_equal, tf_equal)
+        @test_throws AssertionError Processing.upsample(df1, tf_equal, tf_equal)
 
         # 6. Zero volume
         df_zero = da.DataFrame(timestamp=[DateTime(2024,1,1,0,5)], open=[1.0], high=[1.5], low=[0.5], close=[1.2], volume=[0.0])
-        @test_throws AssertionError pr.upsample(df_zero, tf_large, tf_small)
+        @test_throws AssertionError Processing.upsample(df_zero, tf_large, tf_small)
         tf_small = TimeFrame(Minute(1))
         result_zero = Processing.upsample(df_zero, tf_large, tf_small)
         @test all(result_zero.volume .== 0.0)
