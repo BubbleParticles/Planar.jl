@@ -57,7 +57,14 @@ get(ENV, "PLANAR_DOCS_LOADED", "false") == "true" || begin
     use(:Processing, "Processing")
     use(:Instruments, "Instruments")
     use(:Exchanges, "Exchanges")
-    use(:Plotting, "Plotting")
+    # Ensure Plotting is available to Documenter
+    try
+        @eval Main using Plotting
+    catch
+        # Fallback: include module source and then import
+        include(joinpath(project_path, "Plotting", "src", "Plotting.jl"))
+        @eval Main using Plotting
+    end
     use(:Watchers, "Watchers")
     use(:Engine, "Engine")
     use(:Pbar, "Pbar")
