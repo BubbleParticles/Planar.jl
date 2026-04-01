@@ -1,4 +1,26 @@
 using Test
+
+# Preload Data and Zarr modules before defining tests to avoid world-age issues.
+# Doing this at top-level ensures the global bindings exist when test functions are defined.
+try
+    using .Planar.Engine.Data
+    const da = Data
+    using .Data.Zarr
+    const za = Zarr
+catch e
+    @warn "Preloading Data/Zarr failed in tests; tests may require these modules to be available." exception=(e,catch_backtrace())
+end
+
+# Preload Data and Zarr modules before defining tests to avoid world-age issues.
+# Doing this at top-level ensures the global bindings exist when test functions are defined.
+try
+    using .Planar.Engine.Data
+    const da = Data
+    using .Data.Zarr
+    const za = Zarr
+catch e
+    @warn "Preloading Data/Zarr failed in tests; tests may require these modules to be available." exception=(e,catch_backtrace())
+end
 # using .Planar.Data.DFUtils
 # include("env.jl")
 # btc = first(s.universe, a"BTC/USDT")
