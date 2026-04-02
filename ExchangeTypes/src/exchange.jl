@@ -100,7 +100,44 @@ function Exchange(x::Py, params=nothing, account="")
     for f in funcs
         f(e)
     end
-    isnone ? e : finalizer(close_exc, e)
+    if isnone
+        return e
+    end
+    # Avoid calling Python from GC finalizers (unsafe). Instead register a lightweight finalizer
+    # that enqueues the exchange for later cleanup; actual close_exc will be invoked by _closeall or tests.
+    const _FINALIZER_QUEUE = Ref(Vector{CcxtExchange}())
+    function _enqueue_for_close(obj)
+        try
+            push!(_FINALIZER_QUEUE[], obj)
+        catch
+        end
+        return nothing
+    end
+    finalizer(_enqueue_for_close, e)
+    e
+end
+
+# Provide a function to drain the finalizer queue and synchronously close queued exchanges
+function _drain_finalizer_queue()
+    q = copy(_FINALIZER_QUEUE[])
+    empty!(_FINALIZER_QUEUE[])
+    for e in q
+        try
+            close_exc(e)
+        catch
+        end
+    end
+    return nothing
+end
+
+# Update _closeall to also drain the finalizer queue
+_old_closeall = _closeall
+function _closeall()
+    _old_closeall()
+    try
+        _drain_finalizer_queue()
+    catch
+    end
 end
 
 @doc """ Converts value v to integer size with precision p.
