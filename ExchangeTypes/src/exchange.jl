@@ -37,6 +37,8 @@ mutable struct CcxtExchange{I<:ExchangeID} <: Exchange{I}
     _trace::Any
 end
 
+const _FINALIZER_QUEUE = Ref(Vector{CcxtExchange}())
+
 @doc """ Closes the given exchange.
 
 $(TYPEDSIGNATURES)
@@ -129,15 +131,6 @@ function _drain_finalizer_queue()
     return nothing
 end
 
-# Update _closeall to also drain the finalizer queue
-_old_closeall = _closeall
-function _closeall()
-    _old_closeall()
-    try
-        _drain_finalizer_queue()
-    catch
-    end
-end
 
 @doc """ Converts value v to integer size with precision p.
  $(TYPEDSIGNATURES)
@@ -242,9 +235,6 @@ Base.first(exc::Exchange, args::Vararg{Symbol}) = _first(exc, args...)
 const exchanges = Dict{Tuple{Symbol,String},Exchange}()
 @doc "Global var holding Sandbox Exchange instances. Used as a cache."
 const sb_exchanges = Dict{Tuple{Symbol,String},Exchange}()
-
-# queue for exchanges enqueued by finalizers (module scope)
-const _FINALIZER_QUEUE = Ref(Vector{CcxtExchange}())
 
 _closeall() = begin
     @sync begin
