@@ -105,15 +105,14 @@ function Exchange(x::Py, params=nothing, account="")
     end
     # Avoid calling Python from GC finalizers (unsafe). Instead register a lightweight finalizer
     # that enqueues the exchange for later cleanup; actual close_exc will be invoked by _closeall or tests.
-    const _FINALIZER_QUEUE = Ref(Vector{CcxtExchange}())
-    function _enqueue_for_close(obj)
-        try
-            push!(_FINALIZER_QUEUE[], obj)
+    finalizer(obj -> try
+            try
+                push!(_FINALIZER_QUEUE[], obj)
+            catch
+            end
+            nothing
         catch
-        end
-        return nothing
-    end
-    finalizer(_enqueue_for_close, e)
+        end, e)
     e
 end
 
@@ -244,19 +243,34 @@ const exchanges = Dict{Tuple{Symbol,String},Exchange}()
 @doc "Global var holding Sandbox Exchange instances. Used as a cache."
 const sb_exchanges = Dict{Tuple{Symbol,String},Exchange}()
 
+# queue for exchanges enqueued by finalizers (module scope)
+const _FINALIZER_QUEUE = Ref(Vector{CcxtExchange}())
+
 _closeall() = begin
     @sync begin
         excs = []
         while !isempty(exchanges)
             _, e = pop!(exchanges)
             push!(excs, e)
-            @async finalize(e)
+            # prefer explicit close on known exchanges
+            @async try
+                close_exc(e)
+            catch
+            end
         end
         while !isempty(sb_exchanges)
             _, e = pop!(sb_exchanges)
             push!(excs, e)
-            @async finalize(e)
+            @async try
+                close_exc(e)
+            catch
+            end
         end
+    end
+    # drain finalizer-enqueued exchanges
+    try
+        _drain_finalizer_queue()
+    catch
     end
 end
 
