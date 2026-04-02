@@ -35,7 +35,28 @@ using Test
 end
 
 test_exch() = let exc = getexchange!(EXCHANGE, sandbox=false)
-    Symbol(lowercase(exc.name)) == EXCHANGE
+    # ensure the exchange instance is properly closed after use to prevent resource leaks
+    try
+        Symbol(lowercase(exc.name)) == EXCHANGE
+    finally
+        try
+            # If the exchange has an async close, call it via Python if available
+            if hasproperty(exc, :py) && !isnothing(exc.py)
+                try
+                    pyclose = get(exc.py, :close, nothing)
+                    if !isnothing(pyclose)
+                        try
+                            pyfetch(pyclose)
+                        catch
+                            # ignore python close failures in tests
+                        end
+                    end
+                catch
+                end
+            end
+        catch
+        end
+    end
 end
 _exchange() = begin
     empty!(Exchanges.exchanges)
