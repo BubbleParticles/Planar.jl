@@ -25,6 +25,11 @@ function _test_markets(name=EXCHANGE, pair="BTC/USDT")
 end
 
 test_markets() = @testset "markets" begin
-    @eval using .Planar.Exchanges: loadmarkets!, exchanges, getexchange!, Exchanges
+    @eval using .Planar.Exchanges: loadmarkets!, exchanges, getexchange!, Exchanges, ExchangeTypes
     _test_markets()
+    # Ensure any Python exchange client sessions are closed to avoid aiohttp warnings
+    try
+        ExchangeTypes._closeall()
+    catch
+    end
 end

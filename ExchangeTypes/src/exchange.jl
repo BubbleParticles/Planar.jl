@@ -46,27 +46,25 @@ This function attempts to close the given exchange if it exists. It checks if th
 function close_exc(exc::CcxtExchange)
     try
         k = (Symbol(exc.id), account(exc))
-        if !haskey(exchanges, k) && !haskey(sb_exchanges, k) || pyisnull(e.py)
+        pyobj = getfield(exc, :py)
+        # If there's no python object or exchange not cached, nothing to do
+        if ((!haskey(exchanges, k) && !haskey(sb_exchanges, k)) || pyisnull(pyobj))
             return nothing
         end
-        close_func = pygetattr(e, "close", nothing)
+        close_func = pygetattr(pyobj, "close", nothing)
         if !isnothing(close_func)
             co = close_func()
             if !pyisnull(co) && pyisinstance(co, Python.gpa.pycoro_type)
                 task = pytask(co)
-                # block during precomp
-                if ccall(:jl_generating_output, Cint, ()) == 1
+                try
                     wait(task)
-                else
-                    @async try
-                        wait(task)
-                    catch
-                    end
+                catch err
+                    @debug err
                 end
             end
         end
-    catch e
-        @debug e
+    catch ex
+        @debug ex
     end
 end
 
