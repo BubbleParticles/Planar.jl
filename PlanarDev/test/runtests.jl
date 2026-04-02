@@ -55,6 +55,60 @@ all_tests = [
 tests(selected=ARGS) = begin
     selected = string.(selected)
     test_all = "all" ∈ selected || length(selected) == 0
+
+    # Preload commonly used modules and bindings into Main to reduce world-age warnings.
+    @eval begin
+        try
+            using Collections
+            if !isdefined(Main, :AssetCollection)
+                @eval Main const AssetCollection = Collections.AssetCollection
+            end
+        catch
+        end
+        try
+            using Data
+            if !isdefined(Main, :Data)
+                @eval Main const Data = Data
+            end
+        catch
+        end
+        try
+            using Processing
+            if !isdefined(Main, :Processing)
+                @eval Main const Processing = Processing
+            end
+        catch
+        end
+        try
+            using ExchangeTypes
+            if !isdefined(Main, :ExchangeTypes)
+                @eval Main const ExchangeTypes = ExchangeTypes
+            end
+        catch
+        end
+        try
+            using Exchanges
+            if !isdefined(Main, :Exchanges)
+                @eval Main const Exchanges = Exchanges
+            end
+        catch
+        end
+        try
+            using Watchers
+            if !isdefined(Main, :Watchers)
+                @eval Main const Watchers = Watchers
+            end
+        catch
+        end
+        try
+            using Instruments
+            if !isdefined(Main, :Instruments)
+                @eval Main const Instruments = Instruments
+            end
+        catch
+        end
+    end
+
     # Predefine placeholder test functions to avoid world-age warnings when tests are referenced before being defined
     for testname in all_tests
         name = Symbol(:test_, testname)
