@@ -93,6 +93,10 @@ _do_test_exchanges() = begin
     e = _exchange()
     _exchange_pairs(e)
     @test _exchange_sbox(e)
+    try
+        ExchangeTypes._closeall()
+    catch
+    end
 end
 
 test_exchanges() = begin
