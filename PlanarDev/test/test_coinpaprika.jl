@@ -1,15 +1,16 @@
 using Test
 
+@eval begin
+    using .Planar.Engine.LiveMode.Watchers.CoinPaprika
+    using .Planar.Engine.Instruments
+    using .Planar.Engine.TimeTicks
+    using .CoinPaprika.JSON3
+    using .Planar.Engine.Data: Candle
+    const cpr = CoinPaprika
+    const JSON3 = CoinPaprika.JSON3
+end
+
 function test_coinpaprika()
-    @eval begin
-        using .Planar.Engine.LiveMode.Watchers.CoinPaprika
-        using .Planar.Engine.Instruments
-        using .Planar.Engine.TimeTicks
-        using .CoinPaprika.JSON3
-        using .Planar.Engine.Data: Candle
-        const cpr = CoinPaprika
-        const JSON3 = CoinPaprika.JSON3
-    end
     invokelatest(@testset "coinpaprika" begin
         _ = test_ratelimit()
         _ = test_twitter()
