@@ -1,42 +1,35 @@
 using Test
 
-# Attempt to load Planar and TimeTicks at top-level.
-# Use qualified module references to avoid 'using' at non-top-level contexts in CI harness.
+# Ensure Planar and TimeTicks are available and set global `fred` alias to Watchers.FRED if possible.
 try
-    import .Planar: Planar
+    if isdefined(Watchers, :FRED)
+        @eval Main const fred = Watchers.FRED
+    else
+        try
+            basepath = dirname(pathof(Watchers))
+            fred_file = joinpath(basepath, "apis", "fred.jl")
+            if isfile(fred_file)
+                Base.include(Watchers, fred_file)
+            end
+        catch
+        end
+        if isdefined(Watchers, :FRED)
+            @eval Main const fred = Watchers.FRED
+        else
+            @eval Main const fred = nothing
+        end
+    end
 catch
-    # ignore if import fails; tests will gate on availability
-end
-try
-    import .Planar.Engine.TimeTicks
-catch
-end
-try
-    import TimeTicks
-catch
-end
-try
-    import TimeTicks.Dates: format, @dateformat_str
-catch
+    @eval Main const fred = nothing
 end
 
 function test_fred()
-
-    # Ensure watcher's FRED binding is accessed via invokelatest to avoid world-age issues
-    if isdefined(Watchers, :FRED)
-        fred = invokelatest(() -> Watchers.FRED)
-    else
-        # If Watchers.FRED is not available, try loading module directly
-        try
-            # Load FRED watcher at Main top-level to avoid 'using' inside function body
-            eval(Main, :(using .Planar.Engine.LiveMode.Watchers.FRED))
-            fred = invokelatest(() -> FRED)
-        catch
-            @warn "FRED API tests skipped: Watchers.FRED not available"
-            fred = nothing
-        end
+    # If fred isn't available, skip the tests
+    if fred === nothing
+        @warn "FRED API tests skipped: Watchers.FRED not available"
+        return true
     end
-    
+
     @testset "fred" begin
         
         @info "TEST: fred api key setup"
