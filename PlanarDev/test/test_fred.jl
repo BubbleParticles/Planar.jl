@@ -28,7 +28,8 @@ function test_fred()
     else
         # If Watchers.FRED is not available, try loading module directly
         try
-            using .Planar.Engine.LiveMode.Watchers.FRED
+            # Load FRED watcher at Main top-level to avoid 'using' inside function body
+            eval(Main, :(using .Planar.Engine.LiveMode.Watchers.FRED))
             fred = invokelatest(() -> FRED)
         catch
             @warn "FRED API tests skipped: Watchers.FRED not available"
