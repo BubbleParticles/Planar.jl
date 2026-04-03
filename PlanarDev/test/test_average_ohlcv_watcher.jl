@@ -10,7 +10,7 @@ using Exchanges # For Exchange type and MockExchange
 using Misc # For TimeFrame
 
 # Define a Mock Exchange type for testing
-struct MockExchange <: Exchanges.Exchange
+struct MockExchange
     id_::String # field name changed to avoid conflict with Exchanges.id method
     name_::String # field name changed
 
