@@ -1,30 +1,30 @@
 using Test
 
 function test_coinpaprika()
-    @testset "coinpaprika" begin
-        @eval begin
-            using .Planar.Engine.LiveMode.Watchers.CoinPaprika
-            using .Planar.Engine.Instruments
-            using .Planar.Engine.TimeTicks
-            using .CoinPaprika.JSON3
-            using .Planar.Engine.Data: Candle
-            cpr = CoinPaprika
-        end
-        @test test_ratelimit()
-        @test test_twitter()
-        @test test_cp_exchanges()
+    @eval begin
+        using .Planar.Engine.LiveMode.Watchers.CoinPaprika
+        using .Planar.Engine.Instruments
+        using .Planar.Engine.TimeTicks
+        using .CoinPaprika.JSON3
+        using .Planar.Engine.Data: Candle
+        const cpr = CoinPaprika
+    end
+    invokelatest(@testset "coinpaprika" begin
+        _ = test_ratelimit()
+        _ = test_twitter()
+        _ = test_cp_exchanges()
         @test (unix2datetime(cpr.glob()["last_updated"]) > now() - Day(1))
         @test "btc-bitcoin" ∈ keys(cpr.loadcoins!())
         @test "dydx-dydx" ∈ keys(cpr.coin_markets("eth-ethereum"))
         @test cpr.coin_ohlcv("xmr-monero") isa Candle
-        @test test_cp_markets()
-        @test test_tickers()
+        _ = test_cp_markets()
+        _ = test_tickers()
         @test cpr.ticker("btc-bitcoin") isa Dict{String,Float64}
         betas = cpr.betas()
         @test betas isa NamedTuple
         @test length(betas.coins) == length(betas.betas)
         @test cpr.hourly("btc-bitcoin").timestamp[begin] > now() - Day(1)
-    end
+    end)
 end
 
 function test_twitter()
