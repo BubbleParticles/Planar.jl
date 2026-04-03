@@ -2,7 +2,7 @@
 
 julia_version = "1.12.5"
 manifest_format = "2.0"
-project_hash = "77920fb1130852906b400ffd6735ce42ec153a83"
+project_hash = "9a70693a12621efad541cd63a8f372c080343680"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "f7304359109c768cf32dc5fa2d371565bb63b68a"
@@ -1729,6 +1729,12 @@ weakdeps = ["Adapt"]
     [deps.OffsetArrays.extensions]
     OffsetArraysAdaptExt = "Adapt"
 
+[[deps.OnlineStats]]
+deps = ["AbstractTrees", "Dates", "Distributions", "LinearAlgebra", "OnlineStatsBase", "OrderedCollections", "Random", "RecipesBase", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns"]
+git-tree-sha1 = "a19ba00b3968afcde81471033fd22976e62f5fea"
+uuid = "a15396b6-48d5-5d58-9928-6d29437db91e"
+version = "1.7.3"
+
 [[deps.OnlineStatsBase]]
 deps = ["AbstractTrees", "Dates", "LinearAlgebra", "OrderedCollections", "Statistics", "StatsBase"]
 git-tree-sha1 = "a5a5a68d079ce531b0220e99789e0c1c8c5ed215"
@@ -1946,7 +1952,7 @@ version = "1.6.11"
     CausalityTools = "01837fd2-c099-442f-ae89-75fa208aad36"
 
 [[deps.PlanarDev]]
-deps = ["BlackBoxOptim", "Data", "DataFrames", "Metrics", "OnlineTechnicalIndicators", "Opt", "Pkg", "Planar", "Random", "Reexport", "Scrapers", "Stubs"]
+deps = ["BlackBoxOptim", "Data", "DataFrames", "GLM", "Metrics", "OnlineTechnicalIndicators", "Opt", "Pkg", "Planar", "Random", "Reexport", "Scrapers", "Stubs"]
 path = "."
 uuid = "df15b565-ff7f-4c64-9bc8-38e9343ea891"
 version = "0.1.0"
