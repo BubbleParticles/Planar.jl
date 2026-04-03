@@ -8,7 +8,6 @@ using Dates
 using Watchers
 using Exchanges # For Exchange type and MockExchange
 using Misc # For TimeFrame
-using Watchers.AverageOHLCVWatcherImpl # To access AverageOHLCVWatcherAttrs if needed for deeper inspection, not typically for blackbox tests.
 
 # Define a Mock Exchange type for testing
 struct MockExchange <: Exchanges.Exchange
