@@ -17,27 +17,32 @@ struct MockExchange
     MockExchange(id; name=id) = new(id, name)
 end
 # Minimal Exchanges.Exchange interface
-@eval Exchanges begin
-    function id(m::MockExchange)
+# Export minimal helper functions to the Exchanges module that the test harness expects.
+# Use functions that read fields directly from the MockExchange defined in this module.
+@eval begin
+    function __mock_id(m)
         return m.id_
     end
-
-    function name(m::MockExchange)
+    function __mock_name(m)
         return m.name_
     end
-
-    function issandbox(m::MockExchange)
+    function __mock_issandbox(m)
         return false
     end
-
-    function params(m::MockExchange)
+    function __mock_params(m)
         return Dict{Symbol, Any}()
     end
-
-    function account(m::MockExchange)
+    function __mock_account(m)
         return ""
     end
 end
+# Register light wrappers into Exchanges so code calling `Exchanges.id(exc)` works by argument type
+# This avoids polluting the Exchanges module namespace with MockExchange type.
+Exchanges.id(m) = typeof(m) <: MockExchange ? __mock_id(m) : getfield(Exchanges, :id)(m)
+Exchanges.name(m) = typeof(m) <: MockExchange ? __mock_name(m) : getfield(Exchanges, :name)(m)
+Exchanges.issandbox(m) = typeof(m) <: MockExchange ? __mock_issandbox(m) : getfield(Exchanges, :issandbox)(m)
+Exchanges.params(m) = typeof(m) <: MockExchange ? __mock_params(m) : getfield(Exchanges, :params)(m)
+Exchanges.account(m) = typeof(m) <: MockExchange ? __mock_account(m) : getfield(Exchanges, :account)(m)
 
 
 # Helper to create OHLCV DataFrame for tests
