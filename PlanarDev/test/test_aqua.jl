@@ -16,6 +16,12 @@ function run_aqua_test(test_func; skip=[:StrategyStats, :Cli, :zarr, :test, :Pla
             id = Symbol(pname)
             id in skip && return
             @eval using $(id)
+            try
+                @eval using Aqua
+            catch
+                # Aqua may not be available in some environments; skip test if so
+                return
+            end
             @eval $(test_func)($(id))
         end, io=devnull)
     finally
