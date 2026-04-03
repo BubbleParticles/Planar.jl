@@ -9,12 +9,12 @@ function test_coingecko()
         using .Instruments.Derivatives: @d_str
         using .TimeTicks
         using .TimeTicks.Dates: format, @dateformat_str
-        cg = CoinGecko
+        const cg = CoinGecko
         # ensure other watchers are pulling data from coingecko
         # to avoid rate limit
         Planar.Engine.LiveMode.Watchers._closeall()
     end
-    @testset failfast = FAILFAST "coingecko" begin
+    invokelatest(() -> @testset failfast = FAILFAST "coingecko" begin
         @test cg.RATE_LIMIT[] isa Period
         cg.RATE_LIMIT[] = Millisecond(1 * 1000)
         cg.RETRY[] = true
@@ -45,7 +45,7 @@ function test_coingecko()
         coingecko_ohlc()
         @test fieldnames(typeof(cg.globaldata())) == (:volume, :mcap_change_24h, :date)
         @test length(cg.trending()) > 0
-    end
+    end)
 end
 
 coingecko_tickers() = begin
