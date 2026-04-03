@@ -38,11 +38,39 @@ end
 end
 # Register light wrappers into Exchanges so code calling `Exchanges.id(exc)` works by argument type
 # This avoids polluting the Exchanges module namespace with MockExchange type.
-Exchanges.id(m) = typeof(m) <: MockExchange ? __mock_id(m) : getfield(Exchanges, :id)(m)
-Exchanges.name(m) = typeof(m) <: MockExchange ? __mock_name(m) : getfield(Exchanges, :name)(m)
-Exchanges.issandbox(m) = typeof(m) <: MockExchange ? __mock_issandbox(m) : getfield(Exchanges, :issandbox)(m)
-Exchanges.params(m) = typeof(m) <: MockExchange ? __mock_params(m) : getfield(Exchanges, :params)(m)
-Exchanges.account(m) = typeof(m) <: MockExchange ? __mock_account(m) : getfield(Exchanges, :account)(m)
+# Some versions of Exchanges may not export `id` etc. functions as globals accessible via getfield.
+# Provide safe fallbacks that prefer existing methods if present.
+if isdefined(Exchanges, :id)
+    _orig_id = getfield(Exchanges, :id)
+else
+    _orig_id = (x) -> error("Exchanges.id not defined for type: ", typeof(x))
+end
+if isdefined(Exchanges, :name)
+    _orig_name = getfield(Exchanges, :name)
+else
+    _orig_name = (x) -> error("Exchanges.name not defined for type: ", typeof(x))
+end
+if isdefined(Exchanges, :issandbox)
+    _orig_issandbox = getfield(Exchanges, :issandbox)
+else
+    _orig_issandbox = (x) -> false
+end
+if isdefined(Exchanges, :params)
+    _orig_params = getfield(Exchanges, :params)
+else
+    _orig_params = (x) -> Dict{Symbol,Any}()
+end
+if isdefined(Exchanges, :account)
+    _orig_account = getfield(Exchanges, :account)
+else
+    _orig_account = (x) -> ""
+end
+
+Exchanges.id(m) = typeof(m) <: MockExchange ? __mock_id(m) : _orig_id(m)
+Exchanges.name(m) = typeof(m) <: MockExchange ? __mock_name(m) : _orig_name(m)
+Exchanges.issandbox(m) = typeof(m) <: MockExchange ? __mock_issandbox(m) : _orig_issandbox(m)
+Exchanges.params(m) = typeof(m) <: MockExchange ? __mock_params(m) : _orig_params(m)
+Exchanges.account(m) = typeof(m) <: MockExchange ? __mock_account(m) : _orig_account(m)
 
 
 # Helper to create OHLCV DataFrame for tests
