@@ -1,11 +1,11 @@
 using Test
 
+@eval using .Planar: Planar
+@eval using .Planar.Engine.TimeTicks
+@eval using .TimeTicks
+@eval using .TimeTicks.Dates: format, @dateformat_str
+
 function test_fred()
-    # Evaluate using at top-level (Main) to avoid "using" syntax errors inside function bodies
-    eval(Main, :(using .Planar: Planar))
-    eval(Main, :(using .Planar.Engine.TimeTicks))
-    eval(Main, :(using .TimeTicks))
-    eval(Main, :(using .TimeTicks.Dates: format, @dateformat_str))
 
     # Ensure watcher's FRED binding is accessed via invokelatest to avoid world-age issues
     if isdefined(Watchers, :FRED)
