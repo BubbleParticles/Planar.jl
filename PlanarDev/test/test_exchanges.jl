@@ -1,7 +1,62 @@
 using Test
 
+# Preload Planar.Exchanges bindings into Main to avoid world-age binding issues
+@eval begin
+    try
+        using Planar.Exchanges
+        # Bind commonly used functions/modules into Main
+        if !isdefined(Main, :marketsid)
+            @eval Main const marketsid = Planar.Exchanges.marketsid
+        end
+        if !isdefined(Main, :sandbox!)
+            @eval Main const sandbox! = Planar.Exchanges.sandbox!
+        end
+        if !isdefined(Main, :ratelimit!)
+            @eval Main const ratelimit! = Planar.Exchanges.ratelimit!
+        end
+        if !isdefined(Main, :setexchange!)
+            @eval Main const setexchange! = Planar.Exchanges.setexchange!
+        end
+        if !isdefined(Main, :getexchange!)
+            @eval Main const getexchange! = Planar.Exchanges.getexchange!
+        end
+        if !isdefined(Main, :issandbox)
+            @eval Main const issandbox = Planar.Exchanges.issandbox
+        end
+        if !isdefined(Main, :Exchanges)
+            @eval Main const Exchanges = Planar.Exchanges.Exchanges
+        end
+        if !isdefined(Main, :ExchangeTypes)
+            @eval Main const ExchangeTypes = Planar.Exchanges.ExchangeTypes
+        end
+    catch e
+        @warn "Preloading Planar.Exchanges bindings failed" exception=(e,catch_backtrace())
+    end
+end
+
 test_exch() = let exc = getexchange!(EXCHANGE, sandbox=false)
-    Symbol(lowercase(exc.name)) == EXCHANGE
+    # ensure the exchange instance is properly closed after use to prevent resource leaks
+    try
+        Symbol(lowercase(exc.name)) == EXCHANGE
+    finally
+        try
+            # If the exchange has an async close, call it via Python if available
+            if hasproperty(exc, :py) && !isnothing(exc.py)
+                try
+                    pyclose = get(exc.py, :close, nothing)
+                    if !isnothing(pyclose)
+                        try
+                            pyfetch(pyclose)
+                        catch
+                            # ignore python close failures in tests
+                        end
+                    end
+                catch
+                end
+            end
+        catch
+        end
+    end
 end
 _exchange() = begin
     empty!(Exchanges.exchanges)
@@ -17,12 +72,12 @@ _exchange_pairs(exc) = begin
 end
 
 _exchange_sbox(exc) = begin
-    @assert !issandbox(exc)
-    sandbox!(exc, flag=false)
-    @assert !issandbox(exc)
-    sandbox!(exc)
-    @assert issandbox(exc)
-    ratelimit!(exc)
+    @assert !Planar.Exchanges.issandbox(exc)
+    Planar.Exchanges.sandbox!(exc, flag=false)
+    @assert !Planar.Exchanges.issandbox(exc)
+    Planar.Exchanges.sandbox!(exc)
+    @assert Planar.Exchanges.issandbox(exc)
+    Planar.Exchanges.ratelimit!(exc)
 end
 
 _exchanges_test_env() = begin
@@ -38,6 +93,10 @@ _do_test_exchanges() = begin
     e = _exchange()
     _exchange_pairs(e)
     @test _exchange_sbox(e)
+    try
+        ExchangeTypes._closeall()
+    catch
+    end
 end
 
 test_exchanges() = begin

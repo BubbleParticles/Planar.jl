@@ -21,11 +21,11 @@ _test_cmc_1(fromenv=true) = begin
 end
 
 test_coinmarketcap(fromenv=true) = begin
+    # Load module definitions into Main and invoke latest to avoid world-age issues
     @eval begin
         using .Planar: Planar
         using .Planar.Engine.LiveMode.Watchers.CoinMarketCap
+        const CoinMarketCap = Planar.Engine.LiveMode.Watchers.CoinMarketCap
     end
-    @testset "coinmarketcap" begin
-        _test_cmc_1(fromenv)
-    end
+    invokelatest(_test_cmc_1, fromenv)
 end
