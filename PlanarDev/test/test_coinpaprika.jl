@@ -8,6 +8,7 @@ function test_coinpaprika()
         using .CoinPaprika.JSON3
         using .Planar.Engine.Data: Candle
         const cpr = CoinPaprika
+        const JSON3 = CoinPaprika.JSON3
     end
     invokelatest(@testset "coinpaprika" begin
         _ = test_ratelimit()
