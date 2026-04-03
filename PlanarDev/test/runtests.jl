@@ -360,11 +360,9 @@ tests(selected=ARGS) = begin
             catch
             end
             # Preload Dates functions/types commonly used by tests (now, DateTime, Period, Year, Millisecond)
+            # Note: Prefer TimeTicks.now over Dates.now since that's what most of the codebase uses
             try
                 using TimeTicks.Dates
-                if !isdefined(Main, :now)
-                    @eval Main const now = Dates.now
-                end
                 if !isdefined(Main, :DateTime)
                     @eval Main const DateTime = Dates.DateTime
                 end
@@ -378,6 +376,21 @@ tests(selected=ARGS) = begin
                     @eval Main const Millisecond = Dates.Millisecond
                 end
             catch
+            end
+            # Use TimeTicks.now if available, otherwise Dates.now
+            try
+                using TimeTicks: now
+                if !isdefined(Main, :now)
+                    @eval Main const now = TimeTicks.now
+                end
+            catch
+                try
+                    using Dates: now
+                    if !isdefined(Main, :now)
+                        @eval Main const now = Dates.now
+                    end
+                catch
+                end
             end
         catch
         end
