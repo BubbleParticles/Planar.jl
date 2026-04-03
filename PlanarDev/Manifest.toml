@@ -2,7 +2,7 @@
 
 julia_version = "1.12.5"
 manifest_format = "2.0"
-project_hash = "6a0461583de69f0c2676f776485e15a99d0e885f"
+project_hash = "98f4eeda5fb0b10479d5dee7cbb133d9057fde7e"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "f7304359109c768cf32dc5fa2d371565bb63b68a"
@@ -1928,7 +1928,7 @@ version = "1.6.11"
     CausalityTools = "01837fd2-c099-442f-ae89-75fa208aad36"
 
 [[deps.PlanarDev]]
-deps = ["BlackBoxOptim", "Metrics", "Opt", "Pkg", "Planar", "Random", "Reexport", "Scrapers", "Stubs"]
+deps = ["BlackBoxOptim", "Data", "Metrics", "Opt", "Pkg", "Planar", "Random", "Reexport", "Scrapers", "Stubs"]
 path = "."
 uuid = "df15b565-ff7f-4c64-9bc8-38e9343ea891"
 version = "0.1.0"
