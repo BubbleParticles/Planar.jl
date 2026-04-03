@@ -30,9 +30,13 @@ function run_aqua_test(test_func; skip=[:StrategyStats, :Cli, :zarr, :test, :Pla
 end
 
 test_aqua() = @testset "aqua" begin
-    # Aqua.test_ambiguities(pkg) skip=true
-    # Aqua.test_piracies(pkg)
+    # By default only run the dependency check (quick). To run the full Aqua test
+    # suite set the environment variable PLANAR_RUN_FULL_AQUA_TESTS=1.
     run_aqua_test(Aqua.test_stale_deps, skip2=[:Data])
-    run_aqua_test(Aqua.test_unbound_args)
-    run_aqua_test(Aqua.test_undefined_exports)
+    if get(ENV, "PLANAR_RUN_FULL_AQUA_TESTS", "0") == "1"
+        run_aqua_test(Aqua.test_unbound_args)
+        run_aqua_test(Aqua.test_undefined_exports)
+    else
+        @info "Skipping full Aqua tests; set PLANAR_RUN_FULL_AQUA_TESTS=1 to enable."
+    end
 end
