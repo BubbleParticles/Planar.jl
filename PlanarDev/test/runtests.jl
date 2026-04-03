@@ -380,12 +380,12 @@ tests(selected=ARGS) = begin
             file_name = joinpath(PROJECT_PATH, "test", string(name, ".jl"))
             if file_name ∉ _INCLUDED_TEST_FILES
                 push!(_INCLUDED_TEST_FILES, file_name)
-                if isdefined(Main, :Revise)
-                    # Use Revise.includet evaluated in Main so 'using' in included files executes at module top-level
-                    eval(Main, :(Revise.includet($(QuoteNode(file_name)))))
-                else
-                    # Ensure include runs in Main top-level to allow `using` statements in test files
-                    eval(Main, :(include($(QuoteNode(file_name)))))
+                try
+                    # Include the test file into Main so `using` statements inside test files are at top-level.
+                    Base.include(Main, file_name)
+                catch
+                    # Fallback to normal include if Base.include fails for any reason
+                    include(file_name)
                 end
             end
             f = getproperty(@__MODULE__, name)
