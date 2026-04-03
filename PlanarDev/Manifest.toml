@@ -2,7 +2,7 @@
 
 julia_version = "1.12.5"
 manifest_format = "2.0"
-project_hash = "8b60720abdcc439afd528f5978b7892c1de666f9"
+project_hash = "77920fb1130852906b400ffd6735ce42ec153a83"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "f7304359109c768cf32dc5fa2d371565bb63b68a"
@@ -910,6 +910,12 @@ version = "0.5.0"
 deps = ["Random"]
 uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
 version = "1.11.0"
+
+[[deps.GLM]]
+deps = ["Distributions", "LinearAlgebra", "Printf", "Reexport", "SparseArrays", "SpecialFunctions", "Statistics", "StatsAPI", "StatsBase", "StatsFuns", "StatsModels"]
+git-tree-sha1 = "3bcb30438ee1655e3b9c42d97544de7addc9c589"
+uuid = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
+version = "1.9.3"
 
 [[deps.GPUArraysCore]]
 deps = ["Adapt"]
@@ -1940,7 +1946,7 @@ version = "1.6.11"
     CausalityTools = "01837fd2-c099-442f-ae89-75fa208aad36"
 
 [[deps.PlanarDev]]
-deps = ["BlackBoxOptim", "Data", "DataFrames", "Metrics", "Opt", "Pkg", "Planar", "Random", "Reexport", "Scrapers", "Stubs"]
+deps = ["BlackBoxOptim", "Data", "DataFrames", "Metrics", "OnlineTechnicalIndicators", "Opt", "Pkg", "Planar", "Random", "Reexport", "Scrapers", "Stubs"]
 path = "."
 uuid = "df15b565-ff7f-4c64-9bc8-38e9343ea891"
 version = "0.1.0"
@@ -2332,6 +2338,11 @@ deps = ["Distributed", "Mmap", "Random", "Serialization"]
 uuid = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
 version = "1.11.0"
 
+[[deps.ShiftedArrays]]
+git-tree-sha1 = "503688b59397b3307443af35cd953a13e8005c16"
+uuid = "1277b4bf-5013-50f5-be3d-901d8477a67a"
+version = "2.0.0"
+
 [[deps.SimMode]]
 deps = ["Executors", "Pbar", "Simulations"]
 path = "../SimMode"
@@ -2529,6 +2540,12 @@ weakdeps = ["ChainRulesCore", "InverseFunctions"]
     [deps.StatsFuns.extensions]
     StatsFunsChainRulesCoreExt = "ChainRulesCore"
     StatsFunsInverseFunctionsExt = "InverseFunctions"
+
+[[deps.StatsModels]]
+deps = ["DataAPI", "DataStructures", "LinearAlgebra", "Printf", "REPL", "ShiftedArrays", "SparseArrays", "StatsAPI", "StatsBase", "StatsFuns", "Tables"]
+git-tree-sha1 = "08786db4a1346d17d0a8d952d2e66fd00fa18192"
+uuid = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
+version = "0.7.9"
 
 [[deps.Strategies]]
 deps = ["Collections", "MacroTools", "Pkg"]
