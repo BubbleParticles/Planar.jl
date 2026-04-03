@@ -17,11 +17,25 @@ struct MockExchange
     MockExchange(id; name=id) = new(id, name)
 end
 # Minimal Exchanges.Exchange interface
-Exchanges.id(m::MockExchange) = m.id_
-Exchanges.name(m::MockExchange) = m.name_
-Exchanges.issandbox(m::MockExchange) = false
-Exchanges.params(m::MockExchange) = Dict{Symbol, Any}()
-Exchanges.account(m::MockExchange) = ""
+eval(Exchanges, :(function id(m::MockExchange)
+    return m.id_
+end))
+
+eval(Exchanges, :(function name(m::MockExchange)
+    return m.name_
+end))
+
+eval(Exchanges, :(function issandbox(m::MockExchange)
+    return false
+end))
+
+eval(Exchanges, :(function params(m::MockExchange)
+    return Dict{Symbol, Any}()
+end))
+
+eval(Exchanges, :(function account(m::MockExchange)
+    return ""
+end))
 
 
 # Helper to create OHLCV DataFrame for tests
