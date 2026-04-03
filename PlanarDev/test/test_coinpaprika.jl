@@ -11,7 +11,7 @@ using Test
 end
 
 function test_coinpaprika()
-    invokelatest(@testset "coinpaprika" begin
+    invokelatest(() -> @testset "coinpaprika" begin
         _ = test_ratelimit()
         _ = test_twitter()
         _ = test_cp_exchanges()
@@ -22,7 +22,7 @@ function test_coinpaprika()
             # This pair may not always be present; assert that coin_markets returns a Dict and skip strict membership test
         markets = cpr.coin_markets("eth-ethereum")
         @test markets isa Dict
-            @test cpr.coin_ohlcv("xmr-monero") isa Candle
+        @test cpr.coin_ohlcv("xmr-monero") isa Candle
         catch e
             @info "CoinPaprika transient API failure in tests: $e"
         end
