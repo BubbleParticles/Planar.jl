@@ -7,9 +7,19 @@ using .Planar.Engine.Strategies: Strategies as st
 using .Planar.Engine.Executors: Executors as ex
 using .Planar.Engine.Misc: Misc as ms
 using .Planar.Engine.Lang: Lang as lg
-using Opt: Opt as opt
+
+# Try to load Opt module; skip test if unavailable (e.g., when PLANAR_NO_OPTENV is set)
+opt = nothing
+try
+    import Opt
+    opt = Opt
+catch e
+    # Opt module not available (expected when PLANAR_NO_OPTENV="1" in CI)
+end
 
 function test_session_attributes()
+    isnothing(opt) && return  # Skip test if Opt not available
+    
     @eval begin
         using PlanarDev.Planar.Engine: Engine as egn
         using .egn.Strategies: Strategies as st
@@ -50,13 +60,13 @@ function test_session_attributes()
 
             # Clean up any existing sessions to ensure reproducible results
             try
-                opt.delete_sessions!(string(nameof(s)); zi=zi)
+                Main.opt.delete_sessions!(string(nameof(s)); zi=zi)
             catch
                 # Ignore errors if no sessions exist
             end
 
             # Create an optimization session
-            sess = opt.optsession(s; seed=42, splits=1, offset=0)
+            sess = Main.opt.optsession(s; seed=42, splits=1, offset=0)
 
             # Add some test results
             push!(
@@ -69,10 +79,10 @@ function test_session_attributes()
             )
 
             # Save session initially
-            opt.save_session(sess; from=0, zi=zi)
+            Main.opt.save_session(sess; from=0, zi=zi)
 
             # Print session key after saving
-            k, _ = opt.session_key(sess)
+            k, _ = Main.opt.session_key(sess)
             @info "Session key for save" k
             z = da.load_data(zi, k; serialized=true, as_z=true)[1]
             @test !isempty(z.attrs)
@@ -92,10 +102,10 @@ function test_session_attributes()
             )
 
             # Progressive save
-            opt.save_session(sess; from=2, zi=zi)
+            Main.opt.save_session(sess; from=2, zi=zi)
 
             # Load session and verify attributes
-            k, _ = opt.session_key(sess)
+            k, _ = Main.opt.session_key(sess)
             @info "Session key for load" k
             z = da.load_data(zi, k; serialized=true, as_z=true)[1]
             @test !isempty(z.attrs)
@@ -105,8 +115,8 @@ function test_session_attributes()
             @test haskey(z.attrs, "attrs")
 
             # Test loading the session
-            loaded_sess = opt.load_session(sess; zi=zi)
-            @test loaded_sess isa opt.OptSession
+            loaded_sess = Main.opt.load_session(sess; zi=zi)
+            @test loaded_sess isa Main.opt.OptSession
             @test size(loaded_sess.results, 1) == 5
             @test loaded_sess.attrs[:seed] == 42
             @test loaded_sess.attrs[:splits] == 1
@@ -126,13 +136,13 @@ function test_session_attributes()
 
             # Clean up any existing sessions to ensure reproducible results
             try
-                opt.delete_sessions!(string(nameof(s)); zi=zi)
+                Main.opt.delete_sessions!(string(nameof(s)); zi=zi)
             catch
                 # Ignore errors if no sessions exist
             end
 
             # Create an optimization session
-            sess = opt.optsession(s; seed=42, splits=1, offset=0)
+            sess = Main.opt.optsession(s; seed=42, splits=1, offset=0)
 
             # Add some test results
             push!(
@@ -141,10 +151,10 @@ function test_session_attributes()
             )
 
             # Save session initially
-            opt.save_session(sess; from=0, zi=zi)
+            Main.opt.save_session(sess; from=0, zi=zi)
 
             # Manually delete attributes to simulate corruption
-            k, _ = opt.session_key(sess)
+            k, _ = Main.opt.session_key(sess)
             z = da.load_data(zi, k; serialized=true, as_z=true)[1]
             delete!(z.storage, z.path, ".zattrs")
 
@@ -153,7 +163,7 @@ function test_session_attributes()
                 sess.results,
                 (repeat=2, obj=2.0, cash=1100.0, pnl=0.1, trades=1, param1=2, param2=20),
             )
-            opt.save_session(sess; from=1, zi=zi)
+            Main.opt.save_session(sess; from=1, zi=zi)
 
             # Verify attributes are recovered
             z = da.load_data(zi, k; serialized=true, as_z=true)[1]
