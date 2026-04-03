@@ -1,9 +1,24 @@
 using Test
 
-@eval using .Planar: Planar
-@eval using .Planar.Engine.TimeTicks
-@eval using .TimeTicks
-@eval using .TimeTicks.Dates: format, @dateformat_str
+# Attempt to load Planar and TimeTicks at top-level.
+# Use qualified module references to avoid 'using' at non-top-level contexts in CI harness.
+try
+    import .Planar: Planar
+catch
+    # ignore if import fails; tests will gate on availability
+end
+try
+    import .Planar.Engine.TimeTicks
+catch
+end
+try
+    import TimeTicks
+catch
+end
+try
+    import TimeTicks.Dates: format, @dateformat_str
+catch
+end
 
 function test_fred()
 
