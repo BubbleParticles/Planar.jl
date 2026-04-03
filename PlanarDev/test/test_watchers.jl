@@ -57,18 +57,24 @@ function _test_watchers_2()
     end
 end
 
-test_watchers() = @testset failfast = FAILFAST "watchers" begin
-    @eval begin
-        using .Planar.Engine.LiveMode.Watchers
-        using .Planar.Data
-        using .Planar.Data.DataStructures
-        using .Planar.Data.Serialization
-        using .Planar.Engine.TimeTicks
-        wa = Watchers
-        isdefined(@__MODULE__, :wi) || (wi = wa.WatchersImpls)
+@eval begin
+    using .Planar.Engine.LiveMode.Watchers
+    using .Planar.Data
+    using .Planar.Data.DataStructures
+    using .Planar.Data.Serialization
+    using .Planar.Engine.TimeTicks
+    # Provide wa alias for Watchers and ensure wi is available
+    wa = Watchers
+    if !isdefined(@__MODULE__, :wi)
+        const wi = wa.WatchersImpls
     end
-    @info "TEST: watchers 1"
-    _test_watchers_1()
-    @info "TEST: watchers 2"
-    _test_watchers_2()
+end
+
+function test_watchers()
+    invokelatest(() -> @testset failfast = FAILFAST "watchers" begin
+        @info "TEST: watchers 1"
+        _test_watchers_1()
+        @info "TEST: watchers 2"
+        _test_watchers_2()
+    end)
 end

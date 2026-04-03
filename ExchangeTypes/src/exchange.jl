@@ -37,6 +37,8 @@ mutable struct CcxtExchange{I<:ExchangeID} <: Exchange{I}
     _trace::Any
 end
 
+const _FINALIZER_QUEUE = Ref(Vector{CcxtExchange}())
+
 @doc """ Closes the given exchange.
 
 $(TYPEDSIGNATURES)
@@ -46,27 +48,25 @@ This function attempts to close the given exchange if it exists. It checks if th
 function close_exc(exc::CcxtExchange)
     try
         k = (Symbol(exc.id), account(exc))
-        if !haskey(exchanges, k) && !haskey(sb_exchanges, k) || pyisnull(e.py)
+        pyobj = getfield(exc, :py)
+        # If there's no python object or exchange not cached, nothing to do
+        if ((!haskey(exchanges, k) && !haskey(sb_exchanges, k)) || pyisnull(pyobj))
             return nothing
         end
-        close_func = pygetattr(e, "close", nothing)
+        close_func = pygetattr(pyobj, "close", nothing)
         if !isnothing(close_func)
             co = close_func()
             if !pyisnull(co) && pyisinstance(co, Python.gpa.pycoro_type)
                 task = pytask(co)
-                # block during precomp
-                if ccall(:jl_generating_output, Cint, ()) == 1
+                try
                     wait(task)
-                else
-                    @async try
-                        wait(task)
-                    catch
-                    end
+                catch err
+                    @debug err
                 end
             end
         end
-    catch e
-        @debug e
+    catch ex
+        @debug ex
     end
 end
 
@@ -102,8 +102,35 @@ function Exchange(x::Py, params=nothing, account="")
     for f in funcs
         f(e)
     end
-    isnone ? e : finalizer(close_exc, e)
+    if isnone
+        return e
+    end
+    # Avoid calling Python from GC finalizers (unsafe). Instead register a lightweight finalizer
+    # that enqueues the exchange for later cleanup; actual close_exc will be invoked by _closeall or tests.
+    finalizer(obj -> try
+            try
+                push!(_FINALIZER_QUEUE[], obj)
+            catch
+            end
+            nothing
+        catch
+        end, e)
+    e
 end
+
+# Provide a function to drain the finalizer queue and synchronously close queued exchanges
+function _drain_finalizer_queue()
+    q = copy(_FINALIZER_QUEUE[])
+    empty!(_FINALIZER_QUEUE[])
+    for e in q
+        try
+            close_exc(e)
+        catch
+        end
+    end
+    return nothing
+end
+
 
 @doc """ Converts value v to integer size with precision p.
  $(TYPEDSIGNATURES)
@@ -215,13 +242,25 @@ _closeall() = begin
         while !isempty(exchanges)
             _, e = pop!(exchanges)
             push!(excs, e)
-            @async finalize(e)
+            # prefer explicit close on known exchanges
+            @async try
+                close_exc(e)
+            catch
+            end
         end
         while !isempty(sb_exchanges)
             _, e = pop!(sb_exchanges)
             push!(excs, e)
-            @async finalize(e)
+            @async try
+                close_exc(e)
+            catch
+            end
         end
+    end
+    # drain finalizer-enqueued exchanges
+    try
+        _drain_finalizer_queue()
+    catch
     end
 end
 

@@ -6,6 +6,10 @@ test_collections() = @testset "collections" begin
         using .Planar.Engine.Instruments
         using .Planar.Engine.Exchanges
     end
+    # Preload AssetCollection binding into Main to avoid world-age issues
+    if !isdefined(Main, :AssetCollection)
+        @eval Main const AssetCollection = Planar.Engine.Collections.AssetCollection
+    end
     prs = ["ETH/USDT", "BTC/USDT"]
     exc = getexchange!(EXCHANGE)
     let coll = AssetCollection()
