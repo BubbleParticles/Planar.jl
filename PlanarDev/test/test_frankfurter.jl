@@ -1,15 +1,15 @@
 using Test
 
+@eval begin
+    using .Planar.Engine.LiveMode.Watchers.Frankfurter
+    using .Planar.Engine.TimeTicks
+    using .TimeTicks
+    using .TimeTicks.Dates: format, @dateformat_str
+    const frank = Frankfurter
+end
+
 function test_frankfurter()
-    @testset "frankfurter" begin
-        @eval begin
-            using .Planar.Engine.LiveMode.Watchers.Frankfurter
-            using .Planar.Engine.TimeTicks
-            using .TimeTicks
-            using .TimeTicks.Dates: format, @dateformat_str
-            frank = Frankfurter
-        end
-        
+    invokelatest(() -> @testset "frankfurter" begin
         @info "TEST: frankfurter rate limit"
         @test frank.RATE_LIMIT[] isa Period
         frank.RATE_LIMIT[] = Millisecond(100)  # Reduce rate limit for testing
@@ -43,7 +43,7 @@ function test_frankfurter()
         
         @info "TEST: frankfurter configuration"
         @test test_configuration()
-    end
+    end)
 end
 
 function test_currencies()
