@@ -6,18 +6,21 @@ authors = ["zbc"]
 [deps]
 BlackBoxOptim = "a134a8b2-14d6-55f6-9291-3336d3ab0209"
 Metrics = "3fcce980-bff0-41b4-8aec-9cac67d74284"
+Opt = "01937fd2-c099-442f-ae89-75fa208aad36"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 Scrapers = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
 Stubs = "19a5ee1f-efca-4178-b297-263c7ceb508d"
+Data = "934a4ae5-3fdb-4fa4-b6dd-2cd889d3d27b"
 
 [sources]
 Metrics = {path = "../Metrics"}
 Planar = {path = "../Planar"}
 Scrapers = {path = "../Scrapers"}
 Stubs = {path = "../Stubs"}
+Data = {path = "../Data"}
 
 [compat]
 BlackBoxOptim = "0.6.3"
