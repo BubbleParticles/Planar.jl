@@ -1,0 +1,25 @@
+d5eaf3f Preload common modules/bindings into Main in runtests to reduce world-age warnings (AssetCollection, Processing, ExchangeTypes, Exchanges, Watchers, Instruments, Data)
+474bdd9 Preload AssetCollection into Main in collections tests to avoid world-age errors
+9b84939 Fix finalizer queue ordering and avoid running Python in GC finalizers; drain queued exchanges in _closeall
+9ae4820 Move finalizer queue to module scope; prefer explicit close_exc in _closeall to avoid running Python from GC finalizers
+2dc5d56 Avoid calling Python from GC finalizers; enqueue exchanges for later close and drain queue in _closeall; ensure tests call _closeall after exchange tests
+5eba6bb Explicitly close Python exchange sessions after tests; fix close_exc to reference python object correctly
+d4e3ad7 test(ci): prevent world-age warnings and close exchange resources after tests\n\n- Predefine placeholder test functions to avoid 'binding in a world prior to its definition' warnings\n- Call Watchers._closeall and ExchangeTypes._closeall after each test to avoid aiohttp client session leaks\- Close ccxt exchange instances in exchange tests\- Make markets test tolerant to missing external pairs\n\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+bb1ba39 test(exchanges): ensure exchange instances closed to avoid aiohttp resource leaks and future world-age issues\n\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+d47a838 test(markets): tolerate missing external market pairs in CI (avoid flakes)\n\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+9114a8f tests: reference Planar.Exchanges functions fully-qualified in _exchange_sbox to avoid Main binding issues
+d4e1401 tests: preload Planar.Exchanges bindings into Main to address world-age UndefVarErrors in exchanges tests
+8569a6c tests: preload marketsid into Main to avoid world-age UndefVarError in exchanges tests
+0c52c04 tests: fix parse error in test_processing.jl (remove nested try)
+22364c7 tests: bind Processing module into Main via fully qualified reference to avoid parse errors and world-age issues
+015eed3 tests: safely bind Processing into Main to avoid import/const conflicts and world-age issues
+74927e8 tests: bind Processing into Main to avoid world-age UndefVarError
+7aae669 test: fully qualify Processing.upsample usages to avoid missing binding in tests
+536cf8e test: qualify Processing.upsample calls to avoid missing binding and world-age issues
+df9b839 test: preload Processing safely to ensure pr binding exists (world-age fix)
+a483e80 test: import Processing from Planar.Engine to ensure pr binding exists during tests
+b8e7c67 test: preload JSON and Mmap at top-level to avoid world-age JSON binding errors
+b1cc6d7 test(ci): correctly preload Data/Zarr globals to avoid syntax errors and world-age issues
+4cfe535 test(ci): call test functions with invokelatest and preload Data/Zarr to avoid world-age errors
+4c8b48a test: preload Data and Zarr to avoid world-age UndefVarError
+ea7b261 fix(docs): ensure Plotting available to Documenter
