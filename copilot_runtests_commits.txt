@@ -1,0 +1,3 @@
+d5eaf3f Preload common modules/bindings into Main in runtests to reduce world-age warnings (AssetCollection, Processing, ExchangeTypes, Exchanges, Watchers, Instruments, Data)
+d4e3ad7 test(ci): prevent world-age warnings and close exchange resources after tests\n\n- Predefine placeholder test functions to avoid 'binding in a world prior to its definition' warnings\n- Call Watchers._closeall and ExchangeTypes._closeall after each test to avoid aiohttp client session leaks\- Close ccxt exchange instances in exchange tests\- Make markets test tolerant to missing external pairs\n\nCo-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+4cfe535 test(ci): call test functions with invokelatest and preload Data/Zarr to avoid world-age errors

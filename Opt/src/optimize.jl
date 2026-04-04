@@ -13,7 +13,15 @@ using OptimizationEvolutionary
 using OptimizationOptimJL
 using OptimizationManopt
 using Symbolics
-using ModelingToolkit
+const HAS_MODELINGTOOLKIT = begin
+    try
+        @eval using ModelingToolkit
+        true
+    catch e
+        @warn "ModelingToolkit not available; optimization features depending on it will be disabled." exception=(e)
+        false
+    end
+end
 # using OptimizationNOMAD
 # using OptimizationSpeedMapping
 # using Zygote
@@ -166,7 +174,12 @@ function get_method(v, method_kwargs)
     elseif v == :krylov
         Optim.KrylovTrustRegion()
     elseif v == :automod
-        Optimization.AutoModelingToolkit()
+        if HAS_MODELINGTOOLKIT
+            Optimization.AutoModelingToolkit()
+        else
+            @warn "Requested automod method but ModelingToolkit not available; returning nothing."
+            nothing
+        end
     else
         @assert !(v isa DataType) "Expected an instance of an Optimization.jl method, got $(v)"
         v
