@@ -23,6 +23,7 @@ Stubs = "19a5ee1f-efca-4178-b297-263c7ceb508d"
 Data = {path = "../Data"}
 Metrics = {path = "../Metrics"}
 Planar = {path = "../Planar"}
+Plotting = {path = "../Plotting"}
 Opt = {path = "../Opt"}
 Scrapers = {path = "../Scrapers"}
 Stubs = {path = "../Stubs"}
