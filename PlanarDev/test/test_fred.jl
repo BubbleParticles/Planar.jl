@@ -2,25 +2,31 @@ using Test
 
 # Ensure Planar and TimeTicks are available and set global `fred` alias to Watchers.FRED if possible.
 try
-    if isdefined(Watchers, :FRED)
-        @eval Main const fred = Watchers.FRED
+    if isdefined(Main, :fred)
+        # keep existing fred
     else
-        try
-            basepath = dirname(pathof(Watchers))
-            fred_file = joinpath(basepath, "apis", "fred.jl")
-            if isfile(fred_file)
-                Base.include(Watchers, fred_file)
-            end
-        catch
-        end
         if isdefined(Watchers, :FRED)
             @eval Main const fred = Watchers.FRED
         else
-            @eval Main const fred = nothing
+            try
+                basepath = dirname(pathof(Watchers))
+                fred_file = joinpath(basepath, "apis", "fred.jl")
+                if isfile(fred_file)
+                    Base.include(Watchers, fred_file)
+                end
+            catch
+            end
+            if isdefined(Watchers, :FRED)
+                @eval Main const fred = Watchers.FRED
+            else
+                @eval Main const fred = nothing
+            end
         end
     end
 catch
-    @eval Main const fred = nothing
+    if !isdefined(Main, :fred)
+        @eval Main const fred = nothing
+    end
 end
 
 function test_fred()
