@@ -7,7 +7,11 @@ function test_fred_comprehensive()
         using .Planar.Engine.TimeTicks
         using .TimeTicks
         using .TimeTicks.Dates: format, @dateformat_str
-        fred = FRED
+        if !isdefined(Main, :fred)
+            fred = FRED
+        else
+            fred = getfield(Main, :fred)
+        end
     end
     
     @testset "FRED API Comprehensive Tests" begin
