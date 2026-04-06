@@ -169,9 +169,9 @@ test_orders() = @testset "orders" begin
         using .Misc: roundfloat
     end
     @info "TEST: sanitize"
-    exc = getexchange!(EXCHANGE_MM) # NOTE: binanceusdm NON sandbox version is geo restricted (not CI friendly)
-    @testset failfast = FAILFAST test_sanitize(exc)
+    exc = Planar.Engine.Exchanges.getexchange!(Main.EXCHANGE_MM) # NOTE: binanceusdm NON sandbox version is geo restricted (not CI friendly)
+    @testset failfast = FAILFAST Base.invokelatest(test_sanitize, exc)
     @info "TEST: orderscount"
     s = _strat()
-    @testset failfast = FAILFAST test_orderscount(s)
+    @testset failfast = FAILFAST Base.invokelatest(test_orderscount, s)
 end
