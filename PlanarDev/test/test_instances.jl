@@ -1,24 +1,28 @@
-macro asset_constructor(asset=a"BTC/USDT", margin=NoMargin)
+using PlanarDev.Planar.Engine.Instruments: @a_str
+using PlanarDev.Planar.Engine.Instruments.Derivatives: @d_str
+using PlanarDev.Planar.Engine.Instances: @rprice, @ramount
+
+macro asset_constructor(asset=PlanarDev.Planar.Engine.Instruments.@a_str("BTC/USDT"), margin=PlanarDev.Planar.Engine.Misc.NoMargin)
     e = quote
         a = $asset
-        e = getexchange!(:binance)
+        e = PlanarDev.Planar.Engine.Exchanges.getexchange!(:binance)
         eid = e.id
         M = $margin()
-        ai = AssetInstance(a, Dict(tf"1m" => da.DataFrame()), e, M; inst.DEFAULT_FIELDS...)
+        ai = PlanarDev.Planar.Engine.Instances.AssetInstance(a, PlanarDev.Planar.Engine.Data.Dict(PlanarDev.Planar.Engine.TimeTicks.TimeFrames.@tf_str("1m") => PlanarDev.Planar.Engine.Data.DataFrame()), e, M; PlanarDev.Planar.Engine.Instances.DEFAULT_FIELDS...)
     end
     e = esc(e)
 end
 
 macro order_constructor()
     e = quote
-    o = ect.basicorder(
+    o = Planar.Engine.Executors.basicorder(
         ai,
         100,
         1,
         Ref(100),
-        ect.SanitizeOff();
-        type=MarketOrder{Buy},
-        date=DateTime(2020, 1, 1),
+        Planar.Engine.Executors.SanitizeOff();
+        type=Planar.Engine.OrderTypes.MarketOrder{Planar.Engine.Misc.Buy},
+        date=Planar.Engine.TimeTicks.Dates.DateTime(2020, 1, 1),
     )
     end
     e = esc(e)
@@ -558,30 +562,30 @@ function test_instances()
     ENV["JULIA_TEST_FAILFAST"] = true
     @testset "instances" begin
         try
-            test_asset_instance()
-            test_positions_function()
-            test_hash_function()
-            test_lock_function()
-            test_broadcastable_function()
-            test_propertynames_function()
-            test_makerfees_function()
-            test_minfees_function()
-            test_maxfees_function()
-            test_exchangeid_function()
-            test_exchange_function()
-            test_position_function()
-            test_trades_function()
-            test_leverage_function()
-            test_marginmode_function()
-            test_timestamp_function()
-            test_ishedged_function()
-            test_tier_function()
-            test_posside_function()
-            test_position_field_accessors()
-            test_bankruptcy_function()
-            test_asset_instance_functions1()
-            test_asset_instance_functions2()
-            test_attr_functions()
+            Base.invokelatest(test_asset_instance)
+            Base.invokelatest(test_positions_function)
+            Base.invokelatest(test_hash_function)
+            Base.invokelatest(test_lock_function)
+            Base.invokelatest(test_broadcastable_function)
+            Base.invokelatest(test_propertynames_function)
+            Base.invokelatest(test_makerfees_function)
+            Base.invokelatest(test_minfees_function)
+            Base.invokelatest(test_maxfees_function)
+            Base.invokelatest(test_exchangeid_function)
+            Base.invokelatest(test_exchange_function)
+            Base.invokelatest(test_position_function)
+            Base.invokelatest(test_trades_function)
+            Base.invokelatest(test_leverage_function)
+            Base.invokelatest(test_marginmode_function)
+            Base.invokelatest(test_timestamp_function)
+            Base.invokelatest(test_ishedged_function)
+            Base.invokelatest(test_tier_function)
+            Base.invokelatest(test_posside_function)
+            Base.invokelatest(test_position_field_accessors)
+            Base.invokelatest(test_bankruptcy_function)
+            Base.invokelatest(test_asset_instance_functions1)
+            Base.invokelatest(test_asset_instance_functions2)
+            Base.invokelatest(test_attr_functions)
         finally
             ENV["JULIA_TEST_FAILFAST"] = prev
         end

@@ -6,18 +6,14 @@ test_collections() = @testset "collections" begin
         using .Planar.Engine.Instruments
         using .Planar.Engine.Exchanges
     end
-    # Preload AssetCollection binding into Main to avoid world-age issues
-    if !isdefined(Main, :AssetCollection)
-        @eval Main const AssetCollection = Planar.Engine.Collections.AssetCollection
-    end
     prs = ["ETH/USDT", "BTC/USDT"]
-    exc = getexchange!(EXCHANGE)
-    let coll = AssetCollection()
+    exc = Planar.Engine.Exchanges.getexchange!(Main.EXCHANGE)
+    let coll = Planar.Engine.Collections.AssetCollection()
         @test isempty(coll)
     end
-    coll = AssetCollection(prs; exc, margin=Misc.NoMargin())
+    coll = Planar.Engine.Collections.AssetCollection(prs; exc, margin=Planar.Engine.Misc.NoMargin())
     @test size(coll.data)[1] == length(prs)
-    @test Instruments.raw.(coll.data.instance) == prs
+    @test Planar.Engine.Instruments.raw.(coll.data.instance) == prs
     @test !isnothing(coll[q=:USDT])
     @test !isnothing(coll[b=:BTC])
     @test !isnothing(coll[e=:kucoin])
