@@ -141,28 +141,28 @@ function series_info(series_id::String;
 end
 
 @doc "Get observations for a series within a date range."
-function observations(series_id::String; 
-                     start_date=nothing, 
-                     end_date=nothing, 
+function observations(series_id::String;
+                     start_date=nothing,
+                     end_date=nothing,
                      limit=nothing,
                      offset=nothing,
-                     sort_order="asc",
-                     units="lin",
-                     frequency="d",
-                     aggregation_method="avg",
-                     output_type=1,
+                     sort_order=nothing,
+                     units=nothing,
+                     frequency=nothing,
+                     aggregation_method=nothing,
+                     output_type=nothing,
                      realtime_start=nothing,
                      realtime_end=nothing,
                      vintage_dates=nothing)
-    
-    query = Dict{String,Any}(
-        "series_id" => series_id,
-        "sort_order" => sort_order,
-        "units" => units,
-        "frequency" => frequency,
-        "aggregation_method" => aggregation_method,
-        "output_type" => output_type
-    )
+
+    query = Dict{String,Any}("series_id" => series_id)
+
+    # Only include optional parameters when explicitly provided
+    !isnothing(sort_order) && (query["sort_order"] = sort_order)
+    !isnothing(units) && (query["units"] = units)
+    !isnothing(frequency) && (query["frequency"] = frequency)
+    !isnothing(aggregation_method) && (query["aggregation_method"] = aggregation_method)
+    !isnothing(output_type) && (query["output_type"] = output_type)
     
     if !isnothing(start_date)
         start_str = isa(start_date, DateTime) ? Dates.format(start_date, dateformat"yyyy-mm-dd") : string(start_date)

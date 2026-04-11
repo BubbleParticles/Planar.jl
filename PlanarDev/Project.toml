@@ -4,14 +4,6 @@ version = "0.1.0"
 authors = ["zbc"]
 
 [deps]
-BlackBoxOptim = "a134a8b2-14d6-55f6-9291-3336d3ab0209"
-Data = "934a4ae5-3fdb-4fa4-b6dd-2cd889d3d27b"
-DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-GLM = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
-Metrics = "3fcce980-bff0-41b4-8aec-9cac67d74284"
-OnlineStats = "a15396b6-48d5-5d58-9928-6d29437db91e"
-OnlineTechnicalIndicators = "dc2d07fb-478f-4566-8417-81bb3e5a7af1"
-Opt = "01937fd2-c099-442f-ae89-75fa208aad36"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -20,16 +12,6 @@ Scrapers = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
 Stubs = "19a5ee1f-efca-4178-b297-263c7ceb508d"
 
 [sources]
-Data = {path = "../Data"}
-Metrics = {path = "../Metrics"}
 Planar = {path = "../Planar"}
-Opt = {path = "../Opt"}
 Scrapers = {path = "../Scrapers"}
 Stubs = {path = "../Stubs"}
-
-[compat]
-BlackBoxOptim = "0.6.3"
-DataFrames = "1.8.1"
-GLM = "1.9.3"
-OnlineStats = "1.7.3"
-OnlineTechnicalIndicators = "0.1.2"

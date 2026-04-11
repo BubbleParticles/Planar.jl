@@ -1,5 +1,3 @@
-module TestAverageOHLCVWatcher
-
 using Test
 using DataFrames
 using Dates
@@ -8,6 +6,7 @@ using Dates
 using Watchers
 using Exchanges # For Exchange type and MockExchange
 using Misc # For TimeFrame
+using Watchers: average_ohlcv_watcher
 
 # Define a Mock Exchange type for testing
 struct MockExchange
@@ -90,10 +89,10 @@ function test_average_ohlcv_watcher()
     @testset "AverageOHLCVWatcher Tests" begin
         @testset "Construction and Initialization" begin
             exc1 = MockExchange("exc1")
-        exc2 = MockExchange("exc2")
-        exchanges = [exc1, exc2]
-        symbols = ["BTC/USD", "ETH/USD"]
-        tf = TimeFrame(Dates.Minute(1))
+            exc2 = MockExchange("exc2")
+            exchanges = [exc1, exc2]
+            symbols = ["BTC/USD", "ETH/USD"]
+            tf = TimeFrame(Dates.Minute(1))
 
         # Test with start=false, load=false to control _init! call via Watchers.init!
         avg_watcher_trades = average_ohlcv_watcher(exchanges, symbols, timeframe=tf, input_source=:trades, start=false, load=false)
@@ -183,5 +182,4 @@ function test_average_ohlcv_watcher()
         @test row_ts2.close ≈ 12.0
         end
     end
-end
 end
