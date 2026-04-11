@@ -7,7 +7,9 @@ function test_fred_parameters()
         using .Planar.Engine.TimeTicks
         using .TimeTicks
         using .TimeTicks.Dates: format, @dateformat_str
-        fred = FRED
+    end
+    if !isdefined(Main, :fred)
+        @eval Main const fred = FRED
     end
     
     @testset "FRED API Parameter Validation Tests" begin
@@ -49,18 +51,21 @@ function test_units_parameters()
         @warn "TEST: FRED API key not set, skipping units parameters test"
         return true
     end
-    
+
+    # Test that the API wrapper correctly passes units to FRED
+    # These are valid FRED units values; series may not support all of them
     valid_units = ["lin", "chg", "ch1", "pch", "pca", "cch", "cca", "log"]
-    
+
     for unit in valid_units
         try
             data = fred.observations("GDPC1"; units=unit, limit=1)
             @test data isa Dict{String,Any}
         catch e
-            @warn "Units parameter '$unit' failed: $e"
+            # Series may not support all units; 400 errors are expected for incompatible combos
+            @test occursin("400", string(e)) || @test data isa Dict{String,Any}
         end
     end
-    
+
     return true
 end
 
@@ -69,18 +74,21 @@ function test_frequency_parameters()
         @warn "TEST: FRED API key not set, skipping frequency parameters test"
         return true
     end
-    
-    valid_frequencies = ["d", "w", "bw", "m", "q", "sa", "a", "wef", "weth", "ww", "bw", "ba"]
-    
+
+    # Test that the API wrapper correctly passes frequency to FRED
+    # These are valid FRED frequency values
+    valid_frequencies = ["d", "w", "m", "q", "sa", "a", "wef", "weth", "ww", "bw", "ba"]
+
     for freq in valid_frequencies
         try
             data = fred.observations("GDPC1"; frequency=freq, limit=1)
             @test data isa Dict{String,Any}
         catch e
-            @warn "Frequency parameter '$freq' failed: $e"
+            # Series may not support all frequencies; 400 errors are expected
+            @test occursin("400", string(e))
         end
     end
-    
+
     return true
 end
 
@@ -89,18 +97,20 @@ function test_aggregation_parameters()
         @warn "TEST: FRED API key not set, skipping aggregation parameters test"
         return true
     end
-    
+
+    # Test that the API wrapper correctly passes aggregation_method to FRED
     valid_aggregations = ["avg", "sum", "eop"]
-    
+
     for agg in valid_aggregations
         try
             data = fred.observations("GDPC1"; aggregation_method=agg, limit=1)
             @test data isa Dict{String,Any}
         catch e
-            @warn "Aggregation parameter '$agg' failed: $e"
+            # Aggregation requires compatible frequency; 400 errors are expected
+            @test occursin("400", string(e))
         end
     end
-    
+
     return true
 end
 
@@ -109,18 +119,20 @@ function test_output_type_parameters()
         @warn "TEST: FRED API key not set, skipping output type parameters test"
         return true
     end
-    
+
+    # Test that the API wrapper correctly passes output_type to FRED
     valid_output_types = [1, 2, 3, 4]
-    
+
     for output_type in valid_output_types
         try
             data = fred.observations("GDPC1"; output_type=output_type, limit=1)
             @test data isa Dict{String,Any}
         catch e
-            @warn "Output type parameter '$output_type' failed: $e"
+            # output_type 2/3/4 require realtime dates; 400 errors are expected
+            @test occursin("400", string(e))
         end
     end
-    
+
     return true
 end
 
@@ -129,9 +141,10 @@ function test_sort_order_parameters()
         @warn "TEST: FRED API key not set, skipping sort order parameters test"
         return true
     end
-    
+
+    # Test that the API wrapper correctly passes sort_order to FRED
     valid_sort_orders = ["asc", "desc"]
-    
+
     for sort_order in valid_sort_orders
         try
             data = fred.observations("GDPC1"; sort_order=sort_order, limit=1)
@@ -140,7 +153,7 @@ function test_sort_order_parameters()
             @warn "Sort order parameter '$sort_order' failed: $e"
         end
     end
-    
+
     return true
 end
 

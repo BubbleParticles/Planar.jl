@@ -7,7 +7,9 @@ function test_fred_performance()
         using .Planar.Engine.TimeTicks
         using .TimeTicks
         using .TimeTicks.Dates: format, @dateformat_str
-        fred = FRED
+    end
+    if !isdefined(Main, :fred)
+        @eval Main const fred = FRED
     end
     
     @testset "FRED API Performance Tests" begin
