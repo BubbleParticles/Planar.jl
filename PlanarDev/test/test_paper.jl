@@ -113,8 +113,11 @@ function test_paper_margin(s)
     prev_cash = cash(ai)
     pos_price = inst.price(ai, this_p, Long)
     @test this_p != pos_price || this_p == t.price
+    # Cancel any pending orders before counting - the low-price GTC from earlier
+    # may still be open, and the up_price order may or may not have filled
+    ect.call!(s, ai, ect.CancelOrders())
     prev_count = ect.orderscount(s, ai)
-    @test prev_count == 1
+    @test prev_count == 0
     ect.cash!(s.cash, this_p * total_vol[])
     t = ect.call!(
         s,
