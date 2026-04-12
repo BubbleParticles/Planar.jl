@@ -1,8 +1,8 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.12.5"
+julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "6d54209435263bfe39463001c9126a44e40e4eb6"
+project_hash = "4b96a32869f4412eb771288d999d3bd94a31dcf5"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "f7304359109c768cf32dc5fa2d371565bb63b68a"
@@ -210,12 +210,6 @@ weakdeps = ["SparseArrays"]
     [deps.ChainRulesCore.extensions]
     ChainRulesCoreSparseArraysExt = "SparseArrays"
 
-[[deps.Clustering]]
-deps = ["Distances", "LinearAlgebra", "NearestNeighbors", "Printf", "Random", "SparseArrays", "Statistics", "StatsBase"]
-git-tree-sha1 = "3e22db924e2945282e70c33b75d4dde8bfa44c94"
-uuid = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
-version = "0.15.8"
-
 [[deps.CodeTracking]]
 deps = ["InteractiveUtils", "REPL", "UUIDs"]
 git-tree-sha1 = "cfb7a2e89e245a9d5016b70323db412b3a7438d5"
@@ -358,7 +352,7 @@ uuid = "748a5540-242a-11e9-3d63-bf3149dae578"
 version = "0.3.2"
 
 [[deps.Data]]
-deps = ["CodecZlib", "DataFrames", "DataFramesMeta", "DataStructures", "LMDB", "LRUCache", "Misc", "Reexport", "Serialization", "Zarr"]
+deps = ["CodecZlib", "DataFrames", "DataFramesMeta", "DataStructures", "LMDB", "Misc", "Reexport", "Serialization", "Zarr"]
 path = "../../Data"
 uuid = "934a4ae5-3fdb-4fa4-b6dd-2cd889d3d27b"
 version = "0.1.1"
@@ -695,12 +689,6 @@ version = "0.5.0"
 deps = ["Random"]
 uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
 version = "1.11.0"
-
-[[deps.GLM]]
-deps = ["Distributions", "LinearAlgebra", "Printf", "Reexport", "SparseArrays", "SpecialFunctions", "Statistics", "StatsAPI", "StatsBase", "StatsFuns", "StatsModels"]
-git-tree-sha1 = "3bcb30438ee1655e3b9c42d97544de7addc9c589"
-uuid = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
-version = "1.9.3"
 
 [[deps.GPUArraysCore]]
 deps = ["Adapt"]
@@ -1267,12 +1255,6 @@ version = "1.2.3"
     Requires = "ae029012-a4dd-5104-9daa-d747884805df"
     Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 
-[[deps.NearestNeighbors]]
-deps = ["AbstractTrees", "Distances", "StaticArrays"]
-git-tree-sha1 = "e2c3bba08dd6dedfe17a17889131b885b8c082f0"
-uuid = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
-version = "0.4.27"
-
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 version = "1.3.0"
@@ -1285,24 +1267,6 @@ weakdeps = ["Adapt"]
 
     [deps.OffsetArrays.extensions]
     OffsetArraysAdaptExt = "Adapt"
-
-[[deps.OnlineStats]]
-deps = ["AbstractTrees", "Dates", "Distributions", "LinearAlgebra", "OnlineStatsBase", "OrderedCollections", "Random", "RecipesBase", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns"]
-git-tree-sha1 = "a19ba00b3968afcde81471033fd22976e62f5fea"
-uuid = "a15396b6-48d5-5d58-9928-6d29437db91e"
-version = "1.7.3"
-
-[[deps.OnlineStatsBase]]
-deps = ["AbstractTrees", "Dates", "LinearAlgebra", "OrderedCollections", "Statistics", "StatsBase"]
-git-tree-sha1 = "a5a5a68d079ce531b0220e99789e0c1c8c5ed215"
-uuid = "925886fa-5bf2-5e8e-b522-a9147a512338"
-version = "1.7.1"
-
-[[deps.OnlineTechnicalIndicators]]
-deps = ["Dates", "OnlineStatsBase", "Tables"]
-git-tree-sha1 = "778e958802493156c0f340f2a91d102b47901630"
-uuid = "dc2d07fb-478f-4566-8417-81bb3e5a7af1"
-version = "0.1.2"
 
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
@@ -1487,16 +1451,13 @@ weakdeps = ["REPL"]
     REPLExt = "REPL"
 
 [[deps.Planar]]
-deps = ["Clustering", "Engine", "MacroTools", "Pkg", "Preferences", "REPL", "Random", "Remote", "URIs", "YAML", "Zarr"]
+deps = ["Engine", "MacroTools", "Pkg", "REPL", "Random", "Remote"]
 path = "../../Planar"
 uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 version = "1.6.11"
 
-    [deps.Planar.weakdeps]
-    CausalityTools = "01837fd2-c099-442f-ae89-75fa208aad36"
-
 [[deps.PlanarDev]]
-deps = ["BlackBoxOptim", "Data", "DataFrames", "GLM", "Metrics", "OnlineStats", "OnlineTechnicalIndicators", "Opt", "Pkg", "Planar", "Random", "Reexport", "Scrapers", "Stubs"]
+deps = ["Opt", "Pkg", "Planar", "Random", "Reexport", "Scrapers", "Stubs"]
 path = ".."
 uuid = "df15b565-ff7f-4c64-9bc8-38e9343ea891"
 version = "0.1.0"
@@ -1588,7 +1549,7 @@ uuid = "43287f4e-b6f4-7ad1-bb20-aadabca52c3d"
 version = "1.4.0"
 
 [[deps.Python]]
-deps = ["Dates", "DocStringExtensions", "Lang", "OpenSSL_jll", "Pkg", "PrecompileTools", "PythonCall", "Reexport"]
+deps = ["Dates", "DocStringExtensions", "Lang", "Pkg", "PrecompileTools", "PythonCall", "Reexport"]
 path = "../../Python"
 uuid = "e8cdc95d-7257-4c38-ab0e-cc8a28c19776"
 version = "0.1.0"
@@ -1851,11 +1812,6 @@ deps = ["Distributed", "Mmap", "Random", "Serialization"]
 uuid = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
 version = "1.11.0"
 
-[[deps.ShiftedArrays]]
-git-tree-sha1 = "503688b59397b3307443af35cd953a13e8005c16"
-uuid = "1277b4bf-5013-50f5-be3d-901d8477a67a"
-version = "2.0.0"
-
 [[deps.SimMode]]
 deps = ["Executors", "Pbar", "Simulations"]
 path = "../../SimMode"
@@ -2021,23 +1977,11 @@ weakdeps = ["ChainRulesCore", "InverseFunctions"]
     StatsFunsChainRulesCoreExt = "ChainRulesCore"
     StatsFunsInverseFunctionsExt = "InverseFunctions"
 
-[[deps.StatsModels]]
-deps = ["DataAPI", "DataStructures", "LinearAlgebra", "Printf", "REPL", "ShiftedArrays", "SparseArrays", "StatsAPI", "StatsBase", "StatsFuns", "Tables"]
-git-tree-sha1 = "08786db4a1346d17d0a8d952d2e66fd00fa18192"
-uuid = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
-version = "0.7.9"
-
 [[deps.Strategies]]
-deps = ["Collections", "MacroTools", "Pkg"]
+deps = ["Collections", "Pkg"]
 path = "../../Strategies"
 uuid = "7a1c9c3a-7759-4314-aa2e-fd1262f248b0"
 version = "0.1.0"
-
-[[deps.StringEncodings]]
-deps = ["Libiconv_jll"]
-git-tree-sha1 = "b765e46ba27ecf6b44faf70df40c57aa3a547dcb"
-uuid = "69024149-9ee7-55f6-a4c4-859efe599b68"
-version = "0.3.7"
 
 [[deps.StringManipulation]]
 deps = ["PrecompileTools"]
@@ -2329,12 +2273,6 @@ deps = ["EzXML", "IterTools", "OrderedCollections"]
 git-tree-sha1 = "d9a3faf078210e477b291c79117676fca54da9dd"
 uuid = "228000da-037f-5747-90a9-8195ccbf91a5"
 version = "0.4.1"
-
-[[deps.YAML]]
-deps = ["Base64", "Dates", "Printf", "StringEncodings"]
-git-tree-sha1 = "a1c0c7585346251353cddede21f180b96388c403"
-uuid = "ddb6d928-2868-570f-bddf-ab3f9cf99eb6"
-version = "0.4.16"
 
 [[deps.Zarr]]
 deps = ["AWSS3", "Blosc", "CodecZlib", "DataStructures", "Dates", "DiskArrays", "HTTP", "JSON", "LRUCache", "OffsetArrays", "OpenSSL", "Pkg", "URIs"]
