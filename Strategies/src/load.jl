@@ -220,7 +220,11 @@ function strategy!(src::Symbol, cfg::Config)
                         using .$src
                     end
                     if isinteractive() && isdefined(Main, :Revise)
-                        Main.Revise.track($src, $path)
+                        try
+                            Main.Revise.track($src, $path)
+                        catch e
+                            @warn "strategy: Revise tracking failed for $src" exception=e
+                        end
                     end
                     $src
                 end
