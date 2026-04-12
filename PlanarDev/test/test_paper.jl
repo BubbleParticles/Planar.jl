@@ -396,17 +396,17 @@ function test_paper(; margin=true, nomargin=true)
             try
                 if nomargin
                     @info "TEST: paper nomargin market"
-                    @testset test_paper_nomargin_market(s)
+                    @testset Base.invokelatest(test_paper_nomargin_market, s)
                     @info "TEST: paper nomargin gtc"
-                    @testset test_paper_nomargin_gtc(s)
+                    @testset Base.invokelatest(test_paper_nomargin_gtc, s)
                     @info "TEST: paper nomargin ioc"
-                    @testset test_paper_nomargin_ioc(s)
+                    @testset Base.invokelatest(test_paper_nomargin_ioc, s)
                     @info "TEST: paper nomargin fok"
-                    @testset test_paper_nomargin_fok(s)
+                    @testset Base.invokelatest(test_paper_nomargin_fok, s)
                 end
             finally
-                stop!(s)
-                reset!(s)
+                Base.invokelatest(stop!, s)
+                Base.invokelatest(reset!, s)
             end
 
             s = @eval backtest_strat(
