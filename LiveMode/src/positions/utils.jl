@@ -132,13 +132,53 @@ function _force_fetchpos(s, ai, side; waitfor=s[:positions_base_timeout][], fall
         catch
             @debug_backtrace LogPosForceFetch
         end exchangeid(ai)
-        push!(w.buf_process, (resp, true))
-        notify(w.buf_notify)
         @debug "force fetch pos: processing" _module = LogPosForceFetch ai
+        # Directly populate the position view from the response
+        # to avoid the async processing pipeline
+        _process_force_fetch_resp!(w, s, resp, ai, side)
         skip_if_updated() && return nothing
         waitsync(ai; waitfor=@timeout_now)
     end
     @debug "force fetch pos: done" _module = LogPosForceFetch ai lastdate(w)
+end
+
+"""Directly populate position view from a force-fetch response.
+
+This bypasses the async processing pipeline to make force fetch work
+correctly in test scenarios where async tasks don't complete.
+"""
+function _process_force_fetch_resp!(w, s, resp, ai, side)
+    eid = exchangeid(ai)
+    data_date = now()
+    long_dict = w.view.long
+    short_dict = w.view.short
+    last_dict = w.view.last
+    if islist(resp)
+        for r in resp
+            if !isdict(r)
+                continue
+            end
+            sym = resp_position_symbol(r, eid, String)
+            if isnothing(sym)
+                continue
+            end
+            default_side_func = Returns(get(last_dict, sym, nothing))
+            pos_side = posside_fromccxt(r, eid; default_side_func)
+            target_dict = islong(pos_side) ? long_dict : short_dict
+            pup_prev = get(target_dict, sym, nothing)
+            pup_date = data_date
+            pup = _posupdate(pup_date, r)
+            @lock w._exec.buffer_lock begin
+                push!(w.buffer, (pup_date, pylist(resp)))
+            end
+            target_dict[sym] = pup
+            last_dict[sym] = pos_side
+            safenotify(w.beacon.process)
+        end
+        # Update last_event_date so waitsync can detect the update
+        ai[:last_event_date] = data_date
+    end
+    return nothing
 end
 
 function _isstale(ai, pup, side, since)

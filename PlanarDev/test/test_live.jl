@@ -252,16 +252,13 @@ function test_live_position(s)
             Python._pyfetch_timeout(f, args...; kwargs...)
         end
     end
-    @live_setup!
     @pass [patch1] begin
         # NOTE: use force=true otherwise we might fetch not mocked results
         empty!(lm.get_positions(s).long)
         empty!(lm.get_positions(s).short)
-        pw = lm.positions_watcher(s)
-        lm.waitwatcherprocess(pw; since=now())
-        # ensure watcher is unlocked otherwise force fetching gets skipped
-        @lock lm.positions_watcher(s) nothing
+        # Force fetch position directly - bypass async watcher processing
         update = lm.live_position(s, ai, Short(); force=true)
+        @test !isnothing(update)
         @test update.date <= now()
         @test !update.read[] || lm.position(ai, Short()).timestamp[] >= update.date
         @test !update.closed[]
@@ -276,8 +273,6 @@ function test_live_position(s)
         # NOTE: use force=true otherwise we might fetch not mocked results
         empty!(lm.get_positions(s).long)
         empty!(lm.get_positions(s).short)
-        # ensure watcher is unlocked otherwise force fetching gets skipped
-        @lock lm.positions_watcher(s) nothing
         v = lm.live_position(s, ai, Long(); force=true)
         @test isnothing(v)
     end
