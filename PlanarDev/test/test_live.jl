@@ -252,6 +252,8 @@ function test_live_position(s)
             Python._pyfetch_timeout(f, args...; kwargs...)
         end
     end
+    ai = s[m"btc"]
+    eid = exchangeid(s)
     @pass [patch1] begin
         # NOTE: use force=true otherwise we might fetch not mocked results
         empty!(lm.get_positions(s).long)
