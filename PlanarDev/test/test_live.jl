@@ -347,10 +347,18 @@ function test_live_position_sync(s)
 end
 function test_live_pnl(s)
     @live_setup!
+    # Reset position state to avoid pollution from previous tests
+    # Previous tests may have left position in non-reset state
+    lm.stop!(s)
+    reset!(ai.shortpos)
+    reset!(ai.longpos)
+    lm.empty_caches!(s)
+    empty!(lm.get_positions(s).long)
+    empty!(lm.get_positions(s).short)
+    lm.start_handlers!(s)
     @pass [patch_pf, patch_pft] begin
         # set some parameters for testing
         p = Short()
-        lm.empty_caches!(s)
         lp = lm.fetch_positions(s, ai; side=p)[0]
         @test !isnothing(lp)
         update = lm.PositionTuple(lm._posupdate(now(), lp))
