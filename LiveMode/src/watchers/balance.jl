@@ -288,6 +288,9 @@ function _balance_init_watch!(state)
             # back to a default id in this case.
             stab = pycall(sp.generate_balance, Any, nothing)
             _balance_process_bal!(state, w, stab)
+            # mark seed as processed to prevent the stall guard from firing
+            _lastprocessed!(w, now())
+            _lastcount!(w, stab)
         catch e
             @warn "ccxt: stub balance generation failed" e
         end
