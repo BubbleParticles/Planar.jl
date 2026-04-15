@@ -204,6 +204,9 @@ function _w_positions_watch_mode(
                 end
                 # push stubbed positions into the processing buffer
                 _positions_process_push!(w, tasks, out; fetched=false)
+                # mark seed as processed to prevent the stall guard from firing
+                _lastprocessed!(w, now())
+                _lastcount!(w, out)
             catch e
                 @warn "ccxt: stubex.patch import/generation failed" e
             end

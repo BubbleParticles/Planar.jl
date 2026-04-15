@@ -127,6 +127,11 @@ async def fetch_positions(self, symbols=None, params=None):
 async def load_leverage_brackets(self, reload=False, params=None):
     return None
 
+# ccxt.pro uses load_positions_snapshot to initialize position snapshots in the background.
+# Patch it to a no-op in stub mode to avoid background coroutines that may call network
+# functions such as sign()/fetch2() and raise NotSupported.
+async def load_positions_snapshot(self, *args, **kwargs):
+    return []
 
 def _bind(inst, name, func):
     """Bind function `func` as attribute `name` on `inst` using MethodType."""
@@ -235,6 +240,8 @@ def patch_exchange(exchange, exch_name: str = None):
             ("fetchPositions", fetch_positions),
             ("load_leverage_brackets", load_leverage_brackets),
             ("loadLeverageBrackets", load_leverage_brackets),
+            ("load_positions_snapshot", load_positions_snapshot),
+            ("loadPositionsSnapshot", load_positions_snapshot),
             ("watch_balance", watch_balance),
             ("watchBalance", watch_balance),
             ("watch_positions", watch_positions),
@@ -483,6 +490,8 @@ def make_patched_instance(exc_cls, params=None):
             ("fetchPositions", fetch_positions),
             ("load_leverage_brackets", load_leverage_brackets),
             ("loadLeverageBrackets", load_leverage_brackets),
+            ("load_positions_snapshot", load_positions_snapshot),
+            ("loadPositionsSnapshot", load_positions_snapshot),
             ("watch_balance", watch_balance),
             ("watchBalance", watch_balance),
             ("watch_positions", watch_positions),
