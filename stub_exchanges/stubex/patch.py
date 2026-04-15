@@ -243,6 +243,17 @@ def patch_exchange(exchange, exch_name: str = None):
                 # ignore
                 pass
 
+        # Also try patching the exchange class to override methods implemented as descriptors
+        try:
+            ex_cls = type(exchange)
+            for (nm, fn) in mappings:
+                try:
+                    setattr(ex_cls, nm, fn)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
         # Provide a minimal async loadMarkets implementation to avoid network calls
         async def _load_markets(self, reload=False):
             # minimal fields expected by Planar's loadmarkets! flow
