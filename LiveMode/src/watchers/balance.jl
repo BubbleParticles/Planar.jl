@@ -283,7 +283,7 @@ function _balance_init_watch!(state)
     if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
         try
             sp = pyimport("stubex.utils")
-            stab = pycall(sp.generate_balance, Any, state.exc, nothing)
+            stab = pycall(sp.generate_balance, Any, state.exc)
             _balance_process_bal!(state, w, stab)
         catch e
             @warn "ccxt: stub balance generation failed" e
