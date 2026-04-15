@@ -39,6 +39,11 @@ function get_events(ai::AssetInstance)
     end
 end
 
+# Lock for synchronizing access to event queues
+function events_lock(obj)
+    @lget! attrs(obj) :events_lock Threads.ReentrantLock()
+end
+
 function notify_request(ai::AssetInstance)
     safenotify(condition(ai))
 end
