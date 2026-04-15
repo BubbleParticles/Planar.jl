@@ -38,7 +38,32 @@ function ccxt_exchange(name::Symbol, params=nothing; kwargs...)
         async = ccxtasync()
         getproperty(async, name)
     end
-    isnothing(params) ? exc_cls() : exc_cls(params)
+    inst = isnothing(params) ? exc_cls() : exc_cls(params)
+    # If environment variable set, try to patch the python exchange instance with stubs
+    try
+        if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
+            # add local stub_exchanges package path to sys.path so python can import stubex
+            stub_path = get(ENV, "PLANAR_CCXT_STUB_PATH", normpath(joinpath(@__DIR__, "..", "..", "stub_exchanges")))
+            try
+                sys = pyimport("sys")
+                Python.pyfetch(sys.path.insert, 0, stub_path)
+            catch
+                try
+                    Python.pyfetch(sys.path.append, stub_path)
+                catch
+                end
+            end
+            try
+                sp = pyimport("stubex.patch")
+                pycall(sp.patch_exchange, Any, inst)
+            catch e
+                @warn "ccxt: stub patch failed" e
+            end
+        end
+    catch e
+        @warn "ccxt: stub check failed" e
+    end
+    inst
 end
 
 ccxt_exchange_names() = ccxtasync().exchanges
