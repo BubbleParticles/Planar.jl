@@ -142,6 +142,11 @@ def patch_exchange(exchange, exch_name: str = None):
     exch_name: optional exchange id string used for deterministic seeds (ignored currently)
     """
     try:
+        try:
+            ex_id = getattr(exchange, 'id', None)
+        except Exception:
+            ex_id = None
+        print(f"stubex: patch_exchange called for exchange id={ex_id}")
         # streaming/watch stub implementations
         async def watch_balance(self, *args, **kwargs):
             # ccxt.watchBalance usually returns a balance snapshot when awaited
@@ -426,6 +431,10 @@ def patch_exchange(exchange, exch_name: str = None):
                                 pass
                 except Exception:
                     pass
+        except Exception:
+            pass
+        try:
+            print(f"stubex: patch_exchange complete for exchange id={ex_id}")
         except Exception:
             pass
     except Exception:
