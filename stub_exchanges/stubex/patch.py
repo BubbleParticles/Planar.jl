@@ -122,6 +122,12 @@ async def fetch_positions(self, symbols=None, params=None):
     return out
 
 
+# Some exchanges (e.g., binance) call load_leverage_brackets during position fetches.
+# Provide a no-op stub to avoid network calls or unsupported testnet errors.
+async def load_leverage_brackets(self, reload=False, params=None):
+    return None
+
+
 def _bind(inst, name, func):
     """Bind function `func` as attribute `name` on `inst` using MethodType."""
     try:
@@ -227,6 +233,8 @@ def patch_exchange(exchange, exch_name: str = None):
             ("fetchOpenOrders", fetch_open_orders),
             ("fetch_positions", fetch_positions),
             ("fetchPositions", fetch_positions),
+            ("load_leverage_brackets", load_leverage_brackets),
+            ("loadLeverageBrackets", load_leverage_brackets),
             ("watch_balance", watch_balance),
             ("watchBalance", watch_balance),
             ("watch_positions", watch_positions),
@@ -310,7 +318,7 @@ def patch_exchange(exchange, exch_name: str = None):
         # Attempt to wrap original watch* methods to catch AuthenticationError and return stub data
         try:
             import asyncio
-            from ccxt.base.errors import AuthenticationError
+            from ccxt.base.errors import AuthenticationError, NotSupported
 
             def _make_wrapper(orig, nm):
                 if asyncio.iscoroutinefunction(orig):
@@ -318,9 +326,9 @@ def patch_exchange(exchange, exch_name: str = None):
                         try:
                             return await orig(*args, **kwargs)
                         except Exception as e:
-                            # On authentication errors return fallback stub
+                            # On authentication or unsupported errors return fallback stub
                             try:
-                                if isinstance(e, AuthenticationError) or e.__class__.__name__ == 'AuthenticationError':
+                                if isinstance(e, AuthenticationError) or isinstance(e, NotSupported) or e.__class__.__name__ in ('AuthenticationError','NotSupported'):
                                     ln = nm.lower()
                                     if 'balance' in ln:
                                         return utils.generate_balance(exchange, None)
@@ -378,7 +386,7 @@ def patch_exchange(exchange, exch_name: str = None):
                             return orig(*args, **kwargs)
                         except Exception as e:
                             try:
-                                if isinstance(e, AuthenticationError) or e.__class__.__name__ == 'AuthenticationError':
+                                if isinstance(e, AuthenticationError) or isinstance(e, NotSupported) or e.__class__.__name__ in ('AuthenticationError','NotSupported'):
                                     ln = nm.lower()
                                     if 'balance' in ln:
                                         return utils.generate_balance(exchange, None)
@@ -440,3 +448,74 @@ def patch_exchange(exchange, exch_name: str = None):
     except Exception:
         # swallow errors - patcher is best-effort
         pass
+
+
+# Create a patched subclass instance when possible to ensure class-methods are overridden
+def make_patched_instance(exc_cls, params=None):
+    """Instantiate a subclass of exc_cls that has stub methods attached at class level.
+
+    This helps override methods that are implemented as descriptors on the base class.
+    """
+    try:
+        cls_name = getattr(exc_cls, '__name__', 'PatchedExchange')
+        Patched = type(f"Patched{cls_name}", (exc_cls,), {})
+        # list of method mappings to attach at class level
+        mappings = [
+            ("fetch_ohlcv", fetch_ohlcv),
+            ("fetchOHLCV", fetch_ohlcv),
+            ("fetch_order_book", fetch_order_book),
+            ("fetchOrderBook", fetch_order_book),
+            ("fetch_trades", fetch_trades),
+            ("fetchTrades", fetch_trades),
+            ("fetch_my_trades", fetch_my_trades),
+            ("fetchMyTrades", fetch_my_trades),
+            ("fetch_balance", fetch_balance),
+            ("fetchBalance", fetch_balance),
+            ("create_order", create_order),
+            ("createOrder", create_order),
+            ("cancel_order", cancel_order),
+            ("cancelOrder", cancel_order),
+            ("fetch_orders", fetch_orders),
+            ("fetchOrders", fetch_orders),
+            ("fetch_open_orders", fetch_open_orders),
+            ("fetchOpenOrders", fetch_open_orders),
+            ("fetch_positions", fetch_positions),
+            ("fetchPositions", fetch_positions),
+            ("load_leverage_brackets", load_leverage_brackets),
+            ("loadLeverageBrackets", load_leverage_brackets),
+            ("watch_balance", watch_balance),
+            ("watchBalance", watch_balance),
+            ("watch_positions", watch_positions),
+            ("watchPositions", watch_positions),
+            ("watch_order_book", watch_order_book),
+            ("watchOrderBook", watch_order_book),
+            ("watch_trades", watch_trades),
+            ("watchTrades", watch_trades),
+            ("watch_ticker", watch_ticker),
+            ("watchTicker", watch_ticker),
+            ("loadMarkets", fetch_orders),
+        ]
+        for (nm, fn) in mappings:
+            try:
+                setattr(Patched, nm, fn)
+            except Exception:
+                pass
+        # instantiate
+        inst = Patched() if params is None else Patched(params)
+        # run instance-level patching as well
+        try:
+            patch_exchange(inst)
+        except Exception:
+            pass
+        return inst
+    except Exception:
+        # fallback to normal instantiation and patching
+        try:
+            inst = exc_cls() if params is None else exc_cls(params)
+        except Exception:
+            inst = exc_cls({}) if params is None else exc_cls(params)
+        try:
+            patch_exchange(inst)
+        except Exception:
+            pass
+        return inst
