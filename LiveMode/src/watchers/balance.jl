@@ -15,6 +15,7 @@ using Watchers.WatchersImpls:
 using .Exchanges: check_timeout
 using .Exchanges.Python: @py
 using .Lang: splitkws, withoutkws, safenotify, safewait
+using ..Python: pyimport, pycall, pylist
 
 const CcxtBalanceVal = Val{:ccxt_balance_val}
 
@@ -278,6 +279,16 @@ function _balance_init_watch!(state)
     w = state.w
     v = @lock w fetch_balance(s; state.timeout, state.params, state.rest...)
     _balance_process_bal!(state, w, v)
+    # Seed balance when using stub CCXT to ensure initial update is available
+    if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
+        try
+            sp = pyimport("stubex.utils")
+            stab = pycall(sp.generate_balance, Any, exc, nothing)
+            _balance_process_bal!(state, w, stab)
+        catch e
+            @warn "ccxt: stub balance generation failed" e
+        end
+    end
     state_init = Ref(false)
     f_push(v) = begin
         push!(state.buf, v)
