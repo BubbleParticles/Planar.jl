@@ -301,6 +301,133 @@ def patch_exchange(exchange, exch_name: str = None):
                 pass
         except Exception:
             pass
+
+        # Attempt to wrap original watch* methods to catch AuthenticationError and return stub data
+        try:
+            import asyncio
+            from ccxt.base.errors import AuthenticationError
+
+            def _make_wrapper(orig, nm):
+                if asyncio.iscoroutinefunction(orig):
+                    async def awrap(*args, **kwargs):
+                        try:
+                            return await orig(*args, **kwargs)
+                        except Exception as e:
+                            # On authentication errors return fallback stub
+                            try:
+                                if isinstance(e, AuthenticationError) or e.__class__.__name__ == 'AuthenticationError':
+                                    ln = nm.lower()
+                                    if 'balance' in ln:
+                                        return utils.generate_balance(exchange, None)
+                                    if 'position' in ln:
+                                        # args may contain symbols list
+                                        symbols = None
+                                        if len(args) > 0:
+                                            symbols = args[0]
+                                        if symbols is None:
+                                            return []
+                                        out = []
+                                        try:
+                                            for s in symbols:
+                                                out.append(_make_position(s, exchange))
+                                        except Exception:
+                                            try:
+                                                out.append(_make_position(symbols, exchange))
+                                            except Exception:
+                                                pass
+                                        return out
+                                    if 'order' in ln and 'book' in ln:
+                                        symbol = args[0] if len(args) > 0 else None
+                                        depth = kwargs.get('limit', None)
+                                        return utils.generate_orderbook(symbol, depth if depth is not None else 20)
+                                    if 'trade' in ln:
+                                        symbol = args[0] if len(args) > 0 else None
+                                        lim = kwargs.get('limit', 50)
+                                        return utils.generate_trades(symbol, lim)
+                                    if 'ticker' in ln:
+                                        symbol = args[0] if len(args) > 0 else None
+                                        ohlcv = utils.generate_ohlcv(symbol, None, 1, 1)
+                                        if not ohlcv:
+                                            return {}
+                                        last = ohlcv[-1]
+                                        return {
+                                            'symbol': symbol,
+                                            'timestamp': last[0],
+                                            'datetime': None,
+                                            'high': last[2],
+                                            'low': last[3],
+                                            'bid': last[4],
+                                            'ask': last[4],
+                                            'open': last[1],
+                                            'close': last[4],
+                                            'last': last[4],
+                                            'baseVolume': last[5],
+                                        }
+                            except Exception:
+                                pass
+                            raise
+                    return awrap
+                else:
+                    def swrap(*args, **kwargs):
+                        try:
+                            return orig(*args, **kwargs)
+                        except Exception as e:
+                            try:
+                                if isinstance(e, AuthenticationError) or e.__class__.__name__ == 'AuthenticationError':
+                                    ln = nm.lower()
+                                    if 'balance' in ln:
+                                        return utils.generate_balance(exchange, None)
+                                    if 'position' in ln:
+                                        return []
+                                    if 'order' in ln and 'book' in ln:
+                                        symbol = args[0] if len(args) > 0 else None
+                                        depth = kwargs.get('limit', None)
+                                        return utils.generate_orderbook(symbol, depth if depth is not None else 20)
+                                    if 'trade' in ln:
+                                        symbol = args[0] if len(args) > 0 else None
+                                        lim = kwargs.get('limit', 50)
+                                        return utils.generate_trades(symbol, lim)
+                                    if 'ticker' in ln:
+                                        symbol = args[0] if len(args) > 0 else None
+                                        ohlcv = utils.generate_ohlcv(symbol, None, 1, 1)
+                                        if not ohlcv:
+                                            return {}
+                                        last = ohlcv[-1]
+                                        return {
+                                            'symbol': symbol,
+                                            'timestamp': last[0],
+                                            'datetime': None,
+                                            'high': last[2],
+                                            'low': last[3],
+                                            'bid': last[4],
+                                            'ask': last[4],
+                                            'open': last[1],
+                                            'close': last[4],
+                                            'last': last[4],
+                                            'baseVolume': last[5],
+                                        }
+                            except Exception:
+                                pass
+                            raise
+                    return swrap
+
+            for (nm, fn) in mappings:
+                try:
+                    orig = getattr(exchange, nm, None)
+                    if orig is not None:
+                        wrapper = _make_wrapper(orig, nm)
+                        try:
+                            bound = types.MethodType(wrapper, exchange)
+                            setattr(exchange, nm, bound)
+                        except Exception:
+                            try:
+                                setattr(exchange, nm, wrapper)
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+        except Exception:
+            pass
     except Exception:
         # swallow errors - patcher is best-effort
         pass
