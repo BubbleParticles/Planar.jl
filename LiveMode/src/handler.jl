@@ -136,7 +136,14 @@ function _start_handler!(obj)
         cond = condition(obj)
         obj[:event_handler] = @start_task IdDict() begin
             obj[:stopping_handler] = false
-            handle_events(obj, events, cond)
+            # Protect the initial call to handle_events to avoid the task
+            # terminating if handle_events raises an unexpected exception.
+            try
+                handle_events(obj, events, cond)
+            catch e
+                @warn "handler: initial handle_events failed" exception = e obj = obj
+                @debug_backtrace LogEvents
+            end
             while @istaskrunning()
                 if obj[:stopping_handler]
                     break
@@ -145,7 +152,8 @@ function _start_handler!(obj)
                 end
                 try
                     handle_events(obj, events, cond)
-                catch
+                catch e
+                    @warn "handler: error during handle_events loop" exception = e obj = obj
                     @debug_backtrace LogEvents
                 end
             end
