@@ -388,6 +388,22 @@ function ccxt_positions_func!(a, exc)
                 sleep(pre_timeout[])
                 out = positions_func(exc, ais; timeout, kwargs...)
                 out = handle_list_resp(eid, out, timeout, pre_timeout, base_timeout)
+                # Fallback to local stub generation when using stub ccxt and the call failed
+                if isnothing(out) && get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
+                    try
+                        sp = pyimport("stubex.patch")
+                        out = pylist()
+                        for ai in ais
+                            try
+                                pos = pycall(sp._make_position, Any, raw(ai))
+                                out.append(pos)
+                            catch
+                            end
+                        end
+                    catch
+                        out = nothing
+                    end
+                end
                 if !isnothing(out)
                     default_side_func(resp) = _last_posside(_matching_asset(resp, eid, ais))
                     _filter_positions(out, eid, side; default_side_func)
