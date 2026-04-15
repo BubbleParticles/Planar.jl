@@ -142,6 +142,64 @@ def patch_exchange(exchange, exch_name: str = None):
     exch_name: optional exchange id string used for deterministic seeds (ignored currently)
     """
     try:
+        # streaming/watch stub implementations
+        async def watch_balance(self, *args, **kwargs):
+            # ccxt.watchBalance usually returns a balance snapshot when awaited
+            symbol = None
+            if len(args) > 0:
+                symbol = args[0]
+            try:
+                return utils.generate_balance(self, symbol)
+            except Exception:
+                return utils.generate_balance(self, None)
+
+        async def watch_positions(self, symbols=None, params=None):
+            if symbols is None:
+                return []
+            out = []
+            try:
+                for s in symbols:
+                    out.append(_make_position(s, self))
+            except Exception:
+                try:
+                    out.append(_make_position(symbols, self))
+                except Exception:
+                    pass
+            return out
+
+        async def watch_order_book(self, symbol, limit=None, params=None):
+            depth = limit if limit is not None else 20
+            return utils.generate_orderbook(symbol, depth)
+
+        async def watch_trades(self, symbol, since=None, limit=50, params=None):
+            lim = limit if limit is not None else 50
+            return utils.generate_trades(symbol, lim)
+
+        async def watch_ticker(self, symbol, params=None):
+            ohlcv = utils.generate_ohlcv(symbol, None, 1, 1)
+            if not ohlcv:
+                return {}
+            last = ohlcv[-1]
+            return {
+                "symbol": symbol,
+                "timestamp": last[0],
+                "datetime": None,
+                "high": last[2],
+                "low": last[3],
+                "bid": last[4],
+                "ask": last[4],
+                "vwap": None,
+                "open": last[1],
+                "close": last[4],
+                "last": last[4],
+                "previousClose": None,
+                "change": None,
+                "percentage": None,
+                "average": None,
+                "baseVolume": last[5],
+                "quoteVolume": None,
+            }
+
         # map of canonical names -> function object (async functions)
         mappings = [
             ("fetch_ohlcv", fetch_ohlcv),
@@ -164,6 +222,16 @@ def patch_exchange(exchange, exch_name: str = None):
             ("fetchOpenOrders", fetch_open_orders),
             ("fetch_positions", fetch_positions),
             ("fetchPositions", fetch_positions),
+            ("watch_balance", watch_balance),
+            ("watchBalance", watch_balance),
+            ("watch_positions", watch_positions),
+            ("watchPositions", watch_positions),
+            ("watch_order_book", watch_order_book),
+            ("watchOrderBook", watch_order_book),
+            ("watch_trades", watch_trades),
+            ("watchTrades", watch_trades),
+            ("watch_ticker", watch_ticker),
+            ("watchTicker", watch_ticker),
             ("loadMarkets", fetch_orders),
         ]
 
