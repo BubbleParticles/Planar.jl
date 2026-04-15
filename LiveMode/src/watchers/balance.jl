@@ -283,7 +283,10 @@ function _balance_init_watch!(state)
     if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
         try
             sp = pyimport("stubex.utils")
-            stab = pycall(sp.generate_balance, Any, state.exc)
+            # Pass None to the Python helper to avoid concatenation errors when
+            # the exchange object is a wrapped Julia/PyObject. The helper falls
+            # back to a default id in this case.
+            stab = pycall(sp.generate_balance, Any, nothing)
             _balance_process_bal!(state, w, stab)
         catch e
             @warn "ccxt: stub balance generation failed" e
