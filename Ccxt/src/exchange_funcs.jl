@@ -38,10 +38,11 @@ function ccxt_exchange(name::Symbol, params=nothing; kwargs...)
         async = ccxtasync()
         getproperty(async, name)
     end
-    inst = isnothing(params) ? exc_cls() : exc_cls(params)
-    # If environment variable set, try to patch the python exchange instance with stubs
-    try
-        if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
+    # Instantiate exchange class (may be replaced by patched subclass below)
+    inst = nothing
+    # If environment variable set, try to instantiate a patched subclass via stubex
+    if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
+        try
             # add local stub_exchanges package path to sys.path so python can import stubex
             stub_path = get(ENV, "PLANAR_CCXT_STUB_PATH", normpath(joinpath(@__DIR__, "..", "..", "stub_exchanges")))
             try
@@ -55,13 +56,28 @@ function ccxt_exchange(name::Symbol, params=nothing; kwargs...)
             end
             try
                 sp = pyimport("stubex.patch")
-                pycall(sp.patch_exchange, Any, inst)
+                # Attempt to let the patcher create a patched subclass instance
+                try
+                    inst = pycall(sp.make_patched_instance, Any, exc_cls, params)
+                catch
+                    # fallback: normal instantiation then instance-level patch
+                    inst = isnothing(params) ? exc_cls() : exc_cls(params)
+                    try
+                        pycall(sp.patch_exchange, Any, inst)
+                    catch e
+                        @warn "ccxt: stub patch failed" e
+                    end
+                end
             catch e
-                @warn "ccxt: stub patch failed" e
+                @warn "ccxt: stub patch import failed" e
             end
+        catch e
+            @warn "ccxt: stub check failed" e
         end
-    catch e
-        @warn "ccxt: stub check failed" e
+    end
+    # Final fallback to normal instantiation if not patched above
+    if isnothing(inst)
+        inst = isnothing(params) ? exc_cls() : exc_cls(params)
     end
     inst
 end
