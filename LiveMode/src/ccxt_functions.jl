@@ -319,12 +319,22 @@ function position_func(exc::Exchange, ai, args...; timeout, kwargs...)
 end
 
 function watch_positions_handler(exc::Exchange, ais, args...; f_push, kwargs...)
-    corogen() = exc.watchPositions(_syms(ais), args...; kwargs...)
+    if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
+        # When using stubs, prefer fetchPositions (snapshot) instead of watchPositions
+        corogen() = exc.fetchPositions(_syms(ais), args...; kwargs...)
+    else
+        corogen() = exc.watchPositions(_syms(ais), args...; kwargs...)
+    end
     stream_handler(corogen, f_push)
 end
 
 function watch_balance_handler(exc::Exchange, args...; f_push, kwargs...)
-    corogen() = exc.watchBalance(args...; kwargs...)
+    if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
+        # Use fetchBalance instead of watchBalance in stub mode to avoid websocket/auth issues
+        corogen() = exc.fetchBalance(args...; kwargs...)
+    else
+        corogen() = exc.watchBalance(args...; kwargs...)
+    end
     parse_and_push(v) = _parse_balance(exc, v) |> f_push
     stream_handler(corogen, parse_and_push)
 end
