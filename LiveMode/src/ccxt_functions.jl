@@ -379,6 +379,32 @@ function ccxt_positions_func!(a, exc)
     a[:positions_base_timeout] = base_timeout = Ref(Second(0))
     get!(a, :positions_ttl, Second(3))
     l, cache = _positions_resp_cache(a)
+
+    # When using stub CCXT, provide a direct stub implementation for positions
+    # to avoid invoking any ccxt network-internal logic (e.g., load_leverage_brackets)
+    if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
+        a[:live_positions_func] = function ccxt_positions_stub(ais; side=Hedged(), timeout=base_timeout[], kwargs...)
+            try
+                sp = pyimport("stubex.patch")
+                out = pylist()
+                for ai in ais
+                    try
+                        pos = pycall(sp._make_position, Any, raw(ai))
+                        out.append(pos)
+                    catch e
+                        @warn "ccxt: stub position generation failed for" ai e
+                    end
+                end
+                default_side_func(resp) = _last_posside(_matching_asset(resp, eid, ais))
+                _filter_positions(out, eid, side; default_side_func)
+            catch e
+                @warn "ccxt: positions stub failed" e
+                pylist()
+            end
+        end
+        return
+    end
+
     a[:live_positions_func] = if has(exc, :fetchPositions)
         function ccxt_positions_multi(ais; side=Hedged(), timeout=base_timeout[], kwargs...)
             syms = ((raw(ai) for ai in ais)..., side)
