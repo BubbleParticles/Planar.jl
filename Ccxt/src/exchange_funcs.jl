@@ -31,12 +31,20 @@ This function creates an instance of a CCXT exchange. It checks if the exchange 
 """
 function ccxt_exchange(name::Symbol, params=nothing; kwargs...)
     @debug "Instantiating Exchange $name..."
-    ws = ccxtws()
-    exc_cls = if hasproperty(ws, name)
-        getproperty(ws, name)
-    else
+    # When using stub CCXT, avoid ccxt.pro (websocket/pro) classes since they
+    # may spawn background coroutines (ccxt.pro) that call internal network
+    # methods and raise NotSupported. Prefer async_support in stub mode.
+    if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
         async = ccxtasync()
-        getproperty(async, name)
+        exc_cls = getproperty(async, name)
+    else
+        ws = ccxtws()
+        exc_cls = if hasproperty(ws, name)
+            getproperty(ws, name)
+        else
+            async = ccxtasync()
+            getproperty(async, name)
+        end
     end
     # Instantiate exchange class (may be replaced by patched subclass below)
     inst = nothing
