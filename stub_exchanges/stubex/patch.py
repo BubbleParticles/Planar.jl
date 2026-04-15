@@ -269,6 +269,27 @@ def patch_exchange(exchange, exch_name: str = None):
                         pass
         except Exception:
             pass
+
+        # Provide dummy credentials to avoid AuthenticationError for exchanges that require them
+        try:
+            try:
+                if not hasattr(exchange, "apiKey") or exchange.apiKey is None:
+                    exchange.apiKey = "stub"
+            except Exception:
+                pass
+            try:
+                if not hasattr(exchange, "secret") or exchange.secret is None:
+                    exchange.secret = "stub"
+            except Exception:
+                pass
+            # some exchanges may check for password or uid
+            try:
+                if not hasattr(exchange, "password"):
+                    exchange.password = "stub"
+            except Exception:
+                pass
+        except Exception:
+            pass
     except Exception:
         # swallow errors - patcher is best-effort
         pass
