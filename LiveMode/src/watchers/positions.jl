@@ -5,6 +5,7 @@ using Watchers.WatchersImpls: _tfunc!, _tfunc, _exc!, _exc, _lastpushed!, _lastp
 using .PaperMode: sleep_pad
 using .Exchanges: check_timeout, current_account
 using .Lang: splitkws, safenotify, safewait
+using ..Python: pyimport, pycall, pylist
 
 const CcxtPositionsVal = Val{:ccxt_positions}
 # :read, if true, the value of :pos has already be locally synced
@@ -187,6 +188,25 @@ function _w_positions_watch_mode(
             push!(buf, (v, false))
             notify(buf_notify)
             maybe_backoff!(errors, v)
+        end
+        # Seed initial positions when running in stub CCXT mode to avoid stalls
+        if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
+            try
+                sp = pyimport("stubex.patch")
+                out = pylist()
+                for ai in s.universe
+                    try
+                        pos = pycall(sp._make_position, Any, raw(ai))
+                        out.append(pos)
+                    catch e
+                        @warn "ccxt: stub position generation failed for" ai e
+                    end
+                end
+                # push stubbed positions into the processing buffer
+                _positions_process_push!(w, tasks, out; fetched=false)
+            catch e
+                @warn "ccxt: stubex.patch import/generation failed" e
+            end
         end
         h =
             w[:positions_handler] = watch_positions_handler(
