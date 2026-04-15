@@ -390,6 +390,7 @@ function ccxt_positions_func!(a, exc)
                 out = handle_list_resp(eid, out, timeout, pre_timeout, base_timeout)
                 # Fallback to local stub generation when using stub ccxt and the call failed
                 if isnothing(out) && get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
+                    @info "ccxt: using stub positions fallback" eid = eid
                     try
                         sp = pyimport("stubex.patch")
                         out = pylist()
@@ -397,10 +398,12 @@ function ccxt_positions_func!(a, exc)
                             try
                                 pos = pycall(sp._make_position, Any, raw(ai))
                                 out.append(pos)
-                            catch
+                            catch e
+                                @warn "ccxt: stub position generation failed for" ai e
                             end
                         end
-                    catch
+                    catch e
+                        @warn "ccxt: stubex.patch import/generation failed" e
                         out = nothing
                     end
                 end
