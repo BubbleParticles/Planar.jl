@@ -53,34 +53,59 @@ function ccxt_exchange(name::Symbol, params=nothing; kwargs...)
         try
             # add local stub_exchanges package path to sys.path so python can import stubex
             stub_path = get(ENV, "PLANAR_CCXT_STUB_PATH", normpath(joinpath(@__DIR__, "..", "..", "stub_exchanges")))
+            @info "ccxt: adding stub path" stub_path
             try
                 sys = pyimport("sys")
-                Python.pyfetch(sys.path.insert, 0, stub_path)
-            catch
+                parent = normpath(joinpath(@__DIR__, "..", ".."))
                 try
-                    Python.pyfetch(sys.path.append, stub_path)
+                    pycall(sys.path.insert, Any, 0, parent)
                 catch
+                    try
+                        pycall(sys.path.append, Any, parent)
+                    catch
+                        # ignore if sys.path modification fails
+                    end
+                end
+                @info "ccxt: python sys.path updated (parent inserted)" parent
+            catch e
+                @warn "ccxt: failed to update sys.path for stubex" e=string(e)
+            end
+            sp = nothing
+            try
+                # Prefer importing stub_exchanges package (makes repo layout explicit)
+                sp = pyimport("stub_exchanges.stubex.patch")
+                @info "ccxt: imported stub_exchanges.stubex.patch"
+            catch e1
+                try
+                    # Fallback to direct stubex package import if present
+                    sp = pyimport("stubex.patch")
+                    @info "ccxt: imported stubex.patch"
+                catch e2
+                    @warn "ccxt: stub patch import failed" e1=string(e1) e2=string(e2)
                 end
             end
-            try
-                sp = pyimport("stubex.patch")
+            if !isnothing(sp)
+                @info "ccxt: stubex.patch module available" sp
                 # Attempt to let the patcher create a patched subclass instance
                 try
                     inst = pycall(sp.make_patched_instance, Any, exc_cls, params)
-                catch
+                    @info "ccxt: make_patched_instance succeeded for " string(name)
+                catch e
+                    @info "ccxt: make_patched_instance failed, falling back to instance patch" e
                     # fallback: normal instantiation then instance-level patch
                     inst = isnothing(params) ? exc_cls() : exc_cls(params)
                     try
                         pycall(sp.patch_exchange, Any, inst)
-                    catch e
-                        @warn "ccxt: stub patch failed" e
+                        @info "ccxt: instance-level patch_exchange applied"
+                    catch e2
+                        @warn "ccxt: stub patch failed at instance-level" e2=string(e2)
                     end
                 end
-            catch e
-                @warn "ccxt: stub patch import failed" e
+            else
+                @warn "ccxt: stub patch not available, skipping" stub_path
             end
         catch e
-            @warn "ccxt: stub check failed" e
+            @warn "ccxt: stub check failed" e=string(e)
         end
     end
     # Final fallback to normal instantiation if not patched above
