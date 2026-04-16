@@ -16,7 +16,13 @@ function _override_phemex(exc::Exchange{ExchangeID{:phemex}})
        import ccxt
        from juliacall import Main
        push = getattr(Main, 'push!')
-       class phemex_override(ccxt.pro.phemex):
+       try:
+           BasePhemex = ccxt.pro.phemex
+       except Exception:
+           BasePhemex = getattr(ccxt, 'phemex', None)
+           if BasePhemex is None:
+               raise ImportError("ccxt phemex class not found")
+       class phemex_override(BasePhemex):
            def handle_message(self, client, message):
                if 'positions_p' in message:
                    push(self._positions_messages, message['positions_p'])
