@@ -142,6 +142,18 @@ julia
 using Planar  # or PlanarInteractive for plotting and optimization
 ```
 
+Testing with local CCXT stub:
+
+To run live tests deterministically (no network), install the local stub and point Julia's Python to it:
+
+```bash
+python3 -m pip install -e ./stub_exchanges
+export PYTHON=$(which python3)
+export PLANAR_USE_STUB_CCXT=1
+export PLANAR_CCXT_STUB_PATH=./stub_exchanges
+julia --project=PlanarDev/ -e 'import Pkg; Pkg.instantiate(); Pkg.test()'
+```
+
 Read the :book: documentation ([link](https://bubbleparticles.github.io/Planar.jl/)) to learn how to get started with the bot.
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/A0A81M3SML)
