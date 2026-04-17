@@ -269,6 +269,11 @@ async def fetch_my_trades(self, *args, **kwargs):
                             synths.append(tr)
                         except Exception:
                             synths = synths + [tr]
+                        if _debug:
+                            try:
+                                print(f"stubex.fetch_my_trades: synthesized trade for order={o_str} symbol={symbol} price={price} amt={amt}")
+                            except Exception:
+                                pass
                         try:
                             ordinfo['_returned'] = True
                         except Exception:
@@ -314,6 +319,11 @@ async def fetch_my_trades(self, *args, **kwargs):
                             synths.append(tr)
                         except Exception:
                             synths = synths + [tr]
+                        if _debug:
+                            try:
+                                print(f"stubex.fetch_my_trades: synthesized trade for order={o_str} symbol={sym} price={price} amt={amt}")
+                            except Exception:
+                                pass
                         try:
                             ordinfo['_returned'] = True
                         except Exception:
