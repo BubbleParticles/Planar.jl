@@ -270,7 +270,7 @@ async def fetch_my_trades(self, *args, **kwargs):
                         except Exception:
                             synths = synths + [tr]
                         try:
-                            ro[symbol].remove(ordinfo)
+                            ordinfo['_returned'] = True
                         except Exception:
                             pass
                     # Return only synthesized trades for pending orders to ensure order ids are present
@@ -315,7 +315,7 @@ async def fetch_my_trades(self, *args, **kwargs):
                         except Exception:
                             synths = synths + [tr]
                         try:
-                            ro[sym].remove(ordinfo)
+                            ordinfo['_returned'] = True
                         except Exception:
                             pass
                     out_trades.extend(synths)
