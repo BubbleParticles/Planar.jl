@@ -186,25 +186,179 @@ async def fetch_my_trades(self, *args, **kwargs):
         since = None
         limit = kwargs.get('limit', 50)
         params = kwargs.get('params', None)
-        # Positional parsing: (symbol, since, limit, params) or (since, limit) etc.
-        if len(args) > 0:
-            symbol = args[0]
-            if len(args) > 1:
-                since = args[1]
-            if len(args) > 2:
-                limit = args[2]
-            if len(args) > 3:
-                params = args[3]
+
+        # Helper to test symbol-like values
+        def _is_symbol_like(v):
+            try:
+                if isinstance(v, str) and "/" in v:
+                    return True
+                sv = str(v)
+                return "/" in sv
+            except Exception:
+                return False
+
+        # Search for a symbol-like candidate in positional args
+        for a in args:
+            try:
+                if _is_symbol_like(a):
+                    symbol = str(a)
+                    break
+            except Exception:
+                continue
+
         # Keyword overrides
-        if 'symbol' in kwargs:
-            symbol = kwargs.get('symbol')
+        if 'symbol' in kwargs and _is_symbol_like(kwargs.get('symbol')):
+            symbol = str(kwargs.get('symbol'))
         if 'since' in kwargs:
             since = kwargs.get('since')
         if 'params' in kwargs:
             params = kwargs.get('params')
-        if symbol is None:
-            return []
-        return await fetch_trades(self, symbol, since, limit, params)
+
+        trades = []
+        # If we have a symbol-like argument, fetch trades for that symbol
+        if symbol is not None:
+            trades = await fetch_trades(self, symbol, since, limit, params)
+            try:
+                trades = list(trades) if trades is not None else []
+            except Exception:
+                pass
+            # Ensure all returned trades have order/orderId keys (may be None)
+            try:
+                for t in trades:
+                    try:
+                        if isinstance(t, dict):
+                            if 'order' not in t:
+                                t['order'] = None
+                            if 'orderId' not in t:
+                                t['orderId'] = None
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            # Attach pending order info as trades when present for this symbol
+            try:
+                ro = getattr(self, "_stub_recent_orders", None)
+                if _debug:
+                    try:
+                        print(f"stubex.fetch_my_trades called: symbol={symbol} pending={ro}")
+                    except Exception:
+                        pass
+                if isinstance(ro, dict) and symbol in ro and ro[symbol]:
+                    if _debug:
+                        try:
+                            print(f"stubex.fetch_my_trades: attaching {len(ro[symbol])} pending orders for {symbol}")
+                        except Exception:
+                            pass
+                    synths = []
+                    for ordinfo in list(ro.get(symbol, [])):
+                        ts = _now_ms()
+                        price = ordinfo.get("price") if ordinfo.get("price") is not None else (trades[0].get("price") if trades else 100.0)
+                        amt = ordinfo.get("amount") if ordinfo.get("amount") is not None else 0.0
+                        side = ordinfo.get("side", None)
+                        # Ensure order id is a non-empty string to avoid None -> Julia Nothing conversions
+                        o_id = ordinfo.get("id")
+                        if o_id is None:
+                            o_id = f"o{_now_ms()}"
+                            try:
+                                ordinfo['id'] = o_id
+                            except Exception:
+                                pass
+                        o_str = str(o_id)
+                        tr = {"id": f"t{ts}", "timestamp": ts, "datetime": None, "symbol": symbol, "price": round(float(price),8) if price is not None else None, "amount": amt, "side": side, "order": o_str, "orderId": o_str, "clientOrderId": o_str}
+                        try:
+                            synths.append(tr)
+                        except Exception:
+                            synths = synths + [tr]
+                        try:
+                            ro[symbol].remove(ordinfo)
+                        except Exception:
+                            pass
+                    # Return only synthesized trades for pending orders to ensure order ids are present
+                    return synths
+            except Exception:
+                pass
+            return trades
+
+        # No symbol-like argument found. Attempt to attach pending orders across all known symbols
+        try:
+            ro = getattr(self, "_stub_recent_orders", None)
+            if isinstance(ro, dict) and ro:
+                out_trades = []
+                # For each symbol with pending orders, only return synthesized trades (with order ids)
+                for sym, lst in list(ro.items()):
+                    if not lst:
+                        continue
+                    synths = []
+                    for ordinfo in list(lst):
+                        ts = _now_ms()
+                        # try to get a sensible price
+                        price = ordinfo.get("price") if ordinfo.get("price") is not None else None
+                        if price is None:
+                            try:
+                                sample_trades = utils.generate_trades(sym, 1) or []
+                                price = sample_trades[0].get("price") if sample_trades else 100.0
+                            except Exception:
+                                price = 100.0
+                        amt = ordinfo.get("amount") if ordinfo.get("amount") is not None else 0.0
+                        side = ordinfo.get("side", None)
+                        o_id = ordinfo.get("id")
+                        if o_id is None:
+                            o_id = f"o{_now_ms()}"
+                            try:
+                                ordinfo['id'] = o_id
+                            except Exception:
+                                pass
+                        o_str = str(o_id)
+                        tr = {"id": f"t{ts}", "timestamp": ts, "datetime": None, "symbol": sym, "price": round(float(price),8) if price is not None else None, "amount": amt, "side": side, "order": o_str, "orderId": o_str, "clientOrderId": o_str}
+                        try:
+                            synths.append(tr)
+                        except Exception:
+                            synths = synths + [tr]
+                        try:
+                            ro[sym].remove(ordinfo)
+                        except Exception:
+                            pass
+                    out_trades.extend(synths)
+                if _debug:
+                    try:
+                        print(f"stubex.fetch_my_trades: returning aggregated trades for symbols={list(ro.keys())}")
+                    except Exception:
+                        pass
+                return out_trades
+        except Exception:
+            pass
+
+        # As a last resort, see if any positional arg has a 'symbol' attribute we can use
+        try:
+            for a in args:
+                try:
+                    maybe_sym = getattr(a, "symbol", None)
+                    if _is_symbol_like(maybe_sym):
+                        trades = await fetch_trades(self, str(maybe_sym), since, limit, params)
+                        try:
+                            tlist = list(trades) if trades is not None else []
+                        except Exception:
+                            tlist = trades or []
+                        # ensure order/orderId keys exist
+                        try:
+                            for t in tlist:
+                                try:
+                                    if isinstance(t, dict):
+                                        if 'order' not in t:
+                                            t['order'] = None
+                                        if 'orderId' not in t:
+                                            t['orderId'] = None
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+                        return tlist
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+        return []
     except Exception:
         return []
 
@@ -475,6 +629,27 @@ async def create_order(self, *args, **kwargs):
             ord['symbol'] = symbol_str
         ord['type'] = order_type or ord.get('type', None)
         ord['side'] = side or ord.get('side', None)
+
+        # Register recent orders (symbol -> list of order infos) so fetch_my_trades
+        # can return matching trades referencing the order id. Register both open
+        # and immediately-filled orders to ensure callers can discover trades.
+        try:
+            if symbol_str is not None:
+                try:
+                    ro = getattr(self, "_stub_recent_orders", None)
+                    if ro is None:
+                        self._stub_recent_orders = {}
+                        ro = self._stub_recent_orders
+                except Exception:
+                    ro = getattr(self, "_stub_recent_orders", {})
+                try:
+                    lst = ro.get(symbol_str, [])
+                    lst.append({"id": ord.get("id"), "price": ord.get("price"), "amount": ord.get("amount"), "side": ord.get("side")})
+                    ro[symbol_str] = lst
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
         if _debug:
             try:
@@ -773,6 +948,79 @@ def patch_exchange(exchange, exch_name: str = None):
 
         _bind(exchange, "loadMarkets", _load_markets)
         _bind(exchange, "load_markets", _load_markets)
+
+        # Immediately populate minimal markets to override any pre-existing data.
+        try:
+            # Clear existing markets to avoid mixing real exchange metadata with stub data
+            try:
+                exchange.markets = {}
+            except Exception:
+                pass
+            try:
+                exchange.markets_by_id = {}
+            except Exception:
+                pass
+            try:
+                syms = list(exchange.symbols) if hasattr(exchange, 'symbols') and exchange.symbols else ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
+            except Exception:
+                syms = ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
+            exchange.symbols = []
+            for s in syms:
+                try:
+                    sym = str(s)
+                except Exception:
+                    sym = s
+                base = None
+                quote = None
+                if isinstance(sym, str) and '/' in sym:
+                    parts = sym.split('/', 1)
+                    base = parts[0]
+                    quote = parts[1]
+                else:
+                    base = sym
+                    quote = ""
+                last_price = None
+                try:
+                    ohlcv = utils.generate_ohlcv(sym, None, 1, 1)
+                    if ohlcv and len(ohlcv) > 0:
+                        last_price = float(ohlcv[-1][4])
+                except Exception:
+                    last_price = None
+                if last_price is None:
+                    last_price = 100.0
+                # Use a very small min price to avoid accidental clamping in consumers
+                min_price = max(1e-12, float(last_price) * 1e-6)
+                m = {
+                    'id': sym,
+                    'symbol': sym,
+                    'base': base,
+                    'quote': quote,
+                    'type': 'spot',
+                    'limits': {
+                        'amount': {'min': 1e-8, 'max': None},
+                        'price': {'min': min_price, 'max': None},
+                        'cost': {'min': 1e-8, 'max': None},
+                    },
+                    'precision': {'amount': 8, 'price': 8},
+                    'active': True,
+                    'taker': 0.001,
+                    'maker': 0.001,
+                }
+                try:
+                    exchange.markets[sym] = m
+                    exchange.markets_by_id[sym] = m
+                except Exception:
+                    pass
+                try:
+                    exchange.symbols.append(sym)
+                except Exception:
+                    pass
+            try:
+                exchange.currencies = {}
+            except Exception:
+                pass
+        except Exception:
+            pass
 
         # Try set has flags so ccxt feature detection picks them up
         try:
