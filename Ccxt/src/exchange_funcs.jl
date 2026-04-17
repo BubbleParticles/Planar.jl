@@ -57,16 +57,19 @@ function ccxt_exchange(name::Symbol, params=nothing; kwargs...)
             try
                 sys = pyimport("sys")
                 parent = normpath(joinpath(@__DIR__, "..", ".."))
-                try
-                    pycall(sys.path.insert, Any, 0, parent)
-                catch
+                paths_to_try = [stub_path, parent]
+                for p in paths_to_try
                     try
-                        pycall(sys.path.append, Any, parent)
+                        pycall(sys.path.insert, Any, 0, p)
                     catch
-                        # ignore if sys.path modification fails
+                        try
+                            pycall(sys.path.append, Any, p)
+                        catch
+                            # ignore if sys.path modification fails
+                        end
                     end
                 end
-                @info "ccxt: python sys.path updated (parent inserted)" parent
+                @info "ccxt: python sys.path updated (paths inserted)" paths_to_try
             catch e
                 @warn "ccxt: failed to update sys.path for stubex" e=string(e)
             end
