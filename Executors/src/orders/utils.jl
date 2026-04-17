@@ -140,7 +140,10 @@ Calculates the commitment for an order.
 $(TYPEDSIGNATURES)
 """
 function committment(ai::AssetInstance, o::Order; kwargs...)
-    committment(typeof(o), ai, o.price, o.amount; kwargs...)
+    @debug "committment input" ai=ai order=o kwargs=kwargs
+    res = committment(typeof(o), ai, o.price, o.amount; kwargs...)
+    @debug "committment result" result=res
+    res
 end
 
 @doc """
