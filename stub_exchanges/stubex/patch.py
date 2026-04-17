@@ -937,9 +937,145 @@ async def fetch_positions(self, *args, **kwargs):
 
 
 # Some exchanges (e.g., binance) call load_leverage_brackets during position fetches.
-# Provide a no-op stub to avoid network calls or unsupported testnet errors.
-async def load_leverage_brackets(self, reload=False, params=None):
-    return None
+# Provide a lightweight in-process implementation to avoid network calls while
+# returning a plausible structure for leverage tiers and related helpers.
+def load_leverage_brackets(self, reload=False, params=None):
+    """Populate and return a per-symbol leverage brackets mapping.
+
+    The structure is intentionally simple and deterministic so Planar's
+    leverage_tiers() can parse and cache it. Stored on the instance as
+    `_stub_leverage_brackets`.
+    """
+    try:
+        if getattr(self, "_stub_leverage_brackets", None) is None:
+            self._stub_leverage_brackets = {}
+        try:
+            syms = list(self.symbols) if hasattr(self, "symbols") and self.symbols else ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
+        except Exception:
+            syms = ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
+        for s in syms:
+            try:
+                self._stub_leverage_brackets[s] = utils.generate_leverage_tiers(s)
+            except Exception:
+                self._stub_leverage_brackets[s] = []
+        return self._stub_leverage_brackets
+    except Exception:
+        return None
+
+
+def fetch_market_leverage_tiers(self, symbol, *args, **kwargs):
+    """Return a list of leverage tier dicts for the given symbol.
+
+    Matches the shape expected by Planar's leverage_tiers() caller.
+    """
+    try:
+        return utils.generate_leverage_tiers(symbol)
+    except Exception:
+        return []
+
+
+def set_leverage(self, lev, symbol, *args, **kwargs):
+    """Set stub leverage for a symbol. Returns True on success.
+
+    Accepts string or numeric leverage values; stored on the instance so
+    fetchLeverage can return it later.
+    """
+    try:
+        sval = str(lev)
+        val = float(sval)
+    except Exception:
+        try:
+            val = float(lev)
+        except Exception:
+            val = 1.0
+    try:
+        if getattr(self, "_stub_leverage_map", None) is None:
+            self._stub_leverage_map = {}
+        self._stub_leverage_map[str(symbol)] = {"longLeverage": float(val), "shortLeverage": float(val)}
+    except Exception:
+        pass
+    return True
+
+
+def fetch_leverage(self, symbol, *args, **kwargs):
+    """Return the current stubbed leverage for `symbol` or a sensible default."""
+    try:
+        m = getattr(self, "_stub_leverage_map", None)
+        key = str(symbol)
+        if isinstance(m, dict) and key in m:
+            return m[key]
+        # fallback default
+        return {"longLeverage": 3.0, "shortLeverage": 3.0}
+    except Exception:
+        return {"longLeverage": 1.0, "shortLeverage": 1.0}
+
+
+def fetch_funding_rate(self, symbol, *args, **kwargs):
+    """Return a single funding-rate-like dict for a symbol."""
+    try:
+        s = str(symbol)
+        return utils.generate_funding_rate(s, self)
+    except Exception:
+        return {"symbol": symbol, "fundingRate": 0.0, "nextFundingTime": _now_ms() + 8 * 60 * 60 * 1000}
+
+
+def fetch_funding_rates(self, *args, **kwargs):
+    """Return a dict of funding rates keyed by symbol."""
+    try:
+        syms = list(self.symbols) if hasattr(self, "symbols") and self.symbols else ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
+        out = {}
+        for s in syms:
+            try:
+                out[s] = utils.generate_funding_rate(s, self)
+            except Exception:
+                out[s] = {"symbol": s, "fundingRate": 0.0, "nextFundingTime": _now_ms() + 8 * 60 * 60 * 1000}
+        return out
+    except Exception:
+        return {}
+
+
+def fetch_funding_rate_history(self, symbol, since=None, limit=None, params=None):
+    """Return a list of historical funding-rate rows for `symbol`.
+
+    Each row is a dict with keys: timestamp (ms), symbol, fundingRate.
+    The implementation is deterministic and spaced at 8-hour intervals to
+    match Planar's FUNDING_PERIOD semantics.
+    """
+    try:
+        s = str(symbol)
+        now_ms = _now_ms()
+        period_ms = 8 * 60 * 60 * 1000
+        # Choose a conservative default limit
+        lim = int(limit) if limit is not None else 100
+        # If since provided, interpret negative values as offsets from now
+        if since is None:
+            timestamps = [now_ms - i * period_ms for i in range(lim)]
+        else:
+            try:
+                since_int = int(since)
+            except Exception:
+                since_int = 0
+            if since_int < 0:
+                start_ms = now_ms + since_int
+            else:
+                start_ms = since_int
+            if start_ms >= now_ms:
+                timestamps = [now_ms]
+            else:
+                # build ascending series from start_ms to now_ms
+                count = int(((now_ms - start_ms) // period_ms) + 1)
+                count = min(count, lim) if lim is not None else count
+                timestamps = [start_ms + i * period_ms for i in range(count)]
+        # Use deterministic RNG per-symbol/exchange so results are stable
+        r = utils.deterministic_random((s, getattr(self, "id", "")))
+        out = []
+        # return most-recent-first to match typical exchange APIs
+        for ts in reversed(timestamps):
+            rate = (r.random() - 0.5) * 0.001
+            out.append({"timestamp": int(ts), "symbol": s, "fundingRate": round(rate, 8)})
+        return out
+    except Exception:
+        return []
 
 # ccxt.pro uses load_positions_snapshot to initialize position snapshots in the background.
 # Patch it to a no-op in stub mode to avoid background coroutines that may call network
@@ -1129,6 +1265,12 @@ def patch_exchange(exchange, exch_name: str = None):
             ("fetchPositions", fetch_positions),
             ("load_leverage_brackets", load_leverage_brackets),
             ("loadLeverageBrackets", load_leverage_brackets),
+            ("fetchMarketLeverageTiers", fetch_market_leverage_tiers),
+            ("fetch_market_leverage_tiers", fetch_market_leverage_tiers),
+            ("setLeverage", set_leverage),
+            ("set_leverage", set_leverage),
+            ("fetchLeverage", fetch_leverage),
+            ("fetch_leverage", fetch_leverage),
             ("load_positions_snapshot", load_positions_snapshot),
             ("loadPositionsSnapshot", load_positions_snapshot),
             ("watch_balance", watch_balance),
@@ -1141,6 +1283,12 @@ def patch_exchange(exchange, exch_name: str = None):
             ("watchTrades", watch_trades),
             ("watch_ticker", watch_ticker),
             ("watchTicker", watch_ticker),
+            ("fetchFundingRate", fetch_funding_rate),
+            ("fetch_funding_rate", fetch_funding_rate),
+            ("fetchFundingRates", fetch_funding_rates),
+            ("fetch_funding_rates", fetch_funding_rates),
+            ("fetchFundingRateHistory", fetch_funding_rate_history),
+            ("fetch_funding_rate_history", fetch_funding_rate_history),
             ("loadMarkets", fetch_orders),
         ]
 
@@ -1589,6 +1737,12 @@ def make_patched_instance(*args, **kwargs):
             ("fetchPositions", fetch_positions),
             ("load_leverage_brackets", load_leverage_brackets),
             ("loadLeverageBrackets", load_leverage_brackets),
+            ("fetchMarketLeverageTiers", fetch_market_leverage_tiers),
+            ("fetch_market_leverage_tiers", fetch_market_leverage_tiers),
+            ("setLeverage", set_leverage),
+            ("set_leverage", set_leverage),
+            ("fetchLeverage", fetch_leverage),
+            ("fetch_leverage", fetch_leverage),
             ("load_positions_snapshot", load_positions_snapshot),
             ("loadPositionsSnapshot", load_positions_snapshot),
             ("watch_balance", watch_balance),
@@ -1601,6 +1755,12 @@ def make_patched_instance(*args, **kwargs):
             ("watchTrades", watch_trades),
             ("watch_ticker", watch_ticker),
             ("watchTicker", watch_ticker),
+            ("fetchFundingRate", fetch_funding_rate),
+            ("fetch_funding_rate", fetch_funding_rate),
+            ("fetchFundingRates", fetch_funding_rates),
+            ("fetch_funding_rates", fetch_funding_rates),
+            ("fetchFundingRateHistory", fetch_funding_rate_history),
+            ("fetch_funding_rate_history", fetch_funding_rate_history),
             ("loadMarkets", fetch_orders),
         ]
         for (nm, fn) in mappings:
