@@ -215,8 +215,39 @@ async def fetch_my_trades(self, *args, **kwargs):
             params = kwargs.get('params')
 
         trades = []
-        # If we have a symbol-like argument, fetch trades for that symbol
+        # If we have a symbol-like argument, first check the internal trade buffer
         if symbol is not None:
+            try:
+                tb = getattr(self, "_stub_trade_buffer", None)
+                if isinstance(tb, dict) and symbol in tb and tb[symbol]:
+                    try:
+                        buf_trades = list(tb.get(symbol, []))
+                        # clear buffer entries after returning
+                        try:
+                            tb[symbol] = []
+                        except Exception:
+                            pass
+                        # ensure order fields exist
+                        try:
+                            for t in buf_trades:
+                                if isinstance(t, dict):
+                                    if 'order' not in t:
+                                        t['order'] = None
+                                    if 'orderId' not in t:
+                                        t['orderId'] = None
+                        except Exception:
+                            pass
+                        if _debug:
+                            try:
+                                print(f"stubex.fetch_my_trades: returning buffered trades for symbol={symbol} count={len(buf_trades)}")
+                            except Exception:
+                                pass
+                        return buf_trades
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
             trades = await fetch_trades(self, symbol, since, limit, params)
             try:
                 trades = list(trades) if trades is not None else []
@@ -251,6 +282,12 @@ async def fetch_my_trades(self, *args, **kwargs):
                             pass
                     synths = []
                     for ordinfo in list(ro.get(symbol, [])):
+                        # skip orders already returned
+                        try:
+                            if ordinfo.get('_returned'):
+                                continue
+                        except Exception:
+                            pass
                         ts = _now_ms()
                         price = ordinfo.get("price") if ordinfo.get("price") is not None else (trades[0].get("price") if trades else 100.0)
                         amt = ordinfo.get("amount") if ordinfo.get("amount") is not None else 0.0
@@ -286,6 +323,30 @@ async def fetch_my_trades(self, *args, **kwargs):
 
         # No symbol-like argument found. Attempt to attach pending orders across all known symbols
         try:
+            # First, check for any buffered trades produced during create_order
+            tb = getattr(self, "_stub_trade_buffer", None)
+            if isinstance(tb, dict):
+                buf_out = []
+                for sym, lst in list(tb.items()):
+                    if not lst:
+                        continue
+                    for t in list(lst):
+                        buf_out.append(t)
+                    # clear per-symbol buffer
+                    try:
+                        tb[sym] = []
+                    except Exception:
+                        pass
+                if buf_out:
+                    if _debug:
+                        try:
+                            print(f"stubex.fetch_my_trades: returning buffered aggregated trades for symbols={list(tb.keys())}")
+                        except Exception:
+                            pass
+                    return buf_out
+        except Exception:
+            pass
+        try:
             ro = getattr(self, "_stub_recent_orders", None)
             if isinstance(ro, dict) and ro:
                 out_trades = []
@@ -295,6 +356,12 @@ async def fetch_my_trades(self, *args, **kwargs):
                         continue
                     synths = []
                     for ordinfo in list(lst):
+                        # skip orders already returned
+                        try:
+                            if ordinfo.get('_returned'):
+                                continue
+                        except Exception:
+                            pass
                         ts = _now_ms()
                         # try to get a sensible price
                         price = ordinfo.get("price") if ordinfo.get("price") is not None else None
@@ -658,6 +725,52 @@ async def create_order(self, *args, **kwargs):
                     ro[symbol_str] = lst
                 except Exception:
                     pass
+                # initialize trade buffer for symbol and append immediate trades so watchers can pick them up
+                try:
+                    tb = getattr(self, "_stub_trade_buffer", None)
+                    if tb is None:
+                        self._stub_trade_buffer = {}
+                        tb = self._stub_trade_buffer
+                except Exception:
+                    tb = getattr(self, "_stub_trade_buffer", {})
+                try:
+                    symbuf = tb.get(symbol_str, []) if isinstance(tb, dict) else []
+                except Exception:
+                    symbuf = []
+                try:
+                    if trades:
+                        appended = []
+                        for tr in trades:
+                            try:
+                                trd = dict(tr)
+                            except Exception:
+                                try:
+                                    trd = dict(tr._asdict())
+                                except Exception:
+                                    trd = tr
+                            try:
+                                o_id = ord.get("id")
+                                if o_id is None:
+                                    o_id = f"o{_now_ms()}"
+                                    ord['id'] = o_id
+                                trd_order = trd.get('order') or trd.get('orderId') or str(o_id)
+                                trd['order'] = trd_order
+                                trd['orderId'] = trd.get('orderId') or trd_order
+                                trd['clientOrderId'] = trd.get('clientOrderId') or trd_order
+                            except Exception:
+                                pass
+                            appended.append(trd)
+                        try:
+                            sb = tb.get(symbol_str, [])
+                            sb.extend(appended)
+                            tb[symbol_str] = sb
+                        except Exception:
+                            try:
+                                tb[symbol_str] = appended
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
         except Exception:
             pass
 
@@ -666,6 +779,12 @@ async def create_order(self, *args, **kwargs):
                 print("stubex.create_order returning ord:", ord)
             except Exception:
                 pass
+        # If immediate trades were generated, allow a small window for watchers to process them
+        try:
+            if trades:
+                time.sleep(0.02)
+        except Exception:
+            pass
 
         return ord
     except Exception:
@@ -678,6 +797,108 @@ async def cancel_order(self, *args, **kwargs):
         return {"id": id, "status": "canceled"}
     except Exception:
         return {"id": None, "status": "canceled"}
+
+
+async def fetch_order_trades(self, *args, **kwargs):
+    """Return trades associated with a specific order id.
+
+    Flexible signature handling to interoperate with ccxt and Planar calls.
+    Expected common signatures:
+      - fetchOrderTrades(symbol, id, since=None, limit=None, params=None)
+      - fetchOrderTrades(id, symbol=None)
+      - fetch_order_trades(self, *args, **kwargs)
+    """
+    try:
+        order_id = None
+        symbol = None
+        # kwargs first
+        for k in ('id', 'orderId', 'order_id', 'order'):
+            if k in kwargs and kwargs.get(k) is not None:
+                order_id = kwargs.get(k)
+                break
+        # positional heuristics
+        if order_id is None:
+            if len(args) >= 2:
+                # common: (symbol, id, ...)
+                try:
+                    cand_sym = args[0]
+                    cand_id = args[1]
+                    if isinstance(cand_sym, str) and "/" in cand_sym:
+                        symbol = cand_sym
+                        order_id = cand_id
+                    else:
+                        # maybe called (id,)
+                        order_id = args[0]
+                        if len(args) > 1:
+                            symbol = args[1]
+                except Exception:
+                    order_id = args[0]
+            elif len(args) == 1:
+                order_id = args[0]
+        # symbol kw override
+        if 'symbol' in kwargs and kwargs.get('symbol') is not None:
+            symbol = kwargs.get('symbol')
+        try:
+            order_str = str(order_id) if order_id is not None else None
+        except Exception:
+            order_str = order_id
+
+        out = []
+        # Search trade buffer first
+        tb = getattr(self, "_stub_trade_buffer", None)
+        if isinstance(tb, dict):
+            if symbol is not None:
+                try:
+                    lst = tb.get(str(symbol), [])
+                except Exception:
+                    lst = []
+                for t in list(lst):
+                    try:
+                        if (str(t.get('order')) == order_str) or (str(t.get('orderId')) == order_str) or (str(t.get('clientOrderId', '')) == order_str):
+                            out.append(t)
+                    except Exception:
+                        pass
+            else:
+                for sym, lst in list(tb.items()):
+                    for t in list(lst):
+                        try:
+                            if (str(t.get('order')) == order_str) or (str(t.get('orderId')) == order_str) or (str(t.get('clientOrderId', '')) == order_str):
+                                out.append(t)
+                        except Exception:
+                            pass
+        # If none found, synthesize from recent orders
+        ro = getattr(self, "_stub_recent_orders", None)
+        if (not out) and isinstance(ro, dict):
+            # try symbol-specific first
+            if symbol is not None and symbol in ro:
+                for ordinfo in list(ro.get(symbol, [])):
+                    try:
+                        if str(ordinfo.get('id')) == order_str:
+                            ts = _now_ms()
+                            price = ordinfo.get('price') if ordinfo.get('price') is not None else 100.0
+                            amt = ordinfo.get('amount') if ordinfo.get('amount') is not None else 0.0
+                            side = ordinfo.get('side', None)
+                            tr = {"id": f"t{ts}", "timestamp": ts, "datetime": None, "symbol": symbol, "price": round(float(price),8) if price is not None else None, "amount": amt, "side": side, "order": order_str, "orderId": order_str, "clientOrderId": order_str}
+                            out.append(tr)
+                    except Exception:
+                        pass
+            # fallback: search all symbols
+            if not out:
+                for sym, lst in list(ro.items()):
+                    for ordinfo in list(lst):
+                        try:
+                            if str(ordinfo.get('id')) == order_str:
+                                ts = _now_ms()
+                                price = ordinfo.get('price') if ordinfo.get('price') is not None else 100.0
+                                amt = ordinfo.get('amount') if ordinfo.get('amount') is not None else 0.0
+                                side = ordinfo.get('side', None)
+                                tr = {"id": f"t{ts}", "timestamp": ts, "datetime": None, "symbol": sym, "price": round(float(price),8) if price is not None else None, "amount": amt, "side": side, "order": order_str, "orderId": order_str, "clientOrderId": order_str}
+                                out.append(tr)
+                        except Exception:
+                            pass
+        return out
+    except Exception:
+        return []
 
 
 async def fetch_orders(self, *args, **kwargs):
@@ -750,6 +971,13 @@ def patch_exchange(exchange, exch_name: str = None):
         except Exception:
             ex_id = None
         print(f"stubex: patch_exchange called for exchange id={ex_id}")
+        # Initialize internal buffers used by the stub to transport synthetic events to callers
+        try:
+            tb = getattr(exchange, "_stub_trade_buffer", None)
+            if tb is None:
+                exchange._stub_trade_buffer = {}
+        except Exception:
+            pass
         # streaming/watch stub implementations
         async def watch_balance(self, *args, **kwargs):
             # ccxt.watchBalance usually returns a balance snapshot when awaited
@@ -927,7 +1155,8 @@ def patch_exchange(exchange, exch_name: str = None):
                         last_price = None
                     if last_price is None:
                         last_price = 100.0
-                    min_price = max(1e-8, float(last_price) * 1e-3)
+                    # use a very small min price to avoid accidental clamping in consumers
+                    min_price = max(1e-12, float(last_price) * 1e-6)
                     m = {
                         'id': sym,
                         'symbol': sym,
@@ -1280,6 +1509,9 @@ def make_patched_instance(*args, **kwargs):
             ("fetchOrderBook", fetch_order_book),
             ("fetch_trades", fetch_trades),
             ("fetchTrades", fetch_trades),
+            ("fetch_order_trades", fetch_order_trades),
+            ("fetchOrderTrades", fetch_order_trades),
+            ("fetchOrderTradesWs", fetch_order_trades),
             ("fetch_my_trades", fetch_my_trades),
             ("fetchMyTrades", fetch_my_trades),
             ("fetch_balance", fetch_balance),
