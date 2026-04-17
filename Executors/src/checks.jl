@@ -100,11 +100,14 @@ $(TYPEDSIGNATURES)
 See `sanitize_amount`.
 """
 function sanitize_price(ai::AssetInstance, price)
-    if ai.limits.price.min > 0.0 && price < ai.limits.price.min
+    @debug "sanitize_price input" ai=ai price=price
+    out = if ai.limits.price.min > 0.0 && price < ai.limits.price.min
         ai.limits.price.min
     else
         max(toprecision(price, ai.precision.price), ai.limits.price.min)
     end
+    @debug "sanitize_price result" result=out
+    out
 end
 
 function _cost_msg(asset, direction, value, cost)
