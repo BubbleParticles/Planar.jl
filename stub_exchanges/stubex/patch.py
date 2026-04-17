@@ -11,6 +11,7 @@ import types
 import time
 import os
 from typing import Any
+import asyncio
 
 from . import utils
 
@@ -1019,6 +1020,66 @@ def patch_exchange(exchange, exch_name: str = None):
             lim = limit if limit is not None else 50
             return utils.generate_trades(symbol, lim)
 
+        async def watch_my_trades(self, symbol, since=None, limit=50, params=None):
+            # Prefer returning buffered trades for the symbol when available
+            try:
+                tb = getattr(self, "_stub_trade_buffer", None)
+                if isinstance(tb, dict):
+                    lst = tb.get(symbol, [])
+                    if lst:
+                        out = list(lst)
+                        try:
+                            tb[symbol] = []
+                        except Exception:
+                            pass
+                        return out
+            except Exception:
+                pass
+
+            # Synthesize trades from recent orders if present
+            try:
+                ro = getattr(self, "_stub_recent_orders", None)
+                if isinstance(ro, dict) and symbol in ro and ro[symbol]:
+                    synths = []
+                    for ordinfo in list(ro.get(symbol, [])):
+                        try:
+                            if ordinfo.get('_returned'):
+                                continue
+                        except Exception:
+                            pass
+                        ts = _now_ms()
+                        price = ordinfo.get('price') if ordinfo.get('price') is not None else None
+                        if price is None:
+                            try:
+                                st = utils.generate_trades(symbol, 1)
+                                price = st[0].get('price') if st else 100.0
+                            except Exception:
+                                price = 100.0
+                        amt = ordinfo.get('amount') if ordinfo.get('amount') is not None else 0.0
+                        side = ordinfo.get('side', None)
+                        o_id = ordinfo.get('id')
+                        if o_id is None:
+                            o_id = f"o{_now_ms()}"
+                            try:
+                                ordinfo['id'] = o_id
+                            except Exception:
+                                pass
+                        o_str = str(o_id)
+                        tr = {"id": f"t{ts}", "timestamp": ts, "datetime": None, "symbol": symbol, "price": round(float(price), 8) if price is not None else None, "amount": amt, "side": side, "order": o_str, "orderId": o_str, "clientOrderId": o_str}
+                        synths.append(tr)
+                        try:
+                            ordinfo['_returned'] = True
+                        except Exception:
+                            pass
+                    if synths:
+                        return synths
+            except Exception:
+                pass
+
+            # no trades available right now - sleep briefly to yield to event loop and return empty list
+            await asyncio.sleep(0.05)
+            return []
+
         async def watch_ticker(self, symbol, params=None):
             ohlcv = utils.generate_ohlcv(symbol, None, 1, 1)
             if not ohlcv:
@@ -1119,7 +1180,7 @@ def patch_exchange(exchange, exch_name: str = None):
             pass
 
         # Provide a minimal async loadMarkets implementation to avoid network calls
-        async def _load_markets(self, reload=False):
+        def _load_markets(self, reload=False):
             # minimal markets expected by Planar's loadmarkets! flow
             try:
                 self.markets = {}
