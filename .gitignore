@@ -71,3 +71,6 @@ node_modules
 /.kiro
 /.kilocode
 /.vscode
+
+# Ignore Python egg-info directories
+*.egg-info/
