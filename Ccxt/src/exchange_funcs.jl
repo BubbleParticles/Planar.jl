@@ -115,6 +115,28 @@ function ccxt_exchange(name::Symbol, params=nothing; kwargs...)
     if isnothing(inst)
         inst = isnothing(params) ? exc_cls() : exc_cls(params)
     end
+    # Debug: when using stub CCXT, inspect markets presence and a sample price.min
+    try
+        if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
+            try
+                if hasproperty(inst, :markets) && !isempty(inst.markets)
+                    sample_sym = first(keys(inst.markets))
+                    try
+                        minp = inst.markets[sample_sym]["limits"]["price"]["min"]
+                        @info "ccxt: patched instance markets present" sample_sym=string(sample_sym) min_price=minp
+                    catch e
+                        @info "ccxt: markets present but couldn't read min_price" sample_sym=string(sample_sym) e=string(e)
+                    end
+                else
+                    @info "ccxt: patched instance has no markets or markets empty"
+                end
+            catch e
+                @warn "ccxt: inspecting markets failed" e=string(e)
+            end
+        end
+    catch e
+        # ignore inspection errors
+    end
     inst
 end
 

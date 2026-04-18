@@ -74,9 +74,15 @@ function _live_load()
     end
 end
 
-function live_strat(name; kwargs...)
+function live_strat(name; stub=true, kwargs...)
     s = backtest_strat(name; config_attrs=(; skip_watcher=true), mode=Live(), kwargs...)
     lm.set_exc_funcs!(s)
+    if stub
+        try
+            Stubs.stub!(s; trades=false)
+        catch
+        end
+    end
     s
 end
 

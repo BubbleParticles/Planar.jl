@@ -1,8 +1,8 @@
-using .Executors: AnyLimitOrder
+using .Executors: AnyLimitOrder, committment, unfillment
 using .PaperMode: create_sim_limit_order
 using .PaperMode.SimMode: construct_order_func
 using .Executors.Instruments: AbstractAsset
-using .OrderTypes: ordertype, MarketOrderType, GTCOrderType, ForcedOrderType
+using .OrderTypes: ordertype, MarketOrderType, GTCOrderType, ForcedOrderType, Order, Trade
 using .Lang: filterkws
 
 function isactive(s::Strategy, ai::AssetInstance, resp::Py, eid::EIDType; fetched=false)
@@ -156,6 +156,32 @@ function _create_live_order(
         if isnothing(o)
             @debug "create order: retrying (no commits)" _module = LogCreateOrder ai = raw(ai) side = posside(t)
             o = @inlock ai create(skipcommit=true)
+        end
+        # Fallback: if still nothing but exchange reports filled/closed, construct a minimal Order bypassing cost checks
+        if isnothing(o) && (status == "closed" || resp_order_filled(resp, eid) > 0.0)
+            try
+                @warn "create order: fallback constructing order from exchange response" id = id ai = raw(ai) resp = resp
+                # compute committed and unfilled
+                # Prefer exchange-provided cost when available for closed/filled orders
+                resp_cost = try resp_order_cost(resp, eid) catch; nothing end
+                if !isnothing(resp_cost) && resp_cost != 0.0
+                    committed_val = resp_cost
+                else
+                    committed_val = try
+                        committment(type, ai, price, amount)
+                    catch err
+                        @debug "create order: committment failed in fallback" err = err
+                        # fallback to price*abs(amount)
+                        price * abs(amount)
+                    end
+                end
+                committed_ref = Ref(committed_val)
+                unfilled_ref = Ref(unfillment(type, amount))
+                attrs = (take = profit, stop = loss, committed = committed_ref, unfilled = unfilled_ref, trades = Trade[])
+                o = Order(ai, type; date = date, price = price, amount = amount, id = id, attrs = attrs)
+            catch err
+                @debug "create order: fallback construction failed" err = err
+            end
         end
         o
     end

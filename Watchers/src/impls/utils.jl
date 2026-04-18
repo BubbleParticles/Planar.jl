@@ -179,15 +179,18 @@ _key(w::Watcher) = attr(w, :key)
 _view!(w, v) = setattr!(w, v, :view)
 _view(w) = attr(w, :view)
 
-_dopush!(w, v; if_func=islist) =
+function _dopush!(w, v; if_func=islist)
     try
         if if_func(v)
             pushnew!(w, v, now())
             _lastpushed!(w, now())
+            return true
         end
     catch
         @debug_backtrace
     end
+    return nothing
+end
 
 iswatchfunc(func::Function) = startswith(string(nameof(func)), "watch")
 iswatchfunc(func::Py) = startswith(string(func.__name__), "watch")
