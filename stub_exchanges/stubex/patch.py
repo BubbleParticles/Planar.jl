@@ -1796,7 +1796,7 @@ def patch_exchange(exchange, exch_name: str = None):
             pass
 
         # Provide a minimal async loadMarkets implementation to avoid network calls
-        def _load_markets(self, reload=False):
+        async def _load_markets(self, reload=False):
             # minimal markets expected by Planar's loadmarkets! flow
             try:
                 self.markets = {}
