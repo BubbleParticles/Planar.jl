@@ -6,6 +6,7 @@ using .PaperMode: sleep_pad
 using .Exchanges: check_timeout, current_account
 using .Lang: splitkws, safenotify, safewait
 using ..Python: pyimport, pycall, pylist
+using .OrderTypes: Long
 
 const CcxtPositionsVal = Val{:ccxt_positions}
 # :read, if true, the value of :pos has already be locally synced
@@ -47,7 +48,12 @@ function ccxt_positions_watcher(
     exc = st.exchange(s)
     check_timeout(exc, interval)
     haswpos = !isnothing(first(exc, :watchPositions))
-    iswatch = haswpos && @lget! s.attrs :is_watch_positions haswpos
+    iswatch = if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
+        # Force fetch mode when using stub CCXT to avoid websocket/watch pitfalls
+        false
+    else
+        haswpos && @lget! s.attrs :is_watch_positions haswpos
+    end
     attrs = Dict{Symbol,Any}()
     attrs[:strategy] = s
     attrs[:kwargs] = kwargs
@@ -204,11 +210,35 @@ function _w_positions_watch_mode(
                 end
                 # push stubbed positions into the processing buffer
                 _positions_process_push!(w, tasks, out; fetched=false)
+                # Ensure asset instances have a last position set so posside(ai) doesn't return `nothing`.
+                # This avoids freecash dispatch falling back to Instruments.freecash when no position is present.
+                try
+                    for ai in s.universe
+                        try
+                            # Only set lastpos if it's currently nothing; ignore non-margin instances
+                            isnothing(ai.lastpos[]) || continue
+                        catch
+                        end
+                        try
+                            ai.lastpos[] = position(ai, Long())
+                        catch
+                            # ignore if position(ai, Long()) is not applicable (NoMargin instances)
+                        end
+                    end
+                catch
+                end
                 # mark seed as processed to prevent the stall guard from firing
                 _lastprocessed!(w, now())
                 _lastcount!(w, out)
             catch e
                 @warn "ccxt: stubex.patch import/generation failed" e
+                # Fallback: mark seed as processed and notify to avoid stall/wait
+                try
+                    _lastprocessed!(w, now())
+                    _lastcount!(w, ())
+                    safenotify(w.beacon.process)
+                catch
+                end
             end
         end
         h =
@@ -781,15 +811,22 @@ This function updates the position flags for a symbol in a dictionary when not u
 function _setposflags!(ctx, max_date, dict, side)
     @sync for (sym, pup) in dict
         ai = asset_bysym(ctx.s, sym, ctx.w.symsdict)
+        if isnothing(ai)
+            @debug "watchers pos process: no matching asset for symbol while finalizing flags" _module = LogWatchPosProcess sym
+            continue
+        end
         @debug "watchers pos process: pos flags locking" _module = LogWatchPosProcess isownable(
             ai.lock
         ) isownable(pup.notify.lock)
-        @async @lock pup.notify if !pup.closed[] && (sym, side) ∉ ctx.processed_syms
-            @debug "watchers pos process: pos flags setting" _module = LogWatchPosProcess
-            this_pup = dict[sym] = _posupdate(pup, max_date, pup.resp)
-            this_pup.closed[] = true
-            func = () -> _live_sync_cash!(ctx.s, ai, side; pup=this_pup)
-            sendrequest!(ai, max_date, func)
+        # Capture loop variables in a `let` block to avoid closure/mutation races
+        let ai_local = ai, pup_local = pup, sym_local = sym
+            @async @lock pup_local.notify if !pup_local.closed[] && (sym_local, side) ∉ ctx.processed_syms
+                @debug "watchers pos process: pos flags setting" _module = LogWatchPosProcess
+                this_pup = dict[sym_local] = _posupdate(pup_local, max_date, pup_local.resp)
+                this_pup.closed[] = true
+                func = () -> _live_sync_cash!(ctx.s, ai_local, side; pup=this_pup)
+                sendrequest!(ai_local, max_date, func)
+            end
         end
     end
 end

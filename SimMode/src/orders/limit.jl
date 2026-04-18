@@ -14,6 +14,7 @@ $(TYPEDSIGNATURES)
 This function creates a limit order in a simulated environment. It takes a strategy `s`, an order type `t`, and an asset `ai` as inputs, along with an `amount` and an optional `skipcommit` flag. If the order is valid, it is queued for execution.
 """
 function create_sim_limit_order(s, t, ai; amount, skipcommit=false, kwargs...)
+    @debug "create_sim_limit_order: kwargs" kwargs
     o = limitorder(s, ai, amount; type=t, skipcommit, kwargs...)
     isnothing(o) && return nothing
     queue!(s, o, ai; skipcommit) || return nothing

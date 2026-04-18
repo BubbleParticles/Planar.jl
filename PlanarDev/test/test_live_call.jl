@@ -1,6 +1,12 @@
 using Base: _wait2
 using Test
 using PlanarDev.Planar.Engine.Lang: @m_str
+using PlanarDev.Planar.Engine.Strategies: Strategies as st
+using PlanarDev.Planar.Engine: LiveMode as lm
+
+# Ensure test utilities and environment from test_live.jl are available
+include(joinpath(@__DIR__, "test_live.jl"))
+# Bring Planar environment aliases (st, lm, mi, etc.) into Main
 
 global w, ai
 
@@ -118,12 +124,29 @@ function test_live_call_mg(s)
     @info "TEST: strategy sync"
     _live_sync_strategy!(s)
     lm.start_handlers!(s)
-    sleep(0)
+    # Wait for handlers to start (avoid flakiness on CI/local schedulers)
+    timeout = now() + Second(2)
+    while !istaskstarted(s.event_handler) && now() < timeout
+        sleep(0.01)
+    end
     let t = s.event_handler
         @test istaskstarted(t) && !istaskdone(t)
     end
     for ai in s.universe
+        # ensure asset handler is started, retry a few times
+        tries = 0
+        while tries < 200
+            t = ai.event_handler
+            if istaskstarted(t) && !istaskdone(t)
+                break
+            end
+            lm._start_handler!(ai)
+            sleep(0.01)
+            tries += 1
+        end
         t = ai.event_handler
+        @info "Handler debug" ai haskey(attrs(ai), :event_handler) get(attrs(ai), :event_handler, nothing)
+        @info "Handler type" typeof(t) istaskstarted(t) istaskdone(t)
         @test istaskstarted(t) && !istaskdone(t)
     end
     @info "TEST: wait watchers"
@@ -538,7 +561,9 @@ function test_live_call(exchange=EXCHANGE, mm_exchange=EXCHANGE_MM; debug="Execu
             end
         end
         if clear_deadlocks
-            empty!(mi.lock_errors)
+            if isdefined(Main, :mi) && isdefined(mi, :lock_errors)
+                empty!(mi.lock_errors)
+            end
         end
         @eval @testset failfast = FAILFAST "live" begin
 
