@@ -21,6 +21,7 @@ jobs:
     env:
       JULIA_VERSION: 1
       PYTHON: python3
+      PLANAR_USE_STUB_CCXT: "1"
     steps:
     - uses: actions/checkout@v2
     - name: restore cache
@@ -82,8 +83,10 @@ jobs:
         echo "Conda env path: ${JULIA_CONDAPKG_ENV}"
         git reset --hard # otherwise instantiate fails
         julia --project=PlanarDev/ -e 'import Pkg; Pkg.instantiate(); using PlanarDev;'
-    - name: Install stub_exchanges
+    - name: Install CCXT and stub_exchanges
       run: |
+        python3 -m pip install --user --upgrade pip setuptools wheel || true
+        python3 -m pip install --user ccxt || python3 -m pip install ccxt
         python3 -m pip install --user -e ./stub_exchanges || python3 -m pip install -e ./stub_exchanges
       shell: bash
     - name: Run tests # coverage is generated only on success
