@@ -783,7 +783,7 @@ async def create_order(self, *args, **kwargs):
         # If immediate trades were generated, allow a small window for watchers to process them
         try:
             if trades:
-                time.sleep(0.02)
+                await asyncio.sleep(0.02)
         except Exception:
             pass
 
