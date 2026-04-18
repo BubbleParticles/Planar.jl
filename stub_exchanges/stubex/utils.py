@@ -29,8 +29,29 @@ def instantiate_exchange(name: str):
     return exch
 
 
+import hashlib
+
+def _canon_seed(seed_val: Any) -> str:
+    if seed_val is None:
+        return "none"
+    if isinstance(seed_val, (tuple, list)):
+        return "|".join(_canon_seed(x) for x in seed_val)
+    s = str(seed_val).strip()
+    # Normalize symbols like 'BTC/USDT:USDT' to 'BTC/USDT'
+    if ":" in s:
+        s = s.split(":")[0]
+    return s.upper()
+
+
 def deterministic_random(seed_val: Any):
-    h = hash(seed_val) & 0xFFFFFFFF
+    """Return a deterministic random.Random seeded from a stable hash of seed_val.
+
+    Uses a SHA-256 based seed of the canonicalized seed value so results are
+    stable across processes and invocations (unlike Python's built-in hash).
+    """
+    key = _canon_seed(seed_val)
+    # Use first 8 hex chars (32 bits) of SHA256 as the seed integer
+    h = int(hashlib.sha256(key.encode("utf-8")).hexdigest()[:8], 16)
     r = random.Random(h)
     return r
 
@@ -125,19 +146,130 @@ def generate_trades(symbol: str, limit: int = 50) -> List[Dict[str, Any]]:
 
 
 def generate_balance(exchange, symbol: Optional[str] = None) -> Dict[str, Any]:
+    """Generate a deterministic balance containing both base and quote currencies when a symbol is provided.
+
+    For a market like "BTC/USDT:USDT" this returns totals for both BTC and USDT so callers
+    that look up either currency (base or quote) can find a numeric value.
+    """
     r = deterministic_random(getattr(exchange, "id", "default") + (symbol or ""))
-    base_quote = 10000.0
-    base_base = 1.0
-    return {"total": {"USD": round(base_quote * (0.5 + r.random()), 8), (symbol or "BTC"): round(base_base * (0.1 + r.random()), 8)}, "used": {}, "free": {}}
+    # sensible defaults
+    quote_amount = round(10000.0 * (0.5 + r.random()), 8)
+    base_amount = round(1.0 * (0.1 + r.random()), 8)
+
+    base = "BTC"
+    quote = "USD"
+    if symbol:
+        try:
+            s = str(symbol)
+            # strip exchange-specific suffixes like ':USDT'
+            if ":" in s:
+                s = s.split(":")[0]
+            if "/" in s:
+                parts = s.split("/")
+                if len(parts) >= 2:
+                    base, quote = parts[0], parts[1]
+                else:
+                    base = parts[0]
+            else:
+                base = s
+        except Exception:
+            pass
+
+    total = {quote: quote_amount, base: base_amount}
+    free = {k: v for k, v in total.items()}
+    used = {k: 0.0 for k in total.keys()}
+
+    # Also include per-currency nested mappings alongside the top-level shape
+    v = {"total": total, "free": free, "used": used}
+    v[base] = {"total": base_amount, "free": base_amount, "used": 0.0}
+    v[quote] = {"total": quote_amount, "free": quote_amount, "used": 0.0}
+    return v
 
 
-def generate_order(symbol: str, order_type: str = "limit") -> Dict[str, Any]:
-    r = deterministic_random(symbol)
+def generate_order(symbol: str = None, order_type: str = "limit") -> Dict[str, Any]:
+    r = deterministic_random(symbol or "order")
     base = 100.0 + r.random() * 100.0
     price = round(base * (1 + (r.random() - 0.5) * 0.02), 8)
     amount = round((1 + r.random()) * 0.1, 8)
     side = "buy" if r.random() > 0.5 else "sell"
-    return {"id": f"o{int(time.time()*1000)%1_000_000}", "symbol": symbol, "type": order_type, "side": side, "price": price, "amount": amount, "filled": 0.0, "remaining": amount}
+    ts = _now_ms()
+    filled = 0.0
+    status = "open"
+    trades = []
+    cost = 0.0
+    average = None
+    # default to a closed (filled) market-like order only when order_type indicates market
+    if order_type is not None and str(order_type).lower() == 'market':
+        filled = amount
+        status = "closed"
+        cost = round(price * filled, 8)
+        average = price
+        trades = [{"id": f"t{ts}", "timestamp": ts, "datetime": datetime.utcfromtimestamp(ts / 1000).isoformat(), "symbol": symbol, "price": price, "amount": filled, "side": side}]
+    return {
+        "id": f"o{int(time.time()*1000)%1_000_000}",
+        "symbol": symbol,
+        "type": order_type,
+        "side": side,
+        "price": price,
+        "amount": amount,
+        "filled": filled,
+        "remaining": round((amount - filled) if amount is not None else 0.0, 8),
+        "status": status,
+        "timestamp": ts,
+        "datetime": datetime.utcfromtimestamp(ts / 1000).isoformat(),
+        "cost": cost,
+        "average": average,
+        "trades": trades,
+    }
+
+
+def generate_leverage_tiers(symbol: str, tiers_count: int = 3) -> List[Dict[str, Any]]:
+    """Generate plausible leverage tier definitions for a symbol.
+
+    Returns a list of dicts matching the shape returned by exchanges such as Binance:
+    [{"tier": 1, "currency": "BTC", "minNotional": 0.0, "maxNotional": 1e6, "maxLeverage": 100.0, "maintenanceMarginRate": 0.005, "info": {}}, ...]
+    """
+    r = deterministic_random((symbol, "leverage"))
+    s = str(symbol)
+    if ":" in s:
+        s = s.split(":")[0]
+    base = s.split("/")[0] if "/" in s else s
+    tiers: List[Dict[str, Any]] = []
+    # sensible defaults with increasing notional thresholds and decreasing leverage
+    defaults = [
+        (1e-8, 2e6, 100.0, 0.005),
+        (2e6 + 1e-8, 1e7, 50.0, 0.01),
+        (1e7 + 1e-8, 1e9, 20.0, 0.02),
+    ]
+    for i in range(min(tiers_count, len(defaults))):
+        mn, mx, mle, mmr = defaults[i]
+        # add a small deterministic jitter so different symbols aren't identical
+        jitter = (r.random() - 0.5) * (mx * 1e-6)
+        tiers.append(
+            {
+                "tier": i + 1,
+                "currency": base,
+                "minNotional": float(round(mn + max(-abs(jitter), 0.0), 8)),
+                "maxNotional": float(round(mx + jitter, 8)),
+                "maxLeverage": float(mle),
+                "maintenanceMarginRate": float(mmr),
+                "info": {},
+            }
+        )
+    # If more tiers requested, extend conservatively
+    last_max = tiers[-1]["maxNotional"] if tiers else 1e9
+    for j in range(len(tiers), tiers_count):
+        last_max = last_max * 10
+        tiers.append({
+            "tier": j + 1,
+            "currency": base,
+            "minNotional": float(last_max / 10 + 1e-8),
+            "maxNotional": float(last_max),
+            "maxLeverage": float(max(1.0, 20.0 / (j + 1))),
+            "maintenanceMarginRate": float(0.02 * (j + 1)),
+            "info": {},
+        })
+    return tiers
 
 
 def safe_load_markets(exchange) -> None:
