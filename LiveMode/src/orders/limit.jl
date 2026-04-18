@@ -30,10 +30,18 @@ function _live_limit_order(s::LiveStrategy, ai, t; skipchecks=false, amount, pri
             @debug "call limit order: order failed (immediate)" _module = LogCreateOrder o.id
             nothing
         elseif waittrade(s, ai, o; waitfor=@timeout_now, force=synced)
-            last(order_trades)
+            # refresh trades after waittrade signals a trade
+            order_trades = trades(o)
+            if !isempty(order_trades)
+                last(order_trades)
+            else
+                @debug "call limit order: waittrade signaled but no trades present (immediate)" _module = LogCreateOrder o.id
+                missing
+            end
         elseif haskey(s, ai, o)
             if synced
                 live_sync_open_orders!(s, ai, side=orderside(o), exec=true)
+                order_trades = trades(o)
                 if !isempty(order_trades)
                     last(order_trades)
                 elseif haskey(s, ai, o)
@@ -51,10 +59,18 @@ function _live_limit_order(s::LiveStrategy, ai, t; skipchecks=false, amount, pri
         last(order_trades)
         # otherwise wait a little in case the there is already a fill for the gtc order
     elseif waittrade(s, ai, o; waitfor=@timeout_now, force=synced)
-        last(order_trades)
+        # refresh trades after waittrade signals a trade
+        order_trades = trades(o)
+        if !isempty(order_trades)
+            last(order_trades)
+        else
+            @debug "call limit order: waittrade signaled but no trades present" _module = LogCreateOrder o.id
+            missing
+        end
     elseif haskey(s, ai, o)
         if synced
             live_sync_open_orders!(s, ai, side=orderside(o), exec=true)
+            order_trades = trades(o)
             if !isempty(order_trades)
                 last(order_trades)
             elseif haskey(s, ai, o)

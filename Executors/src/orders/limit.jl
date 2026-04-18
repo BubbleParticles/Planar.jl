@@ -57,13 +57,15 @@ function limitorder(
     skipcommit=false,
     kwargs...,
 )
+    @debug "limitorder: entry" ai = raw(ai) date type price take stop kwargs
+    @debug "limitorder: limits" ai.limits.price.min ai.precision.price
     @price! ai price take stop
     @amount! ai amount
     comm = Ref(committment(type, ai, price, amount))
-    @debug "create limitorder:" ai = raw(ai) price amount comm[] is_comm = iscommittable(
-        s, type, comm, ai
-    ) free = freecash(ai, posside(ai))
-    if skipcommit || iscommittable(s, type, comm, ai)
+    is_comm = iscommittable(s, type, comm, ai)
+    free = try freecash(ai, posside(ai)) catch err; nothing end
+    @debug "create limitorder:" ai = raw(ai) price amount comm[] is_comm free
+    if skipcommit || is_comm
         basicorder(ai, price, amount, comm, SanitizeOff(); date, type, kwargs...)
     end
 end

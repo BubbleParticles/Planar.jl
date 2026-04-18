@@ -40,7 +40,12 @@ function ccxt_balance_watcher(
     params["type"] = @pystr(lowercase(string(balance_type(s))))
     _exc!(attrs, exc)
     attrs[:strategy] = s
-    attrs[:iswatch] = @lget! s.attrs :is_watch_balance has(exc, :watchBalance)
+    attrs[:iswatch] = if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
+        # Force fetch mode when using stub CCXT to avoid websocket/watch pitfalls
+        false
+    else
+        @lget! s.attrs :is_watch_balance has(exc, :watchBalance)
+    end
     attrs[:func_kwargs] = (; params, kwargs...)
     attrs[:interval] = interval
     watcher_type = Py
@@ -283,16 +288,41 @@ function _balance_init_watch!(state)
     if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
         try
             sp = pyimport("stubex.utils")
-            # Pass None to the Python helper to avoid concatenation errors when
-            # the exchange object is a wrapped Julia/PyObject. The helper falls
-            # back to a default id in this case.
-            stab = pycall(sp.generate_balance, Any, nothing)
-            _balance_process_bal!(state, w, stab)
-            # mark seed as processed to prevent the stall guard from firing
-            _lastprocessed!(w, now())
-            _lastcount!(w, stab)
+            # Seed per-universe balances so margin/no-margin instances receive
+            # realistic cash values. Pass `None` as the exchange arg and the
+            # market symbol as the second arg so the helper can derive base/quote.
+            try
+                for ai in s.universe
+                    try
+                        sym = raw(ai)
+                        stab = pycall(sp.generate_balance, Any, nothing, string(sym))
+                        _balance_process_bal!(state, w, stab)
+                    catch e
+                        @warn "ccxt: stub balance generation failed for" ai e
+                    end
+                end
+                # mark seed as processed to prevent the stall guard from firing
+                _lastprocessed!(w, now())
+                _lastcount!(w, ())
+            catch e
+                @warn "ccxt: stub balance generation failed" e
+                # Fallback: mark seed as processed and notify to avoid stall/wait
+                try
+                    _lastprocessed!(w, now())
+                    _lastcount!(w, ())
+                    safenotify(w.beacon.process)
+                catch
+                end
+            end
         catch e
             @warn "ccxt: stub balance generation failed" e
+            # Fallback: mark seed as processed and notify to avoid stall/wait
+            try
+                _lastprocessed!(w, now())
+                _lastcount!(w, ())
+                safenotify(w.beacon.process)
+            catch
+            end
         end
     end
     state_init = Ref(false)

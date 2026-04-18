@@ -71,7 +71,19 @@ end
 @doc "Returns the currency from the exchange if found."
 function _cur(exc, sym)
     sym_str = uppercase(string(sym))
-    curs = @lget! currenciesCache1Hour exc.id let v = pyfetch(exc.fetchCurrencies)
+    curs = @lget! currenciesCache1Hour exc.id begin
+        v = try
+            # Prefer direct `exc.py.currencies` when present and non-empty. Some stubbed
+            # exchanges expose `currencies` as a dict rather than a callable `fetchCurrencies`.
+            if hasproperty(exc.py, :currencies) && !pyisnone(exc.py.currencies) && !isempty(exc.py.currencies)
+                exc.py.currencies
+            else
+                pyfetch(exc.fetchCurrencies)
+            end
+        catch e
+            # On any Python error, fall back to the exchange's cached `currencies` field
+            exc.currencies
+        end
         v isa PyException ? exc.currencies : v
     end
     (pyisnone(curs) || isempty(curs)) ? nothing : get(curs, sym_str, nothing)

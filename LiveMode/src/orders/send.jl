@@ -257,12 +257,28 @@ function live_send_order(
     # start monitoring before sending the create request
     watch_orders!(s, ai)
     watch_trades!(s, ai)
-    @debug "send order: create" _module = LogSendOrder sym type price amount side params
+    @debug "send order: create" _module = LogSendOrder sym type price amount side params args
     inc_pending_orders!(ai)
     resp = nothing
     try
         resp = create_order(s, sym, args...; side, type, price, amount, params)
     finally
+        # Trace response for debugging stub mismatches
+        if !(isnothing(resp) || resp isa Exception)
+            try
+                @debug "send order: response raw" _module = LogSendOrder resp
+                resp_id = try resp_order_id(resp, exchangeid(ai)) catch; nothing end
+                resp_price = try resp_order_price(resp, exchangeid(ai)) catch; nothing end
+                resp_cost = try resp_order_cost(resp, exchangeid(ai)) catch; nothing end
+                resp_filled = try resp_order_filled(resp, exchangeid(ai)) catch; nothing end
+                resp_avg = try resp_order_average(resp, exchangeid(ai)) catch; nothing end
+                resp_remaining = try resp_order_remaining(resp, exchangeid(ai)) catch; nothing end
+                resp_status = try resp_order_status(resp, exchangeid(ai)) catch; nothing end
+                @debug "send order: response trace" _module = LogSendOrder req_price = price req_amount = amount resp_id resp_price resp_cost resp_filled resp_avg resp_remaining resp_status
+            catch err
+                @debug "send order: response trace failed" err = err
+            end
+        end
         return if isnothing(resp) || resp isa Exception
             @warn "send order: failed" sym ai exception = resp args params
             dec_pending_orders!(ai)
