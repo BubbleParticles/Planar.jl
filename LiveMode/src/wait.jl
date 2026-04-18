@@ -96,9 +96,24 @@ function waittrade(s::LiveStrategy, ai, o::Order; waitfor=Second(5), force=true)
             end
             time
         end
+        # After asset-level trade signal, refresh order_trades and try to force-fetch order trades
+        order_trades = trades(o)
         this_count = length(order_trades)
         if this_count > prev_count
             return true
+        end
+        # If no new trades yet, attempt a forced fetch if allowed
+        if force
+            try
+                _force_fetchtrades(s, ai, o)
+            catch
+                @debug_backtrace LogWaitTrade
+            end
+            order_trades = trades(o)
+            this_count = length(order_trades)
+            if this_count > prev_count
+                return true
+            end
         end
     end
     this_count > prev_count
