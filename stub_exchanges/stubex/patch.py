@@ -1736,8 +1736,6 @@ def patch_exchange(exchange, exch_name: str = None):
             ("fetch_funding_rates", fetch_funding_rates),
             ("fetchFundingRateHistory", fetch_funding_rate_history_async),
             ("fetch_funding_rate_history", fetch_funding_rate_history),
-            ("loadMarkets", load_markets_impl),
-            ("load_markets", load_markets_impl),
         ]
 
         # Bind all mappings
