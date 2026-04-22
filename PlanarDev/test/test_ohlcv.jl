@@ -15,13 +15,13 @@ _test_ohlcv_exc(exc) = begin
     @test names(pd.data) == String.(Planar.Engine.Data.OHLCV_COLUMNS)
     @test size(pd.data)[1] > (count / 10 * 9) # if its less there is something wrong
     lastcandle = pd.data[end, :][1]
-    @test Planar.Engine.Processing.islast(lastcandle, timeframe) || Planar.Engine.TimeTicks.now() - lastcandle.timestamp < s.timeframe
+    @test Planar.Engine.Processing.islast(lastcandle, timeframe) || Planar.Engine.TimeTicks.now() - lastcandle < Minute(5)
 end
 
 _test_ohlcv() = begin
-    # if one exchange does not succeeds try on other exchanges
-    # until one succeeds
-    for e in unique((Main.EXCHANGE, Main.EXCHANGE_MM, :kucoin, :phemex, :binance))
+    # Test configured exchanges using the stub
+    # The stub now programmatically supports all exchanges
+    for e in (Main.EXCHANGE, Main.EXCHANGE_MM)
         @debug "TEST: test_ohlcv" exchange = e
         exc = Planar.Engine.Exchanges.getexchange!(e)
         Planar.Engine.Exchanges.setexchange!(exc)

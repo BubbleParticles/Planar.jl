@@ -48,10 +48,7 @@ end
 function _live_load()
     @eval begin
         using PlanarDev
-        try
-            @eval PlanarDev.Planar.@environment!
-        catch
-        end
+        @eval PlanarDev.Planar.@environment!
         using Base.Experimental: @overlay
         using .inst: MarginInstance, raw, cash, cash!
         using .Python:

@@ -74,3 +74,4 @@ node_modules
 
 # Ignore Python egg-info directories
 *.egg-info/
+.soulforge

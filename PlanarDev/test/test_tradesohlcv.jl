@@ -1,21 +1,13 @@
 using Test
+using Dates: DateTime
+using Planar
 
 function _test_tradesohlcv_1()
-    @eval begin
-        using .Planar.Misc.JSON
-        using .Planar.Misc.TimeTicks
-        using .Planar.Engine.Processing
-        using .Planar.Engine.LiveMode.Watchers
-        if !(isdefined(Main, :wi))
-            wi = Watchers.WatchersImpls
-        end
-        if !(isdefined(Main, :pro))
-            pro = Processing
-        end
-    end
-    trades = JSON.parsefile(joinpath(PROJECT_PATH, "test", "stubs", "trades.json"))
-    trades = wi.fromdict.(CcxtTrade, String, trades)
-    (df, _, _) = pro.TradesOHLCV.trades_to_ohlcv(trades, tf"1m")
+    trades = Planar.Misc.JSON.parsefile(joinpath(PROJECT_PATH, "test", "stubs", "trades.json"))
+    wi = Planar.Engine.LiveMode.Watchers.WatchersImpls
+    pro = Planar.Engine.Processing
+    trades = wi.fromdict.(Planar.Engine.LiveMode.CcxtTrade, String, trades)
+    (df, _, _) = pro.TradesOHLCV.trades_to_ohlcv(trades, Planar.Misc.TimeTicks.tf"1m")
     @views begin
         @test NamedTuple(df[1, :]) == (;
             timestamp=DateTime("2023-02-11T18:37:00"),

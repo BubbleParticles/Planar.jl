@@ -312,11 +312,13 @@ _min_from_precision(v::Int) = 1.0 / 10.0^v
 _min_from_precision(v::Real) = v
 function _minmax_pair(mkt, l, prec, default)
     k = string(l)
+    inner = get(mkt, k, nothing)
+    inner_dict = inner isa AbstractDict ? inner : nothing
     Symbol(l) => (;
-        min=(@something pyconvert(Option{DFT}, get(mkt[k], "min", nothing)) _min_from_precision(
+        min=(@something pyconvert(Option{DFT}, inner_dict === nothing ? nothing : get(inner_dict, "min", nothing)) _min_from_precision(
             prec
         ) default.min),
-        max=(@something pyconvert(Option{DFT}, get(mkt[k], "max", nothing)) default.max),
+        max=(@something pyconvert(Option{DFT}, inner_dict === nothing ? nothing : get(inner_dict, "max", nothing)) default.max),
     )
 end
 

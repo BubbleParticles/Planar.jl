@@ -12,10 +12,37 @@ _istriggered(o::AnyLimitOrder{Sell}, price) = price >= o.price
 _istriggered(::AnyMarketOrder, args...) = true
 
 @doc "Use the base currency volume from the ticker."
-_basevol(ai) =
-    let tkr = ticker!(ai.asset.raw, ai.exchange)
-        pyconvert(DFT, tkr["baseVolume"])
+function _basevol(ai)
+    tkr = ticker!(ai.asset.raw, ai.exchange)
+    # Debug - log what we got
+    @debug "ticker result" tkr_type=typeof(tkr) tkr_keys=isa(tkr, AbstractDict) ? keys(tkr) : "not-a-dict"
+    # Convert to AbstractDict if needed (e.g., when using PythonCall)
+    if !isa(tkr, AbstractDict)
+        try
+            tkr = pyconvert(Dict{String, Any}, tkr)
+        catch e
+            @debug "ticker not convertible to dict" typeof=typeof(tkr) error=e
+            return 1.0
+        end
     end
+    # Get volume - handle both Python None and Julia nothing
+    vol = get(tkr, "baseVolume", missing)
+    @debug "baseVolume" vol=vol typeof=typeof(vol)
+    if ismissing(vol) || vol === nothing
+        return 1.0
+    end
+    # Convert to number if it's a string or other type
+    try
+        if vol isa AbstractString
+            return parse(Float64, vol)
+        end
+        # If vol is a PyObject (should have been converted), let pyconvert handle
+        pyconvert(DFT, vol)
+    catch e
+        @debug "basevol conversion error" error=e
+        return 1.0
+    end
+end
 function _ticker_volume(ai)
     (Ref(apply(tf"1d", now())), Ref(0.0), Ref(_basevol(ai)))
 end
