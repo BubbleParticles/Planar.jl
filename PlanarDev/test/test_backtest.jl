@@ -197,10 +197,6 @@ test_backtest() = begin
         using .egn.Instruments: Cash
         Planar.@environment!
         using .Planar.Engine.Strategies: reset!
-        if isnothing(Base.find_package("BlackBoxOptim")) && @__MODULE__() == Main
-            import Pkg
-            Pkg.add("BlackBoxOptim")
-        end
     end
     # NOTE: Don't override exchange of these tests, since they rely on
     # specific assets precision/limits

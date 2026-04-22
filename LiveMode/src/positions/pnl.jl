@@ -20,8 +20,9 @@ function live_pnl(
 )
     pside = posside(p)
     eid = exchangeid(ai)
-    update = @something update live_position(s, ai, pside; kwargs...)
+    update = @something update live_position(s, ai, pside; kwargs...) (resp=nothing, date=now())
     lp = update.resp
+    @assert !isnothing(lp) "live_pnl: no position response from exchange"
     pos = position(ai, p)
     pnl = resp_position_unpnl(lp, eid)
     if iszero(pnl)

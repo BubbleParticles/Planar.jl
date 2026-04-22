@@ -229,15 +229,24 @@ export JULIA_NUM_THREADS=auto
 ### Testing
 Run tests before submitting:
 ```bash
-# Unit tests
-julia --project=Planar -e "using Pkg; Pkg.test()"
+# All tests (uses stub exchange by default)
+julia --project=PlanarDev PlanarDev/test/runtests.jl
 
-# Documentation tests
-julia --project=Planar docs/test/runtests.jl
-
-# Integration tests (if applicable)
-julia --project=Planar test/integration/runtests.jl
+# With specific exchange
+PLANAR_TEST_EXCHANGE=phemex julia --project=PlanarDev PlanarDev/test/runtests.jl
 ```
+
+#### Test Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PLANAR_USE_STUB_CCXT` | "1" | Use stub exchange (set "0" for real) |
+| `PLANAR_TEST_EXCHANGE` | :binance | Primary exchange for tests |
+| `PLANAR_TEST_EXCHANGE_MM` | :binanceusdm | Margin/perpetual exchange |
+
+The stub programmatically supports any ccxt exchange by deriving characteristics from the exchange class.
+
+See [TESTING.md](TESTING.md) for comprehensive testing documentation.
 
 ### Building Documentation
 To build documentation locally:

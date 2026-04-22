@@ -5,12 +5,6 @@ _strategies_load() = begin
         using .Planar.Engine.Data: Data as da
         using .Planar.Engine
         PlanarDev.@environment!
-        @info get(ENV, "JULIA_TEST", "NO TEST")
-        @info get(ENV, "TEST", "NO TEST2")
-        if isnothing(Base.find_package("BlackBoxOptim")) && @__MODULE__() == Main
-            import Pkg
-            Pkg.add("BlackBoxOptim")
-        end
     end
 end
 

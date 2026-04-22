@@ -179,6 +179,7 @@ function _create_live_order(
                 unfilled_ref = Ref(unfillment(type, amount))
                 attrs = (take = profit, stop = loss, committed = committed_ref, unfilled = unfilled_ref, trades = Trade[])
                 o = Order(ai, type; date = date, price = price, amount = amount, id = id, attrs = attrs)
+                push!(s, ai, o)
             catch err
                 @debug "create order: fallback construction failed" err = err
             end

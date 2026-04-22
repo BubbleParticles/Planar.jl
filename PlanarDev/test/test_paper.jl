@@ -4,6 +4,8 @@ using PlanarDev.Stubs
 using PlanarDev.Planar.Engine.Lang: @m_str
 using Logging
 using Base.CoreLogging: Debug
+using PaperMode: Paper, stop!
+using Strategies: reset!
 
 function emptyuni!(s)
     copysubs! = @eval da.DFUtils.copysubs!
@@ -382,10 +384,6 @@ function test_paper(; margin=true, nomargin=true)
         using PlanarDev
         using .Planar
         Planar.@environment!
-        if isnothing(Base.find_package("BlackBoxOptim")) && @__MODULE__() == Main
-            using Pkg: Pkg
-            Pkg.add("BlackBoxOptim")
-        end
         using .Planar.Engine.Instruments: add!
     end
     s = @eval backtest_strat(
@@ -424,7 +422,7 @@ function test_paper(; margin=true, nomargin=true)
                 reset!(s)
             end
         end
-    finally
-        stop!(s)
-    end
+        finally
+            stop!(s)
+        end
 end

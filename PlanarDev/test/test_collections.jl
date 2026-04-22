@@ -1,3 +1,5 @@
+using Test
+
 # TODO: add some stub data
 test_collections() = @testset "collections" begin
     @eval begin

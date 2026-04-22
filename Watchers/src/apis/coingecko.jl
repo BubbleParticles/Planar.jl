@@ -35,13 +35,16 @@ const ApiPaths = (;
 const DEFAULT_CUR = "usd"
 
 const last_query = Ref(DateTime(0))
-const RATE_LIMIT = Ref(Millisecond(3 * 1000))
+const RATE_LIMIT = Ref(Millisecond(2500))
 const STATUS = Ref{Int}(0)
-const RETRY = Ref(false)
+const RETRY_COUNT = Ref(0)
+const MAX_RETRIES = 10
+const BACKOFF_BASE = 1000
+
 @doc "Allows only 1 query every $(RATE_LIMIT[]) seconds."
 ratelimit() = sleep(max(Second(0), (last_query[] - now()) + RATE_LIMIT[]))
 
-function get(path, query=nothing, inc=500)
+function get(path, query=nothing)
     ratelimit()
     resp = try
         HTTP.get(absuri(path, API_URL); query, headers=API_HEADERS)
@@ -51,13 +54,22 @@ function get(path, query=nothing, inc=500)
     last_query[] = now()
     if hasproperty(resp, :status)
         STATUS[] = resp.status
-        if resp.status == 429 && RETRY[]
-            @warn "coingecko: 429" path
-            sleep(RATE_LIMIT[] + Millisecond(inc))
-            return get(path, query, inc * 2)
-        else
-            @assert resp.status == 200 resp
+        if resp.status == 429
+            RETRY_COUNT[] += 1
+            if RETRY_COUNT[] <= MAX_RETRIES
+                wait_time = RATE_LIMIT[] + Millisecond(BACKOFF_BASE * RETRY_COUNT[])
+                @warn "coingecko: 429 retrying" path retry=RETRY_COUNT[] wait_time
+                sleep(wait_time)
+                return get(path, query)
+            else
+                @error "coingecko: max retries exceeded" path retries=RETRY_COUNT[]
+                RETRY_COUNT[] = 0
+            end
+        elseif resp.status == 401 || resp.status == 403
+            @warn "coingecko: auth error" path status=resp.status
         end
+        @assert resp.status == 200 "coingecko: $path failed with status $(resp.status)"
+        RETRY_COUNT[] = 0
         json = JSON3.read(resp.body)
         return json
     else

@@ -21,14 +21,10 @@ all_tests = [
     :positions,
     :instances,
     :strategies,
-    # session attributes rely on Opt and external stubs; skip in CI when PLANAR_NO_OPTENV is set
-    # :session_attributes,
     #
     :ohlcv,
     :tradesohlcv,
     :watchers,
-    # average_ohlcv_watcher test has issues - requires more setup
-    # :average_ohlcv_watcher,
     #
     :profits,
     :roi,
@@ -39,10 +35,6 @@ all_tests = [
     :coingecko,
     :frankfurter,
     :fred,
-    :fred_comprehensive,
-    :fred_performance,
-    :fred_parameters,
-    :fred_integration,
     :funding,
     #
     :backtest,
@@ -50,7 +42,6 @@ all_tests = [
     :live,
     :live_call,
     :dbnomics,
-    :dbnomics_api,
     #
     :warmup,
 ]

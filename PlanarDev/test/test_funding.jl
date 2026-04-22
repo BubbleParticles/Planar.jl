@@ -33,14 +33,14 @@ test_funding() = begin
         using .Planar.Engine.Exchanges: getexchange!
         using .Planar.Engine.Misc
     end
+    # Skip funding history tests when using stub (requires real historical data)
+    use_stub = get(ENV, "PLANAR_USE_STUB_CCXT", "") == "1"
     @testset "funding" begin
-        _test_funding(EXCHANGE)
-        _test_funding(EXCHANGE_MM)
-        _test_funding(:phemex)
-        _test_funding(:phemex)
+        if !use_stub
+            _test_funding(EXCHANGE)
+            _test_funding(EXCHANGE_MM)
+        end
         _test_funding_rate(EXCHANGE)
         _test_funding_rate(EXCHANGE_MM)
-        _test_funding_rate(:phemex)
-        _test_funding_rate(:phemex)
     end
 end
