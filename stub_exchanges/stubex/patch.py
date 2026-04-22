@@ -13,21 +13,24 @@ import os
 from typing import Any
 import asyncio
 
+import ccxt
+
 from . import utils
 
 import logging
-logger = logging.getLogger('stubex')
+
+logger = logging.getLogger("stubex")
 try:
     logger.addHandler(logging.NullHandler())
 except Exception as e:
     if _debug:
         try:
-            logger.exception('stubex: suppressed exception: %s', e)
+            logger.exception("stubex: suppressed exception: %s", e)
         except Exception:
             pass
     pass
 
-_debug = os.environ.get('STUBEX_DEBUG', '') != ''
+_debug = os.environ.get("STUBEX_DEBUG", "") != ""
 
 
 def _to_minutes(timeframe: str) -> int:
@@ -113,10 +116,10 @@ def _make_position(symbol: str, exchange=None):
 async def fetch_ohlcv(self, *args, **kwargs):
     # signature compatibility: accept (symbol, timeframe, since, limit, params) or kwargs
     try:
-        symbol = args[0] if len(args) > 0 else kwargs.get('symbol', None)
-        timeframe = args[1] if len(args) > 1 else kwargs.get('timeframe', "1m")
-        since = args[2] if len(args) > 2 else kwargs.get('since', None)
-        limit = args[3] if len(args) > 3 else kwargs.get('limit', 100)
+        symbol = args[0] if len(args) > 0 else kwargs.get("symbol", None)
+        timeframe = args[1] if len(args) > 1 else kwargs.get("timeframe", "1m")
+        since = args[2] if len(args) > 2 else kwargs.get("since", None)
+        limit = args[3] if len(args) > 3 else kwargs.get("limit", 100)
         tf = _to_minutes(timeframe)
         lim = limit if limit is not None else 100
         return utils.generate_ohlcv(symbol, since, lim, tf)
@@ -126,8 +129,8 @@ async def fetch_ohlcv(self, *args, **kwargs):
 
 async def fetch_order_book(self, *args, **kwargs):
     try:
-        symbol = args[0] if len(args) > 0 else kwargs.get('symbol', None)
-        limit = args[1] if len(args) > 1 else kwargs.get('limit', None)
+        symbol = args[0] if len(args) > 0 else kwargs.get("symbol", None)
+        limit = args[1] if len(args) > 1 else kwargs.get("limit", None)
         depth = limit if limit is not None else 20
         return utils.generate_orderbook(symbol, depth)
     except Exception:
@@ -136,9 +139,9 @@ async def fetch_order_book(self, *args, **kwargs):
 
 async def fetch_trades(self, *args, **kwargs):
     try:
-        symbol = args[0] if len(args) > 0 else kwargs.get('symbol', None)
-        since = args[1] if len(args) > 1 else kwargs.get('since', None)
-        limit = args[2] if len(args) > 2 else kwargs.get('limit', 50)
+        symbol = args[0] if len(args) > 0 else kwargs.get("symbol", None)
+        since = args[1] if len(args) > 1 else kwargs.get("since", None)
+        limit = args[2] if len(args) > 2 else kwargs.get("limit", 50)
         lim = limit if limit is not None else 50
         return utils.generate_trades(symbol, lim)
     except Exception:
@@ -153,15 +156,15 @@ async def fetch_tickers(self, *args, **kwargs):
     a small common set used in tests.
     """
     try:
-        _type = args[0] if len(args) > 0 else kwargs.get('type', None)
+        _type = args[0] if len(args) > 0 else kwargs.get("type", None)
         syms = []
         try:
-            if hasattr(self, 'symbols') and self.symbols:
+            if hasattr(self, "symbols") and self.symbols:
                 syms = list(self.symbols)
         except Exception:
             syms = []
         if not syms:
-            syms = ['BTC/USDT:USDT', 'ETH/USDT:USDT', 'SOL/USDT:USDT']
+            syms = ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
         out = {}
         for s in syms:
             ohlcv = utils.generate_ohlcv(s, None, 1, 1)
@@ -169,25 +172,61 @@ async def fetch_tickers(self, *args, **kwargs):
                 continue
             last = ohlcv[-1]
             out[s] = {
-                'symbol': s,
-                'timestamp': last[0],
-                'datetime': None,
-                'high': last[2],
-                'low': last[3],
-                'bid': last[4],
-                'ask': last[4],
-                'vwap': None,
-                'open': last[1],
-                'close': last[4],
-                'last': last[4],
-                'previousClose': None,
-                'change': None,
-                'percentage': None,
-                'average': None,
-                'baseVolume': last[5],
-                'quoteVolume': None,
+                "symbol": s,
+                "timestamp": last[0],
+                "datetime": None,
+                "high": last[2],
+                "low": last[3],
+                "bid": last[4],
+                "ask": last[4],
+                "vwap": None,
+                "open": last[1],
+                "close": last[4],
+                "last": last[4],
+                "previousClose": None,
+                "change": None,
+                "percentage": None,
+                "average": None,
+                "baseVolume": last[5],
+                "quoteVolume": None,
             }
         return out
+    except Exception:
+        return {}
+
+
+async def fetch_ticker(self, symbol, params={}):
+    """Return a ticker dict for the given symbol."""
+    try:
+        s = str(symbol)
+        ohlcv = utils.generate_ohlcv(s, None, 1, 1)
+        if not ohlcv:
+            return {}
+        last = ohlcv[-1]
+        return {
+            "symbol": s,
+            "info": {},
+            "timestamp": last[0],
+            "datetime": None,
+            "high": last[2],
+            "low": last[3],
+            "bid": last[4],
+            "bidVolume": None,
+            "ask": last[4],
+            "askVolume": None,
+            "vwap": last[4],
+            "open": last[1],
+            "close": last[4],
+            "last": last[4],
+            "previousClose": None,
+            "change": None,
+            "percentage": None,
+            "average": last[4],
+            "baseVolume": last[5],
+            "quoteVolume": None,
+            "markPrice": last[4],
+            "indexPrice": last[4],
+        }
     except Exception:
         return {}
 
@@ -197,8 +236,8 @@ async def fetch_my_trades(self, *args, **kwargs):
     try:
         symbol = None
         since = None
-        limit = kwargs.get('limit', 50)
-        params = kwargs.get('params', None)
+        limit = kwargs.get("limit", 50)
+        params = kwargs.get("params", None)
 
         # Helper to test symbol-like values
         def _is_symbol_like(v):
@@ -220,12 +259,12 @@ async def fetch_my_trades(self, *args, **kwargs):
                 continue
 
         # Keyword overrides
-        if 'symbol' in kwargs and _is_symbol_like(kwargs.get('symbol')):
-            symbol = str(kwargs.get('symbol'))
-        if 'since' in kwargs:
-            since = kwargs.get('since')
-        if 'params' in kwargs:
-            params = kwargs.get('params')
+        if "symbol" in kwargs and _is_symbol_like(kwargs.get("symbol")):
+            symbol = str(kwargs.get("symbol"))
+        if "since" in kwargs:
+            since = kwargs.get("since")
+        if "params" in kwargs:
+            params = kwargs.get("params")
 
         trades = []
         # If we have a symbol-like argument, first check the internal trade buffer
@@ -241,7 +280,9 @@ async def fetch_my_trades(self, *args, **kwargs):
                         except Exception as e:
                             if _debug:
                                 try:
-                                    logger.exception('stubex: suppressed exception: %s', e)
+                                    logger.exception(
+                                        "stubex: suppressed exception: %s", e
+                                    )
                                 except Exception:
                                     pass
                             pass
@@ -249,24 +290,32 @@ async def fetch_my_trades(self, *args, **kwargs):
                         try:
                             for t in buf_trades:
                                 if isinstance(t, dict):
-                                    if 'order' not in t:
-                                        t['order'] = None
-                                    if 'orderId' not in t:
-                                        t['orderId'] = None
+                                    if "order" not in t:
+                                        t["order"] = None
+                                    if "orderId" not in t:
+                                        t["orderId"] = None
                         except Exception as e:
                             if _debug:
                                 try:
-                                    logger.exception('stubex: suppressed exception: %s', e)
+                                    logger.exception(
+                                        "stubex: suppressed exception: %s", e
+                                    )
                                 except Exception:
                                     pass
                             pass
                         if _debug:
                             try:
-                                logger.debug("stubex.fetch_my_trades: returning buffered trades for symbol=%s count=%d", symbol, len(buf_trades))
+                                logger.debug(
+                                    "stubex.fetch_my_trades: returning buffered trades for symbol=%s count=%d",
+                                    symbol,
+                                    len(buf_trades),
+                                )
                             except Exception as e:
                                 if _debug:
                                     try:
-                                        logger.exception('stubex: suppressed exception: %s', e)
+                                        logger.exception(
+                                            "stubex: suppressed exception: %s", e
+                                        )
                                     except Exception:
                                         pass
                                 pass
@@ -274,14 +323,14 @@ async def fetch_my_trades(self, *args, **kwargs):
                     except Exception as e:
                         if _debug:
                             try:
-                                logger.exception('stubex: suppressed exception: %s', e)
+                                logger.exception("stubex: suppressed exception: %s", e)
                             except Exception:
                                 pass
                         pass
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
@@ -292,7 +341,7 @@ async def fetch_my_trades(self, *args, **kwargs):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
@@ -301,21 +350,21 @@ async def fetch_my_trades(self, *args, **kwargs):
                 for t in trades:
                     try:
                         if isinstance(t, dict):
-                            if 'order' not in t:
-                                t['order'] = None
-                            if 'orderId' not in t:
-                                t['orderId'] = None
+                            if "order" not in t:
+                                t["order"] = None
+                            if "orderId" not in t:
+                                t["orderId"] = None
                     except Exception as e:
                         if _debug:
                             try:
-                                logger.exception('stubex: suppressed exception: %s', e)
+                                logger.exception("stubex: suppressed exception: %s", e)
                             except Exception:
                                 pass
                         pass
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
@@ -324,22 +373,32 @@ async def fetch_my_trades(self, *args, **kwargs):
                 ro = getattr(self, "_stub_recent_orders", None)
                 if _debug:
                     try:
-                        logger.debug("stubex.fetch_my_trades called: symbol=%s pending=%r", symbol, ro)
+                        logger.debug(
+                            "stubex.fetch_my_trades called: symbol=%s pending=%r",
+                            symbol,
+                            ro,
+                        )
                     except Exception as e:
                         if _debug:
                             try:
-                                logger.exception('stubex: suppressed exception: %s', e)
+                                logger.exception("stubex: suppressed exception: %s", e)
                             except Exception:
                                 pass
                         pass
                 if isinstance(ro, dict) and symbol in ro and ro[symbol]:
                     if _debug:
                         try:
-                            logger.debug("stubex.fetch_my_trades: attaching %d pending orders for %s", len(ro.get(symbol, [])), symbol)
+                            logger.debug(
+                                "stubex.fetch_my_trades: attaching %d pending orders for %s",
+                                len(ro.get(symbol, [])),
+                                symbol,
+                            )
                         except Exception as e:
                             if _debug:
                                 try:
-                                    logger.exception('stubex: suppressed exception: %s', e)
+                                    logger.exception(
+                                        "stubex: suppressed exception: %s", e
+                                    )
                                 except Exception:
                                     pass
                             pass
@@ -347,54 +406,89 @@ async def fetch_my_trades(self, *args, **kwargs):
                     for ordinfo in list(ro.get(symbol, [])):
                         # skip orders already returned
                         try:
-                            if ordinfo.get('_returned'):
+                            if ordinfo.get("_returned"):
                                 continue
                         except Exception as e:
                             if _debug:
                                 try:
-                                    logger.exception('stubex: suppressed exception: %s', e)
+                                    logger.exception(
+                                        "stubex: suppressed exception: %s", e
+                                    )
                                 except Exception:
                                     pass
                             pass
                         ts = _now_ms()
-                        price = ordinfo.get("price") if ordinfo.get("price") is not None else (trades[0].get("price") if trades else 100.0)
-                        amt = ordinfo.get("amount") if ordinfo.get("amount") is not None else 0.0
+                        price = (
+                            ordinfo.get("price")
+                            if ordinfo.get("price") is not None
+                            else (trades[0].get("price") if trades else 100.0)
+                        )
+                        amt = (
+                            ordinfo.get("amount")
+                            if ordinfo.get("amount") is not None
+                            else 0.0
+                        )
                         side = ordinfo.get("side", None)
                         # Ensure order id is a non-empty string to avoid None -> Julia Nothing conversions
                         o_id = ordinfo.get("id")
                         if o_id is None:
                             o_id = f"o{_now_ms()}"
                             try:
-                                ordinfo['id'] = o_id
+                                ordinfo["id"] = o_id
                             except Exception as e:
                                 if _debug:
                                     try:
-                                        logger.exception('stubex: suppressed exception: %s', e)
+                                        logger.exception(
+                                            "stubex: suppressed exception: %s", e
+                                        )
                                     except Exception:
                                         pass
                                 pass
                         o_str = str(o_id)
-                        tr = {"id": f"t{ts}", "timestamp": ts, "datetime": None, "symbol": symbol, "price": round(float(price),8) if price is not None else None, "amount": amt, "side": side, "order": o_str, "orderId": o_str, "clientOrderId": o_str}
+                        tr = {
+                            "id": f"t{ts}",
+                            "timestamp": ts,
+                            "datetime": None,
+                            "symbol": symbol,
+                            "price": round(float(price), 8)
+                            if price is not None
+                            else None,
+                            "amount": amt,
+                            "side": side,
+                            "order": o_str,
+                            "orderId": o_str,
+                            "clientOrderId": o_str,
+                        }
                         try:
                             synths.append(tr)
                         except Exception:
                             synths = synths + [tr]
                         if _debug:
                             try:
-                                logger.debug("stubex.fetch_my_trades: synthesized trade for order=%s symbol=%s price=%s amt=%s", o_str, symbol, price, amt)
+                                logger.debug(
+                                    "stubex.fetch_my_trades: synthesized trade for order=%s symbol=%s price=%s amt=%s",
+                                    o_str,
+                                    symbol,
+                                    price,
+                                    amt,
+                                )
                             except Exception as e:
                                 if _debug:
                                     try:
-                                        logger.exception('stubex: suppressed exception: %s', e)
+                                        logger.exception(
+                                            "stubex: suppressed exception: %s", e
+                                        )
                                     except Exception:
                                         pass
                                 pass
                         try:
-                            ordinfo['_returned'] = True
+                            ordinfo["_returned"] = True
                         except Exception as e:
                             if _debug:
                                 try:
-                                    logger.exception('stubex: suppressed exception: %s', e)
+                                    logger.exception(
+                                        "stubex: suppressed exception: %s", e
+                                    )
                                 except Exception:
                                     pass
                             pass
@@ -403,7 +497,7 @@ async def fetch_my_trades(self, *args, **kwargs):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
@@ -426,18 +520,23 @@ async def fetch_my_trades(self, *args, **kwargs):
                     except Exception as e:
                         if _debug:
                             try:
-                                logger.exception('stubex: suppressed exception: %s', e)
+                                logger.exception("stubex: suppressed exception: %s", e)
                             except Exception:
                                 pass
                         pass
                 if buf_out:
                     if _debug:
                         try:
-                            logger.debug("stubex.fetch_my_trades: returning buffered aggregated trades for symbols=%r", list(tb.keys()))
+                            logger.debug(
+                                "stubex.fetch_my_trades: returning buffered aggregated trades for symbols=%r",
+                                list(tb.keys()),
+                            )
                         except Exception as e:
                             if _debug:
                                 try:
-                                    logger.exception('stubex: suppressed exception: %s', e)
+                                    logger.exception(
+                                        "stubex: suppressed exception: %s", e
+                                    )
                                 except Exception:
                                     pass
                             pass
@@ -445,7 +544,7 @@ async def fetch_my_trades(self, *args, **kwargs):
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
@@ -461,71 +560,113 @@ async def fetch_my_trades(self, *args, **kwargs):
                     for ordinfo in list(lst):
                         # skip orders already returned
                         try:
-                            if ordinfo.get('_returned'):
+                            if ordinfo.get("_returned"):
                                 continue
                         except Exception as e:
                             if _debug:
                                 try:
-                                    logger.exception('stubex: suppressed exception: %s', e)
+                                    logger.exception(
+                                        "stubex: suppressed exception: %s", e
+                                    )
                                 except Exception:
                                     pass
                             pass
                         ts = _now_ms()
                         # try to get a sensible price
-                        price = ordinfo.get("price") if ordinfo.get("price") is not None else None
+                        price = (
+                            ordinfo.get("price")
+                            if ordinfo.get("price") is not None
+                            else None
+                        )
                         if price is None:
                             try:
                                 sample_trades = utils.generate_trades(sym, 1) or []
-                                price = sample_trades[0].get("price") if sample_trades else 100.0
+                                price = (
+                                    sample_trades[0].get("price")
+                                    if sample_trades
+                                    else 100.0
+                                )
                             except Exception:
                                 price = 100.0
-                        amt = ordinfo.get("amount") if ordinfo.get("amount") is not None else 0.0
+                        amt = (
+                            ordinfo.get("amount")
+                            if ordinfo.get("amount") is not None
+                            else 0.0
+                        )
                         side = ordinfo.get("side", None)
                         o_id = ordinfo.get("id")
                         if o_id is None:
                             o_id = f"o{_now_ms()}"
                             try:
-                                ordinfo['id'] = o_id
+                                ordinfo["id"] = o_id
                             except Exception as e:
                                 if _debug:
                                     try:
-                                        logger.exception('stubex: suppressed exception: %s', e)
+                                        logger.exception(
+                                            "stubex: suppressed exception: %s", e
+                                        )
                                     except Exception:
                                         pass
                                 pass
                         o_str = str(o_id)
-                        tr = {"id": f"t{ts}", "timestamp": ts, "datetime": None, "symbol": sym, "price": round(float(price),8) if price is not None else None, "amount": amt, "side": side, "order": o_str, "orderId": o_str, "clientOrderId": o_str}
+                        tr = {
+                            "id": f"t{ts}",
+                            "timestamp": ts,
+                            "datetime": None,
+                            "symbol": sym,
+                            "price": round(float(price), 8)
+                            if price is not None
+                            else None,
+                            "amount": amt,
+                            "side": side,
+                            "order": o_str,
+                            "orderId": o_str,
+                            "clientOrderId": o_str,
+                        }
                         try:
                             synths.append(tr)
                         except Exception:
                             synths = synths + [tr]
                         if _debug:
                             try:
-                                logger.debug("stubex.fetch_my_trades: synthesized trade for order=%s symbol=%s price=%s amt=%s", o_str, sym, price, amt)
+                                logger.debug(
+                                    "stubex.fetch_my_trades: synthesized trade for order=%s symbol=%s price=%s amt=%s",
+                                    o_str,
+                                    sym,
+                                    price,
+                                    amt,
+                                )
                             except Exception as e:
                                 if _debug:
                                     try:
-                                        logger.exception('stubex: suppressed exception: %s', e)
+                                        logger.exception(
+                                            "stubex: suppressed exception: %s", e
+                                        )
                                     except Exception:
                                         pass
                                 pass
                         try:
-                            ordinfo['_returned'] = True
+                            ordinfo["_returned"] = True
                         except Exception as e:
                             if _debug:
                                 try:
-                                    logger.exception('stubex: suppressed exception: %s', e)
+                                    logger.exception(
+                                        "stubex: suppressed exception: %s", e
+                                    )
                                 except Exception:
                                     pass
                             pass
                     out_trades.extend(synths)
                 if _debug:
                     try:
-                        logger.debug("stubex.fetch_my_trades: returning aggregated trades for symbols=%r", list(ro.keys()))
+                        logger.debug(
+                            "stubex.fetch_my_trades: returning aggregated trades for symbols=%r",
+                            list(ro.keys()),
+                        )
                     except Exception as e:
                         if _debug:
                             try:
-                                logger.exception('stubex: suppressed exception: %s', e)
+                                logger.exception("stubex: suppressed exception: %s", e)
                             except Exception:
                                 pass
                         pass
@@ -533,7 +674,7 @@ async def fetch_my_trades(self, *args, **kwargs):
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
@@ -544,7 +685,9 @@ async def fetch_my_trades(self, *args, **kwargs):
                 try:
                     maybe_sym = getattr(a, "symbol", None)
                     if _is_symbol_like(maybe_sym):
-                        trades = await fetch_trades(self, str(maybe_sym), since, limit, params)
+                        trades = await fetch_trades(
+                            self, str(maybe_sym), since, limit, params
+                        )
                         try:
                             tlist = list(trades) if trades is not None else []
                         except Exception:
@@ -554,21 +697,25 @@ async def fetch_my_trades(self, *args, **kwargs):
                             for t in tlist:
                                 try:
                                     if isinstance(t, dict):
-                                        if 'order' not in t:
-                                            t['order'] = None
-                                        if 'orderId' not in t:
-                                            t['orderId'] = None
+                                        if "order" not in t:
+                                            t["order"] = None
+                                        if "orderId" not in t:
+                                            t["orderId"] = None
                                 except Exception as e:
                                     if _debug:
                                         try:
-                                            logger.exception('stubex: suppressed exception: %s', e)
+                                            logger.exception(
+                                                "stubex: suppressed exception: %s", e
+                                            )
                                         except Exception:
                                             pass
                                     pass
                         except Exception as e:
                             if _debug:
                                 try:
-                                    logger.exception('stubex: suppressed exception: %s', e)
+                                    logger.exception(
+                                        "stubex: suppressed exception: %s", e
+                                    )
                                 except Exception:
                                     pass
                             pass
@@ -578,7 +725,7 @@ async def fetch_my_trades(self, *args, **kwargs):
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
@@ -597,8 +744,8 @@ async def fetch_balance(self, *args, **kwargs):
         if len(args) > 0:
             # If first arg is a dict-like params, treat it as params
             params = args[0]
-        if 'params' in kwargs:
-            params = kwargs.get('params')
+        if "params" in kwargs:
+            params = kwargs.get("params")
         return utils.generate_balance(self, params)
     except Exception:
         return utils.generate_balance(self, None)
@@ -607,22 +754,26 @@ async def fetch_balance(self, *args, **kwargs):
 async def fetch_currencies(self, *args, **kwargs):
     try:
         # If exchange already has a currencies mapping, prefer and return it
-        if hasattr(self, 'currencies') and isinstance(self.currencies, dict) and self.currencies:
+        if (
+            hasattr(self, "currencies")
+            and isinstance(self.currencies, dict)
+            and self.currencies
+        ):
             return self.currencies
         # Attempt to derive currency codes from known symbols
         syms = []
         try:
-            if hasattr(self, 'symbols') and self.symbols:
+            if hasattr(self, "symbols") and self.symbols:
                 syms = list(self.symbols)
         except Exception:
             syms = []
         codes = set()
         for s in syms:
             try:
-                if isinstance(s, str) and '/' in s:
-                    base, quote = s.split('/', 1)
-                    if ':' in quote:
-                        quote = quote.split(':')[0]
+                if isinstance(s, str) and "/" in s:
+                    base, quote = s.split("/", 1)
+                    if ":" in quote:
+                        quote = quote.split(":")[0]
                     codes.add(base)
                     codes.add(quote)
                 else:
@@ -630,24 +781,27 @@ async def fetch_currencies(self, *args, **kwargs):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
         if not codes:
-            for c in ['BTC','USD','USDT','ETH','SOL']:
+            for c in ["BTC", "USD", "USDT", "ETH", "SOL"]:
                 codes.add(c)
         out = {}
         for c in codes:
             out[c] = {
-                'id': c,
-                'code': c,
-                'name': c,
-                'precision': 8,
-                'active': True,
-                'type': 'crypto',
-                'fee': 0.0,
-                'limits': {'amount': {'min': 0.0, 'max': None}, 'withdraw': {'min': 0.0, 'max': None}}
+                "id": c,
+                "code": c,
+                "name": c,
+                "precision": 8,
+                "active": True,
+                "type": "crypto",
+                "fee": 0.0,
+                "limits": {
+                    "amount": {"min": 0.0, "max": None},
+                    "withdraw": {"min": 0.0, "max": None},
+                },
             }
         return out
     except Exception:
@@ -667,19 +821,24 @@ async def create_order(self, *args, **kwargs):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
         if _debug:
             try:
-                logger.debug("stubex.create_order called: args_len=%d off=%d a0_repr=%r", len(args), off, (repr(args[0]) if len(args)>0 else None))
+                logger.debug(
+                    "stubex.create_order called: args_len=%d off=%d a0_repr=%r",
+                    len(args),
+                    off,
+                    (repr(args[0]) if len(args) > 0 else None),
+                )
                 try:
                     logger.debug("  args: %r", args)
                 except Exception as e:
                     if _debug:
                         try:
-                            logger.exception('stubex: suppressed exception: %s', e)
+                            logger.exception("stubex: suppressed exception: %s", e)
                         except Exception:
                             pass
                     pass
@@ -688,49 +847,64 @@ async def create_order(self, *args, **kwargs):
                 except Exception as e:
                     if _debug:
                         try:
-                            logger.exception('stubex: suppressed exception: %s', e)
+                            logger.exception("stubex: suppressed exception: %s", e)
                         except Exception:
                             pass
                     pass
                 try:
-                    logger.debug("  price_kw: %r amount_kw: %r params_kw: %r", kwargs.get('price', None), kwargs.get('amount', None), kwargs.get('params', None))
+                    logger.debug(
+                        "  price_kw: %r amount_kw: %r params_kw: %r",
+                        kwargs.get("price", None),
+                        kwargs.get("amount", None),
+                        kwargs.get("params", None),
+                    )
                 except Exception as e:
                     if _debug:
                         try:
-                            logger.exception('stubex: suppressed exception: %s', e)
+                            logger.exception("stubex: suppressed exception: %s", e)
                         except Exception:
                             pass
                     pass
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
-        symbol = args[off] if len(args) > off else kwargs.get('symbol', None)
-        order_type = args[off + 1] if len(args) > off + 1 else kwargs.get('type', kwargs.get('order_type', None))
-        side = args[off + 2] if len(args) > off + 2 else kwargs.get('side', None)
-        amount = args[off + 3] if len(args) > off + 3 else kwargs.get('amount', None)
-        price = args[off + 4] if len(args) > off + 4 else kwargs.get('price', None)
+        symbol = args[off] if len(args) > off else kwargs.get("symbol", None)
+        order_type = (
+            args[off + 1]
+            if len(args) > off + 1
+            else kwargs.get("type", kwargs.get("order_type", None))
+        )
+        side = args[off + 2] if len(args) > off + 2 else kwargs.get("side", None)
+        amount = args[off + 3] if len(args) > off + 3 else kwargs.get("amount", None)
+        price = args[off + 4] if len(args) > off + 4 else kwargs.get("price", None)
 
         # Prefer a plain string symbol for deterministic behaviour
         try:
             symbol_str = str(symbol) if symbol is not None else None
             # If symbol looks like an exchange object, drop it
-            if symbol_str is not None and (symbol_str.startswith("<") or ("ccxt" in symbol_str and "exchange" in symbol_str)):
+            if symbol_str is not None and (
+                symbol_str.startswith("<")
+                or ("ccxt" in symbol_str and "exchange" in symbol_str)
+            ):
                 symbol_str = None
         except Exception:
             symbol_str = None
 
-        ord = utils.generate_order(symbol_str or None, order_type=str(order_type) if order_type is not None else None)
+        ord = utils.generate_order(
+            symbol_str or None,
+            order_type=str(order_type) if order_type is not None else None,
+        )
 
         # Honor requested amount when provided
         if amount is not None:
             try:
-                ord['amount'] = float(amount)
+                ord["amount"] = float(amount)
             except Exception:
-                ord['amount'] = amount
+                ord["amount"] = amount
 
         # Try to determine a sensible price when none provided: prefer explicit price, then last market price
         last_price = None
@@ -753,9 +927,13 @@ async def create_order(self, *args, **kwargs):
         # Heuristic: attempt to recover price from kwargs['params'] or positional numeric args
         if price_provided is None:
             try:
-                pparams = kwargs.get('params', None)
+                pparams = kwargs.get("params", None)
                 if isinstance(pparams, dict) and pparams:
-                    pv = pparams.get('price', None) or pparams.get('limit_price', None) or pparams.get('price_limit', None)
+                    pv = (
+                        pparams.get("price", None)
+                        or pparams.get("limit_price", None)
+                        or pparams.get("price_limit", None)
+                    )
                     if pv is not None:
                         try:
                             price_provided = float(pv)
@@ -764,7 +942,7 @@ async def create_order(self, *args, **kwargs):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
@@ -786,26 +964,33 @@ async def create_order(self, *args, **kwargs):
                                     except Exception as e:
                                         if _debug:
                                             try:
-                                                logger.exception('stubex: suppressed exception: %s', e)
+                                                logger.exception(
+                                                    "stubex: suppressed exception: %s",
+                                                    e,
+                                                )
                                             except Exception:
                                                 pass
                                         pass
                         except Exception as e:
                             if _debug:
                                 try:
-                                    logger.exception('stubex: suppressed exception: %s', e)
+                                    logger.exception(
+                                        "stubex: suppressed exception: %s", e
+                                    )
                                 except Exception:
                                     pass
                             pass
                 if len(numeric_args) >= 2:
                     # assume last numeric is price, previous is amount
-                    if ord.get('amount', None) is None:
+                    if ord.get("amount", None) is None:
                         try:
-                            ord['amount'] = numeric_args[-2]
+                            ord["amount"] = numeric_args[-2]
                         except Exception as e:
                             if _debug:
                                 try:
-                                    logger.exception('stubex: suppressed exception: %s', e)
+                                    logger.exception(
+                                        "stubex: suppressed exception: %s", e
+                                    )
                                 except Exception:
                                     pass
                             pass
@@ -813,26 +998,38 @@ async def create_order(self, *args, **kwargs):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
 
-        price_to_use = price_provided if price_provided is not None else (last_price if last_price is not None else ord.get('price', None))
+        price_to_use = (
+            price_provided
+            if price_provided is not None
+            else (last_price if last_price is not None else ord.get("price", None))
+        )
         if price_to_use is not None:
             try:
-                ord['price'] = float(price_to_use)
+                ord["price"] = float(price_to_use)
             except Exception:
-                ord['price'] = price_to_use
+                ord["price"] = price_to_use
 
-        ord_amount = ord.get('amount', None)
+        ord_amount = ord.get("amount", None)
         filled = 0.0
         trades = []
-        cost = ord.get('cost', 0.0)
-        average = ord.get('average', None)
+        cost = ord.get("cost", 0.0)
+        average = ord.get("average", None)
 
-        ot = str(order_type).lower() if order_type is not None else (str(ord.get('type', '')).lower() if ord.get('type') else '')
-        side_str = str(side).lower() if side is not None else (str(ord.get('side', '')).lower() if ord.get('side') else '')
+        ot = (
+            str(order_type).lower()
+            if order_type is not None
+            else (str(ord.get("type", "")).lower() if ord.get("type") else "")
+        )
+        side_str = (
+            str(side).lower()
+            if side is not None
+            else (str(ord.get("side", "")).lower() if ord.get("side") else "")
+        )
 
         # Determine last market price again if needed
         if last_price is None:
@@ -845,9 +1042,9 @@ async def create_order(self, *args, **kwargs):
                 last_price = None
 
         # Use ord['price'] as the canonical price when available
-        canonical_price = ord.get('price', last_price)
+        canonical_price = ord.get("price", last_price)
 
-        if ot == 'market':
+        if ot == "market":
             try:
                 filled = float(ord_amount) if ord_amount is not None else 0.0
             except Exception:
@@ -855,25 +1052,49 @@ async def create_order(self, *args, **kwargs):
             if filled > 0:
                 ts = _now_ms()
                 price_used = canonical_price if canonical_price is not None else 0.0
-                trades = [{"id": f"t{ts}", "timestamp": ts, "datetime": None, "symbol": symbol_str, "price": price_used, "amount": filled, "side": side_str}]
+                trades = [
+                    {
+                        "id": f"t{ts}",
+                        "timestamp": ts,
+                        "datetime": None,
+                        "symbol": symbol_str,
+                        "price": price_used,
+                        "amount": filled,
+                        "side": side_str,
+                    }
+                ]
                 try:
                     cost = float(price_used) * filled
                 except Exception:
                     cost = 0.0
                 average = price_used
-        elif ot == 'limit':
+        elif ot == "limit":
             # If price crosses last_price, consider immediate fill
             try:
-                p = float(ord.get('price')) if ord.get('price') is not None else None
+                p = float(ord.get("price")) if ord.get("price") is not None else None
                 if p is not None and last_price is not None:
-                    if (side_str == 'sell' and p <= last_price) or (side_str == 'buy' and p >= last_price):
+                    if (side_str == "sell" and p <= last_price) or (
+                        side_str == "buy" and p >= last_price
+                    ):
                         try:
-                            filled = float(ord_amount) if ord_amount is not None else 0.0
+                            filled = (
+                                float(ord_amount) if ord_amount is not None else 0.0
+                            )
                         except Exception:
                             filled = 0.0
                         if filled > 0:
                             ts = _now_ms()
-                            trades = [{"id": f"t{ts}", "timestamp": ts, "datetime": None, "symbol": symbol_str, "price": p, "amount": filled, "side": side_str}]
+                            trades = [
+                                {
+                                    "id": f"t{ts}",
+                                    "timestamp": ts,
+                                    "datetime": None,
+                                    "symbol": symbol_str,
+                                    "price": p,
+                                    "amount": filled,
+                                    "side": side_str,
+                                }
+                            ]
                             try:
                                 cost = float(p) * filled
                             except Exception:
@@ -882,43 +1103,47 @@ async def create_order(self, *args, **kwargs):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
 
-        ord['filled'] = filled
+        ord["filled"] = filled
         try:
-            ord['remaining'] = (ord_amount - filled) if (ord_amount is not None) else 0.0
+            ord["remaining"] = (
+                (ord_amount - filled) if (ord_amount is not None) else 0.0
+            )
         except Exception:
-            ord['remaining'] = 0.0
-        ord['status'] = 'closed' if filled > 0 else 'open'
-        ord['trades'] = trades
-        ord['cost'] = cost
-        ord['average'] = average
+            ord["remaining"] = 0.0
+        ord["status"] = "closed" if filled > 0 else "open"
+        ord["trades"] = trades
+        ord["cost"] = cost
+        ord["average"] = average
 
         # Compute cost deterministically if filled but cost not set
         try:
-            if ord.get('filled', 0) and not ord.get('cost'):
-                price_for_cost = ord.get('average') or ord.get('price') or last_price
+            if ord.get("filled", 0) and not ord.get("cost"):
+                price_for_cost = ord.get("average") or ord.get("price") or last_price
                 if price_for_cost is not None:
                     try:
-                        ord['cost'] = float(price_for_cost) * float(ord.get('filled', 0))
+                        ord["cost"] = float(price_for_cost) * float(
+                            ord.get("filled", 0)
+                        )
                     except Exception:
-                        ord['cost'] = ord.get('cost', 0.0)
+                        ord["cost"] = ord.get("cost", 0.0)
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
 
         # Ensure symbol/type/side fields are plain values
         if symbol_str is not None:
-            ord['symbol'] = symbol_str
-        ord['type'] = order_type or ord.get('type', None)
-        ord['side'] = side or ord.get('side', None)
+            ord["symbol"] = symbol_str
+        ord["type"] = order_type or ord.get("type", None)
+        ord["side"] = side or ord.get("side", None)
 
         # Register recent orders (symbol -> list of order infos) so fetch_my_trades
         # can return matching trades referencing the order id. Register both open
@@ -934,12 +1159,19 @@ async def create_order(self, *args, **kwargs):
                     ro = getattr(self, "_stub_recent_orders", {})
                 try:
                     lst = ro.get(symbol_str, [])
-                    lst.append({"id": ord.get("id"), "price": ord.get("price"), "amount": ord.get("amount"), "side": ord.get("side")})
+                    lst.append(
+                        {
+                            "id": ord.get("id"),
+                            "price": ord.get("price"),
+                            "amount": ord.get("amount"),
+                            "side": ord.get("side"),
+                        }
+                    )
                     ro[symbol_str] = lst
                 except Exception as e:
                     if _debug:
                         try:
-                            logger.exception('stubex: suppressed exception: %s', e)
+                            logger.exception("stubex: suppressed exception: %s", e)
                         except Exception:
                             pass
                     pass
@@ -970,15 +1202,21 @@ async def create_order(self, *args, **kwargs):
                                 o_id = ord.get("id")
                                 if o_id is None:
                                     o_id = f"o{_now_ms()}"
-                                    ord['id'] = o_id
-                                trd_order = trd.get('order') or trd.get('orderId') or str(o_id)
-                                trd['order'] = trd_order
-                                trd['orderId'] = trd.get('orderId') or trd_order
-                                trd['clientOrderId'] = trd.get('clientOrderId') or trd_order
+                                    ord["id"] = o_id
+                                trd_order = (
+                                    trd.get("order") or trd.get("orderId") or str(o_id)
+                                )
+                                trd["order"] = trd_order
+                                trd["orderId"] = trd.get("orderId") or trd_order
+                                trd["clientOrderId"] = (
+                                    trd.get("clientOrderId") or trd_order
+                                )
                             except Exception as e:
                                 if _debug:
                                     try:
-                                        logger.exception('stubex: suppressed exception: %s', e)
+                                        logger.exception(
+                                            "stubex: suppressed exception: %s", e
+                                        )
                                     except Exception:
                                         pass
                                 pass
@@ -993,21 +1231,23 @@ async def create_order(self, *args, **kwargs):
                             except Exception as e:
                                 if _debug:
                                     try:
-                                        logger.exception('stubex: suppressed exception: %s', e)
+                                        logger.exception(
+                                            "stubex: suppressed exception: %s", e
+                                        )
                                     except Exception:
                                         pass
                                 pass
                 except Exception as e:
                     if _debug:
                         try:
-                            logger.exception('stubex: suppressed exception: %s', e)
+                            logger.exception("stubex: suppressed exception: %s", e)
                         except Exception:
                             pass
                     pass
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
@@ -1018,7 +1258,7 @@ async def create_order(self, *args, **kwargs):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
@@ -1029,7 +1269,7 @@ async def create_order(self, *args, **kwargs):
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
@@ -1041,7 +1281,7 @@ async def create_order(self, *args, **kwargs):
 
 async def cancel_order(self, *args, **kwargs):
     try:
-        id = args[0] if len(args) > 0 else kwargs.get('id', None)
+        id = args[0] if len(args) > 0 else kwargs.get("id", None)
         return {"id": id, "status": "canceled"}
     except Exception:
         return {"id": None, "status": "canceled"}
@@ -1060,7 +1300,7 @@ async def fetch_order_trades(self, *args, **kwargs):
         order_id = None
         symbol = None
         # kwargs first
-        for k in ('id', 'orderId', 'order_id', 'order'):
+        for k in ("id", "orderId", "order_id", "order"):
             if k in kwargs and kwargs.get(k) is not None:
                 order_id = kwargs.get(k)
                 break
@@ -1084,8 +1324,8 @@ async def fetch_order_trades(self, *args, **kwargs):
             elif len(args) == 1:
                 order_id = args[0]
         # symbol kw override
-        if 'symbol' in kwargs and kwargs.get('symbol') is not None:
-            symbol = kwargs.get('symbol')
+        if "symbol" in kwargs and kwargs.get("symbol") is not None:
+            symbol = kwargs.get("symbol")
         try:
             order_str = str(order_id) if order_id is not None else None
         except Exception:
@@ -1102,12 +1342,16 @@ async def fetch_order_trades(self, *args, **kwargs):
                     lst = []
                 for t in list(lst):
                     try:
-                        if (str(t.get('order')) == order_str) or (str(t.get('orderId')) == order_str) or (str(t.get('clientOrderId', '')) == order_str):
+                        if (
+                            (str(t.get("order")) == order_str)
+                            or (str(t.get("orderId")) == order_str)
+                            or (str(t.get("clientOrderId", "")) == order_str)
+                        ):
                             out.append(t)
                     except Exception as e:
                         if _debug:
                             try:
-                                logger.exception('stubex: suppressed exception: %s', e)
+                                logger.exception("stubex: suppressed exception: %s", e)
                             except Exception:
                                 pass
                         pass
@@ -1115,12 +1359,18 @@ async def fetch_order_trades(self, *args, **kwargs):
                 for sym, lst in list(tb.items()):
                     for t in list(lst):
                         try:
-                            if (str(t.get('order')) == order_str) or (str(t.get('orderId')) == order_str) or (str(t.get('clientOrderId', '')) == order_str):
+                            if (
+                                (str(t.get("order")) == order_str)
+                                or (str(t.get("orderId")) == order_str)
+                                or (str(t.get("clientOrderId", "")) == order_str)
+                            ):
                                 out.append(t)
                         except Exception as e:
                             if _debug:
                                 try:
-                                    logger.exception('stubex: suppressed exception: %s', e)
+                                    logger.exception(
+                                        "stubex: suppressed exception: %s", e
+                                    )
                                 except Exception:
                                     pass
                             pass
@@ -1131,17 +1381,38 @@ async def fetch_order_trades(self, *args, **kwargs):
             if symbol is not None and symbol in ro:
                 for ordinfo in list(ro.get(symbol, [])):
                     try:
-                        if str(ordinfo.get('id')) == order_str:
+                        if str(ordinfo.get("id")) == order_str:
                             ts = _now_ms()
-                            price = ordinfo.get('price') if ordinfo.get('price') is not None else 100.0
-                            amt = ordinfo.get('amount') if ordinfo.get('amount') is not None else 0.0
-                            side = ordinfo.get('side', None)
-                            tr = {"id": f"t{ts}", "timestamp": ts, "datetime": None, "symbol": symbol, "price": round(float(price),8) if price is not None else None, "amount": amt, "side": side, "order": order_str, "orderId": order_str, "clientOrderId": order_str}
+                            price = (
+                                ordinfo.get("price")
+                                if ordinfo.get("price") is not None
+                                else 100.0
+                            )
+                            amt = (
+                                ordinfo.get("amount")
+                                if ordinfo.get("amount") is not None
+                                else 0.0
+                            )
+                            side = ordinfo.get("side", None)
+                            tr = {
+                                "id": f"t{ts}",
+                                "timestamp": ts,
+                                "datetime": None,
+                                "symbol": symbol,
+                                "price": round(float(price), 8)
+                                if price is not None
+                                else None,
+                                "amount": amt,
+                                "side": side,
+                                "order": order_str,
+                                "orderId": order_str,
+                                "clientOrderId": order_str,
+                            }
                             out.append(tr)
                     except Exception as e:
                         if _debug:
                             try:
-                                logger.exception('stubex: suppressed exception: %s', e)
+                                logger.exception("stubex: suppressed exception: %s", e)
                             except Exception:
                                 pass
                         pass
@@ -1150,17 +1421,40 @@ async def fetch_order_trades(self, *args, **kwargs):
                 for sym, lst in list(ro.items()):
                     for ordinfo in list(lst):
                         try:
-                            if str(ordinfo.get('id')) == order_str:
+                            if str(ordinfo.get("id")) == order_str:
                                 ts = _now_ms()
-                                price = ordinfo.get('price') if ordinfo.get('price') is not None else 100.0
-                                amt = ordinfo.get('amount') if ordinfo.get('amount') is not None else 0.0
-                                side = ordinfo.get('side', None)
-                                tr = {"id": f"t{ts}", "timestamp": ts, "datetime": None, "symbol": sym, "price": round(float(price),8) if price is not None else None, "amount": amt, "side": side, "order": order_str, "orderId": order_str, "clientOrderId": order_str}
+                                price = (
+                                    ordinfo.get("price")
+                                    if ordinfo.get("price") is not None
+                                    else 100.0
+                                )
+                                amt = (
+                                    ordinfo.get("amount")
+                                    if ordinfo.get("amount") is not None
+                                    else 0.0
+                                )
+                                side = ordinfo.get("side", None)
+                                tr = {
+                                    "id": f"t{ts}",
+                                    "timestamp": ts,
+                                    "datetime": None,
+                                    "symbol": sym,
+                                    "price": round(float(price), 8)
+                                    if price is not None
+                                    else None,
+                                    "amount": amt,
+                                    "side": side,
+                                    "order": order_str,
+                                    "orderId": order_str,
+                                    "clientOrderId": order_str,
+                                }
                                 out.append(tr)
                         except Exception as e:
                             if _debug:
                                 try:
-                                    logger.exception('stubex: suppressed exception: %s', e)
+                                    logger.exception(
+                                        "stubex: suppressed exception: %s", e
+                                    )
                                 except Exception:
                                     pass
                             pass
@@ -1184,8 +1478,8 @@ async def fetch_positions(self, *args, **kwargs):
         symbols = None
         if len(args) > 0:
             symbols = args[0]
-        elif 'symbols' in kwargs:
-            symbols = kwargs.get('symbols')
+        elif "symbols" in kwargs:
+            symbols = kwargs.get("symbols")
         if symbols is None:
             return []
         out = []
@@ -1199,7 +1493,7 @@ async def fetch_positions(self, *args, **kwargs):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
@@ -1222,7 +1516,11 @@ def load_leverage_brackets(self, reload=False, params=None):
         if getattr(self, "_stub_leverage_brackets", None) is None:
             self._stub_leverage_brackets = {}
         try:
-            syms = list(self.symbols) if hasattr(self, "symbols") and self.symbols else ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
+            syms = (
+                list(self.symbols)
+                if hasattr(self, "symbols") and self.symbols
+                else ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
+            )
         except Exception:
             syms = ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
         for s in syms:
@@ -1263,11 +1561,14 @@ def set_leverage(self, lev, symbol, *args, **kwargs):
     try:
         if getattr(self, "_stub_leverage_map", None) is None:
             self._stub_leverage_map = {}
-        self._stub_leverage_map[str(symbol)] = {"longLeverage": float(val), "shortLeverage": float(val)}
+        self._stub_leverage_map[str(symbol)] = {
+            "longLeverage": float(val),
+            "shortLeverage": float(val),
+        }
     except Exception as e:
         if _debug:
             try:
-                logger.exception('stubex: suppressed exception: %s', e)
+                logger.exception("stubex: suppressed exception: %s", e)
             except Exception:
                 pass
         pass
@@ -1293,19 +1594,31 @@ def fetch_funding_rate(self, symbol, *args, **kwargs):
         s = str(symbol)
         return utils.generate_funding_rate(s, self)
     except Exception:
-        return {"symbol": symbol, "fundingRate": 0.0, "nextFundingTime": _now_ms() + 8 * 60 * 60 * 1000}
+        return {
+            "symbol": symbol,
+            "fundingRate": 0.0,
+            "nextFundingTime": _now_ms() + 8 * 60 * 60 * 1000,
+        }
 
 
 def fetch_funding_rates(self, *args, **kwargs):
     """Return a dict of funding rates keyed by symbol."""
     try:
-        syms = list(self.symbols) if hasattr(self, "symbols") and self.symbols else ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
+        syms = (
+            list(self.symbols)
+            if hasattr(self, "symbols") and self.symbols
+            else ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
+        )
         out = {}
         for s in syms:
             try:
                 out[s] = utils.generate_funding_rate(s, self)
             except Exception:
-                out[s] = {"symbol": s, "fundingRate": 0.0, "nextFundingTime": _now_ms() + 8 * 60 * 60 * 1000}
+                out[s] = {
+                    "symbol": s,
+                    "fundingRate": 0.0,
+                    "nextFundingTime": _now_ms() + 8 * 60 * 60 * 1000,
+                }
         return out
     except Exception:
         return {}
@@ -1349,16 +1662,20 @@ def fetch_funding_rate_history(self, symbol, since=None, limit=None, params=None
         # return most-recent-first to match typical exchange APIs
         for ts in reversed(timestamps):
             rate = (r.random() - 0.5) * 0.001
-            out.append({"timestamp": int(ts), "symbol": s, "fundingRate": round(rate, 8)})
+            out.append(
+                {"timestamp": int(ts), "symbol": s, "fundingRate": round(rate, 8)}
+            )
         return out
     except Exception:
         return []
+
 
 # ccxt.pro uses load_positions_snapshot to initialize position snapshots in the background.
 # Patch it to a no-op in stub mode to avoid background coroutines that may call network
 # functions such as sign()/fetch2() and raise NotSupported.
 async def load_positions_snapshot(self, *args, **kwargs):
     return []
+
 
 def _bind(inst, name, func):
     """Bind function `func` as attribute `name` on `inst` using MethodType."""
@@ -1372,7 +1689,7 @@ def _bind(inst, name, func):
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
@@ -1387,7 +1704,11 @@ def load_markets_impl(self, reload=False):
         self.markets = {}
         self.markets_by_id = {}
         try:
-            syms = list(self.symbols) if hasattr(self, 'symbols') and self.symbols else ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
+            syms = (
+                list(self.symbols)
+                if hasattr(self, "symbols") and self.symbols
+                else ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
+            )
         except Exception:
             syms = ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
         # recreate symbols list and populate minimal market metadata
@@ -1402,8 +1723,8 @@ def load_markets_impl(self, reload=False):
                 sym = s
             base = None
             quote = None
-            if isinstance(sym, str) and '/' in sym:
-                parts = sym.split('/', 1)
+            if isinstance(sym, str) and "/" in sym:
+                parts = sym.split("/", 1)
                 base = parts[0]
                 quote = parts[1]
             else:
@@ -1421,20 +1742,29 @@ def load_markets_impl(self, reload=False):
             # use a very small min price to avoid accidental clamping in consumers
             min_price = max(1e-12, float(last_price) * 1e-6)
             m = {
-                'id': sym,
-                'symbol': sym,
-                'base': base,
-                'quote': quote,
-                'type': 'spot',
-                'limits': {
-                    'amount': {'min': 1e-8, 'max': None},
-                    'price': {'min': min_price, 'max': None},
-                    'cost': {'min': 1e-8, 'max': None},
+                "id": sym,
+                "symbol": sym,
+                "base": base,
+                "quote": quote,
+                "type": "spot",
+                "spot": True,
+                "margin": True,
+                "swap": False,
+                "future": False,
+                "contract": False,
+                "option": None,
+                "linear": None,
+                "inverse": None,
+                "limits": {
+                    "leverage": {"min": 1.0, "max": 10.0},
+                    "amount": {"min": 1e-8, "max": None},
+                    "price": {"min": min_price, "max": None},
+                    "cost": {"min": 1e-8, "max": None},
                 },
-                'precision': {'amount': 8, 'price': 8},
-                'active': True,
-                'taker': 0.001,
-                'maker': 0.001,
+                "precision": {"amount": 8, "price": 8},
+                "active": True,
+                "taker": 0.001,
+                "maker": 0.001,
             }
             try:
                 self.markets[sym] = m
@@ -1442,7 +1772,7 @@ def load_markets_impl(self, reload=False):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
@@ -1451,7 +1781,7 @@ def load_markets_impl(self, reload=False):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
@@ -1460,14 +1790,14 @@ def load_markets_impl(self, reload=False):
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
     except Exception as e:
         if _debug:
             try:
-                logger.exception('stubex: suppressed exception: %s', e)
+                logger.exception("stubex: suppressed exception: %s", e)
             except Exception:
                 pass
         pass
@@ -1502,7 +1832,7 @@ def patch_exchange(exchange, exch_name: str = None):
     """
     try:
         try:
-            ex_id = getattr(exchange, 'id', None)
+            ex_id = getattr(exchange, "id", None)
         except Exception:
             ex_id = None
         if _debug:
@@ -1511,7 +1841,7 @@ def patch_exchange(exchange, exch_name: str = None):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
@@ -1523,10 +1853,11 @@ def patch_exchange(exchange, exch_name: str = None):
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
+
         # streaming/watch stub implementations
         async def watch_balance(self, *args, **kwargs):
             # ccxt.watchBalance usually returns a balance snapshot when awaited
@@ -1543,8 +1874,8 @@ def patch_exchange(exchange, exch_name: str = None):
                 symbols = None
                 if len(args) > 0:
                     symbols = args[0]
-                elif 'symbols' in kwargs:
-                    symbols = kwargs.get('symbols')
+                elif "symbols" in kwargs:
+                    symbols = kwargs.get("symbols")
                 if symbols is None:
                     return []
                 out = []
@@ -1557,7 +1888,7 @@ def patch_exchange(exchange, exch_name: str = None):
                     except Exception as e:
                         if _debug:
                             try:
-                                logger.exception('stubex: suppressed exception: %s', e)
+                                logger.exception("stubex: suppressed exception: %s", e)
                             except Exception:
                                 pass
                         pass
@@ -1586,7 +1917,9 @@ def patch_exchange(exchange, exch_name: str = None):
                         except Exception as e:
                             if _debug:
                                 try:
-                                    logger.exception('stubex: suppressed exception: %s', e)
+                                    logger.exception(
+                                        "stubex: suppressed exception: %s", e
+                                    )
                                 except Exception:
                                     pass
                             pass
@@ -1594,7 +1927,7 @@ def patch_exchange(exchange, exch_name: str = None):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
@@ -1606,46 +1939,73 @@ def patch_exchange(exchange, exch_name: str = None):
                     synths = []
                     for ordinfo in list(ro.get(symbol, [])):
                         try:
-                            if ordinfo.get('_returned'):
+                            if ordinfo.get("_returned"):
                                 continue
                         except Exception as e:
                             if _debug:
                                 try:
-                                    logger.exception('stubex: suppressed exception: %s', e)
+                                    logger.exception(
+                                        "stubex: suppressed exception: %s", e
+                                    )
                                 except Exception:
                                     pass
                             pass
                         ts = _now_ms()
-                        price = ordinfo.get('price') if ordinfo.get('price') is not None else None
+                        price = (
+                            ordinfo.get("price")
+                            if ordinfo.get("price") is not None
+                            else None
+                        )
                         if price is None:
                             try:
                                 st = utils.generate_trades(symbol, 1)
-                                price = st[0].get('price') if st else 100.0
+                                price = st[0].get("price") if st else 100.0
                             except Exception:
                                 price = 100.0
-                        amt = ordinfo.get('amount') if ordinfo.get('amount') is not None else 0.0
-                        side = ordinfo.get('side', None)
-                        o_id = ordinfo.get('id')
+                        amt = (
+                            ordinfo.get("amount")
+                            if ordinfo.get("amount") is not None
+                            else 0.0
+                        )
+                        side = ordinfo.get("side", None)
+                        o_id = ordinfo.get("id")
                         if o_id is None:
                             o_id = f"o{_now_ms()}"
                             try:
-                                ordinfo['id'] = o_id
+                                ordinfo["id"] = o_id
                             except Exception as e:
                                 if _debug:
                                     try:
-                                        logger.exception('stubex: suppressed exception: %s', e)
+                                        logger.exception(
+                                            "stubex: suppressed exception: %s", e
+                                        )
                                     except Exception:
                                         pass
                                 pass
                         o_str = str(o_id)
-                        tr = {"id": f"t{ts}", "timestamp": ts, "datetime": None, "symbol": symbol, "price": round(float(price), 8) if price is not None else None, "amount": amt, "side": side, "order": o_str, "orderId": o_str, "clientOrderId": o_str}
+                        tr = {
+                            "id": f"t{ts}",
+                            "timestamp": ts,
+                            "datetime": None,
+                            "symbol": symbol,
+                            "price": round(float(price), 8)
+                            if price is not None
+                            else None,
+                            "amount": amt,
+                            "side": side,
+                            "order": o_str,
+                            "orderId": o_str,
+                            "clientOrderId": o_str,
+                        }
                         synths.append(tr)
                         try:
-                            ordinfo['_returned'] = True
+                            ordinfo["_returned"] = True
                         except Exception as e:
                             if _debug:
                                 try:
-                                    logger.exception('stubex: suppressed exception: %s', e)
+                                    logger.exception(
+                                        "stubex: suppressed exception: %s", e
+                                    )
                                 except Exception:
                                     pass
                             pass
@@ -1654,7 +2014,7 @@ def patch_exchange(exchange, exch_name: str = None):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
@@ -1696,6 +2056,8 @@ def patch_exchange(exchange, exch_name: str = None):
             ("fetchOrderBook", fetch_order_book),
             ("fetch_trades", fetch_trades),
             ("fetchTrades", fetch_trades),
+            ("fetch_ticker", fetch_ticker),
+            ("fetchTicker", fetch_ticker),
             ("fetch_my_trades", fetch_my_trades),
             ("fetchMyTrades", fetch_my_trades),
             ("fetch_balance", fetch_balance),
@@ -1739,7 +2101,7 @@ def patch_exchange(exchange, exch_name: str = None):
         ]
 
         # Bind all mappings
-        for (nm, fn) in mappings:
+        for nm, fn in mappings:
             try:
                 _bind(exchange, nm, fn)
             except Exception:
@@ -1750,12 +2112,14 @@ def patch_exchange(exchange, exch_name: str = None):
         try:
             _bind(exchange, "fetch_tickers", fetch_tickers)
             _bind(exchange, "fetchTickers", fetch_tickers)
+            _bind(exchange, "fetch_ticker", fetch_ticker)
+            _bind(exchange, "fetchTicker", fetch_ticker)
             _bind(exchange, "fetch_currencies", fetch_currencies)
             _bind(exchange, "fetchCurrencies", fetch_currencies)
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
@@ -1763,112 +2127,42 @@ def patch_exchange(exchange, exch_name: str = None):
         # Also try patching the exchange class to override methods implemented as descriptors
         try:
             ex_cls = type(exchange)
-            for (nm, fn) in mappings:
+            for nm, fn in mappings:
                 try:
                     setattr(ex_cls, nm, fn)
                 except Exception as e:
                     if _debug:
                         try:
-                            logger.exception('stubex: suppressed exception: %s', e)
+                            logger.exception("stubex: suppressed exception: %s", e)
                         except Exception:
                             pass
                     pass
             try:
                 setattr(ex_cls, "fetch_tickers", fetch_tickers)
                 setattr(ex_cls, "fetchTickers", fetch_tickers)
+                setattr(ex_cls, "fetch_ticker", fetch_ticker)
+                setattr(ex_cls, "fetchTicker", fetch_ticker)
                 setattr(ex_cls, "fetch_currencies", fetch_currencies)
                 setattr(ex_cls, "fetchCurrencies", fetch_currencies)
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
 
         # Provide a minimal async loadMarkets implementation to avoid network calls
         async def _load_markets(self, reload=False):
-            # minimal markets expected by Planar's loadmarkets! flow
-            try:
-                self.markets = {}
-                self.markets_by_id = {}
-                # prefer an existing symbols list if present, otherwise fall back to common test symbols
-                try:
-                    syms = list(self.symbols) if hasattr(self, 'symbols') and self.symbols else ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
-                except Exception:
-                    syms = ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
-                # recreate symbols list and populate minimal market metadata
-                self.symbols = []
-                for s in syms:
-                    try:
-                        sym = str(s)
-                    except Exception:
-                        sym = s
-                    base = None
-                    quote = None
-                    if isinstance(sym, str) and '/' in sym:
-                        parts = sym.split('/', 1)
-                        base = parts[0]
-                        quote = parts[1]
-                    else:
-                        base = sym
-                        quote = ""
-                    # derive a sensible minimum price based on a tiny fraction of last price
-                    last_price = None
-                    try:
-                        ohlcv = utils.generate_ohlcv(sym, None, 1, 1)
-                        if ohlcv and len(ohlcv) > 0:
-                            last_price = float(ohlcv[-1][4])
-                    except Exception:
-                        last_price = None
-                    if last_price is None:
-                        last_price = 100.0
-                    # use a very small min price to avoid accidental clamping in consumers
-                    min_price = max(1e-12, float(last_price) * 1e-6)
-                    m = {
-                        'id': sym,
-                        'symbol': sym,
-                        'base': base,
-                        'quote': quote,
-                        'type': 'spot',
-                        'limits': {
-                            'amount': {'min': 1e-8, 'max': None},
-                            'price': {'min': min_price, 'max': None},
-                            'cost': {'min': 1e-8, 'max': None},
-                        },
-                        'precision': {'amount': 8, 'price': 8},
-                        'active': True,
-                        'taker': 0.001,
-                        'maker': 0.001,
-                    }
-                    self.markets[sym] = m
-                    self.markets_by_id[sym] = m
-                    try:
-                        # ensure symbols is a plain python list
-                        self.symbols.append(sym)
-                    except Exception as e:
-                        if _debug:
-                            try:
-                                logger.exception('stubex: suppressed exception: %s', e)
-                            except Exception:
-                                pass
-                        pass
-                self.currencies = {}
-            except Exception as e:
-                if _debug:
-                    try:
-                        logger.exception('stubex: suppressed exception: %s', e)
-                    except Exception:
-                        pass
-                pass
-            return None
+            # Delegate to full load_markets_impl to ensure consistent market structure
+            return load_markets_impl(self, reload)
 
         _bind(exchange, "loadMarkets", _load_markets)
         _bind(exchange, "load_markets", _load_markets)
@@ -1881,7 +2175,7 @@ def patch_exchange(exchange, exch_name: str = None):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
@@ -1890,12 +2184,16 @@ def patch_exchange(exchange, exch_name: str = None):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
             try:
-                syms = list(exchange.symbols) if hasattr(exchange, 'symbols') and exchange.symbols else ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
+                syms = (
+                    list(exchange.symbols)
+                    if hasattr(exchange, "symbols") and exchange.symbols
+                    else ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
+                )
             except Exception:
                 syms = ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
             exchange.symbols = []
@@ -1906,8 +2204,8 @@ def patch_exchange(exchange, exch_name: str = None):
                     sym = s
                 base = None
                 quote = None
-                if isinstance(sym, str) and '/' in sym:
-                    parts = sym.split('/', 1)
+                if isinstance(sym, str) and "/" in sym:
+                    parts = sym.split("/", 1)
                     base = parts[0]
                     quote = parts[1]
                 else:
@@ -1925,20 +2223,29 @@ def patch_exchange(exchange, exch_name: str = None):
                 # Use a very small min price to avoid accidental clamping in consumers
                 min_price = max(1e-12, float(last_price) * 1e-6)
                 m = {
-                    'id': sym,
-                    'symbol': sym,
-                    'base': base,
-                    'quote': quote,
-                    'type': 'spot',
-                    'limits': {
-                        'amount': {'min': 1e-8, 'max': None},
-                        'price': {'min': min_price, 'max': None},
-                        'cost': {'min': 1e-8, 'max': None},
+                    "id": sym,
+                    "symbol": sym,
+                    "base": base,
+                    "quote": quote,
+                    "type": "spot",
+                    "spot": True,
+                    "margin": True,
+                    "swap": False,
+                    "future": False,
+                    "contract": False,
+                    "option": None,
+                    "linear": None,
+                    "inverse": None,
+                    "limits": {
+                        "leverage": {"min": 1.0, "max": 10.0},
+                        "amount": {"min": 1e-8, "max": None},
+                        "price": {"min": min_price, "max": None},
+                        "cost": {"min": 1e-8, "max": None},
                     },
-                    'precision': {'amount': 8, 'price': 8},
-                    'active': True,
-                    'taker': 0.001,
-                    'maker': 0.001,
+                    "precision": {"amount": 8, "price": 8},
+                    "active": True,
+                    "taker": 0.001,
+                    "maker": 0.001,
                 }
                 try:
                     exchange.markets[sym] = m
@@ -1946,7 +2253,7 @@ def patch_exchange(exchange, exch_name: str = None):
                 except Exception as e:
                     if _debug:
                         try:
-                            logger.exception('stubex: suppressed exception: %s', e)
+                            logger.exception("stubex: suppressed exception: %s", e)
                         except Exception:
                             pass
                     pass
@@ -1955,7 +2262,7 @@ def patch_exchange(exchange, exch_name: str = None):
                 except Exception as e:
                     if _debug:
                         try:
-                            logger.exception('stubex: suppressed exception: %s', e)
+                            logger.exception("stubex: suppressed exception: %s", e)
                         except Exception:
                             pass
                     pass
@@ -1964,14 +2271,14 @@ def patch_exchange(exchange, exch_name: str = None):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
@@ -1979,21 +2286,21 @@ def patch_exchange(exchange, exch_name: str = None):
         # Try set has flags so ccxt feature detection picks them up
         try:
             if hasattr(exchange, "has") and exchange.has is not None:
-                for (nm, _) in mappings:
+                for nm, _ in mappings:
                     try:
                         # some exchanges expect snake_case keys in `has`
                         exchange.has[nm] = True
                     except Exception as e:
                         if _debug:
                             try:
-                                logger.exception('stubex: suppressed exception: %s', e)
+                                logger.exception("stubex: suppressed exception: %s", e)
                             except Exception:
                                 pass
                         pass
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
@@ -2006,7 +2313,7 @@ def patch_exchange(exchange, exch_name: str = None):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
@@ -2016,7 +2323,7 @@ def patch_exchange(exchange, exch_name: str = None):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
@@ -2027,14 +2334,14 @@ def patch_exchange(exchange, exch_name: str = None):
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
@@ -2042,21 +2349,44 @@ def patch_exchange(exchange, exch_name: str = None):
         # Attempt to wrap original watch* methods to catch AuthenticationError and return stub data
         try:
             import asyncio
-            from ccxt.base.errors import AuthenticationError, NotSupported, ExchangeNotAvailable, RequestTimeout, DDoSProtection
+            from ccxt.base.errors import (
+                AuthenticationError,
+                NotSupported,
+                ExchangeNotAvailable,
+                RequestTimeout,
+                DDoSProtection,
+            )
 
             def _make_wrapper(orig, nm):
                 if asyncio.iscoroutinefunction(orig):
+
                     async def awrap(*args, **kwargs):
                         try:
                             return await orig(*args, **kwargs)
                         except Exception as e:
                             # On authentication, unsupported, network or unknown-symbol errors return fallback stub
                             try:
-                                if isinstance(e, (AuthenticationError, NotSupported, ExchangeNotAvailable, RequestTimeout, DDoSProtection)) or e.__class__.__name__ in ('AuthenticationError','NotSupported','BadSymbol','ExchangeNotAvailable','RequestTimeout','DDoSProtection'):
+                                if isinstance(
+                                    e,
+                                    (
+                                        AuthenticationError,
+                                        NotSupported,
+                                        ExchangeNotAvailable,
+                                        RequestTimeout,
+                                        DDoSProtection,
+                                    ),
+                                ) or e.__class__.__name__ in (
+                                    "AuthenticationError",
+                                    "NotSupported",
+                                    "BadSymbol",
+                                    "ExchangeNotAvailable",
+                                    "RequestTimeout",
+                                    "DDoSProtection",
+                                ):
                                     ln = nm.lower()
-                                    if 'balance' in ln:
+                                    if "balance" in ln:
                                         return utils.generate_balance(exchange, None)
-                                    if 'position' in ln:
+                                    if "position" in ln:
                                         # args may contain symbols list
                                         symbols = None
                                         if len(args) > 0:
@@ -2069,104 +2399,145 @@ def patch_exchange(exchange, exch_name: str = None):
                                                 out.append(_make_position(s, exchange))
                                         except Exception:
                                             try:
-                                                out.append(_make_position(symbols, exchange))
+                                                out.append(
+                                                    _make_position(symbols, exchange)
+                                                )
                                             except Exception as e:
                                                 if _debug:
                                                     try:
-                                                        logger.exception('stubex: suppressed exception: %s', e)
+                                                        logger.exception(
+                                                            "stubex: suppressed exception: %s",
+                                                            e,
+                                                        )
                                                     except Exception:
                                                         pass
                                                 pass
                                         return out
-                                    if 'order' in ln and 'book' in ln:
+                                    if "order" in ln and "book" in ln:
                                         symbol = args[0] if len(args) > 0 else None
-                                        depth = kwargs.get('limit', None)
-                                        return utils.generate_orderbook(symbol, depth if depth is not None else 20)
-                                    if 'trade' in ln:
+                                        depth = kwargs.get("limit", None)
+                                        return utils.generate_orderbook(
+                                            symbol, depth if depth is not None else 20
+                                        )
+                                    if "trade" in ln:
                                         symbol = args[0] if len(args) > 0 else None
-                                        lim = kwargs.get('limit', 50)
+                                        lim = kwargs.get("limit", 50)
                                         return utils.generate_trades(symbol, lim)
-                                    if 'ticker' in ln:
+                                    if "ticker" in ln:
                                         symbol = args[0] if len(args) > 0 else None
                                         ohlcv = utils.generate_ohlcv(symbol, None, 1, 1)
                                         if not ohlcv:
                                             return {}
                                         last = ohlcv[-1]
                                         return {
-                                            'symbol': symbol,
-                                            'timestamp': last[0],
-                                            'datetime': None,
-                                            'high': last[2],
-                                            'low': last[3],
-                                            'bid': last[4],
-                                            'ask': last[4],
-                                            'open': last[1],
-                                            'close': last[4],
-                                            'last': last[4],
-                                            'baseVolume': last[5],
+                                            "symbol": symbol,
+                                            "timestamp": last[0],
+                                            "datetime": None,
+                                            "high": last[2],
+                                            "low": last[3],
+                                            "bid": last[4],
+                                            "ask": last[4],
+                                            "open": last[1],
+                                            "close": last[4],
+                                            "last": last[4],
+                                            "baseVolume": last[5],
                                         }
                             except Exception as e:
                                 if _debug:
                                     try:
-                                        logger.exception('stubex: suppressed exception: %s', e)
+                                        logger.exception(
+                                            "stubex: suppressed exception: %s", e
+                                        )
                                     except Exception:
                                         pass
                                 pass
                             raise
+
                     return awrap
                 else:
+
                     def swrap(*args, **kwargs):
                         try:
                             return orig(*args, **kwargs)
                         except Exception as e:
                             try:
-                                if isinstance(e, (AuthenticationError, NotSupported, ExchangeNotAvailable, RequestTimeout, DDoSProtection, TypeError)) or e.__class__.__name__ in ('AuthenticationError','NotSupported','BadSymbol','ExchangeNotAvailable','RequestTimeout','DDoSProtection','TypeError'):
+                                if isinstance(
+                                    e,
+                                    (
+                                        AuthenticationError,
+                                        NotSupported,
+                                        ExchangeNotAvailable,
+                                        RequestTimeout,
+                                        DDoSProtection,
+                                        TypeError,
+                                    ),
+                                ) or e.__class__.__name__ in (
+                                    "AuthenticationError",
+                                    "NotSupported",
+                                    "BadSymbol",
+                                    "ExchangeNotAvailable",
+                                    "RequestTimeout",
+                                    "DDoSProtection",
+                                    "TypeError",
+                                ):
                                     ln = nm.lower()
-                                    if 'balance' in ln:
+                                    if "balance" in ln:
                                         return utils.generate_balance(exchange, None)
-                                    if 'position' in ln:
+                                    if "position" in ln:
                                         return []
-                                    if 'order' in ln and 'book' in ln:
+                                    if "order" in ln and "book" in ln:
                                         symbol = args[0] if len(args) > 0 else None
-                                        depth = kwargs.get('limit', None)
-                                        return utils.generate_orderbook(symbol, depth if depth is not None else 20)
-                                    if 'trade' in ln:
+                                        depth = kwargs.get("limit", None)
+                                        return utils.generate_orderbook(
+                                            symbol, depth if depth is not None else 20
+                                        )
+                                    if "trade" in ln:
                                         symbol = args[0] if len(args) > 0 else None
-                                        lim = kwargs.get('limit', 50)
+                                        lim = kwargs.get("limit", 50)
                                         return utils.generate_trades(symbol, lim)
-                                    if 'ticker' in ln:
+                                    if "ticker" in ln:
                                         symbol = args[0] if len(args) > 0 else None
                                         ohlcv = utils.generate_ohlcv(symbol, None, 1, 1)
                                         if not ohlcv:
                                             return {}
                                         last = ohlcv[-1]
                                         return {
-                                            'symbol': symbol,
-                                            'timestamp': last[0],
-                                            'datetime': None,
-                                            'high': last[2],
-                                            'low': last[3],
-                                            'bid': last[4],
-                                            'ask': last[4],
-                                            'open': last[1],
-                                            'close': last[4],
-                                            'last': last[4],
-                                            'baseVolume': last[5],
+                                            "symbol": symbol,
+                                            "timestamp": last[0],
+                                            "datetime": None,
+                                            "high": last[2],
+                                            "low": last[3],
+                                            "bid": last[4],
+                                            "ask": last[4],
+                                            "open": last[1],
+                                            "close": last[4],
+                                            "last": last[4],
+                                            "baseVolume": last[5],
                                         }
                             except Exception as e:
                                 if _debug:
                                     try:
-                                        logger.exception('stubex: suppressed exception: %s', e)
+                                        logger.exception(
+                                            "stubex: suppressed exception: %s", e
+                                        )
                                     except Exception:
                                         pass
                                 pass
                             raise
+
                     return swrap
 
-            for (nm, fn) in mappings:
+            for nm, fn in mappings:
                 try:
                     orig = getattr(exchange, nm, None)
                     if orig is not None:
+                        # Skip wrapping if the method is already a stub (from stubex)
+                        try:
+                            mod = getattr(orig, "__module__", None)
+                            if mod and "stubex" in mod:
+                                continue
+                        except Exception:
+                            pass
                         wrapper = _make_wrapper(orig, nm)
                         try:
                             bound = types.MethodType(wrapper, exchange)
@@ -2177,14 +2548,16 @@ def patch_exchange(exchange, exch_name: str = None):
                             except Exception as e:
                                 if _debug:
                                     try:
-                                        logger.exception('stubex: suppressed exception: %s', e)
+                                        logger.exception(
+                                            "stubex: suppressed exception: %s", e
+                                        )
                                     except Exception:
                                         pass
                                 pass
                 except Exception as e:
                     if _debug:
                         try:
-                            logger.exception('stubex: suppressed exception: %s', e)
+                            logger.exception("stubex: suppressed exception: %s", e)
                         except Exception:
                             pass
                     pass
@@ -2193,75 +2566,97 @@ def patch_exchange(exchange, exch_name: str = None):
             # fallback stub data (e.g., for unknown symbols) even when the mapping above
             # did not include it.
             try:
-                orig_ft = getattr(exchange, 'fetch_ticker', None)
+                orig_ft = getattr(exchange, "fetch_ticker", None)
                 if orig_ft is not None:
-                    wrapper = _make_wrapper(orig_ft, 'fetch_ticker')
+                    # Skip wrapping if already a stub
                     try:
-                        bound = types.MethodType(wrapper, exchange)
-                        setattr(exchange, 'fetch_ticker', bound)
-                    except Exception:
-                        try:
-                            setattr(exchange, 'fetch_ticker', wrapper)
-                        except Exception as e:
-                            if _debug:
-                                try:
-                                    logger.exception('stubex: suppressed exception: %s', e)
-                                except Exception:
-                                    pass
+                        mod = getattr(orig_ft, "__module__", None)
+                        if mod and "stubex" in mod:
+                            # Already a stub method, no need to wrap
                             pass
+                        else:
+                            wrapper = _make_wrapper(orig_ft, "fetch_ticker")
+                            try:
+                                bound = types.MethodType(wrapper, exchange)
+                                setattr(exchange, "fetch_ticker", bound)
+                            except Exception:
+                                try:
+                                    setattr(exchange, "fetch_ticker", wrapper)
+                                except Exception as e:
+                                    if _debug:
+                                        try:
+                                            logger.exception(
+                                                "stubex: suppressed exception: %s", e
+                                            )
+                                        except Exception:
+                                            pass
+                                    pass
+                    except Exception:
+                        pass
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
+                    except Exception:
+                        pass
+                pass
+            except Exception as e:
+                if _debug:
+                    try:
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
             try:
-                orig_FT = getattr(exchange, 'fetchTicker', None)
+                orig_FT = getattr(exchange, "fetchTicker", None)
                 if orig_FT is not None:
-                    wrapper = _make_wrapper(orig_FT, 'fetchTicker')
+                    wrapper = _make_wrapper(orig_FT, "fetchTicker")
                     try:
                         bound = types.MethodType(wrapper, exchange)
-                        setattr(exchange, 'fetchTicker', bound)
+                        setattr(exchange, "fetchTicker", bound)
                     except Exception:
                         try:
-                            setattr(exchange, 'fetchTicker', wrapper)
+                            setattr(exchange, "fetchTicker", wrapper)
                         except Exception as e:
                             if _debug:
                                 try:
-                                    logger.exception('stubex: suppressed exception: %s', e)
+                                    logger.exception(
+                                        "stubex: suppressed exception: %s", e
+                                    )
                                 except Exception:
                                     pass
                             pass
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
         try:
             if _debug:
                 try:
-                    logger.debug("stubex: patch_exchange complete for exchange id=%s", ex_id)
+                    logger.debug(
+                        "stubex: patch_exchange complete for exchange id=%s", ex_id
+                    )
                 except Exception as e:
                     if _debug:
                         try:
-                            logger.exception('stubex: suppressed exception: %s', e)
+                            logger.exception("stubex: suppressed exception: %s", e)
                         except Exception:
                             pass
                     pass
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
@@ -2287,10 +2682,10 @@ def make_patched_instance(*args, **kwargs):
         exc_cls = None
         params = None
         # prefer explicit kwargs
-        if 'exc_cls' in kwargs:
-            exc_cls = kwargs.get('exc_cls')
-        if 'params' in kwargs:
-            params = kwargs.get('params')
+        if "exc_cls" in kwargs:
+            exc_cls = kwargs.get("exc_cls")
+        if "params" in kwargs:
+            params = kwargs.get("params")
         # handle positional args
         if exc_cls is None:
             if len(args) == 0:
@@ -2300,7 +2695,7 @@ def make_patched_instance(*args, **kwargs):
             else:
                 # Common patterns: (exc_cls, params) or (self, exc_cls, params)
                 # Heuristic: if first arg looks like a module/object (no __name__), assume it's bound and take last two
-                if hasattr(args[0], '__name__') and isinstance(args[0], type):
+                if hasattr(args[0], "__name__") and isinstance(args[0], type):
                     # (exc_cls, params)
                     exc_cls = args[0]
                     params = args[1] if len(args) > 1 else None
@@ -2308,8 +2703,24 @@ def make_patched_instance(*args, **kwargs):
                     # assume (self, exc_cls, params) -> take the last two
                     exc_cls = args[-2]
                     params = args[-1]
+        # If exc_cls is a string, look it up in ccxt
+        if isinstance(exc_cls, str):
+            try:
+                exc_cls = getattr(ccxt, exc_cls)
+            except AttributeError:
+                # If not found in ccxt, fall back to using the string as class name (will fail later)
+                cls_name = f"Patched{exc_cls}"
+                Patched = type(cls_name, (object,), {})()
+                logger.warning(
+                    f"Could not find {exc_cls} in ccxt, using fallback class"
+                )
+                try:
+                    inst = Patched() if params is None else Patched(params)
+                    return inst
+                except Exception:
+                    return None
         # Proceed to create patched subclass
-        cls_name = getattr(exc_cls, '__name__', 'PatchedExchange')
+        cls_name = getattr(exc_cls, "__name__", "PatchedExchange")
         Patched = type(f"Patched{cls_name}", (exc_cls,), {})
         mappings = [
             ("fetch_ohlcv", fetch_ohlcv),
@@ -2318,6 +2729,8 @@ def make_patched_instance(*args, **kwargs):
             ("fetchOrderBook", fetch_order_book),
             ("fetch_trades", fetch_trades),
             ("fetchTrades", fetch_trades),
+            ("fetch_ticker", fetch_ticker),
+            ("fetchTicker", fetch_ticker),
             ("fetch_order_trades", fetch_order_trades),
             ("fetchOrderTrades", fetch_order_trades),
             ("fetchOrderTradesWs", fetch_order_trades),
@@ -2363,25 +2776,27 @@ def make_patched_instance(*args, **kwargs):
             ("fetch_funding_rate_history", fetch_funding_rate_history),
             ("loadMarkets", fetch_orders),
         ]
-        for (nm, fn) in mappings:
+        for nm, fn in mappings:
             try:
                 setattr(Patched, nm, fn)
             except Exception as e:
                 if _debug:
                     try:
-                        logger.exception('stubex: suppressed exception: %s', e)
+                        logger.exception("stubex: suppressed exception: %s", e)
                     except Exception:
                         pass
                 pass
         try:
             setattr(Patched, "fetch_tickers", fetch_tickers)
             setattr(Patched, "fetchTickers", fetch_tickers)
+            setattr(Patched, "fetch_ticker", fetch_ticker)
+            setattr(Patched, "fetchTicker", fetch_ticker)
             setattr(Patched, "fetch_currencies", fetch_currencies)
             setattr(Patched, "fetchCurrencies", fetch_currencies)
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
@@ -2392,13 +2807,17 @@ def make_patched_instance(*args, **kwargs):
             setattr(Patched, "load_markets", load_markets_impl)
             setattr(Patched, "fetchFundingRate", fetch_funding_rate_async)
             setattr(Patched, "fetchFundingRates", fetch_funding_rates_async)
-            setattr(Patched, "fetchFundingRateHistory", fetch_funding_rate_history_async)
-            setattr(Patched, "fetchMarketLeverageTiers", fetch_market_leverage_tiers_async)
+            setattr(
+                Patched, "fetchFundingRateHistory", fetch_funding_rate_history_async
+            )
+            setattr(
+                Patched, "fetchMarketLeverageTiers", fetch_market_leverage_tiers_async
+            )
             setattr(Patched, "fetchLeverage", fetch_leverage_async)
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
@@ -2423,7 +2842,7 @@ def make_patched_instance(*args, **kwargs):
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
@@ -2431,16 +2850,20 @@ def make_patched_instance(*args, **kwargs):
     except Exception:
         # fallback to normal instantiation and patching (best effort)
         try:
-            inst = args[0]() if len(args) > 0 and len(args) == 1 and kwargs == {} else (args[0]() if len(args) > 0 else None)
+            inst = (
+                args[0]()
+                if len(args) > 0 and len(args) == 1 and kwargs == {}
+                else (args[0]() if len(args) > 0 else None)
+            )
         except Exception:
             try:
-                inst = exc_cls() if 'exc_cls' in locals() else None
+                inst = exc_cls() if "exc_cls" in locals() else None
             except Exception:
                 inst = None
         if inst is None:
             try:
                 # try classic instantiation using kwargs
-                inst = exc_cls() if 'exc_cls' in locals() else None
+                inst = exc_cls() if "exc_cls" in locals() else None
             except Exception:
                 inst = None
         try:
@@ -2449,7 +2872,7 @@ def make_patched_instance(*args, **kwargs):
         except Exception as e:
             if _debug:
                 try:
-                    logger.exception('stubex: suppressed exception: %s', e)
+                    logger.exception("stubex: suppressed exception: %s", e)
                 except Exception:
                     pass
             pass
