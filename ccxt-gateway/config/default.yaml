@@ -1,0 +1,49 @@
+# ccxt-gateway default configuration
+
+server:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+  use_ssl: false
+  ssl_cert: null
+  ssl_key: null
+  # Use granian for higher performance (pip install ccxt-gateway[server])
+  use_granian: false
+
+zmq:
+  # Main broker address (for main process to communicate with subprocesses)
+  broker_address: "tcp://127.0.0.1:5555"
+  # Subprocess connect to this address
+  subprocess_connect: "tcp://127.0.0.1:5555"
+  # High water mark for ZMQ (prevent memory issues)
+  high_water_mark: 1000
+  # Timeout for request-reply (ms)
+  timeout_ms: 30000
+
+process_manager:
+  # Maximum RSS per exchange subprocess (in MB)
+  max_rss_mb: 512
+  # Interval to check memory usage (seconds)
+  check_interval: 30
+  # Auto-restart subprocesses on memory limit or crash
+  auto_restart: true
+  # Maximum restarts per hour per exchange
+  max_restarts_per_hour: 5
+  # Subprocess startup timeout (seconds)
+  startup_timeout: 30
+
+update:
+  # Check for ccxt updates interval (hours, 0 to disable)
+  check_interval_hours: 24
+  # Auto-update ccxt when new version available
+  auto_update: false
+  # PyPI package name for ccxt
+  pypi_package: "ccxt"
+
+exchanges:
+  # Default settings for exchange instances
+  default_enable_rate_limit: true
+  # Timeout for exchange API calls (ms)
+  default_timeout: 30000
+  # Enable verbose logging per exchange
+  default_verbose: false
