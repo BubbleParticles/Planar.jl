@@ -184,7 +184,7 @@ uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 version = "0.10.16"
 
 [[deps.Ccxt]]
-deps = ["Misc", "PrecompileTools", "Python"]
+deps = ["HTTP", "JSON3", "Misc", "OrderedCollections", "PrecompileTools", "Python"]
 path = "../Ccxt"
 uuid = "a58c4053-12c5-4e22-b66a-82c3bd74bf8a"
 version = "0.1.0"
