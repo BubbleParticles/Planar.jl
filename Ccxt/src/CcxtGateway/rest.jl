@@ -2,6 +2,7 @@ module Rest
 
 using HTTP
 using JSON3
+using MbedTLS
 using OrderedCollections
 using ..Types
 
@@ -17,7 +18,6 @@ const _http_get = Ref{Function}(HTTP.get)
 const _http_post = Ref{Function}(HTTP.post)
 const _http_delete = Ref{Function}(HTTP.delete)
 
-# Setter functions for testing
 export set_http_get!, set_http_post!, set_http_delete!
 
 set_http_get!(f::Function) = (_http_get[] = f)
@@ -26,6 +26,11 @@ set_http_delete!(f::Function) = (_http_delete[] = f)
 
 const DEFAULT_HOST = "localhost"
 const DEFAULT_PORT = 8999
+const CERT_DIR = joinpath(@__DIR__, "..", "..", "certs")
+const DEFAULT_CRT = joinpath(CERT_DIR, "server.crt")
+const DEFAULT_KEY = joinpath(CERT_DIR, "server.key")
+
+_load_ssl_config(crt::String, key::String) = MbedTLS.SSLConfig(crt, key)
 
 mutable struct GatewayClient
     host::String
@@ -33,17 +38,23 @@ mutable struct GatewayClient
     base_url::String
     timeout::Float64
     use_ssl::Bool
+    ssl_config::Union{MbedTLS.SSLConfig, Nothing}
     
     function GatewayClient(;
         host::String=DEFAULT_HOST,
         port::Int=DEFAULT_PORT,
         timeout::Float64=30.0,
         use_ssl::Bool=true,
+        ssl_cert::Union{String, Nothing}=nothing,
+        ssl_key::Union{String, Nothing}=nothing,
     )
         if use_ssl
-            new(host, port, "https://$host:$port", timeout, true)
+            crt = ssl_cert !== nothing ? ssl_cert : DEFAULT_CRT
+            key = ssl_key !== nothing ? ssl_key : DEFAULT_KEY
+            ssl_cfg = isfile(crt) && isfile(key) ? _load_ssl_config(crt, key) : nothing
+            new(host, port, "https://$host:$port", timeout, true, ssl_cfg)
         else
-            new(host, port, "http://$host:$port", timeout, false)
+            new(host, port, "http://$host:$port", timeout, false, nothing)
         end
     end
 end
@@ -71,7 +82,11 @@ function make_request(client::GatewayClient, method::String, path::String;
     kw[:timeout] = client.timeout
     if client.use_ssl
         kw[:ssl] = true
-        kw[:require_ssl_verification] = false
+        if client.ssl_config !== nothing
+            kw[:sslconfig] = client.ssl_config
+        else
+            kw[:require_ssl_verification] = false
+        end
     end
     
     if query !== nothing
