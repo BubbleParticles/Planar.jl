@@ -1,16 +1,8 @@
+authors = [""]
+data_store = ""
 name = "Planar"
 uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 version = "1.6.11"
-authors = [""]
-data_store = ""
-
-[deps]
-Engine = "2ee4d486-7c03-4138-87ff-17a01ae58543"
-MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
-Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
-Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-Remote = "711acd30-27b5-475d-809f-796ffbe15f78"
 
 [compat]
 Engine = "0.1"
@@ -22,8 +14,17 @@ Remote = "0.1"
 SnoopPrecompile = "1.0"
 julia = "1.12"
 
+[deps]
+Engine = "2ee4d486-7c03-4138-87ff-17a01ae58543"
+MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Remote = "711acd30-27b5-475d-809f-796ffbe15f78"
+
 [extras]
 Data = "934a4ae5-3fdb-4fa4-b6dd-2cd889d3d27b"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 SnoopPrecompile = "66db9d55-30c0-4569-8b51-7e840670fc0c"
 
 [preferences.Data]

@@ -294,17 +294,21 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
         end
     end
     
-    # Use shell script to start gateway with proper venv activation
-    script = joinpath(@__DIR__, "..", "..", "start_gateway.sh")
-    if !isfile(script)
-        error("Gateway start script not found: $script")
+    # Find the daemon script
+    daemon_script = joinpath(@__DIR__, "..", "..", "..", "ccxt-gateway", "daemon_gateway.py")
+    if !isfile(daemon_script)
+        error("Gateway daemon script not found: $daemon_script")
     end
     
-    # Run the shell script in background
-    run(`bash $script`, wait=false)
+    # Find the venv python
+    venv_python = joinpath(@__DIR__, "..", "..", "..", "ccxt-gateway", ".venv", "bin", "python")
+    python_cmd = isfile(venv_python) ? venv_python : "python3"
+    
+    # Run the daemon script
+    run(`$python_cmd $daemon_script`, wait=false)
     sleep(3)
     
-    # Read the actual gateway PID from the pidfile
+    # Read the PID from the pidfile
     pidfile = "/tmp/ccxt_gateway.pid"
     if isfile(pidfile)
         pid = parse(Int, strip(read(pidfile, String)))
