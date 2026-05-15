@@ -7,8 +7,8 @@ class TestConfig:
     def test_server_config(self):
         c = ServerConfig()
         assert c.host == "0.0.0.0"
-        assert c.port == 8000
+        assert c.port == 8999
 
     def test_settings(self):
         s = Settings()
-        assert s.server.port == 8000
+        assert s.server.port == 8999

@@ -2,12 +2,14 @@
 
 import asyncio
 import logging
+import os
+import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any, Dict, Optional
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
 from ccxt_gateway.config import settings
 from ccxt_gateway.core.zmq_broker import ZMQBroker
@@ -18,6 +20,48 @@ from ccxt_gateway.api.admin import router as admin_router
 from ccxt_gateway.utils.updates import UpdateChecker
 
 logger: logging.Logger = logging.getLogger(__name__)
+
+# Idle shutdown tracking
+_last_request_time: float = time.time()
+_idle_task: Optional[asyncio.Task[None]] = None
+PIDFILE: str = settings.idle.pidfile_path
+
+
+async def _idle_monitor(app: FastAPI) -> None:
+    """Monitor for idle timeout and shut down if exceeded."""
+    timeout_seconds: float = settings.idle.timeout_minutes * 60.0
+    while True:
+        await asyncio.sleep(30)
+        elapsed: float = time.time() - _last_request_time
+        if elapsed >= timeout_seconds:
+            logger.info(
+                "Idle timeout reached (%.1f min), shutting down...",
+                elapsed / 60.0,
+            )
+            os.remove(PIDFILE)
+            app.state.shutdown_requested = True
+            # Trigger shutdown via lifespan
+            for handler in app.router.lifespan:
+                if hasattr(handler, "__call__"):
+                    pass
+            # Fastest way: just exit
+            import sys
+            sys.exit(0)
+
+
+async def _write_pidfile() -> None:
+    """Write the PID file."""
+    with open(PIDFILE, "w") as f:
+        f.write(str(os.getpid()))
+
+
+def _remove_pidfile() -> None:
+    """Remove the PID file."""
+    try:
+        if os.path.exists(PIDFILE):
+            os.remove(PIDFILE)
+    except OSError:
+        pass
 
 
 @asynccontextmanager
@@ -54,21 +98,27 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.broker = broker
     app.state.process_manager = process_manager
     app.state.update_checker = update_checker
+    app.state.shutdown_requested = False
 
-    logger.info("ccxt-gateway started successfully")
+    # Write PID file
+    await _write_pidfile()
+
+    # Start idle monitor
+    global _idle_task
+    _idle_task = asyncio.create_task(_idle_monitor(app))
+
+    logger.info("ccxt-gateway started successfully (idle timeout: %d min)", settings.idle.timeout_minutes)
 
     yield
 
     # Shutdown
     logger.info("Shutting down ccxt-gateway...")
+    _remove_pidfile()
+    if _idle_task and not _idle_task.done():
+        _idle_task.cancel()
 
-    # Stop update checker
     await update_checker.stop()
-
-    # Stop process manager (which will stop all exchange processes)
     await process_manager.stop()
-
-    # Stop broker
     await broker.stop()
 
     logger.info("ccxt-gateway stopped")
@@ -81,6 +131,14 @@ app: FastAPI = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+# Touch middleware to update last-request time on every request
+@app.middleware("http")
+async def _touch_last_request(request: Request, call_next: Any) -> Any:
+    global _last_request_time
+    _last_request_time = time.time()
+    response = await call_next(request)
+    return response
 
 app.include_router(rest_router, prefix="/exchanges", tags=["exchanges"])
 app.include_router(ws_router, tags=["websocket"])
@@ -108,6 +166,12 @@ async def health() -> Dict[str, str]:
     return {"status": "healthy"}
 
 
+@app.get("/ping")
+async def ping() -> Dict[str, str]:
+    """Ping endpoint."""
+    return {"status": "pong"}
+
+
 def main() -> None:
     """Entry point."""
     import sys
@@ -120,14 +184,22 @@ def main() -> None:
     except ImportError:
         pass
 
+    # Build uvicorn kwargs
+    uvicorn_kwargs = {
+        "app": app,
+        "host": settings.server.host,
+        "port": settings.server.port,
+        "log_level": "info",
+        "loop": "uvloop" if "uvloop" in sys.modules else "auto",
+    }
+
+    # Add SSL if configured
+    if settings.server.use_ssl and settings.server.ssl_cert and settings.server.ssl_key:
+        uvicorn_kwargs["ssl_keyfile"] = settings.server.ssl_key
+        uvicorn_kwargs["ssl_certfile"] = settings.server.ssl_cert
+
     # Run with uvicorn
-    uvicorn.run(
-        app,
-        host=settings.server.host,
-        port=settings.server.port,
-        log_level="info",
-        loop="uvloop" if "uvloop" in sys.modules else "auto",
-    )
+    uvicorn.run(**uvicorn_kwargs)
 
 
 if __name__ == "__main__":

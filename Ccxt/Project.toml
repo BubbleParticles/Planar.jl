@@ -1,9 +1,25 @@
+authors = ["zbc"]
 name = "Ccxt"
 uuid = "a58c4053-12c5-4e22-b66a-82c3bd74bf8a"
-authors = ["zbc"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+MbedTLS = "739be429-bea8-5141-9913-cc70e7f3736d"
 Misc = "ff97321b-aa60-4104-8cd6-2e42973349ab"
+OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
+WebSockets = "104b5d7c-a370-577a-8038-80a2059c5097"
+
+[extensions]
+CcxtPythonExt = "Python"
+
+[extras]
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+
+[test]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[weakdeps]
 Python = "e8cdc95d-7257-4c38-ab0e-cc8a28c19776"

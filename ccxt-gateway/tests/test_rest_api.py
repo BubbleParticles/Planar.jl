@@ -161,3 +161,60 @@ class TestRestAPIExtended:
 
         response = client.get("/exchanges/binance/fetch_ticker")
         assert response.status_code == 500
+
+    def test_call_exchange_process_dead_restart_and_retry(self, setup):
+        """Test calling method on dead subprocess triggers restart and retries."""
+        client, mock_broker, mock_pm = setup
+
+        mock_proc = MagicMock()
+        mock_proc.is_running = False
+        mock_pm.processes = {"binance": mock_proc}
+        mock_pm.restart_exchange = AsyncMock(return_value=True)
+
+        mock_response = json.dumps({
+            "type": "response",
+            "id": "test-id",
+            "result": {"last": 50000}
+        }).encode()
+        mock_broker.send_request = AsyncMock(return_value=mock_response)
+        mock_broker.exchange_identities = {"binance": b"identity"}
+
+        response = client.get("/exchanges/binance/fetch_ticker?symbol=BTC/USDT")
+        assert response.status_code == 200
+        mock_pm.restart_exchange.assert_awaited_once_with("binance")
+        mock_broker.send_request.assert_awaited_once()
+
+    def test_call_exchange_process_dead_restart_fails(self, setup):
+        """Test calling method on dead subprocess when restart fails."""
+        client, mock_broker, mock_pm = setup
+
+        mock_proc = MagicMock()
+        mock_proc.is_running = False
+        mock_pm.processes = {"binance": mock_proc}
+        mock_pm.restart_exchange = AsyncMock(return_value=False)
+
+        response = client.get("/exchanges/binance/fetch_ticker")
+        assert response.status_code == 503
+        data = response.json()
+        assert "restart" in data["detail"].lower()
+
+    def test_call_exchange_process_alive_no_restart(self, setup):
+        """Test calling method on healthy subprocess does NOT trigger restart."""
+        client, mock_broker, mock_pm = setup
+
+        mock_proc = MagicMock()
+        mock_proc.is_running = True
+        mock_pm.processes = {"binance": mock_proc}
+        mock_pm.restart_exchange = AsyncMock(return_value=True)
+
+        mock_response = json.dumps({
+            "type": "response",
+            "id": "test-id",
+            "result": {"last": 50000}
+        }).encode()
+        mock_broker.send_request = AsyncMock(return_value=mock_response)
+        mock_broker.exchange_identities = {"binance": b"identity"}
+
+        response = client.get("/exchanges/binance/fetch_ticker")
+        assert response.status_code == 200
+        mock_pm.restart_exchange.assert_not_called()

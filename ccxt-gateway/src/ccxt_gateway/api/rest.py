@@ -105,6 +105,34 @@ async def get_exchange_status(
     }
 
 
+@router.get("/{exchange_id}/has")
+async def get_exchange_has(
+    exchange_id: str,
+    process_manager: Any = Depends(get_process_manager),
+    broker: Any = Depends(get_broker),
+) -> Dict[str, bool]:
+    """Get the .has dict for an exchange (supported methods)."""
+    if exchange_id not in process_manager.processes:
+        raise HTTPException(status_code=404, detail=f"Exchange {exchange_id} not found")
+
+    request_msg: bytes = create_request(method="has", exchange_id=exchange_id)
+    response_bytes: Optional[bytes] = await broker.send_request(exchange_id, request_msg)
+
+    if not response_bytes:
+        raise HTTPException(status_code=504, detail="No response from exchange subprocess")
+
+    response: Dict[str, Any] = parse_message(response_bytes)
+
+    if response.get("error"):
+        raise HTTPException(
+            status_code=500,
+            detail={"error": response["error"], "error_code": response.get("error_code")},
+        )
+
+    result: Dict[str, bool] = response.get("result", {})
+    return result
+
+
 @router.api_route("/{exchange_id}/{method}", methods=["GET", "POST"])
 async def call_exchange_method(
     exchange_id: str,
@@ -114,9 +142,20 @@ async def call_exchange_method(
     process_manager: Any = Depends(get_process_manager),
     broker: Any = Depends(get_broker),
 ) -> Any:
-    """Call a CCXT method on an exchange instance."""
+    """Call a CCXT method on an exchange instance.
+    
+    If the exchange subprocess has crashed, it will be restarted automatically
+    and the request will be retried.
+    """
     if exchange_id not in process_manager.processes:
         raise HTTPException(status_code=404, detail=f"Exchange {exchange_id} not found")
+
+    # Check if subprocess is still alive; restart if dead
+    if not process_manager.processes[exchange_id].is_running:
+        logger.warning("Exchange %s subprocess dead, restarting...", exchange_id)
+        success: bool = await process_manager.restart_exchange(exchange_id)
+        if not success:
+            raise HTTPException(status_code=503, detail=f"Failed to restart exchange {exchange_id}")
 
     # Prepare params from query (GET) or body (POST)
     if request.method == "GET":
@@ -150,3 +189,6 @@ async def call_exchange_method(
         )
 
     return response.get("result")
+
+
+

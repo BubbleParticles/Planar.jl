@@ -1,0 +1,286 @@
+module Rest
+
+using HTTP
+using JSON3
+using MbedTLS
+using OrderedCollections
+using ..Types
+
+export GatewayClient
+export start_exchange, stop_exchange, exchange_has
+export call_exchange
+export list_exchanges, exchange_info, server_info, memory_usage, ping, spawn_gateway
+export gateway_pid, stop_gateway, restart_gateway
+
+# Injectable HTTP functions (for testing/mocking)
+const _http_get = Ref{Function}(HTTP.get)
+const _http_post = Ref{Function}(HTTP.post)
+const _http_delete = Ref{Function}(HTTP.delete)
+
+# Setter functions for testing
+export set_http_get!, set_http_post!, set_http_delete!
+
+set_http_get!(f::Function) = (_http_get[] = f)
+set_http_post!(f::Function) = (_http_post[] = f)
+set_http_delete!(f::Function) = (_http_delete[] = f)
+
+const DEFAULT_HOST = "localhost"
+const DEFAULT_PORT = 8999
+const CERT_DIR = joinpath(@__DIR__, "..", "..", "certs")
+
+const _server_crt = joinpath(CERT_DIR, "server.crt")
+const _server_key = joinpath(CERT_DIR, "server.key")
+
+_load_ssl_config() = MbedTLS.SSLConfig(_server_crt, _server_key)
+
+mutable struct GatewayClient
+    host::String
+    port::Int
+    base_url::String
+    timeout::Float64
+    ssl_config::Union{MbedTLS.SSLConfig, Nothing}
+    use_ssl::Bool
+    
+    function GatewayClient(;
+        host::String=DEFAULT_HOST,
+        port::Int=DEFAULT_PORT,
+        timeout::Float64=30.0,
+        use_ssl::Bool=true,
+    )
+        if use_ssl
+            ssl_cfg = _load_ssl_config()
+            new(host, port, "https://$host:$port", timeout, ssl_cfg, true)
+        else
+            new(host, port, "http://$host:$port", timeout, nothing, false)
+        end
+    end
+Base.show(io::IO, client::GatewayClient) = print(io, "GatewayClient($(client.host):$(client.port))")
+
+function build_url(client::GatewayClient, path::String)
+    join([client.base_url, path], '/')
+end
+
+function make_request(client::GatewayClient, method::String, path::String; 
+    query=nothing, body=nothing, kwargs...)
+    url = build_url(client, path)
+    
+    headers = Pair{String, String}[]
+    push!(headers, "Content-Type" => "application/json")
+    push!(headers, "Accept" => "application/json")
+    
+    kw = Dict{Symbol, Any}()
+    kw[:timeout] = client.timeout
+    if client.use_ssl && client.ssl_config !== nothing
+        # Use insecure=true for self-signed certs (simpler than MbedTLS config)
+        kw[:insecure] = true
+    end
+    
+    if query !== nothing
+        kw[:query] = query
+    end
+    
+    if body !== nothing
+        kw[:body] = JSON3.write(body)
+    end
+    
+    if method == "GET"
+        resp = _http_get[](url; kw...)
+    elseif method == "POST"
+        resp = _http_post[](url; headers=headers, kw...)
+    elseif method == "DELETE"
+        if body !== nothing
+            resp = _http_delete[](url; headers=headers, kw...)
+        else
+            resp = _http_delete[](url; kw...)
+        end
+    else
+        error("Unsupported method: $method")
+    end
+    
+    resp
+end
+
+function make_request(client::GatewayClient, method::String, path::String, exchange_id::String; 
+    query=nothing, body=nothing)
+    full_path = replace(path, "{exchange_id}" => exchange_id)
+    make_request(client, method, full_path; query, body)
+end
+
+function check_response(resp::HTTP.Response)::GatewayResponse
+    parsed = parse_response(resp)
+    if has_error(parsed)
+        err_msg = parsed.error !== nothing ? parsed.error : parsed.error_code
+        error("Gateway error: $err_msg")
+    end
+    parsed
+end
+
+function get_data(resp::HTTP.Response)
+    parsed = check_response(resp)
+    get_result(parsed)
+end
+
+function api_call(client::GatewayClient, method::String, path::String, exchange_id::String; 
+    query=nothing, body=nothing)
+    resp = make_request(client, method, path, exchange_id; query, body)
+    get_data(resp)
+end
+
+function api_call(client::GatewayClient, method::String, path::String; 
+    query=nothing, body=nothing)
+    resp = make_request(client, method, path; query, body)
+    get_data(resp)
+end
+
+function call_exchange(client::GatewayClient, exchange_id::String, ccxt_method::String; 
+    query=nothing, body=nothing)
+    path = "/$exchange_id/$ccxt_method"
+    req_method = (ccxt_method ∈ ("createOrder", "cancelOrder", "withdraw")) ? "POST" : "GET"
+    api_call(client, req_method, path; query, body)
+end
+
+function start_exchange(client::GatewayClient, exchange_id::String; 
+    exchange_name=exchange_id, api_key="", secret="", password="", uid="")
+    body = Dict{String, Any}()
+    body["exchange_name"] = exchange_name
+    if !isempty(api_key)
+        body["api_key"] = api_key
+    end
+    if !isempty(secret)
+        body["secret"] = secret
+    end
+    if !isempty(password)
+        body["password"] = password
+    end
+    if !isempty(uid)
+        body["uid"] = uid
+    end
+    api_call(client, "POST", "/$exchange_id"; body=body)
+end
+
+function stop_exchange(client::GatewayClient, exchange_id::String)
+    api_call(client, "DELETE", "/$exchange_id")
+end
+
+function list_exchanges(client::GatewayClient)
+    api_call(client, "GET", "/admin/exchanges")
+end
+
+function exchange_info(client::GatewayClient, exchange_id::String)
+    api_call(client, "GET", "/$exchange_id/status")
+end
+
+function exchange_has(client::GatewayClient, exchange_id::String, method::String)
+    info = exchange_info(client, exchange_id)
+    if info === nothing
+        return false
+    end
+    has = get(info, "has", nothing)
+    if has === nothing
+        return false
+    end
+    get(has, method, false)
+end
+
+function server_info(client::GatewayClient)
+    api_call(client, "GET", "/admin/info")
+end
+
+function ping(client::GatewayClient)
+    try
+        # Use make_request which properly handles SSL
+        resp = make_request(client, "GET", "/ping")
+        return resp.status == 200
+    catch e
+        # Don't try to spawn gateway during precompilation
+        false
+    end
+end
+
+function memory_usage(client::GatewayClient)
+    api_call(client, "GET", "/admin/memory")
+end
+
+function restart_exchange(client::GatewayClient, exchange_id::String)
+    resp = make_request(client, "POST", "/admin/exchanges/{exchange_id}/restart", exchange_id)
+    get_data(resp)
+end
+
+const _default_client = Ref{GatewayClient}()
+const _gateway_pid = Ref{Union{Int, Nothing}}(nothing)
+
+function default_client()
+    if !isassigned(_default_client)
+        _default_client[] = GatewayClient()
+    end
+    _default_client[]
+end
+
+function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
+    # Check if gateway is already running (pid must be > 1)
+    if isassigned(_gateway_pid) && _gateway_pid[] !== nothing && _gateway_pid[] > 1
+        pid = _gateway_pid[]
+        try
+            run(`kill -0 $pid`)
+            return pid
+        catch
+        end
+    end
+    
+    # Use shell script to start gateway with proper venv activation
+    script = joinpath(@__DIR__, "..", "..", "start_gateway.sh")
+    if !isfile(script)
+        error("Gateway start script not found: $script")
+    end
+    
+    # Run the shell script in background
+    run(`bash $script`, wait=false)
+    
+    # Placeholder - actual pid tracking would need process lookup
+    _gateway_pid[] = 1
+    sleep(3)
+    _gateway_pid[]
+end
+
+function gateway_pid()
+    if !isassigned(_gateway_pid) || _gateway_pid[] === nothing
+        try
+            return spawn_gateway()
+        catch
+            nothing
+        end
+    end
+    _gateway_pid[]
+end
+
+function stop_gateway()
+    if isassigned(_gateway_pid) && _gateway_pid[] !== nothing
+        pid = _gateway_pid[]
+        try
+            run(`kill $pid`)
+            _gateway_pid[] = nothing
+        catch
+        end
+    end
+end
+
+function restart_gateway()
+    stop_gateway()
+    sleep(1)
+    spawn_gateway()
+end
+
+function set_default_client!(client::GatewayClient)
+    _default_client[] = client
+end
+
+for fname in (:call_exchange, :start_exchange, :stop_exchange, :exchange_has, 
+    :list_exchanges, :exchange_info, :server_info, :memory_usage, :restart_exchange, :ping)
+    @eval begin
+        ($fname)(args...; kwargs...) = ($fname)(default_client(), args...; kwargs...)
+    end
+end
+
+const RestClient = GatewayClient
+
+end # module Rest

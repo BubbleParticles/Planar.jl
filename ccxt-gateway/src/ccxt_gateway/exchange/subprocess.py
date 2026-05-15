@@ -173,6 +173,15 @@ class ExchangeSubprocess:
             if not self.exchange:
                 raise RuntimeError("Exchange not initialized")
 
+            # Special case: return the .has dict directly (not a callable method)
+            if method == "has":
+                raw: Any = self.exchange.has
+                result: Dict[str, Any] = dict(raw) if hasattr(raw, "items") else {}
+                serializable_result = self._make_serializable(result)
+                response = create_response(request_id, result=serializable_result)
+                await self.socket.send_multipart([b"", response])
+                return
+
             # Get the method from CCXT
             if not hasattr(self.exchange, method):
                 raise AttributeError(f"Method {method} not found on exchange {self.exchange_name}")
