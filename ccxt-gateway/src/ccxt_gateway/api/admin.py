@@ -118,6 +118,40 @@ async def get_stats(
     }
 
 
+@router.get("/info")
+async def get_info(request: Request) -> Dict[str, Any]:
+    """Get gateway server info."""
+    import time
+    start_time: float = getattr(request.app.state, "start_time", time.time())
+    uptime: float = time.time() - start_time
+    return {
+        "result": {
+            "status": "running",
+            "version": "0.1.0",
+            "uptime_seconds": round(uptime, 2),
+            "python_version": __import__("sys").version,
+        },
+        "error": None,
+        "error_code": None,
+    }
+
+
+@router.get("/memory")
+async def get_memory(
+    process_manager: Any = Depends(get_process_manager),
+) -> Dict[str, Any]:
+    """Get memory usage."""
+    total_memory: float = sum(p.rss_mb for p in process_manager.processes.values())
+    return {
+        "result": {
+            "total_memory_mb": round(total_memory, 2),
+            "exchange_count": len(process_manager.processes),
+        },
+        "error": None,
+        "error_code": None,
+    }
+
+
 @router.post("/update/ccxt")
 async def trigger_ccxt_update(
     broker: Any = Depends(get_broker),
@@ -166,3 +200,37 @@ async def check_ccxt_update(
         "current_version": current,
         "latest_version": latest,
     }
+
+
+@router.get("/errors")
+async def list_errors(
+    broker: Any = Depends(get_broker),
+) -> Dict[str, Any]:
+    """List all ccxt error names."""
+    try:
+        import ccxt
+        from ccxt.base.errors import ExchangeError, NetworkError, AuthenticationError, PermissionError, RequestTimeout, ExchangeNotAvailable, NotSupported, OperationFailed, BaseError
+        
+        error_names = [
+            "BaseError",
+            "ExchangeError", 
+            "NetworkError",
+            "AuthenticationError",
+            "PermissionError",
+            "RequestTimeout",
+            "ExchangeNotAvailable",
+            "NotSupported",
+            "OperationFailed",
+        ]
+        
+        return {
+            "result": error_names,
+            "error": None,
+            "error_code": None,
+        }
+    except Exception as e:
+        return {
+            "result": None,
+            "error": str(e),
+            "error_code": "ERROR_LIST_FAILED",
+        }

@@ -36,7 +36,7 @@ class TestServerConfig:
         """Test default values are set correctly."""
         config = ServerConfig()
         assert config.host == "0.0.0.0"
-        assert config.port == 8000
+        assert config.port == 8999
         assert config.debug is False
         assert config.use_ssl is False
         assert config.use_granian is False
@@ -59,7 +59,7 @@ class TestSettings:
     def test_init_without_yaml(self):
         """Test initialization without YAML file."""
         settings = Settings()
-        assert settings.server.port == 8000
+        assert settings.server.port == 8999
         assert settings.zmq.broker_address == "tcp://127.0.0.1:5555"
 
     def test_init_with_yaml(self, tmp_path):

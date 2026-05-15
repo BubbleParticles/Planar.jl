@@ -14,7 +14,7 @@ class ServerConfig(BaseSettings):
     model_config = {"env_prefix": "CCXT_GATEWAY_SERVER_"}
 
     host: str = "0.0.0.0"
-    port: int = 8000
+    port: int = 8999
     debug: bool = False
     use_ssl: bool = False
     ssl_cert: Optional[str] = None
@@ -65,6 +65,15 @@ class ExchangesConfig(BaseSettings):
     default_verbose: bool = False
 
 
+class IdleConfig(BaseSettings):
+    """Idle shutdown configuration."""
+
+    model_config = {"env_prefix": "CCXT_GATEWAY_IDLE_"}
+
+    timeout_minutes: int = 5
+    pidfile_path: str = "/tmp/ccxt_gateway.pid"
+
+
 class Settings:
     """Main settings class."""
 
@@ -74,9 +83,9 @@ class Settings:
         self.process_manager: ProcessManagerConfig = ProcessManagerConfig()
         self.update: UpdateConfig = UpdateConfig()
         self.exchanges: ExchangesConfig = ExchangesConfig()
+        self.idle: IdleConfig = IdleConfig()
 
         if yaml_path is None:
-            # Try default locations
             for path in ["config/default.yaml", "ccxt-gateway/config/default.yaml"]:
                 if os.path.exists(path):
                     yaml_path = path
@@ -96,6 +105,7 @@ class Settings:
             ("process_manager", ProcessManagerConfig),
             ("update", UpdateConfig),
             ("exchanges", ExchangesConfig),
+            ("idle", IdleConfig),
         ]:
             if section_name in data:
                 section_data: Dict[str, Any] = data[section_name]

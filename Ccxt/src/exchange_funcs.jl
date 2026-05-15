@@ -1,145 +1,142 @@
-@doc "Check if the key `k` is in the dictionary `has` and return its boolean value."
-_issupported(has::Py, k) = k in has && Bool(has[k])
-@doc "Check if the key `k` is supported in the `exc.py.has` dictionary."
-issupported(exc, k) = _issupported(exc.py.has, k)
+# exchange_funcs.jl - Gateway helper functions
 
-_lazypy(ref, mod) = begin
-    if isassigned(ref)
-        r = ref[]
-        if isnothing(r)
-            ref[] = pyimport(mod)
-        elseif pyisnull(r)
-            pycopy!(r, pyimport(mod))
-            r
-        else
-            r
-        end
-    else
-        ref[] = pyimport(mod)
+const HAS_CACHE_TTL = 300.0  # 5 minutes in seconds
+const _has_cache = Dict{String, Tuple{Dict{String, Any}, Float64}}()
+
+function _has_cache_valid(exchange_id::String)
+    if !haskey(_has_cache, exchange_id)
+        return false
     end
+    _, ts = _has_cache[exchange_id]
+    return time() - ts < HAS_CACHE_TTL
 end
 
-ccxtws() = _lazypy(ccxt_ws, "ccxt.pro")
-ccxtasync() = _lazypy(ccxt, "ccxt.async_support")
-
-# @doc "Instantiate a ccxt exchange class matching name."
-@doc """Instantiate a CCXT exchange.
-
-$(TYPEDSIGNATURES)
-
-This function creates an instance of a CCXT exchange. It checks if the exchange is available in the WebSocket (ws) module, otherwise it looks in the asynchronous (async) module. If optional parameters are provided, they are passed to the exchange constructor.
-"""
-function ccxt_exchange(name::Symbol, params=nothing; kwargs...)
-    @debug "Instantiating Exchange $name..."
-    # When using stub CCXT, avoid ccxt.pro (websocket/pro) classes since they
-    # may spawn background coroutines (ccxt.pro) that call internal network
-    # methods and raise NotSupported. Prefer async_support in stub mode.
-    if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
-        async = ccxtasync()
-        exc_cls = getproperty(async, name)
-    else
-        ws = ccxtws()
-        exc_cls = if hasproperty(ws, name)
-            getproperty(ws, name)
-        else
-            async = ccxtasync()
-            getproperty(async, name)
+function get_cached_has(client::CcxtGateway.GatewayClient, exchange_id::String)
+    if !_has_cache_valid(exchange_id)
+        result = CcxtGateway.fetch_exchange_has(client, exchange_id)
+        if result isa Dict || result isa JSON3.Object
+            _has_cache[exchange_id] = (Dict{String, Any}(string(k) => v for (k, v) in pairs(result)), time())
         end
     end
-    # Instantiate exchange class (may be replaced by patched subclass below)
-    inst = nothing
-    # If environment variable set, try to instantiate a patched subclass via stubex
-    if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
-        try
-            # add local stub_exchanges package path to sys.path so python can import stubex
-            stub_path = get(ENV, "PLANAR_CCXT_STUB_PATH", normpath(joinpath(@__DIR__, "..", "..", "stub_exchanges")))
-            @info "ccxt: adding stub path" stub_path
-            try
-                sys = pyimport("sys")
-                parent = normpath(joinpath(@__DIR__, "..", ".."))
-                paths_to_try = [stub_path, parent]
-                for p in paths_to_try
-                    try
-                        pycall(sys.path.insert, Any, 0, p)
-                    catch
-                        try
-                            pycall(sys.path.append, Any, p)
-                        catch
-                            # ignore if sys.path modification fails
-                        end
-                    end
-                end
-                @info "ccxt: python sys.path updated (paths inserted)" paths_to_try
-            catch e
-                @warn "ccxt: failed to update sys.path for stubex" e=string(e)
-            end
-            sp = nothing
-            try
-                # Prefer importing stub_exchanges package (makes repo layout explicit)
-                sp = pyimport("stub_exchanges.stubex.patch")
-                @info "ccxt: imported stub_exchanges.stubex.patch"
-            catch e1
-                try
-                    # Fallback to direct stubex package import if present
-                    sp = pyimport("stubex.patch")
-                    @info "ccxt: imported stubex.patch"
-                catch e2
-                    @warn "ccxt: stub patch import failed" e1=string(e1) e2=string(e2)
-                end
-            end
-            if !isnothing(sp)
-                @info "ccxt: stubex.patch module available" sp
-                # Attempt to let the patcher create a patched subclass instance
-                try
-                    inst = pycall(sp.make_patched_instance, Any, exc_cls, params)
-                    @info "ccxt: make_patched_instance succeeded for " string(name)
-                catch e
-                    @info "ccxt: make_patched_instance failed, falling back to instance patch" e
-                    # fallback: normal instantiation then instance-level patch
-                    inst = isnothing(params) ? exc_cls() : exc_cls(params)
-                    try
-                        pycall(sp.patch_exchange, Any, inst)
-                        @info "ccxt: instance-level patch_exchange applied"
-                    catch e2
-                        @warn "ccxt: stub patch failed at instance-level" e2=string(e2)
-                    end
-                end
-            else
-                @warn "ccxt: stub patch not available, skipping" stub_path
-            end
-        catch e
-            @warn "ccxt: stub check failed" e=string(e)
-        end
+    if haskey(_has_cache, exchange_id)
+        return _has_cache[exchange_id][1]
     end
-    # Final fallback to normal instantiation if not patched above
-    if isnothing(inst)
-        inst = isnothing(params) ? exc_cls() : exc_cls(params)
+    Dict{String, Any}()
+end
+
+function get_cached_has(exchange_id::String)
+    client = CcxtGateway.GatewayClient()
+    get_cached_has(client, exchange_id)
+end
+
+function exchange_has(client::CcxtGateway.GatewayClient, exchange_id::String, method::String)
+    has_dict = get_cached_has(client, exchange_id)
+    if !isempty(has_dict)
+        v = get(has_dict, method, nothing)
+        return v !== nothing && v !== false
     end
-    # Debug: when using stub CCXT, inspect markets presence and a sample price.min
+    false
+end
+
+function exchange_has(exchange_id::String, method::String)
+    client = CcxtGateway.GatewayClient()
+    exchange_has(client, exchange_id, method)
+end
+
+@doc "Check if the key `k` is supported using CcxtGateway."
+function issupported(exchange_id::String, k::String)
     try
-        if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
-            try
-                if hasproperty(inst, :markets) && !isempty(inst.markets)
-                    sample_sym = first(keys(inst.markets))
-                    try
-                        minp = inst.markets[sample_sym]["limits"]["price"]["min"]
-                        @info "ccxt: patched instance markets present" sample_sym=string(sample_sym) min_price=minp
-                    catch e
-                        @info "ccxt: markets present but couldn't read min_price" sample_sym=string(sample_sym) e=string(e)
-                    end
-                else
-                    @info "ccxt: patched instance has no markets or markets empty"
-                end
-            catch e
-                @warn "ccxt: inspecting markets failed" e=string(e)
-            end
-        end
-    catch e
-        # ignore inspection errors
+        client = CcxtGateway.GatewayClient()
+        return exchange_has(client, exchange_id, k)
+    catch
+        false
     end
-    inst
 end
 
-ccxt_exchange_names() = ccxtasync().exchanges
+function _suffix_to_methods(suffix::String)
+    if suffix == "Ticker"
+        return ("fetchTickers", "fetchTicker", "fetchTickersWs", "fetchTickerWs")
+    elseif suffix == "OrderBook"
+        return ("fetchOrderBooks", "fetchOrderBook", "fetchOrderBooksWs", "fetchOrderBookWs")
+    elseif suffix == "Trade"
+        return ("fetchTrades", "fetchTrade", "fetchTradesWs", "fetchTradeWs")
+    elseif suffix == "OHLCV"
+        return ("fetchOHLCVs", "fetchOHLCV", "fetchOHLCVsWs", "fetchOHLCVWs")
+    elseif suffix == "Order"
+        return ("fetchOrders", "fetchOrder", "fetchOrdersWs", "fetchOrderWs")
+    elseif suffix == "Balance"
+        return ("fetchBalances", "fetchBalance", "fetchBalancesWs", "fetchBalanceWs")
+    else
+        error("Unsupported suffix: $suffix")
+    end
+end
 
-export ccxt_exchange_names
+function _multifunc(exchange_id::String, suffix::String, hasinputs::Bool=false)
+    multi_method, single_method, multi_ws, single_ws = _suffix_to_methods(suffix)
+    
+    if issupported(exchange_id, multi_method) || issupported(exchange_id, multi_ws)
+        return multi_method, :multi
+    end
+    
+    if issupported(exchange_id, single_ws) || issupported(exchange_id, single_method)
+        if !hasinputs
+            return multi_method, :multi
+        end
+        return single_method, :single
+    end
+    
+    error("Exchange $exchange_id does not support any $suffix methods")
+end
+
+function _out_as_input(inputs, data; elkey=nothing)
+    if data isa Vector
+        if length(data) == length(inputs)
+            return Dict(i => v for (v, i) in zip(data, inputs))
+        else
+            @assert elkey !== nothing "Functions returned a list, but element key not provided."
+            return Dict(v[elkey] => v for v in data)
+        end
+    elseif data isa Dict
+        return Dict(i => data[i] for i in inputs if haskey(data, i))
+    else
+        return Dict(i => data for i in inputs)
+    end
+end
+
+function choosefunc(exchange_id::String, suffix::String, inputs::AbstractVector; elkey=nothing, kwargs...)
+    hasinputs = length(inputs) > 0
+    method, kind = _multifunc(exchange_id, suffix, hasinputs)
+    client = CcxtGateway.GatewayClient()
+    
+    if hasinputs
+        if kind == :multi
+            data = CcxtGateway.call_exchange(client, exchange_id, method; kwargs...)
+            return _out_as_input(inputs, data; elkey)
+        else
+            out = Dict{eltype(inputs), Any}()
+            for i in inputs
+                out[i] = CcxtGateway.call_exchange(client, exchange_id, method; symbol=string(i), kwargs...)
+            end
+            return _out_as_input(inputs, out; elkey)
+        end
+    else
+        return CcxtGateway.call_exchange(client, exchange_id, method; kwargs...)
+    end
+end
+
+function choosefunc(exchange_id::String, suffix::String, inputs...; kwargs...)
+    choosefunc(exchange_id, suffix, [inputs...]; kwargs...)
+end
+
+function ccxt_exchange_names()
+    try
+        client = CcxtGateway.GatewayClient()
+        exchanges = CcxtGateway.list_exchanges(client)
+        return exchanges
+    catch
+        []
+    end
+end
+
+export ccxt_exchange_names, choosefunc, issupported, _multifunc, _out_as_input, _suffix_to_methods
+export exchange_has, get_cached_has

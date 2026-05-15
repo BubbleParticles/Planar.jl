@@ -306,6 +306,16 @@ class ProcessManager:
                 if self.auto_restart:
                     await self._restart_exchange(exchange_id)
 
+    async def restart_exchange(self, exchange_id: str) -> bool:
+        """Public wrapper to restart an exchange subprocess."""
+        if exchange_id not in self.processes:
+            logger.warning("Cannot restart exchange %s: not found", exchange_id)
+            return False
+        await self._restart_exchange(exchange_id)
+        # Wait for the new process to be ready
+        await asyncio.sleep(2)
+        return exchange_id in self.processes and self.processes[exchange_id].is_running
+
     async def _restart_exchange(self, exchange_id: str) -> None:
         """Restart an exchange subprocess."""
         if exchange_id not in self.processes:

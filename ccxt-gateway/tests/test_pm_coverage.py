@@ -207,5 +207,47 @@ class TestProcessManagerCoverage:
         # Should return without error
         await pm._restart_exchange("nonexistent")
 
+    @pytest.mark.asyncio
+    async def test_restart_exchange_public_success(self):
+        """Test public restart_exchange returns True on success."""
+        pm = ProcessManager()
+
+        mock_proc = MagicMock()
+        mock_proc.is_running = True
+        mock_proc.config = {"exchange_id": "binance", "exchange_name": "binance"}
+        pm.processes["binance"] = mock_proc
+
+        pm.stop_exchange = AsyncMock()
+        pm.start_exchange = AsyncMock(return_value=True)
+
+        result = await pm.restart_exchange("binance")
+        assert result is True
+        pm.stop_exchange.assert_called_once_with("binance")
+        pm.start_exchange.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_restart_exchange_public_not_found(self):
+        """Test public restart_exchange on missing exchange."""
+        pm = ProcessManager()
+
+        result = await pm.restart_exchange("nonexistent")
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_restart_exchange_public_restart_fails(self):
+        """Test public restart_exchange when restart fails."""
+        pm = ProcessManager()
+
+        mock_proc = MagicMock()
+        mock_proc.is_running = False
+        mock_proc.config = {"exchange_id": "binance", "exchange_name": "binance"}
+        pm.processes["binance"] = mock_proc
+
+        pm.stop_exchange = AsyncMock()
+        pm.start_exchange = AsyncMock(return_value=False)
+
+        result = await pm.restart_exchange("binance")
+        assert result is False
+
 
 import time  # Need to import at module level

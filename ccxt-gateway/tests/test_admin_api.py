@@ -159,3 +159,41 @@ class TestAdminAPIExtended:
             assert response.status_code == 200
             data = response.json()
             assert data["update_available"] is True
+
+    def test_get_info(self, setup):
+        """Test getting gateway info."""
+        client, mock_broker, mock_pm = setup
+        import time
+        app.state.start_time = time.time()
+
+        response = client.get("/admin/info")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["result"]["status"] == "running"
+        assert "version" in data["result"]
+        assert "uptime_seconds" in data["result"]
+
+    def test_get_memory(self, setup):
+        """Test getting memory usage."""
+        client, _, mock_pm = setup
+
+        mock_proc = MagicMock()
+        mock_proc.rss_mb = 150.0
+        mock_pm.processes = {"binance": mock_proc}
+
+        response = client.get("/admin/memory")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["result"]["total_memory_mb"] == 150.0
+        assert data["result"]["exchange_count"] == 1
+
+    def test_get_memory_empty(self, setup):
+        """Test getting memory when no exchanges."""
+        client, _, mock_pm = setup
+        mock_pm.processes = {}
+
+        response = client.get("/admin/memory")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["result"]["total_memory_mb"] == 0.0
+        assert data["result"]["exchange_count"] == 0
