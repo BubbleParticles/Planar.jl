@@ -307,7 +307,7 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
     
     # Kill any stale gateway or ZMQ process on port 5555
     try
-        run(`fuser -k 5555/tcp`; wait=false)
+        run(`fuser -k 5555/tcp`)
     catch
     end
     sleep(1)
@@ -359,7 +359,7 @@ function stop_gateway()
     end
     # Clean up ZMQ port
     try
-        run(`fuser -k 5555/tcp`; wait=false)
+        run(`fuser -k 5555/tcp`)
     catch
     end
 end
