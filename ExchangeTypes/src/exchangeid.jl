@@ -5,33 +5,33 @@ const exchangeIds = Symbol[]
 
 $(FIELDS)
 
-This structure is used to manage Exchange IDs in the CCXT library. It contains methods for creating an Exchange ID from a symbol, a Python object, or directly from a symbol type. It ensures that the symbol is in the list of valid exchange IDs.
+This structure is used to manage Exchange IDs in the CCXT library.
 """
 struct ExchangeID{I}
     function ExchangeID(sym::Symbol=Symbol())
         sym == Symbol() && return new{sym}()
         if isempty(exchangeIds)
             prev = Set{Symbol}()
-            for name in ccxt_exchange_names()
-                id = Symbol(name)
-                if id ∉ prev
-                    push!(exchangeIds, id)
-                    push!(prev, id)
+            try
+                for name in ccxt_exchange_names()
+                    id = Symbol(name)
+                    if id ∉ prev
+                        push!(exchangeIds, id)
+                        push!(prev, id)
+                    end
                 end
+            catch
             end
-            @assert sym ∈ exchangeIds
+            if !isempty(exchangeIds)
+                @assert sym ∈ exchangeIds
+            end
         else
             @assert sym ∈ exchangeIds
         end
         new{sym}()
     end
-    function ExchangeID(py::Py)
-        s = if pyisnone(py)
-            ""
-        else
-            (pyhasattr(py, "__name__") ? py.__name__ : py.__class__.__name__)
-        end
-        ExchangeID(pyconvert(Symbol, s))
+    function ExchangeID(name::String)
+        ExchangeID(Symbol(name))
     end
     function ExchangeID{sym}() where {sym}
         ExchangeID(sym)
@@ -43,7 +43,7 @@ Base.getproperty(::T, ::Symbol) where {T<:ExchangeID} = T.parameters[1]
 Base.nameof(::ExchangeID{T}) where {T} = T
 Base.show(io::IO, id::ExchangeID) = begin
     write(io, "ExchangeID(:")
-    write(io, id.sym)
+    write(io, string(id.sym))
     write(io, ")")
 end
 Base.convert(::Type{<:AbstractString}, id::ExchangeID) = string(id.sym)
@@ -66,6 +66,8 @@ import Base.==
 
 @doc "Create an ExchangeID instance from a symbol."
 exchangeid(sym::Symbol) = ExchangeID(sym)
+@doc "Create an ExchangeID instance from a string."
+exchangeid(name::String) = ExchangeID(Symbol(name))
 @doc "Return the given ExchangeID instance."
 exchangeid(id::ExchangeID) = id
 @doc "Union type of many exchange ids (from `Symbol` arguments)"
