@@ -278,6 +278,26 @@ function default_client()
     _default_client[]
 end
 
+function _find_gateway_file(relpath::String)
+    paths = String[]
+    try
+        p = normpath(joinpath(dirname(pathof(Ccxt)), "..", "..", "ccxt-gateway", relpath))
+        push!(paths, p)
+    catch
+    end
+    env_dir = get(ENV, "CCXT_GATEWAY_DIR", "")
+    if !isempty(env_dir)
+        push!(paths, normpath(joinpath(env_dir, relpath)))
+    end
+    for base in (homedir(), "/project", "/var/home/fra/dev/Planar.jl", pwd())
+        push!(paths, normpath(joinpath(base, "ccxt-gateway", relpath)))
+    end
+    for p in paths
+        isfile(p) && return p
+    end
+    error("File not found: $relpath (searched: $(join(unique(paths), ", ")))")
+end
+
 function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
     # Check if gateway is already running
     if isassigned(_gateway_pid) && _gateway_pid[] !== nothing && _gateway_pid[] > 1
@@ -305,13 +325,10 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
     end
     
     # Find the daemon script
-    daemon_script = joinpath(@__DIR__, "..", "..", "..", "ccxt-gateway", "daemon_gateway.py")
-    if !isfile(daemon_script)
-        error("Gateway daemon script not found: $daemon_script")
-    end
+    daemon_script = _find_gateway_file("daemon_gateway.py")
     
     # Find the venv python
-    venv_python = joinpath(@__DIR__, "..", "..", "..", "ccxt-gateway", ".venv", "bin", "python")
+    venv_python = _find_gateway_file(joinpath(".venv", "bin", "python"))
     python_cmd = isfile(venv_python) ? venv_python : "python3"
     
     # Run the daemon script
