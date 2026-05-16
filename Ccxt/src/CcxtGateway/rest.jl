@@ -79,7 +79,10 @@ function make_request(client::GatewayClient, method::String, path::String;
     push!(headers, "Accept" => "application/json")
     
     kw = Dict{Symbol, Any}()
-    kw[:timeout] = client.timeout
+    t = get(kwargs, :timeout, client.timeout)
+    kw[:timeout] = t
+    kw[:readtimeout] = t
+    kw[:connect_timeout] = t
     if client.use_ssl
         kw[:ssl] = true
         if client.ssl_config !== nothing
@@ -205,9 +208,9 @@ function server_info(client::GatewayClient)
     api_call(client, "GET", "/admin/info")
 end
 
-function ping(client::GatewayClient)
+function ping(client::GatewayClient; timeout::Float64=3.0)
     try
-        resp = make_request(client, "GET", "/ping")
+        resp = make_request(client, "GET", "/ping"; timeout=timeout)
         return resp.status == 200
     catch e
         false

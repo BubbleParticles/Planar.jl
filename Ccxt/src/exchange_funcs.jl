@@ -130,7 +130,7 @@ end
 
 function ccxt_exchange_names()
     try
-        client = CcxtGateway.GatewayClient()
+        client = CcxtGateway.GatewayClient(; timeout=5.0)
         exchanges = CcxtGateway.list_exchanges(client)
         return exchanges
     catch

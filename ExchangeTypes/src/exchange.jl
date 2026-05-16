@@ -120,11 +120,9 @@ function Exchange(x::String; account="", kwargs...)
 end
 
 function Exchange(sym::Symbol; account="", kwargs...)
-    id = ExchangeID(sym)
+    id = ExchangeID{sym}()
     name = string(sym)
-    client = CcxtGateway.GatewayClient()
-    has_dict = CcxtGateway.get_cached_has(client, name)
-    has_sym = Dict{Symbol,Bool}(Symbol(k) => v for (k, v) in has_dict)
+    has_sym = Dict{Symbol,Bool}()
     
     e = GatewayExchange{typeof(id)}(
         id, name, account, OrderedSet{String}(), OptionsDict(),
