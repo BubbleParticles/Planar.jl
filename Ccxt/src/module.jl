@@ -24,7 +24,8 @@ function _check_existing_gateway()
         return _check_gateway_running()
     end
     pid = try
-        parse(Int, strip(read(GATEWAY_PIDFILE, String)))
+        content = strip(read(GATEWAY_PIDFILE, String))
+        parse(Int, split(content)[1])
     catch
         return _check_gateway_running()
     end
