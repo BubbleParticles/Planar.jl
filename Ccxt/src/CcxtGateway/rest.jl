@@ -303,6 +303,24 @@ function _find_gateway_file(relpath::String)
     error("File not found: $relpath (searched: $(join(unique(paths), ", ")))")
 end
 
+function _ensure_gateway_venv(gateway_dir::String)
+    venv_python = normpath(joinpath(gateway_dir, ".venv", "bin", "python"))
+    isfile(venv_python) && return venv_python
+    # Symlink exists but is broken, or venv doesn't exist — recreate it
+    venv_dir = normpath(joinpath(gateway_dir, ".venv"))
+    @info "Recreating broken/absent venv at $venv_dir..."
+    try
+        run(`uv venv $venv_dir`)
+        run(`uv pip install --python $venv_dir -e $gateway_dir`)
+    catch
+        # Fallback to system python3 if uv is not available
+        run(`python3 -m venv $venv_dir`)
+        run(`$venv_dir/bin/pip install -e $gateway_dir`)
+    end
+    isfile(venv_python) || error("Failed to create venv at $venv_dir")
+    return venv_python
+end
+
 function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
     # Check if gateway is already running
     if isassigned(_gateway_pid) && _gateway_pid[] !== nothing && _gateway_pid[] > 1
@@ -331,14 +349,10 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
     
     # Find the daemon script
     daemon_script = _find_gateway_file("daemon_gateway.py")
+    gateway_dir = dirname(daemon_script)
     
     # Find the venv python (may be a broken symlink if cache is shared)
-    python_cmd = try
-        p = _find_gateway_file(joinpath(".venv", "bin", "python"))
-        isfile(p) ? p : "python3"
-    catch
-        "python3"
-    end
+    python_cmd = _ensure_gateway_venv(gateway_dir)
     
     # Run the daemon script
     # Truncate log so we only see this attempt
