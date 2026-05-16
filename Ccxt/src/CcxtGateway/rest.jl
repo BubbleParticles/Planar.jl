@@ -285,11 +285,16 @@ function _find_gateway_file(relpath::String)
         push!(paths, p)
     catch
     end
+    try
+        p = normpath(joinpath(dirname(Base.active_project()), "..", "ccxt-gateway", relpath))
+        push!(paths, p)
+    catch
+    end
     env_dir = get(ENV, "CCXT_GATEWAY_DIR", "")
     if !isempty(env_dir)
         push!(paths, normpath(joinpath(env_dir, relpath)))
     end
-    for base in (homedir(), "/project", "/var/home/fra/dev/Planar.jl", pwd())
+    for base in (homedir(), homedir() * "/dev/Planar.jl", "/project", "/var/home/fra/dev/Planar.jl", pwd())
         push!(paths, normpath(joinpath(base, "ccxt-gateway", relpath)))
     end
     for p in paths
