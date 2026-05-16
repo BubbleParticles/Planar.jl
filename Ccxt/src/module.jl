@@ -12,9 +12,10 @@ using .CcxtGateway
 
 const MARKETS_PATH = joinpath(DATA_PATH, "markets")
 const GATEWAY_PIDFILE = "/tmp/ccxt_gateway.pid"
+const GATEWAY_LOCKFILE = "/tmp/ccxt_gateway.lock"
 
 function _with_gateway_lock(f::Function)
-    mkpidlock(GATEWAY_PIDFILE) do
+    mkpidlock(GATEWAY_LOCKFILE) do
         f()
     end
 end
@@ -82,7 +83,7 @@ function _atexit_cleanup()
     catch
     end
     try
-        rm(GATEWAY_PIDFILE * ".lock"; force=true)
+        rm(GATEWAY_LOCKFILE; force=true)
     catch
     end
 end
