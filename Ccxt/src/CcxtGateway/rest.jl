@@ -305,12 +305,20 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
         end
     end
     
-    # Kill any stale gateway or ZMQ process on port 5555
-    try
-        run(`fuser -k 5555/tcp`)
-    catch
+    # Kill any process found in the pidfile (stale gateway)
+    pidfile = "/tmp/ccxt_gateway.pid"
+    if isfile(pidfile)
+        try
+            content = strip(read(pidfile, String))
+            pid_str = split(content)[1]
+            stale_pid = parse(Int, pid_str)
+            run(`kill $stale_pid`)
+            @info "Killed stale gateway PID $stale_pid"
+            sleep(2)
+        catch
+        end
+        try rm(pidfile; force=true) catch end
     end
-    sleep(1)
     
     # Find the daemon script
     daemon_script = joinpath(@__DIR__, "..", "..", "..", "ccxt-gateway", "daemon_gateway.py")
@@ -323,6 +331,8 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
     python_cmd = isfile(venv_python) ? venv_python : "python3"
     
     # Run the daemon script
+    # Truncate log so we only see this attempt
+    try open("/tmp/gateway.log", "w") do f; end catch end
     run(`$python_cmd $daemon_script`, wait=false)
     
     # Wait for pidfile AND gateway responsiveness
@@ -334,11 +344,22 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
             pid_str = split(content)[1]
             pid = parse(Int, pid_str)
             _gateway_pid[] = pid
-            # Verify gateway is actually responding
+            @debug "spawn: attempt $attempt, pidfile found (PID $pid)"
             if ping(GatewayClient(; timeout=2.0))
                 return pid
             end
+            @debug "spawn: PID $pid exists but gateway not responding yet"
+        else
+            @debug "spawn: attempt $attempt, no pidfile yet"
         end
+    end
+    
+    # Dump gateway log for diagnostics
+    logfile = "/tmp/gateway.log"
+    if isfile(logfile)
+        loglines = readlines(logfile)
+        last_lines = max(1, length(loglines) - 20)
+        @warn "Gateway log (last 20 lines):\n$(join(loglines[last_lines:end], "\n"))"
     end
     
     error("Gateway failed to start (not responsive after 10s)")
@@ -356,11 +377,6 @@ function stop_gateway()
         catch
         end
         _gateway_pid[] = nothing
-    end
-    # Clean up ZMQ port
-    try
-        run(`fuser -k 5555/tcp`)
-    catch
     end
 end
 
