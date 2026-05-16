@@ -14,12 +14,12 @@ const GATEWAY_PIDFILE = "/tmp/ccxt_gateway.pid"
 
 function _check_existing_gateway()
     if !isfile(GATEWAY_PIDFILE)
-        return false
+        return _check_gateway_running()
     end
     pid = try
         parse(Int, strip(read(GATEWAY_PIDFILE, String)))
     catch
-        return false
+        return _check_gateway_running()
     end
     try
         run(`kill -0 $pid`)
@@ -28,8 +28,20 @@ function _check_existing_gateway()
     catch
         @warn "Stale gateway PID file found (PID $pid), removing..."
         try rm(GATEWAY_PIDFILE) catch end
-        return false
+        return _check_gateway_running()
     end
+end
+
+function _check_gateway_running()
+    try
+        client = CcxtGateway.GatewayClient(; timeout=2.0)
+        if CcxtGateway.ping(client)
+            @info "Gateway found running on $(client.host):$(client.port)"
+            return true
+        end
+    catch
+    end
+    false
 end
 
 function _init()
@@ -52,6 +64,16 @@ end
 function _doinit()
     _init()
 end
+
+function _atexit_cleanup()
+    CcxtGateway.stop_gateway()
+    try
+        isdefined(Main, :ExchangeTypes) && Main.ExchangeTypes._closeall()
+    catch
+    end
+end
+
+atexit(_atexit_cleanup)
 
 # Include exchange functions (Gateway-only, Python functions moved to ext/)
 include("exchange_funcs.jl")

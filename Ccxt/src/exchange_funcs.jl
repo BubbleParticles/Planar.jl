@@ -131,8 +131,8 @@ end
 function ccxt_exchange_names()
     try
         client = CcxtGateway.GatewayClient(; timeout=5.0)
-        exchanges = CcxtGateway.list_exchanges(client)
-        return exchanges
+        exchanges = CcxtGateway.fetch_exchange_names(client)
+        return exchanges isa AbstractVector ? [string(x) for x in exchanges] : String[]
     catch
         []
     end
