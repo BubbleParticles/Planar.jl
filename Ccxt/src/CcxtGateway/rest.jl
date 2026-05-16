@@ -311,11 +311,10 @@ function _ensure_gateway_venv(gateway_dir::String)
     @info "Recreating broken/absent venv at $venv_dir..."
     try
         run(`uv venv $venv_dir`)
-        run(`uv pip install --python $venv_dir -e $gateway_dir`)
+        run(`uv pip install --python $venv_dir --quiet -e $gateway_dir`)
     catch
-        # Fallback to system python3 if uv is not available
         run(`python3 -m venv $venv_dir`)
-        run(`$venv_dir/bin/pip install -e $gateway_dir`)
+        run(`$venv_dir/bin/pip install --quiet --no-input -e $gateway_dir`)
     end
     isfile(venv_python) || error("Failed to create venv at $venv_dir")
     return venv_python
