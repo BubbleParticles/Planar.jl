@@ -298,36 +298,53 @@ function _find_gateway_file(relpath::String)
         push!(paths, normpath(joinpath(base, "ccxt-gateway", relpath)))
     end
     for p in paths
-        isfile(p) && return p
+        if isfile(p)
+            @debug "Found $relpath at $p"
+            return p
+        end
+        @debug "Searching for $relpath: $p — not found"
     end
     error("File not found: $relpath (searched: $(join(unique(paths), ", ")))")
 end
 
 function _ensure_gateway_venv(gateway_dir::String)
     venv_python = normpath(joinpath(gateway_dir, ".venv", "bin", "python"))
-    isfile(venv_python) && return venv_python
-    # Symlink exists but is broken, or venv doesn't exist — recreate it
+    if isfile(venv_python)
+        @debug "Venv python found at $venv_python"
+        return venv_python
+    end
     venv_dir = normpath(joinpath(gateway_dir, ".venv"))
     @info "Recreating broken/absent venv at $venv_dir..."
+    if islink(venv_dir)
+        @info "Removing stale symlink at $venv_dir (target: $(readlink(venv_dir)))"
+        try rm(venv_dir) catch end
+    end
     try
+        @info "Trying uv venv..."
         run(`uv venv $venv_dir`)
         run(`uv pip install --python $venv_dir --quiet -e $gateway_dir`)
-    catch
+        @info "Venv recreated with uv successfully"
+    catch e
+        @info "uv failed ($e), falling back to python3 -m venv..."
         run(`python3 -m venv $venv_dir`)
         run(`$venv_dir/bin/pip install --quiet --no-input -e $gateway_dir`)
+        @info "Venv recreated with python3 successfully"
     end
     isfile(venv_python) || error("Failed to create venv at $venv_dir")
     return venv_python
 end
 
 function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
+    @debug "spawn_gateway: starting"
     # Check if gateway is already running
     if isassigned(_gateway_pid) && _gateway_pid[] !== nothing && _gateway_pid[] > 1
         pid = _gateway_pid[]
         try
             run(`kill -0 $pid`)
+            @debug "spawn_gateway: gateway already running with PID $pid"
             return pid
         catch
+            @debug "spawn_gateway: tracked PID $pid is stale"
         end
     end
     
@@ -338,25 +355,34 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
             content = strip(read(pidfile, String))
             pid_str = split(content)[1]
             stale_pid = parse(Int, pid_str)
+            @debug "spawn_gateway: killing stale PID $stale_pid from pidfile"
             run(`kill $stale_pid`)
             @info "Killed stale gateway PID $stale_pid"
             sleep(2)
-        catch
+        catch e
+            @debug "spawn_gateway: failed to kill stale PID: $e"
         end
         try rm(pidfile; force=true) catch end
     end
     
     # Find the daemon script
+    @debug "spawn_gateway: locating daemon_gateway.py..."
     daemon_script = _find_gateway_file("daemon_gateway.py")
+    @info "Found gateway daemon at $daemon_script"
     gateway_dir = dirname(daemon_script)
+    @debug "Gateway directory: $gateway_dir"
     
     # Find the venv python (may be a broken symlink if cache is shared)
+    @debug "spawn_gateway: ensuring venv..."
     python_cmd = _ensure_gateway_venv(gateway_dir)
+    @info "Using python: $python_cmd"
     
     # Run the daemon script
-    # Truncate log so we only see this attempt
+    @debug "spawn_gateway: truncating gateway log..."
     try open("/tmp/gateway.log", "w") do f; end catch end
+    @debug "spawn_gateway: running: $python_cmd $daemon_script"
     run(`$python_cmd $daemon_script`, wait=false)
+    @debug "spawn_gateway: daemon process launched"
     
     # Wait for pidfile AND gateway responsiveness
     pidfile = "/tmp/ccxt_gateway.pid"
