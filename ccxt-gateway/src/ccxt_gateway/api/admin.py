@@ -152,6 +152,25 @@ async def get_memory(
     }
 
 
+@router.get("/exchange_names")
+async def get_exchange_names() -> Dict[str, Any]:
+    """Get all CCXT exchange names."""
+    try:
+        import ccxt
+        names = sorted(ccxt.exchanges)
+        return {
+            "result": names,
+            "error": None,
+            "error_code": None,
+        }
+    except Exception as e:
+        return {
+            "result": None,
+            "error": str(e),
+            "error_code": "EXCHANGE_NAMES_FAILED",
+        }
+
+
 @router.post("/update/ccxt")
 async def trigger_ccxt_update(
     broker: Any = Depends(get_broker),
