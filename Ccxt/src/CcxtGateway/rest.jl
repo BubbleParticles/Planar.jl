@@ -332,9 +332,13 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
     # Find the daemon script
     daemon_script = _find_gateway_file("daemon_gateway.py")
     
-    # Find the venv python
-    venv_python = _find_gateway_file(joinpath(".venv", "bin", "python"))
-    python_cmd = isfile(venv_python) ? venv_python : "python3"
+    # Find the venv python (may be a broken symlink if cache is shared)
+    python_cmd = try
+        p = _find_gateway_file(joinpath(".venv", "bin", "python"))
+        isfile(p) ? p : "python3"
+    catch
+        "python3"
+    end
     
     # Run the daemon script
     # Truncate log so we only see this attempt
