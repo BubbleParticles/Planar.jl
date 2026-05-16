@@ -305,6 +305,13 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
         end
     end
     
+    # Kill any stale gateway or ZMQ process on port 5555
+    try
+        run(`fuser -k 5555/tcp`; wait=false)
+    catch
+    end
+    sleep(1)
+    
     # Find the daemon script
     daemon_script = joinpath(@__DIR__, "..", "..", "..", "ccxt-gateway", "daemon_gateway.py")
     if !isfile(daemon_script)
@@ -317,19 +324,24 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
     
     # Run the daemon script
     run(`$python_cmd $daemon_script`, wait=false)
-    sleep(3)
     
-    # Read the PID from the pidfile (first token only)
+    # Wait for pidfile AND gateway responsiveness
     pidfile = "/tmp/ccxt_gateway.pid"
-    if isfile(pidfile)
-        content = strip(read(pidfile, String))
-        pid_str = split(content)[1]
-        pid = parse(Int, pid_str)
-        _gateway_pid[] = pid
-        return pid
+    for attempt in 1:10
+        sleep(1)
+        if isfile(pidfile)
+            content = strip(read(pidfile, String))
+            pid_str = split(content)[1]
+            pid = parse(Int, pid_str)
+            _gateway_pid[] = pid
+            # Verify gateway is actually responding
+            if ping(GatewayClient(; timeout=2.0))
+                return pid
+            end
+        end
     end
     
-    error("Gateway failed to start (no pidfile at $pidfile)")
+    error("Gateway failed to start (not responsive after 10s)")
 end
 
 function stop_gateway()
@@ -338,13 +350,17 @@ function stop_gateway()
         try
             run(`kill $pid`)
             sleep(1)
-            # Kill exchange subprocesses spawned by this gateway
             for (ex_id, _) in _started_exchanges
                 stop_exchange(ex_id)
             end
         catch
         end
         _gateway_pid[] = nothing
+    end
+    # Clean up ZMQ port
+    try
+        run(`fuser -k 5555/tcp`; wait=false)
+    catch
     end
 end
 
