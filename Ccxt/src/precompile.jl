@@ -6,5 +6,7 @@ using PrecompileTools
     end
 end
 
-# Stop the gateway spawned during precompilation
+# Stop all processes spawned during precompilation
 stop_gateway()
+try rm("/tmp/ccxt_gateway.pid"; force=true) catch end
+try rm("/tmp/ccxt_gateway.lock"; force=true) catch end
