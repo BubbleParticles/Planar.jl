@@ -1,2 +1,10 @@
 [deps]
-Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+ExchangeTypes = "16e96388-e60e-4b60-892f-986722d15ae4"
+
+[compat]
+Test = "1"
+JSON3 = "1.14.3"
+HTTP = "1"
