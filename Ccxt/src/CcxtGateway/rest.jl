@@ -79,7 +79,7 @@ function make_request(client::GatewayClient, method::String, path::String;
     push!(headers, "Accept" => "application/json")
     
     kw = Dict{Symbol, Any}()
-    t = get(kwargs, :timeout, client.timeout)
+    t = Int(round(get(kwargs, :timeout, client.timeout)))
     kw[:timeout] = t
     kw[:readtimeout] = t
     kw[:connect_timeout] = t
@@ -215,6 +215,14 @@ function ping(client::GatewayClient; timeout::Float64=3.0)
     catch e
         false
     end
+end
+
+function fetch_exchange_names(client::GatewayClient)
+    api_call(client, "GET", "/admin/exchange_names")
+end
+
+function fetch_exchange_names()
+    fetch_exchange_names(default_client())
 end
 
 function memory_usage(client::GatewayClient)
