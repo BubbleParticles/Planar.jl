@@ -319,10 +319,12 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
     run(`$python_cmd $daemon_script`, wait=false)
     sleep(3)
     
-    # Read the PID from the pidfile
+    # Read the PID from the pidfile (first token only)
     pidfile = "/tmp/ccxt_gateway.pid"
     if isfile(pidfile)
-        pid = parse(Int, strip(read(pidfile, String)))
+        content = strip(read(pidfile, String))
+        pid_str = split(content)[1]
+        pid = parse(Int, pid_str)
         _gateway_pid[] = pid
         return pid
     end
