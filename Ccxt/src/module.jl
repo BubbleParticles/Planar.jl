@@ -32,7 +32,7 @@ function _check_existing_gateway()
     end
     try
         run(`kill -0 $pid`)
-        CcxtGateway._gateway_pid[] = pid
+        CcxtGateway.Rest._gateway_pid[] = pid
         return true
     catch
         @warn "Stale gateway PID file found (PID $pid), removing..."
@@ -57,7 +57,7 @@ function _init()
     mkpath(MARKETS_PATH)
     _with_gateway_lock() do
         if _check_existing_gateway()
-            @info "CcxtGateway already running (PID $(CcxtGateway._gateway_pid[]))"
+            @info "CcxtGateway already running (PID $(CcxtGateway.Rest._gateway_pid[]))"
             return
         end
         client = CcxtGateway.GatewayClient()
