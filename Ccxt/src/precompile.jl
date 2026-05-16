@@ -5,3 +5,6 @@ using PrecompileTools
         _init()
     end
 end
+
+# Stop the gateway spawned during precompilation
+stop_gateway()
