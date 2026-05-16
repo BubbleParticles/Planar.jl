@@ -1,6 +1,6 @@
 using Pkg: Pkg
 using TOML
-using JSON
+using JSON3
 using TimeTicks
 using FunctionalCollections: PersistentHashMap
 using .Lang: @lget!, Option, splitkws
@@ -100,7 +100,7 @@ function exchange_keys(name; sandbox, account="")::Dict{String,Any}
     ans = try
         local cfg
         open(keys_path(exc_name)) do f
-            cfg = JSON.parse(f)
+            cfg = JSON3.read(f)
         end
         Dict(k => get(cfg, k, "") for k in names)
     catch

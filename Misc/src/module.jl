@@ -1,6 +1,6 @@
 using Reexport
 @reexport using DocStringExtensions
-using JSON
+using JSON3
 using TimeTicks
 using TimeTicks: Lang
 using FunctionalCollections: PersistentHashMap
