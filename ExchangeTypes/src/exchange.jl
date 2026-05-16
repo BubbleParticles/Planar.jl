@@ -1,5 +1,3 @@
-using .Python: pyschedule, pytask, Python, pyisinstance, pygetattr, @pystr, pybuiltins, pydict
-using Ccxt: _issupported
 using Ccxt.Misc.Lang: @lget!
 using Base: with_logger, NullLogger
 using OrderedCollections: OrderedSet
@@ -12,18 +10,18 @@ const HOOKS = Dict{Symbol,Vector{Function}}()
 
 @doc """Abstract exchange type.
 
-Defines the interface for interacting with crypto exchanges. Implemented for CCXT in CcxtExchange.
+Defines the interface for interacting with crypto exchanges.
 """
 abstract type Exchange{I} end
 const OptionsDict = Dict{String,Dict{String,Any}}
 
-@doc """The `CcxtExchange` type wraps a ccxt exchange instance. Some attributes frequently accessed
-are copied over to avoid round tripping python. More attributes might be added in the future.
-To instantiate an exchange call `getexchange!` or `setexchange!`.
+@doc """A `CcxtExchange` wraps a ccxt exchange instance via PythonCall.
 
+Only available when the Python package is loaded.
+Some attributes frequently accessed are copied over to avoid round tripping python.
 """
 mutable struct CcxtExchange{I<:ExchangeID} <: Exchange{I}
-    const py::Py
+    const py::Any
     const id::I
     const name::String
     const account::String
@@ -32,32 +30,50 @@ mutable struct CcxtExchange{I<:ExchangeID} <: Exchange{I}
     const types::Set{Symbol}
     const fees::Dict{Symbol,Union{Symbol,<:Number,<:AbstractDict}}
     const has::Dict{Symbol,Bool}
-    const params::Py
+    const params::Any
     precision::ExcPrecisionMode
     _trace::Any
 end
 
 const _FINALIZER_QUEUE = Ref(Vector{CcxtExchange}())
 
+@doc """A `GatewayExchange` wraps a ccxt exchange accessed via CcxtGateway.
+
+Uses HTTP calls to the ccxt-gateway instead of Python ccxt bindings.
+"""
+mutable struct GatewayExchange{I<:ExchangeID} <: Exchange{I}
+    const id::I
+    const name::String
+    const account::String
+    const timeframes::OrderedSet{String}
+    const markets::OptionsDict
+    const types::Set{Symbol}
+    const fees::Dict{Symbol,Union{Symbol,<:Number,<:AbstractDict}}
+    const has::Dict{Symbol,Bool}
+    precision::ExcPrecisionMode
+    _trace::Any
+end
+
 @doc """ Closes the given exchange.
 
 $(TYPEDSIGNATURES)
-
-This function attempts to close the given exchange if it exists. It checks if the exchange has a 'close' attribute and if so, it schedules the 'close' coroutine for execution.
 """
 function close_exc(exc::CcxtExchange)
+    if !isdefined(Ccxt, :Python)
+        return nothing
+    end
     try
         k = (Symbol(exc.id), account(exc))
         pyobj = getfield(exc, :py)
-        # If there's no python object or exchange not cached, nothing to do
-        if ((!haskey(exchanges, k) && !haskey(sb_exchanges, k)) || pyisnull(pyobj))
+        PyCall = Ccxt.Python
+        if ((!haskey(exchanges, k) && !haskey(sb_exchanges, k)) || PyCall.PythonCall.pyisnull(pyobj))
             return nothing
         end
-        close_func = pygetattr(pyobj, "close", nothing)
+        close_func = PyCall.pygetattr(pyobj, "close", nothing)
         if !isnothing(close_func)
             co = close_func()
-            if !pyisnull(co) && pyisinstance(co, Python.gpa.pycoro_type)
-                task = pytask(co)
+            if !PyCall.pyisnull(co) && PyCall.pyisinstance(co, PyCall.gpa.pycoro_type)
+                task = PyCall.pytask(co)
                 try
                     wait(task)
                 catch err
@@ -70,33 +86,84 @@ function close_exc(exc::CcxtExchange)
     end
 end
 
-Exchange() = Exchange(pybuiltins.None)
-@doc """ Instantiates a new `Exchange` wrapper for the provided `x` Python object.
+function close_exc(exc::GatewayExchange)
+    try
+        k = (Symbol(exc.id), account(exc))
+        if haskey(exchanges, k)
+            delete!(exchanges, k)
+        end
+        if haskey(sb_exchanges, k)
+            delete!(sb_exchanges, k)
+        end
+    catch ex
+        @debug ex
+    end
+end
+
+Exchange() = Exchange(nothing)
+@doc """ Instantiates a new `GatewayExchange` wrapper for the given exchange id.
+
+This constructs a `GatewayExchange` struct with the provided exchange id.
+It fetches exchange metadata (has dict, timeframes, etc.) from the ccxt-gateway.
+"""
+function Exchange(x::Nothing; kwargs...)
+    id = ExchangeID(Symbol())
+    GatewayExchange{typeof(id)}(
+        id, "", "", OrderedSet{String}(), OptionsDict(),
+        Set{Symbol}(), Dict{Symbol,Union{Symbol,<:Number}}(),
+        Dict{Symbol,Bool}(), excTickSize, nothing,
+    )
+end
+
+function Exchange(x::String; account="", kwargs...)
+    Exchange(Symbol(x); account, kwargs...)
+end
+
+function Exchange(sym::Symbol; account="", kwargs...)
+    id = ExchangeID(sym)
+    name = string(sym)
+    client = CcxtGateway.GatewayClient()
+    has_dict = CcxtGateway.get_cached_has(client, name)
+    has_sym = Dict{Symbol,Bool}(Symbol(k) => v for (k, v) in has_dict)
+    
+    e = GatewayExchange{typeof(id)}(
+        id, name, account, OrderedSet{String}(), OptionsDict(),
+        Set{Symbol}(), Dict{Symbol,Union{Symbol,<:Number}}(),
+        has_sym, excTickSize, nothing,
+    )
+    
+    funcs = get(HOOKS, Symbol(id), ())::Union{Tuple{},Vector{Function}}
+    for f in funcs
+        f(e)
+    end
+    
+    e
+end
+
+@doc """ Instantiates a new `CcxtExchange` wrapper for the provided `x` Python object.
 
 This constructs a `CcxtExchange` struct with the provided Python object.
 It extracts the exchange ID, name, and other metadata.
 It runs any registered hook functions for that exchange.
-It sets a finalizer to close the exchange when garbage collected.
 
 Returns the new `Exchange` instance, or an empty one if `x` is None.
+
+NOTE: Requires Python to be available.
 """
-function Exchange(x::Py, params=nothing, account="")
+function Exchange(x, params=nothing, account="")
+    if !isdefined(Ccxt, :Python) || !(x isa Ccxt.Python.Py)
+        error("Exchange(x::Py, ...) requires Python to be available")
+    end
+    PyCall = Ccxt.Python
     id = ExchangeID(x)
-    isnone = pyisnone(x)
-    name = isnone ? "" : pyconvert(String, pygetattr(x, "name"))
+    isnone = PyCall.pyisnone(x)
+    name = isnone ? "" : PyCall.pyconvert(String, PyCall.pygetattr(x, "name"))
     e = CcxtExchange{typeof(id)}(
-        x,
-        id,
-        name,
-        account,
-        OrderedSet{String}(),
-        OptionsDict(),
-        Set{Symbol}(),
-        Dict{Symbol,Union{Symbol,<:Number}}(),
-        Dict{Symbol,Bool}(),
-        @something(params, pydict()),
-        excTickSize,
-        nothing,
+        x, id, name, account,
+        OrderedSet{String}(), OptionsDict(),
+        Set{Symbol}(), Dict{Symbol,Union{Symbol,<:Number}}(),
+        Dict{Symbol,Bool}(), something(params, PyCall.pydict()),
+        excTickSize, nothing,
     )
     funcs = get(HOOKS, Symbol(id), ())::Union{Tuple{},Vector{Function}}
     for f in funcs
@@ -105,20 +172,13 @@ function Exchange(x::Py, params=nothing, account="")
     if isnone
         return e
     end
-    # Avoid calling Python from GC finalizers (unsafe). Instead register a lightweight finalizer
-    # that enqueues the exchange for later cleanup; actual close_exc will be invoked by _closeall or tests.
     finalizer(obj -> try
-            try
-                push!(_FINALIZER_QUEUE[], obj)
-            catch
-            end
-            nothing
+            push!(_FINALIZER_QUEUE[], obj)
         catch
         end, e)
     e
 end
 
-# Provide a function to drain the finalizer queue and synchronously close queued exchanges
 function _drain_finalizer_queue()
     q = copy(_FINALIZER_QUEUE[])
     empty!(_FINALIZER_QUEUE[])
@@ -128,23 +188,12 @@ function _drain_finalizer_queue()
         catch
         end
     end
-    return nothing
+    nothing
 end
 
-
-@doc """ Converts value v to integer size with precision p.
- $(TYPEDSIGNATURES)
-
-Used when converting exchange API responses to integer sizes for orders.
-"""
 decimal_to_size(v, p::ExcPrecisionMode; exc=nothing) = begin
     if p == excDecimalPlaces
-        if pyisinstance(v, pybuiltins.int)
-            convert(Int, v)
-        else
-            @warn "exchanges: wrong precision mode" v p exc
-            v
-        end
+        v isa Integer ? v : (@warn "exchanges: wrong precision mode" v p exc; v)
     else
         v
     end
@@ -152,22 +201,41 @@ end
 
 Base.isempty(e::Exchange) = Symbol(e.id) === Symbol()
 
-@doc "The hash of an exchange object is reduced to its symbol (the function used to instantiate the object from ccxt)."
 Base.hash(e::Exchange, u::UInt) = Base.hash(e.id, u)
 
-@doc "Attributes not matching the `Exchange` struct fields are forwarded to the wrapped ccxt class instance."
-function Base.getproperty(e::E, k::Symbol) where {E<:Exchange}
-    if hasfield(E, k)
+function Base.getproperty(e::CcxtExchange, k::Symbol)
+    if hasfield(CcxtExchange, k)
         getfield(e, k)
     else
         !isempty(e) || throw("Can't access non instantiated exchange object.")
-        pyk = @pystr(k)
+        if !isdefined(Ccxt, :Python)
+            error("CcxtExchange property access requires Python to be available")
+        end
+        PyCall = Ccxt.Python
         pyv = getfield(e, :py)
-        pygetattr(pyv, pyk)
+        PyCall.pygetattr(pyv, string(k))
     end
 end
-function Base.propertynames(e::E) where {E<:Exchange}
-    (fieldnames(E)..., propertynames(e.py)...)
+
+function Base.getproperty(e::GatewayExchange, k::Symbol)
+    if hasfield(GatewayExchange, k)
+        getfield(e, k)
+    else
+        !isempty(e) || throw("Can't access non instantiated exchange object.")
+        error("GatewayExchange does not support property access: $k. Use call_exchange instead.")
+    end
+end
+
+function Base.propertynames(e::CcxtExchange)
+    if isdefined(Ccxt, :Python)
+        (fieldnames(typeof(e))..., Ccxt.Python.propertynames(getfield(e, :py))...)
+    else
+        fieldnames(typeof(e))
+    end
+end
+
+function Base.propertynames(e::GatewayExchange)
+    fieldnames(typeof(e))
 end
 
 _has(exc::Exchange, syms::Vararg{Symbol}) = begin
@@ -181,41 +249,32 @@ _has(exc::Exchange, s::Symbol) = begin
 end
 
 @doc """
-Checks if the specified feature `feat` is supported by any of the exchanges available through the ccxt library.
-
-# Arguments
-- `s::Symbol`: The feature to check for support across exchanges.
-- `full::Bool=true`: If `true`, checks both static and instantiated properties of the exchange for support.
-
-# Returns
-- `Vector{String}`: A list of exchange names that support the specified feature.
+Checks if the specified feature `feat` is supported by any exchange.
+Uses the gateway to query exchange capabilities.
 """
 function _has(feat::Symbol; full=true)
     supported = String[]
-    ccxt = Ccxt.ccxtws()
-    feat = string(feat)
-    for e in ccxt_exchange_names()
-        name = string(e)
-        if hasproperty(ccxt, name)
-            cls = getproperty(ccxt, name)
-            if (full && (_issupported(cls.has, feat) || _issupported(cls().has, feat))) ||
-                _issupported(cls.has, feat)
+    feat_str = string(feat)
+    for name in ccxt_exchange_names()
+        try
+            client = CcxtGateway.GatewayClient()
+            has_dict = CcxtGateway.get_cached_has(client, name)
+            if get(has_dict, feat_str, false)
                 push!(supported, name)
             end
+        catch
         end
     end
     supported
 end
-# NOTE: wrap the function here to quickly overlay methods
+
 has(args...; kwargs...) = _has(args...; kwargs...)
 _has_all(exc, what; kwargs...) = all((_has(exc, v; kwargs...)) for v in what)
-# NOTE: wrap the function here to quickly overlay methods
 has(exc, what::Tuple{Vararg{Symbol}}; kwargs...) = _has_all(exc, what; kwargs...)
 
 account(exc::Exchange) = getfield(exc, :account)
-params(exc::Exchange) = getfield(exc, :params)
 
-function _first(exc::Exchange, args::Vararg{Symbol})
+function _first(exc::CcxtExchange, args::Vararg{Symbol})
     for name in args
         if has(exc, name)
             py = getfield(exc, :py)
@@ -224,11 +283,22 @@ function _first(exc::Exchange, args::Vararg{Symbol})
     end
 end
 
+function _first(exc::GatewayExchange, args::Vararg{Symbol})
+    for name in args
+        if has(exc, name)
+            client = CcxtGateway.GatewayClient()
+            ex_id = string(exc.id)
+            m = string(name)
+            return (kwargs...) -> CcxtGateway.call_exchange(client, ex_id, m; query=kwargs)
+        end
+    end
+end
+
 @doc """Return the first available property from a variable number of Symbol arguments in the given Exchange.
-
 $(TYPEDSIGNATURES)
-
-This function iterates through the provided Symbols and returns the value of the first property that exists in the Exchange object."""
+This function iterates through the provided Symbols and returns the value of the first property that exists in the Exchange object.
+For GatewayExchange, returns a closure that calls the exchange method via the gateway.
+For CcxtExchange, returns the Python method."""
 Base.first(exc::Exchange, args::Vararg{Symbol}) = _first(exc, args...)
 
 @doc "Global var holding Exchange instances. Used as a cache."
@@ -237,35 +307,31 @@ const exchanges = Dict{Tuple{Symbol,String},Exchange}()
 const sb_exchanges = Dict{Tuple{Symbol,String},Exchange}()
 
 _closeall() = begin
-    @sync begin
-        excs = []
-        while !isempty(exchanges)
-            _, e = pop!(exchanges)
-            push!(excs, e)
-            # prefer explicit close on known exchanges
-            @async try
-                close_exc(e)
-            catch
-            end
-        end
-        while !isempty(sb_exchanges)
-            _, e = pop!(sb_exchanges)
-            push!(excs, e)
-            @async try
-                close_exc(e)
-            catch
-            end
+    excs = []
+    while !isempty(exchanges)
+        _, e = pop!(exchanges)
+        push!(excs, e)
+        try
+            close_exc(e)
+        catch
         end
     end
-    # drain finalizer-enqueued exchanges
+    while !isempty(sb_exchanges)
+        _, e = pop!(sb_exchanges)
+        push!(excs, e)
+        try
+            close_exc(e)
+        catch
+        end
+    end
     try
         _drain_finalizer_queue()
     catch
     end
 end
 
-# atexit(_closeall)
 Base.nameof(e::CcxtExchange) = Symbol(getfield(e, :id))
+Base.nameof(e::GatewayExchange) = Symbol(getfield(e, :id))
 
 exchange(e::Exchange, args...; kwargs...) = e
 exchangeid(e::E) where {E<:Exchange} = getfield(e, :id)
