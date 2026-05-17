@@ -133,6 +133,34 @@ async def get_exchange_has(
     return result
 
 
+@router.get("/{exchange_id}/metadata")
+async def get_exchange_metadata(
+    exchange_id: str,
+    process_manager: Any = Depends(get_process_manager),
+    broker: Any = Depends(get_broker),
+) -> Dict[str, Any]:
+    """Get exchange metadata (has, timeframes, fees, precisionMode, markets)."""
+    if exchange_id not in process_manager.processes:
+        raise HTTPException(status_code=404, detail=f"Exchange {exchange_id} not found")
+
+    request_msg: bytes = create_request(method="metadata", exchange_id=exchange_id)
+    response_bytes: Optional[bytes] = await broker.send_request(exchange_id, request_msg)
+
+    if not response_bytes:
+        raise HTTPException(status_code=504, detail="No response from exchange subprocess")
+
+    response: Dict[str, Any] = parse_message(response_bytes)
+
+    if response.get("error"):
+        raise HTTPException(
+            status_code=500,
+            detail={"error": response["error"], "error_code": response.get("error_code")},
+        )
+
+    result: Dict[str, Any] = response.get("result", {})
+    return result
+
+
 @router.api_route("/{exchange_id}/{method}", methods=["GET", "POST"])
 async def call_exchange_method(
     exchange_id: str,

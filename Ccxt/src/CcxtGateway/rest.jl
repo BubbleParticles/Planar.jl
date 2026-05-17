@@ -180,6 +180,15 @@ function fetch_exchange_has(exchange_id::String)
     fetch_exchange_has(default_client(), exchange_id)
 end
 
+function fetch_exchange_metadata(client::GatewayClient, exchange_id::String)
+    result = api_call(client, "GET", "/exchanges/$exchange_id/metadata")
+    result
+end
+
+function fetch_exchange_metadata(exchange_id::String)
+    fetch_exchange_metadata(default_client(), exchange_id)
+end
+
 function list_exchanges(client::GatewayClient)
     api_call(client, "GET", "/admin/exchanges")
 end
