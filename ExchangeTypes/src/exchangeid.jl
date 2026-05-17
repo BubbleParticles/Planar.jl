@@ -23,10 +23,14 @@ struct ExchangeID{I}
             catch
             end
             if !isempty(exchangeIds)
-                @assert sym ∈ exchangeIds
+                if sym ∉ exchangeIds
+                    push!(exchangeIds, sym)
+                end
             end
         else
-            @assert sym ∈ exchangeIds
+            if sym ∉ exchangeIds
+                push!(exchangeIds, sym)
+            end
         end
         new{sym}()
     end
