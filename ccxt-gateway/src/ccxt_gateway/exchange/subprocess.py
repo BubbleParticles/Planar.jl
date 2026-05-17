@@ -182,6 +182,36 @@ class ExchangeSubprocess:
                 await self.socket.send_multipart([b"", response])
                 return
 
+            # Special case: return exchange metadata
+            if method == "metadata":
+                import json as _json
+                meta: Dict[str, Any] = {}
+                try:
+                    meta["has"] = dict(self.exchange.has) if hasattr(self.exchange.has, "items") else {}
+                except Exception:
+                    meta["has"] = {}
+                try:
+                    tfs = self.exchange.timeframes
+                    meta["timeframes"] = list(tfs.keys()) if hasattr(tfs, "keys") else (list(tfs) if tfs else [])
+                except Exception:
+                    meta["timeframes"] = []
+                try:
+                    fees = self.exchange.fees
+                    meta["fees"] = self._make_serializable(fees)
+                except Exception:
+                    meta["fees"] = {}
+                try:
+                    meta["precisionMode"] = int(self.exchange.precisionMode)
+                except Exception:
+                    meta["precisionMode"] = 4
+                try:
+                    meta["markets"] = list(self.exchange.markets.keys()) if hasattr(self.exchange.markets, "keys") else []
+                except Exception:
+                    meta["markets"] = []
+                response = create_response(request_id, result=meta)
+                await self.socket.send_multipart([b"", response])
+                return
+
             # Get the method from CCXT
             if not hasattr(self.exchange, method):
                 raise AttributeError(f"Method {method} not found on exchange {self.exchange_name}")
