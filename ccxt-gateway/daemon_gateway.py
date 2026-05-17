@@ -20,7 +20,8 @@ def daemonize():
         sys.exit(1)
 
     # Decouple from parent environment
-    os.chdir('/project/ccxt-gateway')
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    os.chdir(script_dir)
     os.setsid()
     os.umask(0)
 
