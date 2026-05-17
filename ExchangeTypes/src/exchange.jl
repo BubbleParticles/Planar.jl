@@ -25,7 +25,7 @@ mutable struct CcxtExchange{I<:ExchangeID} <: Exchange{I}
     const markets::OptionsDict
     const types::Set{Symbol}
     const fees::Dict{Symbol,Union{Symbol,<:Number,<:AbstractDict}}
-    const has::Dict{Symbol,Bool}
+    const has::Dict{Symbol,Any}
     precision::ExcPrecisionMode
     _trace::Any
 end
@@ -72,7 +72,8 @@ function Exchange(sym::Symbol; account="", kwargs...)
     
     # Fetch metadata from gateway (short timeout, best effort)
     client = CcxtGateway.GatewayClient(; timeout=3.0)
-    has_sym = Dict{Symbol,Bool}()
+    
+    has_sym = Dict{Symbol,Any}()
     tfs = OrderedSet{String}()
     mkt_list = String[]
     fees_dict = Dict{Symbol,Union{Symbol,<:Number,<:AbstractDict}}()
@@ -82,7 +83,7 @@ function Exchange(sym::Symbol; account="", kwargs...)
         meta = CcxtGateway.fetch_exchange_metadata(client, name)
         if meta isa Dict || meta isa JSON3.Object
             h = get(meta, "has", Dict{String, Any}())
-            has_sym = Dict{Symbol,Bool}(Symbol(k) => v for (k, v) in pairs(h))
+            has_sym = Dict{Symbol,Any}(Symbol(k) => v for (k, v) in pairs(h))
             tfs_list = get(meta, "timeframes", [])
             tfs = OrderedSet{String}(string(t) for t in tfs_list)
             mkt_list = [string(m) for m in get(meta, "markets", [])]
@@ -90,7 +91,8 @@ function Exchange(sym::Symbol; account="", kwargs...)
             fees_dict = Dict{Symbol,Union{Symbol,<:Number,<:AbstractDict}}(Symbol(k) => v for (k, v) in pairs(f))
             prec = ExcPrecisionMode(get(meta, "precisionMode", 4))
         end
-    catch
+    catch e
+        @debug "Failed to fetch metadata for $name: $e"
     end
     
     mkts = OptionsDict()
@@ -137,8 +139,7 @@ function Base.getproperty(e::CcxtExchange, k::Symbol)
 end
 
 function Base.propertynames(e::CcxtExchange)
-    # Include field names AND supported method names (from has dict) for tab completion
-    method_syms = [Symbol(k) for (k, v) in e.has if v]
+    method_syms = [Symbol(k) for (k, v) in e.has if v !== nothing && v !== false]
     (fieldnames(typeof(e))..., method_syms...)
 end
 
