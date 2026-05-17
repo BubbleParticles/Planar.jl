@@ -45,7 +45,7 @@ function _check_gateway_running()
     try
         client = CcxtGateway.GatewayClient(; timeout=2.0)
         if CcxtGateway.ping(client)
-            @info "Gateway found running on $(client.host):$(client.port)"
+            @debug "Gateway found running on $(client.host):$(client.port)"
             return true
         end
     catch
@@ -57,12 +57,12 @@ function _init()
     mkpath(MARKETS_PATH)
     _with_gateway_lock() do
         if _check_existing_gateway()
-            @info "CcxtGateway already running (PID $(CcxtGateway.Rest._gateway_pid[]))"
+            @debug "CcxtGateway already running (PID $(CcxtGateway.Rest._gateway_pid[]))"
             return
         end
         client = CcxtGateway.GatewayClient()
         if !CcxtGateway.ping(client)
-            @info "CcxtGateway not responding, spawning..."
+            @debug "CcxtGateway not responding, spawning..."
             try
                 CcxtGateway.spawn_gateway()
             catch e
