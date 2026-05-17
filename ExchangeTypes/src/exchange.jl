@@ -68,12 +68,39 @@ end
 function Exchange(sym::Symbol; account="", kwargs...)
     id = ExchangeID{sym}()
     name = string(sym)
+    
+    # Fetch metadata from gateway (best effort, defaults on failure)
     has_sym = Dict{Symbol,Bool}()
+    tfs = OrderedSet{String}()
+    mkt_list = String[]
+    fees_dict = Dict{Symbol,Union{Symbol,<:Number,<:AbstractDict}}()
+    prec = excTickSize
+    
+    try
+        client = CcxtGateway.default_client()
+        meta = CcxtGateway.fetch_exchange_metadata(client, name)
+        if meta isa Dict || meta isa JSON3.Object
+            h = get(meta, "has", Dict{String, Any}())
+            has_sym = Dict{Symbol,Bool}(Symbol(k) => v for (k, v) in pairs(h))
+            tfs_list = get(meta, "timeframes", [])
+            tfs = OrderedSet{String}(string(t) for t in tfs_list)
+            mkt_list = [string(m) for m in get(meta, "markets", [])]
+            f = get(meta, "fees", Dict{String, Any}())
+            fees_dict = Dict{Symbol,Union{Symbol,<:Number,<:AbstractDict}}(Symbol(k) => v for (k, v) in pairs(f))
+            prec = ExcPrecisionMode(get(meta, "precisionMode", 4))
+        end
+    catch
+    end
+    
+    mkts = OptionsDict()
+    for sym_str in mkt_list
+        mkts[sym_str] = Dict{String,Any}()
+    end
     
     e = CcxtExchange{typeof(id)}(
-        id, name, account, OrderedSet{String}(), OptionsDict(),
-        Set{Symbol}(), Dict{Symbol,Union{Symbol,<:Number}}(),
-        has_sym, excTickSize, nothing,
+        id, name, account, tfs, mkts,
+        Set{Symbol}(), fees_dict,
+        has_sym, prec, nothing,
     )
     
     funcs = get(HOOKS, Symbol(id), ())::Union{Tuple{},Vector{Function}}
@@ -103,12 +130,15 @@ function Base.getproperty(e::CcxtExchange, k::Symbol)
         !isempty(e) || throw("Can't access non instantiated exchange object.")
         client = CcxtGateway.default_client()
         ex_id = string(e.id)
-        CcxtGateway.call_exchange(client, ex_id, string(k))
+        m = string(k)
+        (args...; kwargs...) -> CcxtGateway.call_exchange(client, ex_id, m; query=kwargs)
     end
 end
 
 function Base.propertynames(e::CcxtExchange)
-    fieldnames(typeof(e))
+    # Include field names AND supported method names (from has dict) for tab completion
+    method_syms = [Symbol(k) for (k, v) in e.has if v]
+    (fieldnames(typeof(e))..., method_syms...)
 end
 
 _has(exc::Exchange, syms::Vararg{Symbol}) = begin
@@ -150,7 +180,7 @@ function _first(exc::CcxtExchange, args::Vararg{Symbol})
             client = CcxtGateway.default_client()
             ex_id = string(exc.id)
             m = string(name)
-            return (kwargs...) -> CcxtGateway.call_exchange(client, ex_id, m; query=kwargs)
+            return (args...; kwargs...) -> CcxtGateway.call_exchange(client, ex_id, m; query=kwargs)
         end
     end
 end
