@@ -5,8 +5,8 @@ server:
   port: 8999
   debug: false
   use_ssl: true
-  ssl_cert: /project/Ccxt/certs/server.crt
-  ssl_key: /project/Ccxt/certs/server.key
+  ssl_cert: ../Ccxt/certs/server.crt
+  ssl_key: ../Ccxt/certs/server.key
   # Use granian for higher performance (pip install ccxt-gateway[server])
   use_granian: false
 
