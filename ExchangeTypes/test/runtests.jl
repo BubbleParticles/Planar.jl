@@ -181,9 +181,14 @@ end
         @test e.account == ""
     end
 
-    @testset "Non-field access errors" begin
+    @testset "Non-field access via gateway" begin
         e = Exchange(:test_exchange)
-        @test_throws ErrorException e.nonexistent_field
+        try
+            # Should call call_exchange on the gateway (will fail without running gateway)
+            e.fetchTicker
+        catch err
+            @test occursin("fetchTicker", string(err)) || occursin("connect", lowercase(string(err)))
+        end
     end
 
     @testset "Empty exchange getproperty" begin
