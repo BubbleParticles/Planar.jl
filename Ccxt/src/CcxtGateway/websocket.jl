@@ -132,4 +132,33 @@ end
 uuid4() = string(Base.UUID(rand(UInt128)))
 const generate_uuid = uuid4
 
+const _default_ws_client = Ref{Union{GatewayWSClient, Nothing}}(nothing)
+
+function default_ws_client()
+    if !isassigned(_default_ws_client) || _default_ws_client[] === nothing
+        _default_ws_client[] = GatewayWSClient()
+    end
+    _default_ws_client[]
+end
+
+function connect!()
+    connect!(default_ws_client())
+end
+
+function disconnect!()
+    disconnect!(default_ws_client())
+end
+
+function is_connected()
+    is_connected(default_ws_client())
+end
+
+function send_subscribe(exchange_id::String, method::String; kwargs...)
+    send_subscribe(default_ws_client(), exchange_id, method; kwargs...)
+end
+
+function send_unsubscribe(subscription_id::String)
+    send_unsubscribe(default_ws_client(), subscription_id)
+end
+
 end # module WSClient
