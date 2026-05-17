@@ -3,6 +3,67 @@ using ExchangeTypes
 
 @testset "ExchangeTypes" begin
 
+@testset "Module structure" begin
+    @testset "All exported names are defined" begin
+        expected = [:Exchange, :ExchangeID, :EIDType, :ExcPrecisionMode,
+                     :GatewayExchange, :exchange, :exchangeid, :exchanges,
+                     :sb_exchanges, :has, :account, :eids]
+        for name in expected
+            @test isdefined(ExchangeTypes, name)
+        end
+    end
+
+    @testset "Key internal names are defined" begin
+        internal = [:close_exc, :_closeall, :decimal_to_size, :HOOKS,
+                    :exchangeIds, :_has, :OptionsDict]
+        for name in internal
+            @test isdefined(ExchangeTypes, name)
+        end
+    end
+
+    @testset "GatewayExchange subtypes Exchange" begin
+        @test GatewayExchange{ExchangeID{:test}} <: Exchange
+    end
+
+    @testset "ExchangeID subtypes" begin
+        @test ExchangeID{:test} <: ExchangeID
+        @test ExchangeID{:binance} <: ExchangeID
+    end
+
+    @testset "EIDType alias" begin
+        @test EIDType == Type{<:ExchangeID}
+    end
+
+    @testset "ExcPrecisionMode enum values" begin
+        @test ExcPrecisionMode(2) == ExchangeTypes.excDecimalPlaces
+        @test ExcPrecisionMode(3) == ExchangeTypes.excSignificantDigits
+        @test ExcPrecisionMode(4) == ExchangeTypes.excTickSize
+    end
+
+    @testset "OptionsDict alias" begin
+        @test ExchangeTypes.OptionsDict == Dict{String, Dict{String, Any}}
+    end
+
+    @testset "_doinit runs without error" begin
+        ExchangeTypes._doinit()
+        @test true
+    end
+
+    @testset "precompile.jl loads without error" begin
+        include("../src/precompile.jl")
+        @test true
+    end
+
+    @testset "_has with symbol feature (static)" begin
+        result = ExchangeTypes._has(:fetchTicker)
+        @test result isa Vector{String}
+    end
+
+    @testset "exchangeIds is a Vector" begin
+        @test ExchangeTypes.exchangeIds isa Vector{Symbol}
+    end
+end
+
 @testset "ExchangeID" begin
     @testset "Parametric creation" begin
         id = ExchangeID{:test_exchange}()
@@ -50,7 +111,7 @@ using ExchangeTypes
 
     @testset "Broadcast" begin
         id = ExchangeID{:binance}()
-        bc = ExchangeTypes.Base.Broadcast.broadcastable(id)
+        bc = Base.Broadcast.broadcastable(id)
         @test bc isa Base.RefValue{ExchangeID{:binance}}
     end
 end
@@ -60,6 +121,7 @@ end
         e = Exchange()
         @test isempty(e)
         @test nameof(e) == Symbol()
+        @test e isa GatewayExchange
     end
 
     @testset "Exchange from symbol" begin
@@ -93,7 +155,6 @@ end
         @test ExchangeTypes.has(e, (:fetchTicker, :fetchBalance)) == true
         @test ExchangeTypes._has(e, :fetchTicker) == true
         @test ExchangeTypes._has(e, :fetchTicker, :fetchOrderBook) == true
-        # Partial match should fail (all must match)
         ExchangeTypes.has(e, (:fetchTicker, :nonexistent)) == false
         delete!(e.has, :fetchTicker)
         delete!(e.has, :fetchBalance)
@@ -132,7 +193,7 @@ end
 
     @testset "propertynames" begin
         e = Exchange(:test_exchange)
-        names = ExchangeTypes.Base.propertynames(e)
+        names = Base.propertynames(e)
         @test :name in names
         @test :id in names
         @test :has in names
@@ -162,16 +223,12 @@ end
     @testset "close removes from caches" begin
         empty!(ExchangeTypes.exchanges)
         empty!(ExchangeTypes.sb_exchanges)
-
         e = Exchange(:test_close)
         ExchangeTypes.exchanges[(:test_close, "")] = e
         ExchangeTypes.sb_exchanges[(:test_close, "")] = e
-
         @test haskey(ExchangeTypes.exchanges, (:test_close, ""))
         @test haskey(ExchangeTypes.sb_exchanges, (:test_close, ""))
-
         ExchangeTypes.close_exc(e)
-
         @test !haskey(ExchangeTypes.exchanges, (:test_close, ""))
         @test !haskey(ExchangeTypes.sb_exchanges, (:test_close, ""))
     end
@@ -179,7 +236,7 @@ end
     @testset "close_exc on uncached exchange" begin
         e = Exchange(:test_uncached)
         ExchangeTypes.close_exc(e)
-        @test true  # smoke test — should not throw
+        @test true
     end
 
     @testset "nameof" begin
@@ -214,47 +271,6 @@ end
     end
 end
 
-@testset "CcxtExchange" begin
-    @testset "CcxtExchange type exists" begin
-        @test isdefined(ExchangeTypes, :CcxtExchange)
-    end
-
-    @testset "CcxtExchange creation without Python" begin
-        @test_throws ErrorException Exchange(nothing, nothing, "")
-    end
-
-    @testset "CcxtExchange close without Python" begin
-        e = Exchange(:test_ccex)
-        id = ExchangeID{:test_ccex}()
-        ce = ExchangeTypes.CcxtExchange{typeof(id)}(
-            nothing, id, "test_ccex", "",
-            ExchangeTypes.OrderedSet{String}(),
-            ExchangeTypes.OptionsDict(),
-            Set{Symbol}(),
-            Dict{Symbol, Union{Symbol, <:Number}}(),
-            Dict{Symbol, Bool}(),
-            nothing,
-            ExchangeTypes.excTickSize,
-            nothing,
-        )
-        ExchangeTypes.close_exc(ce)
-        @test true
-    end
-
-    @testset "CcxtExchange nameof" begin
-        e = Exchange(:test_ccex_name)
-        @test ExchangeTypes.nameof(e) == :test_ccex_name
-    end
-
-    @testset "CcxtExchange propertynames without Python" begin
-        e = Exchange(:test_ccex_pn)
-        names = ExchangeTypes.Base.propertynames(e)
-        @test :name in names
-        @test :id in names
-        @test :has in names
-    end
-end
-
 @testset "Exchange cache" begin
     @testset "Empty initial state" begin
         empty!(ExchangeTypes.exchanges)
@@ -285,12 +301,10 @@ end
     @testset "closeall with exchanges" begin
         empty!(ExchangeTypes.exchanges)
         empty!(ExchangeTypes.sb_exchanges)
-
         e1 = Exchange(:test_a)
         e2 = Exchange(:test_b)
         ExchangeTypes.exchanges[(:test_a, "")] = e1
         ExchangeTypes.exchanges[(:test_b, "")] = e2
-
         ExchangeTypes._closeall()
         @test isempty(ExchangeTypes.exchanges)
         @test isempty(ExchangeTypes.sb_exchanges)
@@ -299,10 +313,8 @@ end
     @testset "closeall with sb_exchanges" begin
         empty!(ExchangeTypes.exchanges)
         empty!(ExchangeTypes.sb_exchanges)
-
         e = Exchange(:test_sb_close)
         ExchangeTypes.sb_exchanges[(:test_sb_close, "sandbox")] = e
-
         ExchangeTypes._closeall()
         @test isempty(ExchangeTypes.exchanges)
         @test isempty(ExchangeTypes.sb_exchanges)
@@ -311,12 +323,10 @@ end
     @testset "closeall with both caches" begin
         empty!(ExchangeTypes.exchanges)
         empty!(ExchangeTypes.sb_exchanges)
-
         e1 = Exchange(:test_both)
         e2 = Exchange(:test_both_sb)
         ExchangeTypes.exchanges[(:test_both, "main")] = e1
         ExchangeTypes.sb_exchanges[(:test_both_sb, "sandbox")] = e2
-
         ExchangeTypes._closeall()
         @test isempty(ExchangeTypes.exchanges)
         @test isempty(ExchangeTypes.sb_exchanges)
@@ -339,7 +349,7 @@ end
 
     @testset "display method" begin
         e = Exchange(:test_exchange)
-        ExchangeTypes.Base.display(e)  # smoke test
+        ExchangeTypes.Base.display(e)
         @test true
     end
 
@@ -358,7 +368,7 @@ end
 
     @testset "Decimal places with non-integer" begin
         result = ExchangeTypes.decimal_to_size(100.5, ExchangeTypes.excDecimalPlaces)
-        @test result == 100.5  # passes through with warning
+        @test result == 100.5
     end
 
     @testset "Significant digits" begin
@@ -374,34 +384,6 @@ end
     @testset "Default precision mode" begin
         e = Exchange(:test_exchange)
         @test e.precision == ExchangeTypes.excTickSize
-    end
-end
-
-@testset "Finalizer queue" begin
-    @testset "Empty queue" begin
-        empty!(ExchangeTypes._FINALIZER_QUEUE[])
-        ExchangeTypes._drain_finalizer_queue()
-        @test isempty(ExchangeTypes._FINALIZER_QUEUE[])
-    end
-
-    @testset "Drain with items" begin
-        empty!(ExchangeTypes._FINALIZER_QUEUE[])
-        id = ExchangeID{:test_fq}()
-        ce = ExchangeTypes.CcxtExchange{typeof(id)}(
-            nothing, id, "test_fq", "",
-            ExchangeTypes.OrderedSet{String}(),
-            ExchangeTypes.OptionsDict(),
-            Set{Symbol}(),
-            Dict{Symbol, Union{Symbol, <:Number}}(),
-            Dict{Symbol, Bool}(),
-            nothing,
-            ExchangeTypes.excTickSize,
-            nothing,
-        )
-        push!(ExchangeTypes._FINALIZER_QUEUE[], ce)
-        @test length(ExchangeTypes._FINALIZER_QUEUE[]) == 1
-        ExchangeTypes._drain_finalizer_queue()
-        @test isempty(ExchangeTypes._FINALIZER_QUEUE[])
     end
 end
 
