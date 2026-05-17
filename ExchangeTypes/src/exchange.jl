@@ -64,12 +64,14 @@ function Exchange(x::String; account="", kwargs...)
 end
 
 @doc """Instantiates a new exchange from a symbol using CcxtGateway.
+The exchange subprocess is automatically started on the gateway.
 """
 function Exchange(sym::Symbol; account="", kwargs...)
     id = ExchangeID{sym}()
     name = string(sym)
     
-    # Fetch metadata from gateway (best effort, defaults on failure)
+    # Fetch metadata from gateway (short timeout, best effort)
+    client = CcxtGateway.GatewayClient(; timeout=3.0)
     has_sym = Dict{Symbol,Bool}()
     tfs = OrderedSet{String}()
     mkt_list = String[]
@@ -77,7 +79,6 @@ function Exchange(sym::Symbol; account="", kwargs...)
     prec = excTickSize
     
     try
-        client = CcxtGateway.default_client()
         meta = CcxtGateway.fetch_exchange_metadata(client, name)
         if meta isa Dict || meta isa JSON3.Object
             h = get(meta, "has", Dict{String, Any}())
