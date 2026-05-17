@@ -101,7 +101,9 @@ function Base.getproperty(e::GatewayExchange, k::Symbol)
         getfield(e, k)
     else
         !isempty(e) || throw("Can't access non instantiated exchange object.")
-        error("GatewayExchange does not support property access: $k. Use call_exchange instead.")
+        client = CcxtGateway.GatewayClient()
+        ex_id = string(e.id)
+        CcxtGateway.call_exchange(client, ex_id, string(k))
     end
 end
 
