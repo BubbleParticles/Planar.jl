@@ -13,11 +13,11 @@ Defines the interface for interacting with crypto exchanges.
 abstract type Exchange{I} end
 const OptionsDict = Dict{String,Dict{String,Any}}
 
-@doc """A `GatewayExchange` wraps a ccxt exchange accessed via CcxtGateway.
+@doc """A `CcxtExchange` wraps a ccxt exchange accessed via CcxtGateway.
 
 Uses HTTP calls to the ccxt-gateway instead of Python ccxt bindings.
 """
-mutable struct GatewayExchange{I<:ExchangeID} <: Exchange{I}
+mutable struct CcxtExchange{I<:ExchangeID} <: Exchange{I}
     const id::I
     const name::String
     const account::String
@@ -32,7 +32,7 @@ end
 
 @doc """ Closes the given exchange by removing it from caches.
 """
-function close_exc(exc::GatewayExchange)
+function close_exc(exc::CcxtExchange)
     try
         k = (Symbol(exc.id), account(exc))
         if haskey(exchanges, k)
@@ -52,7 +52,7 @@ Exchange() = Exchange(nothing)
 """
 function Exchange(x::Nothing; kwargs...)
     id = ExchangeID(Symbol())
-    GatewayExchange{typeof(id)}(
+    CcxtExchange{typeof(id)}(
         id, "", "", OrderedSet{String}(), OptionsDict(),
         Set{Symbol}(), Dict{Symbol,Union{Symbol,<:Number}}(),
         Dict{Symbol,Bool}(), excTickSize, nothing,
@@ -70,7 +70,7 @@ function Exchange(sym::Symbol; account="", kwargs...)
     name = string(sym)
     has_sym = Dict{Symbol,Bool}()
     
-    e = GatewayExchange{typeof(id)}(
+    e = CcxtExchange{typeof(id)}(
         id, name, account, OrderedSet{String}(), OptionsDict(),
         Set{Symbol}(), Dict{Symbol,Union{Symbol,<:Number}}(),
         has_sym, excTickSize, nothing,
@@ -96,8 +96,8 @@ Base.isempty(e::Exchange) = Symbol(e.id) === Symbol()
 
 Base.hash(e::Exchange, u::UInt) = Base.hash(e.id, u)
 
-function Base.getproperty(e::GatewayExchange, k::Symbol)
-    if hasfield(GatewayExchange, k)
+function Base.getproperty(e::CcxtExchange, k::Symbol)
+    if hasfield(CcxtExchange, k)
         getfield(e, k)
     else
         !isempty(e) || throw("Can't access non instantiated exchange object.")
@@ -107,7 +107,7 @@ function Base.getproperty(e::GatewayExchange, k::Symbol)
     end
 end
 
-function Base.propertynames(e::GatewayExchange)
+function Base.propertynames(e::CcxtExchange)
     fieldnames(typeof(e))
 end
 
@@ -144,7 +144,7 @@ has(exc, what::Tuple{Vararg{Symbol}}; kwargs...) = _has_all(exc, what; kwargs...
 
 account(exc::Exchange) = getfield(exc, :account)
 
-function _first(exc::GatewayExchange, args::Vararg{Symbol})
+function _first(exc::CcxtExchange, args::Vararg{Symbol})
     for name in args
         if has(exc, name)
             client = CcxtGateway.GatewayClient()
@@ -177,7 +177,7 @@ _closeall() = begin
     end
 end
 
-Base.nameof(e::GatewayExchange) = Symbol(getfield(e, :id))
+Base.nameof(e::CcxtExchange) = Symbol(getfield(e, :id))
 
 exchange(e::Exchange, args...; kwargs...) = e
 exchangeid(e::E) where {E<:Exchange} = getfield(e, :id)
