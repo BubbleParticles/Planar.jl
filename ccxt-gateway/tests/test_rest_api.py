@@ -218,3 +218,89 @@ class TestRestAPIExtended:
         response = client.get("/exchanges/binance/fetch_ticker")
         assert response.status_code == 200
         mock_pm.restart_exchange.assert_not_called()
+
+    def test_get_exchange_has_success(self, setup):
+        """Test getting exchange has dict."""
+        client, mock_broker, mock_pm = setup
+
+        mock_proc = MagicMock()
+        mock_pm.processes = {"binance": mock_proc}
+
+        mock_response = json.dumps({
+            "type": "response",
+            "id": "test-id",
+            "result": {"fetchTicker": True, "fetchOHLCV": False}
+        }).encode()
+        mock_broker.send_request = AsyncMock(return_value=mock_response)
+        mock_broker.exchange_identities = {"binance": b"identity"}
+
+        response = client.get("/exchanges/binance/has")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["fetchTicker"] is True
+        assert data["fetchOHLCV"] is False
+
+    def test_get_exchange_has_not_found(self, setup):
+        """Test getting has for non-existent exchange."""
+        client, mock_broker, mock_pm = setup
+        mock_pm.processes = {}
+
+        response = client.get("/exchanges/nonexistent/has")
+        assert response.status_code == 404
+
+    def test_get_exchange_metadata_success(self, setup):
+        """Test getting exchange metadata."""
+        client, mock_broker, mock_pm = setup
+
+        mock_proc = MagicMock()
+        mock_pm.processes = {"binance": mock_proc}
+
+        mock_response = json.dumps({
+            "type": "response",
+            "id": "test-id",
+            "result": {
+                "has": {"fetchTicker": True},
+                "timeframes": ["1m", "5m", "1h"],
+                "fees": {"trading": {"maker": 0.001, "taker": 0.002}},
+                "precisionMode": 4,
+                "markets": ["BTC/USDT", "ETH/USDT"],
+            }
+        }).encode()
+        mock_broker.send_request = AsyncMock(return_value=mock_response)
+        mock_broker.exchange_identities = {"binance": b"identity"}
+
+        response = client.get("/exchanges/binance/metadata")
+        assert response.status_code == 200
+        data = response.json()
+        assert "has" in data
+        assert "timeframes" in data
+        assert "fees" in data
+        assert data["precisionMode"] == 4
+        assert len(data["markets"]) == 2
+
+    def test_get_exchange_metadata_not_found(self, setup):
+        """Test getting metadata for non-existent exchange."""
+        client, mock_broker, mock_pm = setup
+        mock_pm.processes = {}
+
+        response = client.get("/exchanges/nonexistent/metadata")
+        assert response.status_code == 404
+
+    def test_get_exchange_metadata_error_response(self, setup):
+        """Test getting metadata when subprocess returns error."""
+        client, mock_broker, mock_pm = setup
+
+        mock_proc = MagicMock()
+        mock_pm.processes = {"binance": mock_proc}
+
+        mock_response = json.dumps({
+            "type": "response",
+            "id": "test-id",
+            "error": "Exchange not ready",
+            "error_code": "NOT_READY"
+        }).encode()
+        mock_broker.send_request = AsyncMock(return_value=mock_response)
+        mock_broker.exchange_identities = {"binance": b"identity"}
+
+        response = client.get("/exchanges/binance/metadata")
+        assert response.status_code == 500
