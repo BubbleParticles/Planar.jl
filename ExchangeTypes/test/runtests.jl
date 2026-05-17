@@ -175,6 +175,43 @@ end
         @test !haskey(ExchangeTypes.exchanges, (:test_close, ""))
         @test !haskey(ExchangeTypes.sb_exchanges, (:test_close, ""))
     end
+
+    @testset "close_exc on uncached exchange" begin
+        e = Exchange(:test_uncached)
+        ExchangeTypes.close_exc(e)
+        @test true  # smoke test — should not throw
+    end
+
+    @testset "nameof" begin
+        e = Exchange(:test_naming)
+        @test ExchangeTypes.nameof(e) == :test_naming
+    end
+
+    @testset "timeframes, markets, types, fees fields" begin
+        e = Exchange(:test_fields)
+        @test isa(e.timeframes, AbstractSet)
+        @test isempty(e.timeframes)
+        @test e.markets isa Dict
+        @test isempty(e.markets)
+        @test e.types isa Set
+        @test isempty(e.types)
+        @test e.fees isa Dict
+        @test isempty(e.fees)
+    end
+
+    @testset "precision field" begin
+        e = Exchange(:test_precision)
+        @test e.precision == ExchangeTypes.excTickSize
+        e.precision = ExchangeTypes.excDecimalPlaces
+        @test e.precision == ExchangeTypes.excDecimalPlaces
+    end
+
+    @testset "_trace field" begin
+        e = Exchange(:test_trace)
+        @test e._trace === nothing
+        e._trace = "test trace"
+        @test e._trace == "test trace"
+    end
 end
 
 @testset "CcxtExchange" begin
@@ -186,8 +223,35 @@ end
         @test_throws ErrorException Exchange(nothing, nothing, "")
     end
 
+    @testset "CcxtExchange close without Python" begin
+        e = Exchange(:test_ccex)
+        id = ExchangeID{:test_ccex}()
+        ce = ExchangeTypes.CcxtExchange{typeof(id)}(
+            nothing, id, "test_ccex", "",
+            ExchangeTypes.OrderedSet{String}(),
+            ExchangeTypes.OptionsDict(),
+            Set{Symbol}(),
+            Dict{Symbol, Union{Symbol, <:Number}}(),
+            Dict{Symbol, Bool}(),
+            nothing,
+            ExchangeTypes.excTickSize,
+            nothing,
+        )
+        ExchangeTypes.close_exc(ce)
+        @test true
+    end
+
+    @testset "CcxtExchange nameof" begin
+        e = Exchange(:test_ccex_name)
+        @test ExchangeTypes.nameof(e) == :test_ccex_name
+    end
+
     @testset "CcxtExchange propertynames without Python" begin
-        @test isdefined(ExchangeTypes, :CcxtExchange)
+        e = Exchange(:test_ccex_pn)
+        names = ExchangeTypes.Base.propertynames(e)
+        @test :name in names
+        @test :id in names
+        @test :has in names
     end
 end
 
@@ -226,6 +290,32 @@ end
         e2 = Exchange(:test_b)
         ExchangeTypes.exchanges[(:test_a, "")] = e1
         ExchangeTypes.exchanges[(:test_b, "")] = e2
+
+        ExchangeTypes._closeall()
+        @test isempty(ExchangeTypes.exchanges)
+        @test isempty(ExchangeTypes.sb_exchanges)
+    end
+
+    @testset "closeall with sb_exchanges" begin
+        empty!(ExchangeTypes.exchanges)
+        empty!(ExchangeTypes.sb_exchanges)
+
+        e = Exchange(:test_sb_close)
+        ExchangeTypes.sb_exchanges[(:test_sb_close, "sandbox")] = e
+
+        ExchangeTypes._closeall()
+        @test isempty(ExchangeTypes.exchanges)
+        @test isempty(ExchangeTypes.sb_exchanges)
+    end
+
+    @testset "closeall with both caches" begin
+        empty!(ExchangeTypes.exchanges)
+        empty!(ExchangeTypes.sb_exchanges)
+
+        e1 = Exchange(:test_both)
+        e2 = Exchange(:test_both_sb)
+        ExchangeTypes.exchanges[(:test_both, "main")] = e1
+        ExchangeTypes.sb_exchanges[(:test_both_sb, "sandbox")] = e2
 
         ExchangeTypes._closeall()
         @test isempty(ExchangeTypes.exchanges)
@@ -290,6 +380,26 @@ end
 @testset "Finalizer queue" begin
     @testset "Empty queue" begin
         empty!(ExchangeTypes._FINALIZER_QUEUE[])
+        ExchangeTypes._drain_finalizer_queue()
+        @test isempty(ExchangeTypes._FINALIZER_QUEUE[])
+    end
+
+    @testset "Drain with items" begin
+        empty!(ExchangeTypes._FINALIZER_QUEUE[])
+        id = ExchangeID{:test_fq}()
+        ce = ExchangeTypes.CcxtExchange{typeof(id)}(
+            nothing, id, "test_fq", "",
+            ExchangeTypes.OrderedSet{String}(),
+            ExchangeTypes.OptionsDict(),
+            Set{Symbol}(),
+            Dict{Symbol, Union{Symbol, <:Number}}(),
+            Dict{Symbol, Bool}(),
+            nothing,
+            ExchangeTypes.excTickSize,
+            nothing,
+        )
+        push!(ExchangeTypes._FINALIZER_QUEUE[], ce)
+        @test length(ExchangeTypes._FINALIZER_QUEUE[]) == 1
         ExchangeTypes._drain_finalizer_queue()
         @test isempty(ExchangeTypes._FINALIZER_QUEUE[])
     end
