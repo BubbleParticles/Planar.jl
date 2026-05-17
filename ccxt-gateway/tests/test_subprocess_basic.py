@@ -154,3 +154,67 @@ class TestExchangeSubprocess:
 
         parsed = json.loads(response_bytes)
         assert parsed["result"] == {}
+
+    @pytest.mark.asyncio
+    async def test_handle_metadata_method(self):
+        """Test that method='metadata' returns exchange metadata."""
+        import ccxt_gateway.exchange.subprocess as sp
+
+        sp_exch = sp.ExchangeSubprocess("test_ex", "binance")
+        sp_exch.socket = AsyncMock()
+        sp_exch.socket.send_multipart = AsyncMock()
+
+        mock_has = {"fetchTicker": True}
+        mock_timeframes = MagicMock()
+        mock_timeframes.keys.return_value = ["1m", "5m", "1h"]
+        mock_fees = {"trading": {"maker": 0.001}}
+        mock_markets = MagicMock()
+        mock_markets.keys.return_value = ["BTC/USDT", "ETH/USDT"]
+
+        sp_exch.exchange = MagicMock()
+        sp_exch.exchange.has = mock_has
+        sp_exch.exchange.timeframes = mock_timeframes
+        sp_exch.exchange.fees = mock_fees
+        sp_exch.exchange.precisionMode = 4
+        sp_exch.exchange.markets = mock_markets
+
+        await sp_exch._handle_request({
+            "id": "req-5",
+            "method": "metadata",
+            "params": {},
+        })
+
+        sp_exch.socket.send_multipart.assert_called_once()
+        sent = sp_exch.socket.send_multipart.call_args[0][0]
+        response_bytes = sent[1] if len(sent) > 1 else sent[0]
+        parsed = json.loads(response_bytes)
+
+        assert parsed["type"] == "response"
+        assert parsed["id"] == "req-5"
+        assert parsed["result"]["has"]["fetchTicker"] is True
+        assert "1m" in parsed["result"]["timeframes"]
+        assert parsed["result"]["fees"]["trading"]["maker"] == 0.001
+        assert parsed["result"]["precisionMode"] == 4
+        assert "BTC/USDT" in parsed["result"]["markets"]
+
+    @pytest.mark.asyncio
+    async def test_handle_metadata_method_no_exchange(self):
+        """Test that method='metadata' raises error when exchange not initialized."""
+        import ccxt_gateway.exchange.subprocess as sp
+
+        sp_exch = sp.ExchangeSubprocess("test_ex", "binance")
+        sp_exch.socket = AsyncMock()
+        sp_exch.socket.send_multipart = AsyncMock()
+        sp_exch.exchange = None
+
+        await sp_exch._handle_request({
+            "id": "req-6",
+            "method": "metadata",
+            "params": {},
+        })
+
+        sp_exch.socket.send_multipart.assert_called_once()
+        sent = sp_exch.socket.send_multipart.call_args[0][0]
+        response_bytes = sent[1] if len(sent) > 1 else sent[0]
+        parsed = json.loads(response_bytes)
+        assert "error" in parsed
