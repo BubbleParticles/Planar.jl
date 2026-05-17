@@ -6,7 +6,7 @@ using ExchangeTypes
 @testset "Module structure" begin
     @testset "All exported names are defined" begin
         expected = [:Exchange, :ExchangeID, :EIDType, :ExcPrecisionMode,
-                     :GatewayExchange, :exchange, :exchangeid, :exchanges,
+                     :CcxtExchange, :exchange, :exchangeid, :exchanges,
                      :sb_exchanges, :has, :account, :eids]
         for name in expected
             @test isdefined(ExchangeTypes, name)
@@ -21,8 +21,8 @@ using ExchangeTypes
         end
     end
 
-    @testset "GatewayExchange subtypes Exchange" begin
-        @test GatewayExchange{ExchangeID{:test}} <: Exchange
+    @testset "CcxtExchange subtypes Exchange" begin
+        @test CcxtExchange{ExchangeID{:test}} <: Exchange
     end
 
     @testset "ExchangeID subtypes" begin
@@ -116,17 +116,17 @@ end
     end
 end
 
-@testset "GatewayExchange" begin
+@testset "CcxtExchange" begin
     @testset "Empty exchange" begin
         e = Exchange()
         @test isempty(e)
         @test nameof(e) == Symbol()
-        @test e isa GatewayExchange
+        @test e isa CcxtExchange
     end
 
     @testset "Exchange from symbol" begin
         e = Exchange(:test_only)
-        @test e isa GatewayExchange
+        @test e isa CcxtExchange
         @test e.name == "test_only"
         @test string(e.id) == "test_only"
         @test !ExchangeTypes.isempty(e)
@@ -135,7 +135,7 @@ end
 
     @testset "Exchange from string" begin
         e = Exchange("test_exchange")
-        @test e isa GatewayExchange
+        @test e isa CcxtExchange
         @test e.name == "test_exchange"
     end
 
