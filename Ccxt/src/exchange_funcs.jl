@@ -25,7 +25,7 @@ function get_cached_has(client::CcxtGateway.GatewayClient, exchange_id::String)
 end
 
 function get_cached_has(exchange_id::String)
-    client = CcxtGateway.GatewayClient()
+    client = CcxtGateway.default_client()
     get_cached_has(client, exchange_id)
 end
 
@@ -39,14 +39,14 @@ function exchange_has(client::CcxtGateway.GatewayClient, exchange_id::String, me
 end
 
 function exchange_has(exchange_id::String, method::String)
-    client = CcxtGateway.GatewayClient()
+    client = CcxtGateway.default_client()
     exchange_has(client, exchange_id, method)
 end
 
 @doc "Check if the key `k` is supported using CcxtGateway."
 function issupported(exchange_id::String, k::String)
     try
-        client = CcxtGateway.GatewayClient()
+        client = CcxtGateway.GatewayClient(; timeout=5.0)
         return exchange_has(client, exchange_id, k)
     catch
         false
@@ -106,7 +106,7 @@ end
 function choosefunc(exchange_id::String, suffix::String, inputs::AbstractVector; elkey=nothing, kwargs...)
     hasinputs = length(inputs) > 0
     method, kind = _multifunc(exchange_id, suffix, hasinputs)
-    client = CcxtGateway.GatewayClient()
+    client = CcxtGateway.default_client()
     
     if hasinputs
         if kind == :multi
