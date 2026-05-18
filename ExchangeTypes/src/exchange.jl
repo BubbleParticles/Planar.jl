@@ -74,16 +74,21 @@ function Exchange(sym::Symbol; account="", kwargs...)
     # Start the exchange subprocess if it's a known CCXT exchange
     client = CcxtGateway.GatewayClient(; timeout=5.0)
     if Symbol(name) ∈ ExchangeTypes._ccxt_exchange_set
-        resp = CcxtGateway.start_exchange(client, name)
-        if resp isa Dict
-            status = get(resp, "status", "unknown")
-            if status == "already_started"
-                @debug "Exchange $name already running on gateway"
-            elseif status == "success"
-                @debug "Exchange $name started on gateway"
-            else
-                @warn "Unexpected start_exchange response for $name: $resp"
+        try
+            resp = CcxtGateway.start_exchange(client, name)
+            if resp isa Dict
+                status = get(resp, "status", "unknown")
+                if status == "already_started"
+                    @debug "Exchange $name already running on gateway"
+                elseif status == "success"
+                    @debug "Exchange $name started on gateway"
+                else
+                    @warn "Exchange $name start response: $resp"
+                end
             end
+        catch e
+            @warn "Failed to start exchange $name on gateway: $e"
+            @warn "Make sure the gateway is running and the exchange subprocess can start (check ZMQ broker on port 5555)"
         end
     else
         @debug "Exchange $name not in CCXT exchange set, skipping gateway init"
