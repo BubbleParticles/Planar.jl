@@ -6,7 +6,8 @@ import sys
 import os
 import signal
 
-PIDFILE = "/tmp/ccxt_gateway.pid"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PIDFILE = os.path.join(SCRIPT_DIR, ".cache", "ccxt_gateway.pid")
 
 
 def daemonize():
