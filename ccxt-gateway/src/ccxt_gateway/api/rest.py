@@ -110,7 +110,7 @@ async def get_exchange_has(
     exchange_id: str,
     process_manager: Any = Depends(get_process_manager),
     broker: Any = Depends(get_broker),
-) -> Dict[str, bool]:
+) -> Dict[str, Any]:
     """Get the .has dict for an exchange (supported methods)."""
     if exchange_id not in process_manager.processes:
         raise HTTPException(status_code=404, detail=f"Exchange {exchange_id} not found")
