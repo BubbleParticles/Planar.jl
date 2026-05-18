@@ -71,7 +71,7 @@ class IdleConfig(BaseSettings):
     model_config = {"env_prefix": "CCXT_GATEWAY_IDLE_"}
 
     timeout_minutes: int = 5
-    pidfile_path: str = "/tmp/ccxt_gateway.pid"
+    pidfile_path: str = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".cache", "ccxt_gateway.pid")
 
 
 class Settings:

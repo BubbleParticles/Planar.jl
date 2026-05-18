@@ -8,5 +8,5 @@ end
 
 # Stop all processes spawned during precompilation
 stop_gateway()
-try rm("/tmp/ccxt_gateway.pid"; force=true) catch end
-try rm("/tmp/ccxt_gateway.lock"; force=true) catch end
+try rm(Ccxt.GATEWAY_PIDFILE; force=true) catch end
+try rm(Ccxt.GATEWAY_LOCKFILE; force=true) catch end

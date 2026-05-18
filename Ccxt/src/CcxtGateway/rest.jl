@@ -358,7 +358,7 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
     end
     
     # Kill any process found in the pidfile (stale gateway)
-    pidfile = "/tmp/ccxt_gateway.pid"
+    pidfile = Ccxt.GATEWAY_PIDFILE
     if isfile(pidfile)
         try
             content = strip(read(pidfile, String))
@@ -394,7 +394,7 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
     @debug "spawn_gateway: daemon process launched"
     
     # Wait for pidfile AND gateway responsiveness
-    pidfile = "/tmp/ccxt_gateway.pid"
+    pidfile = Ccxt.GATEWAY_PIDFILE
     seen_log_lines = 0
     for attempt in 1:10
         sleep(1)
