@@ -210,3 +210,101 @@ class TestExchangeSubprocess:
         assert parsed["id"] == "req-6"
         assert parsed["result"]["key"] == "value"
         assert parsed["result"]["number"] == 42
+
+    @pytest.mark.asyncio
+    async def test_handle_get_propertynames(self):
+        """Test that method='get_propertynames' returns all public attributes."""
+        import ccxt_gateway.exchange.subprocess as sp
+
+        sp_exch = sp.ExchangeSubprocess("test_ex", "binance")
+        sp_exch.socket = AsyncMock()
+        sp_exch.socket.send_multipart = AsyncMock()
+
+        # Use a plain object (not MagicMock) to avoid dynamic hasattr
+        class FakeExchange:
+            has = {"fetchTicker": True}
+            timeframes = {"1m": None}
+            fetchTicker = "callable_str"
+
+        sp_exch.exchange = FakeExchange()
+
+        await sp_exch._handle_request({
+            "id": "req-prop",
+            "method": "get_propertynames",
+            "params": {},
+        })
+
+        sp_exch.socket.send_multipart.assert_called_once()
+        sent = sp_exch.socket.send_multipart.call_args[0][0]
+        response_bytes = sent[1] if len(sent) > 1 else sent[0]
+        parsed = json.loads(response_bytes)
+
+        assert parsed["type"] == "response"
+        assert parsed["id"] == "req-prop"
+        assert isinstance(parsed["result"], list)
+        assert "has" in parsed["result"]
+        assert "timeframes" in parsed["result"]
+        assert "fetchTicker" in parsed["result"]
+
+    @pytest.mark.asyncio
+    async def test_handle_get_propertynames_excludes_private(self):
+        """Test that get_propertynames excludes underscore-prefixed attrs."""
+        import ccxt_gateway.exchange.subprocess as sp
+
+        sp_exch = sp.ExchangeSubprocess("test_ex", "binance")
+        sp_exch.socket = AsyncMock()
+        sp_exch.socket.send_multipart = AsyncMock()
+
+        class FakeExchange:
+            has = {"fetchTicker": True}
+            public_attr = 42
+            _private_attr = "secret"
+
+        sp_exch.exchange = FakeExchange()
+
+        await sp_exch._handle_request({
+            "id": "req-priv",
+            "method": "get_propertynames",
+            "params": {},
+        })
+
+        sent = sp_exch.socket.send_multipart.call_args[0][0]
+        response_bytes = sent[1] if len(sent) > 1 else sent[0]
+        parsed = json.loads(response_bytes)
+
+        assert parsed["type"] == "response"
+        names = parsed["result"]
+        assert "public_attr" in names
+        assert "_private_attr" not in names
+        assert all(not n.startswith("_") for n in names)
+
+    @pytest.mark.asyncio
+    async def test_handle_get_propertynames_excludes_modules(self):
+        """Test that get_propertynames excludes module-type attributes."""
+        import ccxt_gateway.exchange.subprocess as sp
+        import types
+
+        sp_exch = sp.ExchangeSubprocess("test_ex", "binance")
+        sp_exch.socket = AsyncMock()
+        sp_exch.socket.send_multipart = AsyncMock()
+
+        class FakeExchange:
+            has = {"fetchTicker": True}
+            normal_attr = "value"
+
+        setattr(FakeExchange, "some_module", types.ModuleType("fake_module"))
+        sp_exch.exchange = FakeExchange()
+
+        await sp_exch._handle_request({
+            "id": "req-mod",
+            "method": "get_propertynames",
+            "params": {},
+        })
+
+        sent = sp_exch.socket.send_multipart.call_args[0][0]
+        response_bytes = sent[1] if len(sent) > 1 else sent[0]
+        parsed = json.loads(response_bytes)
+
+        names = parsed["result"]
+        assert "normal_attr" in names
+        assert "some_module" not in names
