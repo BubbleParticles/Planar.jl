@@ -173,63 +173,29 @@ class ExchangeSubprocess:
             if not self.exchange:
                 raise RuntimeError("Exchange not initialized")
 
-            # Special case: return the .has dict directly (not a callable method)
-            if method == "has":
-                raw: Any = self.exchange.has
-                result: Dict[str, Any] = dict(raw) if hasattr(raw, "items") else {}
-                serializable_result = self._make_serializable(result)
-                response = create_response(request_id, result=serializable_result)
-                await self.socket.send_multipart([b"", response])
-                return
-
-            # Special case: return exchange metadata
-            if method == "metadata":
-                import json as _json
-                meta: Dict[str, Any] = {}
-                try:
-                    meta["has"] = dict(self.exchange.has) if hasattr(self.exchange.has, "items") else {}
-                except Exception:
-                    meta["has"] = {}
-                try:
-                    tfs = self.exchange.timeframes
-                    meta["timeframes"] = list(tfs.keys()) if hasattr(tfs, "keys") else (list(tfs) if tfs else [])
-                except Exception:
-                    meta["timeframes"] = []
-                try:
-                    fees = self.exchange.fees
-                    meta["fees"] = self._make_serializable(fees)
-                except Exception:
-                    meta["fees"] = {}
-                try:
-                    meta["precisionMode"] = int(self.exchange.precisionMode)
-                except Exception:
-                    meta["precisionMode"] = 4
-                try:
-                    meta["markets"] = list(self.exchange.markets.keys()) if hasattr(self.exchange.markets, "keys") else []
-                except Exception:
-                    meta["markets"] = []
-                response = create_response(request_id, result=meta)
-                await self.socket.send_multipart([b"", response])
-                return
-
-            # Get the method from CCXT
+            # Get the attribute from CCXT
             if not hasattr(self.exchange, method):
                 raise AttributeError(f"Method {method} not found on exchange {self.exchange_name}")
 
-            ccxt_method: Callable[..., Any] = getattr(self.exchange, method)
+            attr: Any = getattr(self.exchange, method)
 
-            # Check if this is a watch method
-            if method.startswith("watch_"):
-                await self._handle_watch_method(method, ccxt_method, params, subscription_id, request_id)
-                return
+            # If it's a callable (method/function), call it with params
+            if callable(attr):
+                ccxt_method: Callable[..., Any] = attr
 
-            # Regular method
-            result: Any = await self._call_method(ccxt_method, params)
+                # Check if this is a watch method
+                if method.startswith("watch_"):
+                    await self._handle_watch_method(method, ccxt_method, params, subscription_id, request_id)
+                    return
 
-            # Convert result to JSON-serializable format
-            serializable_result: Any = self._make_serializable(result)
-
-            response: bytes = create_response(request_id, result=serializable_result)
+                # Regular method
+                result: Any = await self._call_method(ccxt_method, params)
+                serializable_result: Any = self._make_serializable(result)
+                response: bytes = create_response(request_id, result=serializable_result)
+            else:
+                # Non-callable attribute (property, dict, etc.) — return its value directly
+                serializable_result: Any = self._make_serializable(attr)
+                response: bytes = create_response(request_id, result=serializable_result)
 
         except Exception as e:
             logger.error("Error handling request %s: %s", request_id, e)
