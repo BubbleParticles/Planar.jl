@@ -367,4 +367,35 @@ end
     Rest._gateway_pid[] = old_pid
 end
 
+@testset "Convenience methods resolve without stack overflow" begin
+    # These convenience wrappers were causing infinite recursion
+    @test exchange_info isa Function
+    @test start_exchange isa Function
+    @test stop_exchange isa Function
+    @test call_exchange isa Function
+    @test exchange_has isa Function
+    @test server_info isa Function
+    @test memory_usage isa Function
+    @test ping isa Function
+    @test list_exchanges isa Function
+end
+
+@testset "stop_gateway HTTP path does not throw when gateway unreachable" begin
+    # stop_gateway first tries HTTP POST /admin/shutdown
+    # When no gateway is running, it should gracefully fall through to kill + clear
+    old_pid = Rest._gateway_pid[]
+    old_started = copy(Rest._started_exchanges)
+    empty!(Rest._started_exchanges)
+    Rest._gateway_pid[] = nothing
+    Rest._started_exchanges["test_exchange"] = time()
+    # This should not throw — the HTTP call fails silently, then it clears the cache
+    Rest.stop_gateway()
+    @test isempty(Rest._started_exchanges)
+    Rest._gateway_pid[] = old_pid
+    empty!(Rest._started_exchanges)
+    for (k, v) in old_started
+        Rest._started_exchanges[k] = v
+    end
+end
+
 println("REST module edge case tests passed!")

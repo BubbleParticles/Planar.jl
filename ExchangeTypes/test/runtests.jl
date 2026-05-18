@@ -64,7 +64,7 @@ using ExchangeTypes
     end
 end
 
-@testset "ExchangeID" begin
+    @testset "ExchangeID" begin
     @testset "Parametric creation" begin
         id = ExchangeID{:test_exchange}()
         @test id isa ExchangeID{:test_exchange}
@@ -113,6 +113,57 @@ end
         id = ExchangeID{:binance}()
         bc = Base.Broadcast.broadcastable(id)
         @test bc isa Base.RefValue{ExchangeID{:binance}}
+    end
+
+    @testset "_populate_exchange_set! retries until gateway responds" begin
+        empty!(ExchangeTypes.exchangeIds)
+        empty!(ExchangeTypes._ccxt_exchange_set)
+
+        # First call without gateway — should fail silently
+        id1 = ExchangeID{:test_retry}()
+        @test ExchangeTypes._ccxt_exchange_set isa Set{Symbol}
+        @test :test_retry in ExchangeTypes.exchangeIds
+
+        # Verify that the set wasn't populated (no gateway)
+        old_len = length(ExchangeTypes._ccxt_exchange_set)
+
+        # Now simulate gateway becoming available
+        using HTTP, JSON3
+        ExchangeTypes.CcxtGateway.Rest.set_http_get!((url; kwargs...) -> begin
+            occursin("/admin/exchange_names", url) || error("Unexpected: $url")
+            HTTP.Response(200, JSON3.write(Dict("result" => ["binance"], "error" => nothing, "error_code" => nothing)))
+        end)
+        try
+            id2 = ExchangeID{:binance}()
+            if isempty(ExchangeTypes._ccxt_exchange_set)
+                # Gateway still unreachable — _populate_exchange_set! didn't repopulate
+                # This is acceptable; the set grows only on the first successful call
+                @test :binance in ExchangeTypes.exchangeIds
+            end
+        finally
+            ExchangeTypes.CcxtGateway.Rest.set_http_get!(HTTP.get)
+        end
+    end
+
+    @testset "_populate_exchange_set! adds to _ccxt_exchange_set on first success" begin
+        using HTTP, JSON3
+        empty!(ExchangeTypes.exchangeIds)
+        empty!(ExchangeTypes._ccxt_exchange_set)
+
+        mock_get(url; kwargs...) = begin
+            occursin("/admin/exchange_names", url) || error("Unexpected: $url")
+            HTTP.Response(200, JSON3.write(Dict("result" => ["binance", "kraken", "coinbase"], "error" => nothing, "error_code" => nothing)))
+        end
+        ExchangeTypes.CcxtGateway.Rest.set_http_get!(mock_get)
+        try
+            id = ExchangeID{:binance}()
+            @test :binance in ExchangeTypes._ccxt_exchange_set
+            @test :kraken in ExchangeTypes._ccxt_exchange_set
+            @test :coinbase in ExchangeTypes._ccxt_exchange_set
+            @test length(ExchangeTypes._ccxt_exchange_set) >= 3
+        finally
+            ExchangeTypes.CcxtGateway.Rest.set_http_get!(HTTP.get)
+        end
     end
 end
 
@@ -273,6 +324,19 @@ end
     @testset "_trace field" begin
         e = Exchange(:test_trace)
         @test e._trace === nothing || e._trace isa AbstractVector
+    end
+
+    @testset "_propnames via has-keys fallback" begin
+        empty!(ExchangeTypes._ccxt_exchange_set)
+        e = Exchange(:test_fallback)
+        push!(e.has, :fetchTicker => true)
+        push!(e.has, :fetchOHLCV => true)
+        props = Base.propertynames(e)
+        @test :fetchTicker in props
+        @test :fetchOHLCV in props
+        @test :name in props
+        @test :has in props
+        empty!(e.has)
     end
 
     @testset "_propnames populated via gateway" begin

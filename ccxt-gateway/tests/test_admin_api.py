@@ -197,3 +197,73 @@ class TestAdminAPIExtended:
         data = response.json()
         assert data["result"]["total_memory_mb"] == 0.0
         assert data["result"]["exchange_count"] == 0
+
+    def test_shutdown_endpoint_returns_accept(self, setup):
+        """Test that /admin/shutdown returns 200 and schedules shutdown."""
+        client, mock_broker, mock_pm = setup
+
+        response = client.post("/admin/shutdown")
+        assert response.status_code == 200
+        data = response.json()
+        assert "shutting_down" in data["status"].lower()
+
+
+class TestCreateExchangeIdempotent:
+    """Tests for idempotent exchange creation."""
+
+    @pytest.fixture
+    def setup(self):
+        """Set up test client with mocked dependencies."""
+        mock_broker = MagicMock()
+        mock_process_manager = MagicMock()
+        mock_update_checker = MagicMock()
+
+        # Simulate an exchange already running
+        mock_proc = MagicMock()
+        mock_proc.exchange_name = "binance"
+        mock_proc.pid = 12345
+        mock_proc.is_running = True
+        mock_proc.rss_mb = 100.0
+        mock_proc.restart_count = 0
+        mock_proc.started_at = time.time()
+        mock_proc.update_memory = MagicMock()
+        mock_process_manager.processes = {"binance": mock_proc}
+
+        app.state.broker = mock_broker
+        app.state.process_manager = mock_process_manager
+        app.state.update_checker = mock_update_checker
+
+        return TestClient(app), mock_process_manager
+
+    def test_create_exchange_already_running(self, setup):
+        """Test creating an exchange that already exists returns 200 (idempotent)."""
+        client, mock_pm = setup
+
+        response = client.post("/exchanges/binance?exchange_name=binance")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "already_started"
+        assert data["exchange_id"] == "binance"
+
+    def test_create_exchange_new_success(self, setup):
+        """Test creating a new exchange succeeds."""
+        client, mock_pm = setup
+
+        mock_pm.start_exchange = AsyncMock(return_value=True)
+
+        response = client.post("/exchanges/kraken?exchange_name=kraken")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "success"
+        assert data["exchange_id"] == "kraken"
+
+    def test_create_exchange_new_failure(self, setup):
+        """Test creating a new exchange that fails returns 500."""
+        client, mock_pm = setup
+
+        mock_pm.start_exchange = AsyncMock(return_value=False)
+
+        response = client.post("/exchanges/bitfinex?exchange_name=bitfinex")
+        assert response.status_code == 500
+        data = response.json()
+        assert "detail" in data
