@@ -442,10 +442,20 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
 end
 
 function stop_gateway()
+    # Try graceful shutdown via HTTP endpoint first (works across containers)
+    try
+        client = default_client()
+        api_call(client, "POST", "/admin/shutdown")
+        sleep(2)
+    catch e
+        @debug "stop_gateway: HTTP shutdown failed: $e"
+    end
+    
+    # Fallback: kill by PID (works for local gateway)
     if isassigned(_gateway_pid) && _gateway_pid[] !== nothing && _gateway_pid[] > 1
         pid = _gateway_pid[]
         try
-            run(`kill $pid`)
+            run(pipeline(`kill $pid`; stderr=devnull))
             sleep(1)
         catch
         end

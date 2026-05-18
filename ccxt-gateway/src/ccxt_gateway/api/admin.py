@@ -253,3 +253,15 @@ async def list_errors(
             "error": str(e),
             "error_code": "ERROR_LIST_FAILED",
         }
+
+
+@router.post("/shutdown")
+async def shutdown_server(request: Request) -> Dict[str, str]:
+    """Gracefully shut down the gateway: closes all exchange subprocesses, then exits."""
+    logger.info("Shutdown requested via /admin/shutdown")
+    import asyncio, sys
+    async def _delayed_shutdown():
+        await asyncio.sleep(0.2)
+        sys.exit(0)
+    asyncio.create_task(_delayed_shutdown())
+    return {"status": "shutting_down"}
