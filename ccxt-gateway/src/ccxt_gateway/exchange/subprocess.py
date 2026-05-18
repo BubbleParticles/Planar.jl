@@ -173,29 +173,31 @@ class ExchangeSubprocess:
             if not self.exchange:
                 raise RuntimeError("Exchange not initialized")
 
-            # Get the attribute from CCXT
-            if not hasattr(self.exchange, method):
-                raise AttributeError(f"Method {method} not found on exchange {self.exchange_name}")
+            # Try direct attribute first (methods, properties like timeframes, fees)
+            if hasattr(self.exchange, method):
+                attr: Any = getattr(self.exchange, method)
 
-            attr: Any = getattr(self.exchange, method)
+                if callable(attr):
+                    ccxt_method: Callable[..., Any] = attr
 
-            # If it's a callable (method/function), call it with params
-            if callable(attr):
-                ccxt_method: Callable[..., Any] = attr
+                    if method.startswith("watch_"):
+                        await self._handle_watch_method(method, ccxt_method, params, subscription_id, request_id)
+                        return
 
-                # Check if this is a watch method
-                if method.startswith("watch_"):
-                    await self._handle_watch_method(method, ccxt_method, params, subscription_id, request_id)
-                    return
-
-                # Regular method
-                result: Any = await self._call_method(ccxt_method, params)
-                serializable_result: Any = self._make_serializable(result)
-                response: bytes = create_response(request_id, result=serializable_result)
+                    result: Any = await self._call_method(ccxt_method, params)
+                    serializable_result: Any = self._make_serializable(result)
+                    response: bytes = create_response(request_id, result=serializable_result)
+                else:
+                    serializable_result: Any = self._make_serializable(attr)
+                    response: bytes = create_response(request_id, result=serializable_result)
             else:
-                # Non-callable attribute (property, dict, etc.) — return its value directly
-                serializable_result: Any = self._make_serializable(attr)
-                response: bytes = create_response(request_id, result=serializable_result)
+                # Not a direct attribute — try the .has dict (e.g. publicAPI, fetchTicker flags)
+                has_dict: Dict[str, Any] = dict(self.exchange.has) if hasattr(self.exchange.has, "items") else {}
+                if method in has_dict:
+                    serializable_result: Any = self._make_serializable(has_dict[method])
+                    response: bytes = create_response(request_id, result=serializable_result)
+                else:
+                    raise AttributeError(f"Method {method} not found on exchange {self.exchange_name}")
 
         except Exception as e:
             logger.error("Error handling request %s: %s", request_id, e)
