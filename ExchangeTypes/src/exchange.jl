@@ -70,8 +70,15 @@ function Exchange(sym::Symbol; account="", kwargs...)
     id = ExchangeID{sym}()
     name = string(sym)
     
-    # Fetch metadata from gateway (short timeout, best effort)
-    client = CcxtGateway.GatewayClient(; timeout=3.0)
+    # Start the exchange subprocess if it's a known CCXT exchange
+    client = CcxtGateway.GatewayClient(; timeout=5.0)
+    try
+        if Symbol(name) ∈ ExchangeTypes._ccxt_exchange_set
+            CcxtGateway.start_exchange(client, name)
+        end
+    catch e
+        @debug "Failed to start exchange $name: $e"
+    end
     
     has_sym = Dict{Symbol,Any}()
     tfs = OrderedSet{String}()
@@ -80,28 +87,39 @@ function Exchange(sym::Symbol; account="", kwargs...)
     prec = excTickSize
     
     try
-        meta = CcxtGateway.fetch_exchange_metadata(client, name)
-        if meta isa Dict || meta isa JSON3.Object
-            h = get(meta, "has", Dict{String, Any}())
+        h = CcxtGateway.call_exchange(client, name, "has")
+        if h isa Dict || h isa JSON3.Object
             has_sym = Dict{Symbol,Any}(Symbol(k) => v for (k, v) in pairs(h))
-            tfs_list = get(meta, "timeframes", [])
-            tfs = OrderedSet{String}(string(t) for t in tfs_list)
-            mkt_list = [string(m) for m in get(meta, "markets", [])]
-            f = get(meta, "fees", Dict{String, Any}())
-            fees_dict = Dict{Symbol,Union{Symbol,<:Number,<:AbstractDict}}(Symbol(k) => v for (k, v) in pairs(f))
-            prec = ExcPrecisionMode(get(meta, "precisionMode", 4))
         end
-    catch e
-        @debug "Failed to fetch metadata for $name: $e"
+    catch
     end
     
-    mkts = OptionsDict()
-    for sym_str in mkt_list
-        mkts[sym_str] = Dict{String,Any}()
+    try
+        t = CcxtGateway.call_exchange(client, name, "timeframes")
+        if t isa Dict || t isa JSON3.Object
+            tfs = OrderedSet{String}(string(k) for k in keys(t))
+        end
+    catch
+    end
+    
+    try
+        f = CcxtGateway.call_exchange(client, name, "fees")
+        if f isa Dict || f isa JSON3.Object
+            fees_dict = Dict{Symbol,Union{Symbol,<:Number,<:AbstractDict}}(Symbol(k) => v for (k, v) in pairs(f))
+        end
+    catch
+    end
+    
+    try
+        p = CcxtGateway.call_exchange(client, name, "precisionMode")
+        if p isa Integer
+            prec = ExcPrecisionMode(p)
+        end
+    catch
     end
     
     e = CcxtExchange{typeof(id)}(
-        id, name, account, tfs, mkts,
+        id, name, account, tfs, OptionsDict(),
         Set{Symbol}(), fees_dict,
         has_sym, prec, nothing,
     )
@@ -139,8 +157,8 @@ function Base.getproperty(e::CcxtExchange, k::Symbol)
 end
 
 function Base.propertynames(e::CcxtExchange)
-    method_syms = [Symbol(k) for (k, v) in e.has if v !== nothing && v !== false]
-    (fieldnames(typeof(e))..., method_syms...)
+    has_keys = [Symbol(k) for k in keys(e.has)]
+    (fieldnames(typeof(e))..., has_keys...)
 end
 
 _has(exc::Exchange, syms::Vararg{Symbol}) = begin
