@@ -1,5 +1,6 @@
 @doc "All possible exchanges that can be instantiated by ccxt."
 const exchangeIds = Symbol[]
+const _ccxt_exchange_set = Set{Symbol}()
 
 @doc """A structure for handling Exchange IDs in CCXT.
 
@@ -18,6 +19,7 @@ struct ExchangeID{I}
                     if id ∉ prev
                         push!(exchangeIds, id)
                         push!(prev, id)
+                        push!(_ccxt_exchange_set, id)
                     end
                 end
             catch
