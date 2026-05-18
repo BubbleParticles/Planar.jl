@@ -28,6 +28,7 @@ mutable struct CcxtExchange{I<:ExchangeID} <: Exchange{I}
     const has::Dict{Symbol,Any}
     precision::ExcPrecisionMode
     _trace::Any
+    const _propnames::Vector{Symbol}  # All attribute names from the remote ccxt exchange instance (for tab completion)
 end
 
 @doc """ Closes the given exchange by removing it from caches.
@@ -55,7 +56,7 @@ function Exchange(x::Nothing; kwargs...)
     CcxtExchange{typeof(id)}(
         id, "", "", OrderedSet{String}(), OptionsDict(),
         Set{Symbol}(), Dict{Symbol,Union{Symbol,<:Number}}(),
-        Dict{Symbol,Bool}(), excTickSize, nothing,
+        Dict{Symbol,Bool}(), excTickSize, nothing, Symbol[],
     )
 end
 
@@ -85,7 +86,7 @@ function Exchange(sym::Symbol; account="", kwargs...)
     mkt_list = String[]
     fees_dict = Dict{Symbol,Union{Symbol,<:Number,<:AbstractDict}}()
     prec = excTickSize
-    prop_names = Symbol[]
+    pnames = Symbol[]
     
     try
         h = CcxtGateway.call_exchange(client, name, "has")
@@ -120,9 +121,9 @@ function Exchange(sym::Symbol; account="", kwargs...)
     end
     
     try
-        prop_names = CcxtGateway.call_exchange(client, name, "get_propertynames")
-        if prop_names isa AbstractVector
-            prop_names = [Symbol(string(n)) for n in prop_names]
+        p = CcxtGateway.call_exchange(client, name, "get_propertynames")
+        if p isa AbstractVector
+            pnames = [Symbol(string(n)) for n in p]
         end
     catch
     end
@@ -130,7 +131,7 @@ function Exchange(sym::Symbol; account="", kwargs...)
     e = CcxtExchange{typeof(id)}(
         id, name, account, tfs, OptionsDict(),
         Set{Symbol}(), fees_dict,
-        has_sym, prec, prop_names,
+        has_sym, prec, nothing, pnames,
     )
     
     funcs = get(HOOKS, Symbol(id), ())::Union{Tuple{},Vector{Function}}
@@ -166,9 +167,9 @@ function Base.getproperty(e::CcxtExchange, k::Symbol)
 end
 
 function Base.propertynames(e::CcxtExchange)
-    extra = getfield(e, :_trace)
-    if extra isa AbstractVector && !isempty(extra)
-        (fieldnames(typeof(e))..., extra...)
+    pn = getfield(e, :_propnames)
+    if !isempty(pn)
+        (fieldnames(typeof(e))..., pn...)
     else
         fieldnames(typeof(e))
     end
