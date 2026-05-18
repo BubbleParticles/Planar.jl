@@ -86,10 +86,10 @@ function Exchange(sym::Symbol; account="", kwargs...)
                     @warn "Exchange $name start response: $resp"
                 end
             end
-        catch e
-            @warn "Failed to start exchange $name on gateway: $e"
-            @warn "Make sure the gateway is running and the exchange subprocess can start (check ZMQ broker on port 5555)"
-        end
+    catch e
+        @warn "Failed to start exchange $name on gateway: $e"
+        @warn "If the exchange is already running, the gateway may return 500. Try: stop_gateway(); sleep(1); spawn_gateway()"
+    end
     else
         @debug "Exchange $name not in CCXT exchange set, skipping gateway init"
     end
