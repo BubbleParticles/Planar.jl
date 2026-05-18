@@ -469,12 +469,17 @@ function set_default_client!(client::GatewayClient)
     _default_client[] = client
 end
 
-for fname in (:call_exchange, :start_exchange, :stop_exchange, :exchange_has, 
-    :list_exchanges, :exchange_info, :server_info, :memory_usage, :restart_exchange, :ping)
-    @eval begin
-        ($fname)(args...; kwargs...) = ($fname)(default_client(), args...; kwargs...)
-    end
-end
+# Convenience methods: omit GatewayClient, use default_client()
+(server_info)(; kwargs...) = server_info(default_client(); kwargs...)
+(memory_usage)(; kwargs...) = memory_usage(default_client(); kwargs...)
+(ping)(; kwargs...) = ping(default_client(); kwargs...)
+(list_exchanges)(; kwargs...) = list_exchanges(default_client(); kwargs...)
+exchange_info(exchange_id::String) = exchange_info(default_client(), exchange_id)
+start_exchange(exchange_id::String; kwargs...) = start_exchange(default_client(), exchange_id; kwargs...)
+stop_exchange(exchange_id::String) = stop_exchange(default_client(), exchange_id)
+exchange_has(exchange_id::String; kwargs...) = exchange_has(default_client(), exchange_id; kwargs...)
+restart_exchange(exchange_id::String) = restart_exchange(default_client(), exchange_id)
+call_exchange(exchange_id::String, ccxt_method::String; kwargs...) = call_exchange(default_client(), exchange_id, ccxt_method; kwargs...)
 
 const RestClient = GatewayClient()
 
