@@ -73,12 +73,20 @@ function Exchange(sym::Symbol; account="", kwargs...)
     
     # Start the exchange subprocess if it's a known CCXT exchange
     client = CcxtGateway.GatewayClient(; timeout=5.0)
-    try
-        if Symbol(name) ∈ ExchangeTypes._ccxt_exchange_set
-            CcxtGateway.start_exchange(client, name)
+    if Symbol(name) ∈ ExchangeTypes._ccxt_exchange_set
+        resp = CcxtGateway.start_exchange(client, name)
+        if resp isa Dict
+            status = get(resp, "status", "unknown")
+            if status == "already_started"
+                @debug "Exchange $name already running on gateway"
+            elseif status == "success"
+                @debug "Exchange $name started on gateway"
+            else
+                @warn "Unexpected start_exchange response for $name: $resp"
+            end
         end
-    catch e
-        @debug "Failed to start exchange $name: $e"
+    else
+        @debug "Exchange $name not in CCXT exchange set, skipping gateway init"
     end
     
     has_sym = Dict{Symbol,Any}()
@@ -92,8 +100,12 @@ function Exchange(sym::Symbol; account="", kwargs...)
         h = CcxtGateway.call_exchange(client, name, "has")
         if h isa Dict || h isa JSON3.Object
             has_sym = Dict{Symbol,Any}(Symbol(k) => v for (k, v) in pairs(h))
+            @debug "Fetched has dict for $name ($(length(has_sym)) entries)"
+        else
+            @warn "has response for $name was not a dict: $(typeof(h))"
         end
-    catch
+    catch e
+        @warn "Failed to fetch has for $name: $e"
     end
     
     try
@@ -101,7 +113,8 @@ function Exchange(sym::Symbol; account="", kwargs...)
         if t isa Dict || t isa JSON3.Object
             tfs = OrderedSet{String}(string(k) for k in keys(t))
         end
-    catch
+    catch e
+        @debug "Failed to fetch timeframes for $name: $e"
     end
     
     try
@@ -109,7 +122,8 @@ function Exchange(sym::Symbol; account="", kwargs...)
         if f isa Dict || f isa JSON3.Object
             fees_dict = Dict{Symbol,Union{Symbol,<:Number,<:AbstractDict}}(Symbol(k) => v for (k, v) in pairs(f))
         end
-    catch
+    catch e
+        @debug "Failed to fetch fees for $name: $e"
     end
     
     try
@@ -117,18 +131,23 @@ function Exchange(sym::Symbol; account="", kwargs...)
         if p isa Integer
             prec = ExcPrecisionMode(p)
         end
-    catch
+    catch e
+        @debug "Failed to fetch precisionMode for $name: $e"
     end
     
     try
         p = CcxtGateway.call_exchange(client, name, "get_propertynames")
         if p isa AbstractVector
             pnames = [Symbol(string(n)) for n in p]
+            @debug "Fetched $(length(pnames)) property names for $name"
+        else
+            @warn "get_propertynames response for $name was not a vector: $(typeof(p))"
         end
-    catch
-        # Fall back to has-dict keys if get_propertynames unavailable
+    catch e
+        @warn "Failed to fetch get_propertynames for $name: $e"
         if !isempty(has_sym)
             pnames = [Symbol(k) for k in keys(has_sym)]
+            @debug "Falling back to $(length(pnames)) has-dict keys for propertynames"
         end
     end
     
