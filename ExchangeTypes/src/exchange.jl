@@ -85,6 +85,7 @@ function Exchange(sym::Symbol; account="", kwargs...)
     mkt_list = String[]
     fees_dict = Dict{Symbol,Union{Symbol,<:Number,<:AbstractDict}}()
     prec = excTickSize
+    prop_names = Symbol[]
     
     try
         h = CcxtGateway.call_exchange(client, name, "has")
@@ -118,10 +119,18 @@ function Exchange(sym::Symbol; account="", kwargs...)
     catch
     end
     
+    try
+        prop_names = CcxtGateway.call_exchange(client, name, "get_propertynames")
+        if prop_names isa AbstractVector
+            prop_names = [Symbol(string(n)) for n in prop_names]
+        end
+    catch
+    end
+    
     e = CcxtExchange{typeof(id)}(
         id, name, account, tfs, OptionsDict(),
         Set{Symbol}(), fees_dict,
-        has_sym, prec, nothing,
+        has_sym, prec, prop_names,
     )
     
     funcs = get(HOOKS, Symbol(id), ())::Union{Tuple{},Vector{Function}}
@@ -157,8 +166,12 @@ function Base.getproperty(e::CcxtExchange, k::Symbol)
 end
 
 function Base.propertynames(e::CcxtExchange)
-    has_keys = [Symbol(k) for k in keys(e.has)]
-    (fieldnames(typeof(e))..., has_keys...)
+    extra = getfield(e, :_trace)
+    if extra isa AbstractVector && !isempty(extra)
+        (fieldnames(typeof(e))..., extra...)
+    else
+        fieldnames(typeof(e))
+    end
 end
 
 _has(exc::Exchange, syms::Vararg{Symbol}) = begin

@@ -191,13 +191,25 @@ class ExchangeSubprocess:
                     serializable_result: Any = self._make_serializable(attr)
                     response: bytes = create_response(request_id, result=serializable_result)
             else:
-                # Not a direct attribute — try the .has dict (e.g. publicAPI, fetchTicker flags)
-                has_dict: Dict[str, Any] = dict(self.exchange.has) if hasattr(self.exchange.has, "items") else {}
-                if method in has_dict:
-                    serializable_result: Any = self._make_serializable(has_dict[method])
-                    response: bytes = create_response(request_id, result=serializable_result)
-                else:
-                    raise AttributeError(f"Method {method} not found on exchange {self.exchange_name}")
+            # Not a direct attribute — try the .has dict (e.g. publicAPI, fetchTicker flags)
+            has_dict: Dict[str, Any] = dict(self.exchange.has) if hasattr(self.exchange.has, "items") else {}
+            if method in has_dict:
+                serializable_result: Any = self._make_serializable(has_dict[method])
+                response: bytes = create_response(request_id, result=serializable_result)
+            elif method == "get_propertynames":
+                import types as _types
+                names: List[str] = []
+                for k in dir(self.exchange):
+                    if k.startswith("_"):
+                        continue
+                    attr = getattr(self.exchange, k)
+                    # Skip modules, methods that aren't simple attributes
+                    if isinstance(attr, _types.ModuleType):
+                        continue
+                    names.append(k)
+                response = create_response(request_id, result=sorted(names))
+            else:
+                raise AttributeError(f"Method {method} not found on exchange {self.exchange_name}")
 
         except Exception as e:
             logger.error("Error handling request %s: %s", request_id, e)
