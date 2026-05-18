@@ -354,4 +354,17 @@ end
     @test spawn_gateway isa Function
 end
 
+@testset "stop_gateway clears _started_exchanges" begin
+    empty!(Rest._started_exchanges)
+    Rest._started_exchanges["binance"] = time()
+    Rest._started_exchanges["kraken"] = time()
+    @test length(Rest._started_exchanges) == 2
+    # stop_gateway with no gateway running still clears the cache
+    old_pid = Rest._gateway_pid[]
+    Rest._gateway_pid[] = nothing
+    Rest.stop_gateway()
+    @test isempty(Rest._started_exchanges)
+    Rest._gateway_pid[] = old_pid
+end
+
 println("REST module edge case tests passed!")
