@@ -126,6 +126,10 @@ function Exchange(sym::Symbol; account="", kwargs...)
             pnames = [Symbol(string(n)) for n in p]
         end
     catch
+        # Fall back to has-dict keys if get_propertynames unavailable
+        if !isempty(has_sym)
+            pnames = [Symbol(k) for k in keys(has_sym)]
+        end
     end
     
     e = CcxtExchange{typeof(id)}(
@@ -171,7 +175,8 @@ function Base.propertynames(e::CcxtExchange)
     if !isempty(pn)
         (fieldnames(typeof(e))..., pn...)
     else
-        fieldnames(typeof(e))
+        has_keys = [Symbol(k) for k in keys(e.has)]
+        (fieldnames(typeof(e))..., has_keys...)
     end
 end
 
