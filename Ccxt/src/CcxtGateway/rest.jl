@@ -280,6 +280,14 @@ end
 const _default_client = Ref{GatewayClient}()
 const _gateway_pid = Ref{Union{Int, Nothing}}(nothing)
 
+# Paths for PID and lock files — computed relative to this file's location
+function _rest_gateway_dir()
+    normpath(joinpath(dirname(dirname(dirname(@__DIR__))), "ccxt-gateway", ".cache"))
+end
+const REST_GATEWAY_DIR = _rest_gateway_dir()
+const REST_GATEWAY_PIDFILE = joinpath(REST_GATEWAY_DIR, "ccxt_gateway.pid")
+const REST_GATEWAY_LOCKFILE = joinpath(REST_GATEWAY_DIR, "ccxt_gateway.lock")
+
 function default_client()
     if !isassigned(_default_client)
         _default_client[] = GatewayClient()
@@ -358,7 +366,7 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
     end
     
     # Kill any process found in the pidfile (stale gateway)
-    pidfile = Ccxt.GATEWAY_PIDFILE
+    pidfile = REST_GATEWAY_PIDFILE
     if isfile(pidfile)
         try
             content = strip(read(pidfile, String))
@@ -394,7 +402,7 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
     @debug "spawn_gateway: daemon process launched"
     
     # Wait for pidfile AND gateway responsiveness
-    pidfile = Ccxt.GATEWAY_PIDFILE
+    pidfile = REST_GATEWAY_PIDFILE
     seen_log_lines = 0
     for attempt in 1:10
         sleep(1)
