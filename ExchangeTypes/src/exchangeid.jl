@@ -2,6 +2,22 @@
 const exchangeIds = Symbol[]
 const _ccxt_exchange_set = Set{Symbol}()
 
+function _populate_exchange_set!()
+    isempty(_ccxt_exchange_set) || return
+    prev = Set{Symbol}()
+    try
+        for name in ccxt_exchange_names()
+            id = Symbol(name)
+            if id ∉ prev
+                push!(exchangeIds, id)
+                push!(prev, id)
+                push!(_ccxt_exchange_set, id)
+            end
+        end
+    catch
+    end
+end
+
 @doc """A structure for handling Exchange IDs in CCXT.
 
 $(FIELDS)
@@ -11,28 +27,9 @@ This structure is used to manage Exchange IDs in the CCXT library.
 struct ExchangeID{I}
     function ExchangeID(sym::Symbol=Symbol())
         sym == Symbol() && return new{sym}()
-        if isempty(exchangeIds)
-            prev = Set{Symbol}()
-            try
-                for name in ccxt_exchange_names()
-                    id = Symbol(name)
-                    if id ∉ prev
-                        push!(exchangeIds, id)
-                        push!(prev, id)
-                        push!(_ccxt_exchange_set, id)
-                    end
-                end
-            catch
-            end
-            if !isempty(exchangeIds)
-                if sym ∉ exchangeIds
-                    push!(exchangeIds, sym)
-                end
-            end
-        else
-            if sym ∉ exchangeIds
-                push!(exchangeIds, sym)
-            end
+        _populate_exchange_set!()
+        if sym ∉ exchangeIds
+            push!(exchangeIds, sym)
         end
         new{sym}()
     end
