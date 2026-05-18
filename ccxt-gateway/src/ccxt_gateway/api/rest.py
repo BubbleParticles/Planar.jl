@@ -42,7 +42,16 @@ async def create_exchange(
     uid: Optional[str] = Query(None, description="User ID (if required)"),
     process_manager: Any = Depends(get_process_manager),
 ) -> Dict[str, Any]:
-    """Create a new exchange instance."""
+    """Create a new exchange instance (idempotent: returns success if already running)."""
+    if exchange_id in process_manager.processes:
+        logger.info("Exchange %s already running, returning success", exchange_id)
+        return {
+            "status": "already_started",
+            "exchange_id": exchange_id,
+            "exchange_name": exchange_name,
+            "message": f"Exchange {exchange_id} already running",
+        }
+
     success: bool = await process_manager.start_exchange(
         exchange_id=exchange_id,
         exchange_name=exchange_name,
