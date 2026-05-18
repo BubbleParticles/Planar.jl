@@ -11,8 +11,11 @@ include("CcxtGateway/CcxtGateway.jl")
 using .CcxtGateway
 
 const MARKETS_PATH = joinpath(DATA_PATH, "markets")
-const GATEWAY_PIDFILE = "/tmp/ccxt_gateway.pid"
-const GATEWAY_LOCKFILE = "/tmp/ccxt_gateway.lock"
+
+@doc "Gateway runtime directory (PID file, lock file)."
+const GATEWAY_DIR = joinpath(dirname(dirname(@__DIR__)), "ccxt-gateway", ".cache")
+const GATEWAY_PIDFILE = joinpath(GATEWAY_DIR, "ccxt_gateway.pid")
+const GATEWAY_LOCKFILE = joinpath(GATEWAY_DIR, "ccxt_gateway.lock")
 
 function _with_gateway_lock(f::Function)
     mkpidlock(GATEWAY_LOCKFILE) do
