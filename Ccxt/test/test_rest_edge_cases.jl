@@ -338,4 +338,20 @@ end
     end
 end
 
+@testset "Gateway paths and constants (regression: no UndefVarError for Ccxt.GATEWAY_PIDFILE)" begin
+    # Verify path constants resolve correctly — these were using Ccxt.GATEWAY_PIDFILE
+    # which caused UndefVarError: Ccxt not defined in Rest
+    @test Rest.REST_GATEWAY_DIR isa String
+    @test Rest.REST_GATEWAY_PIDFILE isa String
+    @test Rest.REST_GATEWAY_LOCKFILE isa String
+    @test isdir(Rest.REST_GATEWAY_DIR)
+    @test occursin("ccxt-gateway", Rest.REST_GATEWAY_DIR)
+    @test occursin(".cache", Rest.REST_GATEWAY_DIR)
+    @test endswith(Rest.REST_GATEWAY_PIDFILE, "ccxt_gateway.pid")
+    @test endswith(Rest.REST_GATEWAY_LOCKFILE, "ccxt_gateway.lock")
+
+    # Verify spawn_gateway is accessible without UndefVarError
+    @test spawn_gateway isa Function
+end
+
 println("REST module edge case tests passed!")
