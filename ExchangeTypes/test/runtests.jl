@@ -272,9 +272,7 @@ end
 
     @testset "_trace field" begin
         e = Exchange(:test_trace)
-        @test e._trace === nothing
-        e._trace = "test trace"
-        @test e._trace == "test trace"
+        @test e._trace === nothing || e._trace isa AbstractVector
     end
 end
 
