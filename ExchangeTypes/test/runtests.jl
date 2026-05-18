@@ -274,6 +274,52 @@ end
         e = Exchange(:test_trace)
         @test e._trace === nothing || e._trace isa AbstractVector
     end
+
+    @testset "_propnames populated via gateway" begin
+        using HTTP
+        using JSON3
+
+        empty!(ExchangeTypes.CcxtGateway.Rest._started_exchanges)
+
+        mock_get(url; kwargs...) = begin
+            if occursin("/admin/exchange_names", url)
+                HTTP.Response(200, JSON3.write(Dict("result" => ["binance"], "error" => nothing, "error_code" => nothing)))
+            elseif occursin("/exchanges/binance/has", url)
+                HTTP.Response(200, JSON3.write(Dict("result" => Dict("fetchTicker" => true, "fetchOHLCV" => true), "error" => nothing, "error_code" => nothing)))
+            elseif occursin("/exchanges/binance/timeframes", url)
+                HTTP.Response(200, JSON3.write(Dict("result" => Dict("1m" => nothing, "5m" => nothing), "error" => nothing, "error_code" => nothing)))
+            elseif occursin("/exchanges/binance/fees", url)
+                HTTP.Response(200, JSON3.write(Dict("result" => Dict("trading" => Dict("maker" => 0.001, "taker" => 0.001)), "error" => nothing, "error_code" => nothing)))
+            elseif occursin("/exchanges/binance/get_propertynames", url)
+                HTTP.Response(200, JSON3.write(Dict("result" => ["fetchTicker", "fetchOHLCV", "timeframes", "fees"], "error" => nothing, "error_code" => nothing)))
+            else
+                error("Unexpected GET: $url")
+            end
+        end
+
+        mock_post(url; kwargs...) = begin
+            if occursin("/exchanges/binance", url)
+                HTTP.Response(200, JSON3.write(Dict("result" => "started", "error" => nothing, "error_code" => nothing)))
+            else
+                error("Unexpected POST: $url")
+            end
+        end
+
+        ExchangeTypes.CcxtGateway.Rest.set_http_get!(mock_get)
+        ExchangeTypes.CcxtGateway.Rest.set_http_post!(mock_post)
+        try
+            e = Exchange(:binance)
+            @test !isempty(e._propnames)
+            @test :fetchTicker in e._propnames
+            @test :fetchOHLCV in e._propnames
+            @test :timeframes in e._propnames
+            @test :fees in e._propnames
+        finally
+            ExchangeTypes.CcxtGateway.Rest.set_http_get!(HTTP.get)
+            ExchangeTypes.CcxtGateway.Rest.set_http_post!(HTTP.post)
+            empty!(ExchangeTypes.CcxtGateway.Rest._started_exchanges)
+        end
+    end
 end
 
 @testset "Exchange cache" begin
