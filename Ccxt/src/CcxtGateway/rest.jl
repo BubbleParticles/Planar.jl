@@ -447,13 +447,11 @@ function stop_gateway()
         try
             run(`kill $pid`)
             sleep(1)
-            for (ex_id, _) in _started_exchanges
-                stop_exchange(ex_id)
-            end
         catch
         end
         _gateway_pid[] = nothing
     end
+    empty!(_started_exchanges)
 end
 
 function gateway_pid()
