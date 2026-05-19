@@ -404,29 +404,68 @@ _authenticate!(::Exchange) = nothing
 authenticate!(::CcxtExchange, tries=3) = true
 authenticate!(::Exchange, tries=3) = nothing
 
-@doc "Set exchange API keys (stored by gateway, no direct Python property access needed)."
+@doc "Set exchange API keys directly on the gateway exchange instance."
 function exckeys!(exc, key, secret, pass, wa, pk)
+    if !isempty(key) || !isempty(secret)
+        try
+            name = string(exc.id)
+            call_exchange(default_client(), name, "set_api_key", query=Dict("apiKey" => key, "secret" => secret))
+        catch
+            @debug "exckeys! via gateway not supported"
+        end
+    end
     nothing
 end
 
-@doc "Load exchange API keys from config."
+@doc "Load exchange API keys from config and set on gateway exchange."
 function exckeys!(exc; sandbox=false, acc=account(exc))
-    nothing
+    eid = Symbol(exc.id)
+    exc_keys = exchange_keys(eid; sandbox, account=acc)
+    if isempty(exc_keys) && eid ∈ values(futures_exchange)
+        id = argmax(x -> x[2] == eid, futures_exchange)
+        merge!(exc_keys, exchange_keys(id.first; sandbox, account=acc))
+    end
+    if !isempty(exc_keys)
+        @debug "Setting exchange keys..."
+        exckeys!(
+            exc,
+            (get(exc_keys, k, "") for k in ("apiKey", "secret", "password", "walletAddress", "privateKey"))...,
+        )
+    end
 end
 
-@doc """Enable sandbox mode for exchange.
+@doc """Enable sandbox mode for exchange via gateway.
 
 $(TYPEDSIGNATURES)
-Sandbox mode is not yet supported via the gateway.
 """
 function sandbox!(exc::Exchange; flag=!issandbox(exc), remove_keys=true)
-    @warn "sandbox mode not yet supported via gateway" maxlog=1
+    name = string(exc.id)
+    try
+        call_exchange(default_client(), name, "setSandboxMode", query=Dict("flag" => string(flag)))
+        if flag && remove_keys
+            exckeys!(exc, "", "", "", "", "")
+        end
+        !flag && exckeys!(exc)
+    catch e
+        @debug "sandbox! via gateway failed: $e"
+    end
     nothing
 end
 
-@doc "Check if exchange is in sandbox mode. Not yet supported via gateway."
+@doc "Check if exchange is in sandbox mode via gateway."
 function issandbox(exc::Exchange)
-    false
+    try
+        name = string(exc.id)
+        urls = call_exchange(default_client(), name, "urls")
+        if urls isa Union{Dict, JSON3.Object}
+            urls_dict = Dict(pairs(urls))
+            haskey(urls_dict, "apiBackup") || get(urls_dict, "apiBackup", nothing) !== nothing
+        else
+            false
+        end
+    catch
+        false
+    end
 end
 
 @doc "Check if market has percentage or absolute fees."
@@ -434,21 +473,93 @@ function ispercentage(mkt)
     something(get(mkt, "percentage", true), true)
 end
 
-@doc "Rate limiting and timeout stubs (will be supported in future gateway versions)."
-ratelimit!(exc::Exchange, flag=true) = nothing
-ratelimit(exc::Exchange) = 0.0
-isratelimited(exc::Exchange) = false
-ratelimit_tokens(exc::Exchange) = 0.0
-function ratelimit_njobs(exc::Exchange)
-    1
+@doc "Enable or disable rate limit via gateway."
+function ratelimit!(exc::Exchange, flag=true)
+    try
+        name = string(exc.id)
+        call_exchange(default_client(), name, "enableRateLimit", query=Dict("flag" => string(flag)))
+    catch
+        @debug "ratelimit! via gateway failed"
+    end
 end
 
-timeout!(exc::Exchange, v=5000) = nothing
-gettimeout(exc::Exchange)::Millisecond = Millisecond(5000)
+@doc "Get exchange rate limit."
+function ratelimit(exc::Exchange)
+    try
+        name = string(exc.id)
+        rl = call_exchange(default_client(), name, "rateLimit")
+        rl isa Number ? Float64(rl) : 0.0
+    catch
+        0.0
+    end
+end
 
-@doc "The current timestamp from the exchange (stub — will use gateway in future)."
-timestamp(exc::Exchange) = Int64(0)
-Base.time(exc::Exchange) = dt(0.0)
+@doc "Check if rate limit is enabled via gateway."
+function isratelimited(exc::Exchange)
+    try
+        name = string(exc.id)
+        enabled = call_exchange(default_client(), name, "enableRateLimit")
+        enabled == true
+    catch
+        false
+    end
+end
+
+@doc "Get exchange rate limit tokens."
+function ratelimit_tokens(exc::Exchange)
+    try
+        name = string(exc.id)
+        rlt = call_exchange(default_client(), name, "rateLimitTokens")
+        rlt isa Number ? Float64(rlt) : 0.0
+    catch
+        0.0
+    end
+end
+
+@doc "Calculate max concurrent requests from rate limits."
+function ratelimit_njobs(exc::Exchange)
+    rl = ratelimit(exc)
+    rlt = ratelimit_tokens(exc)
+    rlt > 0 ? round(Int, rl / rlt, RoundDown) : 1
+end
+
+@doc "Set exchange timeout (milliseconds) via gateway."
+function timeout!(exc::Exchange, v=5000)
+    try
+        name = string(exc.id)
+        call_exchange(default_client(), name, "timeout", query=Dict("value" => string(v)))
+    catch
+        @debug "timeout! via gateway failed"
+    end
+end
+
+@doc "Get exchange timeout in milliseconds."
+function gettimeout(exc::Exchange)::Millisecond
+    try
+        name = string(exc.id)
+        to = call_exchange(default_client(), name, "timeout")
+        to isa Number ? Millisecond(Int(to)) : Millisecond(5000)
+    catch
+        Millisecond(5000)
+    end
+end
+
+@doc "The current timestamp from the exchange via gateway."
+function timestamp(exc::Exchange)
+    try
+        name = string(exc.id)
+        ts = call_exchange(default_client(), name, "fetchTime")
+        ts isa Number ? Int64(ts) : Int64(0)
+    catch
+        Int64(0)
+    end
+end
+
+@doc "Get exchange time as DateTime via gateway."
+function Base.time(exc::Exchange)
+    ts = timestamp(exc)
+    ts > 0 ? dt(Float64(ts)) : dt(0.0)
+end
 
 @doc "Returns the matching *futures* exchange instance, if it exists, or the input exchange otherwise."
 function futures(exc::Exchange)
