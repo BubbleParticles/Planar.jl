@@ -71,10 +71,15 @@ function Exchange(sym::Symbol; account="", kwargs...)
     id = ExchangeID{sym}()
     name = string(sym)
     
-    # Start the exchange subprocess via gateway
+    # Auto-start gateway if not running
     client = CcxtGateway.GatewayClient(; timeout=60.0)
     if Symbol(name) ∈ ExchangeTypes._ccxt_exchange_set
         try
+            if !CcxtGateway.ping(client)
+                @debug "Gateway not responding, spawning..."
+                CcxtGateway.spawn_gateway()
+                sleep(3)
+            end
             resp = CcxtGateway.start_exchange(client, name)
             if resp isa Dict
                 status = get(resp, "status", "unknown")
