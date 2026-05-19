@@ -124,6 +124,7 @@ class ProcessManager:
         enable_rate_limit: bool = True,
         timeout: int = 30000,
         verbose: bool = False,
+        sandbox: bool = False,
     ) -> bool:
         """Start an exchange subprocess."""
         if exchange_id in self.processes:
@@ -141,6 +142,7 @@ class ProcessManager:
             "enable_rate_limit": enable_rate_limit,
             "timeout": timeout,
             "verbose": verbose,
+            "sandbox": sandbox,
         }
 
         # Build command
@@ -158,6 +160,8 @@ class ProcessManager:
             cmd.extend(["--api-key", api_key])
         if secret:
             cmd.extend(["--secret", secret])
+        if sandbox:
+            cmd.append("--sandbox")
 
         try:
             # Start subprocess
