@@ -215,10 +215,19 @@ class ExchangeSubprocess:
             elif method == "set_api_key":
                 api_key = params.get("apiKey", "")
                 secret = params.get("secret", "")
+                password = params.get("password", "")
+                wallet_address = params.get("walletAddress", "")
+                private_key = params.get("privateKey", "")
                 if api_key:
                     self.exchange.apiKey = api_key
                 if secret:
                     self.exchange.secret = secret
+                if password:
+                    self.exchange.password = password
+                if wallet_address:
+                    self.exchange.walletAddress = wallet_address
+                if private_key:
+                    self.exchange.privateKey = private_key
                 response = create_response(request_id, result={"status": "ok"})
             # Try direct attribute first (methods, properties like timeframes, fees)
             elif hasattr(self.exchange, method):

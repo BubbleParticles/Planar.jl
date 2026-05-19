@@ -399,20 +399,26 @@ issupported(tf::TimeFrame, exc) = issupported(string(tf), exc)
 
 _authenticate!(::Exchange) = nothing
 
-@doc "Exchange authentication is handled by the gateway subprocess."
-authenticate!(::CcxtExchange, tries=3) = true
-authenticate!(::Exchange, tries=3) = nothing
+@doc "Exchange authentication is handled by the gateway subprocess automatically when keys are set."
+authenticate!(::Exchange, tries=3) = true
 
 @doc "Set exchange API keys directly on the gateway exchange instance."
 function exckeys!(exc, key, secret, pass, wa, pk)
-    if !isempty(key) || !isempty(secret)
+    if Symbol(exc.id) ∈ (:kucoin, :kucoinfutures)
+        key, secret = secret, key
+    end
+    if !isempty(key) || !isempty(secret) || !isempty(pass)
         try
             name = string(exc.id)
-            call_exchange(default_client(), name, "set_api_key", query=Dict("apiKey" => key, "secret" => secret))
+            call_exchange(default_client(), name, "set_api_key", query=Dict(
+                "apiKey" => key, "secret" => secret,
+                "password" => pass, "walletAddress" => wa, "privateKey" => pk,
+            ))
         catch
             @debug "exckeys! via gateway not supported"
         end
     end
+    authenticate!(exc)
     nothing
 end
 
