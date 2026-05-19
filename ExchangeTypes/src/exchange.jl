@@ -71,7 +71,7 @@ function Exchange(sym::Symbol; account="", kwargs...)
     id = ExchangeID{sym}()
     name = string(sym)
     
-    # Start the exchange subprocess if it's a known CCXT exchange
+    # Start the exchange subprocess via gateway
     client = CcxtGateway.GatewayClient(; timeout=60.0)
     if Symbol(name) ∈ ExchangeTypes._ccxt_exchange_set
         try
@@ -86,10 +86,9 @@ function Exchange(sym::Symbol; account="", kwargs...)
                     @warn "Exchange $name start response: $resp"
                 end
             end
-    catch e
-        @debug "Failed to start exchange $name on gateway: $e"
-        @debug "If the exchange is already running, the gateway may return 500. Try: stop_gateway(); sleep(1); spawn_gateway()"
-    end
+        catch e
+            @debug "Failed to start exchange $name on gateway: $e"
+        end
     else
         @debug "Exchange $name not in CCXT exchange set, skipping gateway init"
     end
