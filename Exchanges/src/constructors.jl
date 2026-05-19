@@ -113,7 +113,7 @@ $(TYPEDSIGNATURES)
 
 """
 function loadmarkets!(exc; cache=true, agemax=Day(1))
-    sbox = ""  # sandbox not yet supported via gateway
+    sbox = issandbox(exc) ? "_sandbox" : ""
     mkt = joinpath(DATA_PATH, exc.name, "markets$(sbox).jlz")
     empty!(exc.markets)
     function force_load()
@@ -194,10 +194,6 @@ $(TYPEDSIGNATURES)
 Configures the exchange timeframes, loads markets, and sets API keys.
 """
 function setexchange!(exc::Exchange, args...; markets::Symbol=:yes, kwargs...)
-    empty!(exc.timeframes)
-    for tf in exc.timeframes
-        push!(exc.timeframes, tf)
-    end
     @debug "Loading Markets..."
     if markets in (:yes, :force)
         loadmarkets!(exc; cache=(markets != :force))
@@ -218,7 +214,10 @@ function _setfees!(fees, k, v)
         DFT(v)
     elseif v isa Union{Dict, JSON3.Object}
         LittleDict{Symbol,Vector{Vector{DFT}}}(Symbol(k) => v for (k, v) in pairs(v))
+    elseif v isa Number
+        DFT(v)
     else
+        nothing
     end
 end
 
