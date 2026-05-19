@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import os
 import signal
 import sys
 from typing import Any, Callable, Dict, List, Optional
@@ -48,6 +49,7 @@ class ExchangeSubprocess:
         self.timeout: int = timeout
         self.verbose: bool = verbose
         self.sandbox: bool = sandbox
+        self.parent_pid: int = os.getppid()
 
         self.context: zmq.asyncio.Context = zmq.asyncio.Context()
         self.socket: zmq.asyncio.Socket = self.context.socket(zmq.DEALER)
@@ -132,8 +134,22 @@ class ExchangeSubprocess:
 
     async def _message_loop(self) -> None:
         """Main message loop."""
+        _parent_check_count: int = 0
         while self.running:
             try:
+                # Periodically check if parent process is still alive
+                _parent_check_count += 1
+                if _parent_check_count % 5 == 0:
+                    try:
+                        os.kill(self.parent_pid, 0)
+                    except OSError:
+                        logger.warning(
+                            "Parent process %d died, shutting down subprocess %s",
+                            self.parent_pid, self.exchange_id,
+                        )
+                        self.running = False
+                        break
+
                 # Receive multipart: [empty, message]
                 parts: List[bytes] = await self.socket.recv_multipart()
                 if len(parts) < 2:
