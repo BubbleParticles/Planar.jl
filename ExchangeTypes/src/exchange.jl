@@ -35,6 +35,14 @@ end
 """
 function close_exc(exc::CcxtExchange)
     try
+        # Stop the exchange subprocess on the gateway
+        name = string(exc.id)
+        try
+            CcxtGateway.stop_exchange(CcxtGateway.default_client(), name)
+        catch
+            @debug "Failed to stop exchange $name on gateway"
+        end
+        # Remove from local caches
         k = (Symbol(exc.id), account(exc))
         if haskey(exchanges, k)
             delete!(exchanges, k)
