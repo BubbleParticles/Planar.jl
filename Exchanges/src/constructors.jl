@@ -122,7 +122,7 @@ function loadmarkets!(exc; cache=true, agemax=Day(1))
             @debug "Loading markets from gateway and caching at $mkt."
             name = string(exc.id)
             raw = call_exchange(default_client(), name, "markets")
-            if raw isa Union{Dict, JSON3.Object}
+            if raw isa AbstractDict
                 mkpath(dirname(mkt))
                 cache_dict = Dict{Symbol,String}()
                 cache_dict[:markets] = json(Dict(pairs(raw)))
@@ -212,7 +212,7 @@ function _setfees!(fees, k, v)
         Symbol(v)
     elseif v isa AbstractFloat
         DFT(v)
-    elseif v isa Union{Dict, JSON3.Object}
+    elseif v isa AbstractDict
         LittleDict{Symbol,Vector{Vector{DFT}}}(Symbol(k) => v for (k, v) in pairs(v))
     elseif v isa Number
         DFT(v)
@@ -456,7 +456,7 @@ function issandbox(exc::Exchange)
     try
         name = string(exc.id)
         urls = call_exchange(default_client(), name, "urls")
-        if urls isa Union{Dict, JSON3.Object}
+        if urls isa AbstractDict
             urls_dict = Dict(pairs(urls))
             haskey(urls_dict, "apiBackup") || get(urls_dict, "apiBackup", nothing) !== nothing
         else
