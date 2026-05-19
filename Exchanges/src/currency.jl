@@ -73,8 +73,16 @@ function _cur(exc, sym)
         v = try
             client = default_client()
             name = string(exc.id)
+            # Fast path: currencies cached by load_markets() on subprocess
             currencies = call_exchange(client, name, "currencies")
-            currencies isa AbstractDict ? currencies : nothing
+            if currencies isa AbstractDict && !isempty(currencies)
+                currencies
+            else
+                # Slow path: fresh fetch from exchange API
+                @debug "currencies empty, trying fetchCurrencies for $(exc.id)"
+                fetched = call_exchange(client, name, "fetchCurrencies")
+                fetched isa AbstractDict ? fetched : nothing
+            end
         catch e
             @debug "Failed to fetch currencies for $(exc.id): $e"
             nothing
