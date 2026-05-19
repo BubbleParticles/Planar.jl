@@ -445,14 +445,23 @@ $(TYPEDSIGNATURES)
 """
 function sandbox!(exc::Exchange; flag=!issandbox(exc), remove_keys=true)
     name = string(exc.id)
-    try
+    success = try
         call_exchange(default_client(), name, "setSandboxMode", query=Dict("flag" => string(flag)))
-        if flag && remove_keys
-            exckeys!(exc, "", "", "", "", "")
-        end
-        !flag && exckeys!(exc)
+        true
     catch e
-        @debug "sandbox! via gateway failed: $e"
+        msg = string(e)
+        if occursin("sandbox", msg) || occursin("Not Found", msg) || occursin("404", msg)
+            @warn "sandbox! failed: $e"
+            false
+        else
+            rethrow(e)
+        end
+    end
+    if flag && success
+        @assert issandbox(exc) "Exchange sandbox mode couldn't be enabled. (disable sandbox mode with `sandbox=false`)"
+        remove_keys && exckeys!(exc, "", "", "", "", "")
+    else
+        exckeys!(exc)
     end
     nothing
 end
