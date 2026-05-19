@@ -69,6 +69,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Application lifespan events."""
     logger.info("Starting ccxt-gateway...")
 
+    import time
+    app.state.start_time = time.time()
+
     # Initialize ZMQ broker
     broker: ZMQBroker = ZMQBroker(settings.zmq.broker_address)
     await broker.start()
