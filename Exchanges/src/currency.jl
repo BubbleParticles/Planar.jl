@@ -1,5 +1,4 @@
 using .Misc: MM, toprecision, DFT
-using .Python: pybuiltins, pyisinstance, pyfloat, pyint
 using .Instruments: AbstractCash, atleast!, Cash
 import Instruments: value, addzero!
 Instruments.@importcash!
@@ -7,48 +6,47 @@ import Base: ==, +, -, ÷, /, *
 import .Misc: gtxzero, ltxzero, approxzero, ZERO
 
 @doc "The cache for currencies which lasts for 1 hour by exchange."
-const currenciesCache1Hour = safettl(ExchangeID, Py, Hour(1))
+const currenciesCache1Hour = safettl(ExchangeID, Any, Hour(1))
 @doc "This lock is only used during currency construction."
 const currency_lock = ReentrantLock()
 
-@doc "Convert a Python object to a float number."
-function to_float(py::Py, T::Type{<:AbstractFloat}=DFT)
-    something(pyconvert(Option{T}, py), zero(T))
+@doc "Convert a value to a float number."
+function to_float(v, T::Type{<:AbstractFloat}=DFT)
+    something(_tonum(v, T), zero(T))
 end
-to_float(v::Number) = v
+to_float(v::Number, ::Type{<:AbstractFloat}=DFT) = v
 
-@doc "Convert a Python object to a number."
-function to_num(py::Py)
-    @something if pyisnone(py)
-        0.0
-    elseif pyisinstance(py, pybuiltins.int)
-        pyconvert(Option{Int}, py)
-    elseif pyisinstance(py, pybuiltins.float)
-        pyconvert(Option{DFT}, py)
-    elseif pyisinstance(py, (pybuiltins.tuple, pybuiltins.list)) && length(py) > 0
-        to_num(py[0])
-    elseif pyisinstance(py, pybuiltins.str)
-        isempty(py) ? 0 : pyconvert(DFT, pyfloat(py))
-    else
-        pyconvert(Option{DFT}, pyfloat(py))
-    end 0.0
+function _tonum(v, T=DFT)
+    v === nothing && return nothing
+    v isa Number && return convert(T, v)
+    try
+        parse(T, string(v))
+    catch
+        nothing
+    end
 end
 
-@doc "Returns the limits, precision, and fees for a currency as a named tuple.
+@doc "Convert a value to a number."
+function to_num(v)
+    v === nothing && return 0.0
+    v isa Integer && return Int(v)
+    v isa AbstractFloat && return DFT(v)
+    v isa String && return tryparse(DFT, v) |> something(0.0)
+    v isa AbstractVector && !isempty(v) && return to_num(first(v))
+    0.0
+end
 
-$(TYPEDSIGNATURES)
-
-The tuple fields can be nothing if the currency property is not provided.
-"
+@doc "Returns the limits, precision, and fees for a currency as a named tuple."
 function _lpf(exc, cur)
     local limits, precision, fees
-    if isnothing(cur) || pyisnone(cur)
+    if cur === nothing
         limits = (; min=1e-8, max=1e8)
         precision = 8
         fees = zero(DFT)
     else
-        limits = let l = get(cur, "limits", nothing)
-            if isnothing(l) || pyisnone(l)
+        cur_dict = cur isa AbstractDict ? Dict(pairs(cur)) : cur
+        limits = let l = get(cur_dict, "limits", nothing)
+            if l === nothing
                 (min=1e-8, max=1e8)
             elseif haskey(l, "amount")
                 MM{DFT}((to_float(l["amount"]["min"]), to_float(l["amount"]["max"])))
@@ -56,14 +54,14 @@ function _lpf(exc, cur)
                 (min=1e-8, max=1e8)
             end
         end
-        precision = let p = get(cur, "precision", nothing)
-            if isnothing(p) || pyisnone(p)
+        precision = let p = get(cur_dict, "precision", nothing)
+            if p === nothing
                 8
             else
                 to_num(p)
             end
         end
-        fees = to_float(get(cur, "fee", nothing))
+        fees = to_float(get(cur_dict, "fee", nothing))
     end
     (; limits, precision, fees)
 end
@@ -73,20 +71,17 @@ function _cur(exc, sym)
     sym_str = uppercase(string(sym))
     curs = @lget! currenciesCache1Hour exc.id begin
         v = try
-            # Prefer direct `exc.py.currencies` when present and non-empty. Some stubbed
-            # exchanges expose `currencies` as a dict rather than a callable `fetchCurrencies`.
-            if hasproperty(exc.py, :currencies) && !pyisnone(exc.py.currencies) && !isempty(exc.py.currencies)
-                exc.py.currencies
-            else
-                pyfetch(exc.fetchCurrencies)
-            end
+            client = default_client()
+            name = string(exc.id)
+            currencies = call_exchange(client, name, "currencies")
+            currencies isa AbstractDict ? currencies : nothing
         catch e
-            # On any Python error, fall back to the exchange's cached `currencies` field
-            exc.currencies
+            @debug "Failed to fetch currencies for $(exc.id): $e"
+            nothing
         end
-        v isa PyException ? exc.currencies : v
+        v
     end
-    (pyisnone(curs) || isempty(curs)) ? nothing : get(curs, sym_str, nothing)
+    curs === nothing ? nothing : get(Dict(pairs(curs)), sym_str, nothing)
 end
 
 @doc "A `CurrencyCash` contextualizes a `Cash` instance w.r.t. an exchange.
@@ -116,8 +111,7 @@ struct CurrencyCash{C<:Cash,E<:ExchangeID} <: AbstractCash
     function CurrencyCash(exc::Exchange, sym, v=0.0)
         @lock currency_lock begin
             cur = _cur(exc, sym)
-            pyisinstance(cur, pybuiltins.dict) ||
-                @debug "$sym not found on $(exc.name) (using defaults)"
+            cur === nothing && @debug "$sym not found on $(exc.name) (using defaults)"
             c = Cash(sym, v)
             lpf = _lpf(exc, cur)
             Instruments.cash!(c, toprecision(c.value, lpf.precision))
