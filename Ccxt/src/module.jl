@@ -38,7 +38,7 @@ function _check_existing_gateway()
         CcxtGateway.Rest._gateway_pid[] = pid
         return true
     catch
-        @warn "Stale gateway PID file found (PID $pid), removing..."
+        @debug "Stale gateway PID file found (PID $pid), removing..."
         try rm(GATEWAY_PIDFILE) catch end
         return _check_gateway_running()
     end
