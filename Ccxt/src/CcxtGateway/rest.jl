@@ -354,7 +354,7 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
     if isassigned(_gateway_pid) && _gateway_pid[] !== nothing && _gateway_pid[] > 1
         pid = _gateway_pid[]
         try
-            run(`kill -0 $pid`)
+            run(pipeline(`kill -0 $pid`; stderr=devnull))
             @debug "spawn_gateway: gateway already running with PID $pid"
             return pid
         catch
@@ -370,7 +370,7 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
             pid_str = split(content)[1]
             stale_pid = parse(Int, pid_str)
             @debug "spawn_gateway: killing stale PID $stale_pid from pidfile"
-            run(`kill $stale_pid`)
+            run(pipeline(`kill $stale_pid`; stderr=devnull))
             @debug "Killed stale gateway PID $stale_pid"
             sleep(2)
         catch e
