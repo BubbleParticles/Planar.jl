@@ -87,8 +87,8 @@ function Exchange(sym::Symbol; account="", kwargs...)
                 end
             end
     catch e
-        @warn "Failed to start exchange $name on gateway: $e"
-        @warn "If the exchange is already running, the gateway may return 500. Try: stop_gateway(); sleep(1); spawn_gateway()"
+        @debug "Failed to start exchange $name on gateway: $e"
+        @debug "If the exchange is already running, the gateway may return 500. Try: stop_gateway(); sleep(1); spawn_gateway()"
     end
     else
         @debug "Exchange $name not in CCXT exchange set, skipping gateway init"
@@ -107,10 +107,10 @@ function Exchange(sym::Symbol; account="", kwargs...)
             has_sym = Dict{Symbol,Any}(Symbol(k) => v for (k, v) in pairs(h))
             @debug "Fetched has dict for $name ($(length(has_sym)) entries)"
         else
-            @warn "has response for $name was not a dict: $(typeof(h))"
+            @debug "has response for $name was not a dict: $(typeof(h))"
         end
     catch e
-        @warn "Failed to fetch has for $name: $e"
+        @debug "Failed to fetch has for $name: $e"
     end
     
     try
@@ -146,10 +146,10 @@ function Exchange(sym::Symbol; account="", kwargs...)
             pnames = [Symbol(string(n)) for n in p]
             @debug "Fetched $(length(pnames)) property names for $name"
         else
-            @warn "get_propertynames response for $name was not a vector: $(typeof(p))"
+            @debug "get_propertynames response for $name was not a vector: $(typeof(p))"
         end
     catch e
-        @warn "Failed to fetch get_propertynames for $name: $e"
+        @debug "Failed to fetch get_propertynames for $name: $e"
         if !isempty(has_sym)
             pnames = [Symbol(k) for k in keys(has_sym)]
             @debug "Falling back to $(length(pnames)) has-dict keys for propertynames"
