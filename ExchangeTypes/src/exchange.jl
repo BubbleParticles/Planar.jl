@@ -99,9 +99,9 @@ function Exchange(sym::Symbol; account="", kwargs...)
                     @warn "Exchange $name start response: $resp"
                 end
             end
-        catch e
-            @debug "Failed to start exchange $name on gateway: $e"
-        end
+    catch e
+        @warn "Failed to start exchange $name on gateway: $e"
+    end
     else
         @debug "Exchange $name not in CCXT exchange set, skipping gateway init"
     end
