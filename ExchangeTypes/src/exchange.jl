@@ -81,7 +81,9 @@ function Exchange(sym::Symbol; account="", kwargs...)
     
     # Auto-start gateway if not running
     client = CcxtGateway.GatewayClient(; timeout=60.0)
-    if Symbol(name) ∈ ExchangeTypes._ccxt_exchange_set
+    in_set = Symbol(name) ∈ ExchangeTypes._ccxt_exchange_set
+    @info "Exchange($name): in_set=$in_set, set_size=$(length(ExchangeTypes._ccxt_exchange_set))"
+    if in_set
         try
             if !CcxtGateway.ping(client)
                 @debug "Gateway not responding, spawning..."
