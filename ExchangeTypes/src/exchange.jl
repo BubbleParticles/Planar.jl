@@ -72,7 +72,7 @@ function Exchange(sym::Symbol; account="", kwargs...)
     name = string(sym)
     
     # Start the exchange subprocess if it's a known CCXT exchange
-    client = CcxtGateway.GatewayClient(; timeout=5.0)
+    client = CcxtGateway.GatewayClient(; timeout=60.0)
     if Symbol(name) ∈ ExchangeTypes._ccxt_exchange_set
         try
             resp = CcxtGateway.start_exchange(client, name)
