@@ -61,8 +61,12 @@ function marketsid(exc, type::Symbol; exclude=nothing)
     m = exc.markets
     filter!(p -> haskey(m, p) && Symbol(m[p]["type"]) == type, marketsid(exc))
 end
-tickers(quot=config.qc; kwargs...) = tickers(exc, quot; kwargs...)
-tickers(exc, quot=config.qc; type=:spot, with_leveraged=false, args...) = begin
+
+@doc """Fetch and filter tickers from an exchange, or use the global exchange.
+
+$(TYPEDSIGNATURES)
+"""
+function tickers(exc::Exchange=getexchange(), quot=config.qc; type=:spot, with_leveraged=false, args...)
     @tickers! type
     tm = Dict(
         p => t for (p, t) in tickers if
