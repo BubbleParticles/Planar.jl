@@ -34,7 +34,7 @@ function _check_existing_gateway()
         return _check_gateway_running()
     end
     try
-        run(`kill -0 $pid`)
+        run(pipeline(`kill -0 $pid`; stderr=devnull))
         CcxtGateway.Rest._gateway_pid[] = pid
         return true
     catch
