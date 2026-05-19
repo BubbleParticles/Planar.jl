@@ -247,6 +247,7 @@ class ExchangeSubprocess:
                     # Lazy-loaded attributes (markets, currencies, etc.):
                     # try calling load_<attribute>() first to populate
                     load_name: str = f"load_{method}"
+                    loaded: bool = False
                     if hasattr(self.exchange, load_name):
                         try:
                             load_fn: Any = getattr(self.exchange, load_name)
@@ -254,10 +255,24 @@ class ExchangeSubprocess:
                                 await load_fn()
                             else:
                                 load_fn()
-                            # Re-read after loading
-                            attr = getattr(self.exchange, method)
+                            loaded = True
                         except Exception as load_err:
                             logger.warning("Failed to lazy-load %s: %s", method, load_err)
+                    # Special case: currencies are populated by load_markets(),
+                    # but can also be fetched via fetchCurrencies if still empty
+                    if not loaded and method == "currencies":
+                        try:
+                            fetch_name: str = f"fetch{method[0].upper()}{method[1:]}"
+                            if hasattr(self.exchange, fetch_name):
+                                fetch_fn: Any = getattr(self.exchange, fetch_name)
+                                if asyncio.iscoroutinefunction(fetch_fn):
+                                    await fetch_fn()
+                                else:
+                                    fetch_fn()
+                        except Exception as fetch_err:
+                            logger.warning("Failed to fetch %s: %s", method, fetch_err)
+                    # Re-read after loading
+                    attr = getattr(self.exchange, method)
                     serializable_result: Any = self._make_serializable(attr)
                     response: bytes = create_response(request_id, result=serializable_result)
             else:
