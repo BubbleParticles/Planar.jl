@@ -1,10 +1,10 @@
 @doc "Clears all caches."
 function emptycaches!()
-    empty!(TICKERS_CACHE100)
-    empty!(TICKERS_CACHE10)
-    empty!(TICKERSLIST_LOCK_DICT)
-    empty!(tickersCache10Sec)
-    empty!(marketsCache1Min)
-    empty!(activeCache1Min)
+    try empty!(TICKERS_CACHE100) catch end
+    try empty!(TICKERS_CACHE10) catch end
+    try empty!(TICKERSLIST_LOCK_DICT) catch end
+    try empty!(tickersCache10Sec) catch end
+    try empty!(marketsCache1Min) catch end
+    try empty!(activeCache1Min) catch end
     ExchangeTypes._closeall()
 end

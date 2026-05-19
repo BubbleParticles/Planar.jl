@@ -352,7 +352,7 @@ end
 $(TYPEDSIGNATURES)
 """
 function tickerprice(tkr)
-    @something tkr["average"] tkr["last"] tkr["bid"]
+    @something get(tkr, "average", nothing) get(tkr, "last", nothing) get(tkr, "bid", nothing)
 end
 
 @doc """Get price ranges using tickers data from exchange.
@@ -371,9 +371,11 @@ $(TYPEDSIGNATURES)
 """
 function quotevol(tkr::AbstractDict)
     v1 = get(tkr, "quoteVolume", nothing)
-    isnothing(v1) || return v1
+    isnothing(v1) || return float(v1)
     v2 = get(tkr, "baseVolume", nothing)
-    isnothing(v2) || return v2 * tickerprice(tkr)
+    # NOTE: this is not the actual quote volume, since vol from trades
+    # have different prices
+    isnothing(v2) || return float(v2) * tickerprice(tkr)
     0
 end
 
