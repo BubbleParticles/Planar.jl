@@ -25,7 +25,14 @@ function has_leverage(pair, pairs_with_leverage)
 end
 @doc "Constructor that returns a function that checks if a pair is leveraged."
 function leverage_func(exc, with_leveraged, verbose=true)
-    if @something with_leveraged false
+    should_filter = if with_leveraged isa Bool
+        with_leveraged
+    elseif with_leveraged in (:yes, :only, :from)
+        true
+    else
+        false
+    end
+    if should_filter
         if with_leveraged == :from
             lv_pairs = collect(
                 keys(
@@ -67,6 +74,7 @@ tickers(exc, quot=config.qc; type=:spot, with_leveraged=false, args...) = begin
 end
 
 const activeCache1Min = safettl(String, Dict, Minute(1))
+const marketsCache1Min = safettl(String, Dict, Minute(1))
 
 @doc "Caches for tickers for 10-second and concurrently."
 const tickersCache10Sec = ConcurrentDict(Dict{Pair{String,Any},Any}())

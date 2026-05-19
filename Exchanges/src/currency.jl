@@ -31,7 +31,7 @@ function to_num(v)
     v === nothing && return 0.0
     v isa Integer && return Int(v)
     v isa AbstractFloat && return DFT(v)
-    v isa String && return tryparse(DFT, v) |> something(0.0)
+    v isa String && return something(tryparse(DFT, v), 0.0)
     v isa AbstractVector && !isempty(v) && return to_num(first(v))
     0.0
 end
