@@ -120,6 +120,13 @@ class ExchangeSubprocess:
                 except Exception as se:
                     logger.warning("Failed to enable sandbox mode for %s: %s", self.exchange_name, se)
 
+            # Pre-load markets so they're available immediately
+            try:
+                await self.exchange.load_markets()
+                logger.info("Loaded %d markets for %s", len(self.exchange.markets), self.exchange_name)
+            except Exception as me:
+                logger.warning("Failed to pre-load markets for %s: %s", self.exchange_name, me)
+
         except Exception as e:
             logger.error("Failed to initialize exchange %s: %s", self.exchange_name, e)
             raise
@@ -228,6 +235,20 @@ class ExchangeSubprocess:
                     serializable_result: Any = self._make_serializable(result)
                     response: bytes = create_response(request_id, result=serializable_result)
                 else:
+                    # Lazy-loaded attributes (markets, currencies, etc.):
+                    # try calling load_<attribute>() first to populate
+                    load_name: str = f"load_{method}"
+                    if hasattr(self.exchange, load_name):
+                        try:
+                            load_fn: Any = getattr(self.exchange, load_name)
+                            if asyncio.iscoroutinefunction(load_fn):
+                                await load_fn()
+                            else:
+                                load_fn()
+                            # Re-read after loading
+                            attr = getattr(self.exchange, method)
+                        except Exception as load_err:
+                            logger.warning("Failed to lazy-load %s: %s", method, load_err)
                     serializable_result: Any = self._make_serializable(attr)
                     response: bytes = create_response(request_id, result=serializable_result)
             else:
