@@ -40,6 +40,7 @@ async def create_exchange(
     secret: Optional[str] = Query(None, description="API secret"),
     password: Optional[str] = Query(None, description="API password (if required)"),
     uid: Optional[str] = Query(None, description="User ID (if required)"),
+    sandbox: bool = Query(False, description="Enable sandbox mode"),
     process_manager: Any = Depends(get_process_manager),
 ) -> Dict[str, Any]:
     """Create a new exchange instance (idempotent: returns success if already running)."""
@@ -59,6 +60,7 @@ async def create_exchange(
         secret=secret,
         password=password,
         uid=uid,
+        sandbox=sandbox,
     )
 
     if not success:
@@ -68,6 +70,7 @@ async def create_exchange(
         "status": "success",
         "exchange_id": exchange_id,
         "exchange_name": exchange_name,
+        "sandbox": sandbox,
         "message": f"Exchange {exchange_id} started",
     }
 

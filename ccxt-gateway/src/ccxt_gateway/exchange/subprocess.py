@@ -35,6 +35,7 @@ class ExchangeSubprocess:
         enable_rate_limit: bool = True,
         timeout: int = 30000,
         verbose: bool = False,
+        sandbox: bool = False,
     ) -> None:
         self.exchange_id: str = exchange_id
         self.exchange_name: str = exchange_name
@@ -46,6 +47,7 @@ class ExchangeSubprocess:
         self.enable_rate_limit: bool = enable_rate_limit
         self.timeout: int = timeout
         self.verbose: bool = verbose
+        self.sandbox: bool = sandbox
 
         self.context: zmq.asyncio.Context = zmq.asyncio.Context()
         self.socket: zmq.asyncio.Socket = self.context.socket(zmq.DEALER)
@@ -107,6 +109,14 @@ class ExchangeSubprocess:
 
             self.exchange = exchange_class(params)
             logger.info("Initialized CCXT exchange: %s", self.exchange_name)
+
+            # Enable sandbox mode if requested
+            if self.sandbox:
+                try:
+                    self.exchange.set_sandbox_mode(True) if hasattr(self.exchange, 'set_sandbox_mode') else self.exchange.setSandboxMode(True)
+                    logger.info("Sandbox mode enabled for %s", self.exchange_name)
+                except Exception as se:
+                    logger.warning("Failed to enable sandbox mode for %s: %s", self.exchange_name, se)
 
         except Exception as e:
             logger.error("Failed to initialize exchange %s: %s", self.exchange_name, e)
@@ -173,8 +183,22 @@ class ExchangeSubprocess:
             if not self.exchange:
                 raise RuntimeError("Exchange not initialized")
 
+            # Settable properties — check params for set-operations
+            settable_props: Dict[str, str] = {"timeout": "value", "enableRateLimit": "flag", "rateLimit": "value"}
+            if method in settable_props and settable_props[method] in params:
+                setattr(self.exchange, method, params[settable_props[method]])
+                response = create_response(request_id, result={"status": "ok"})
+            # Custom command: set API key on a running exchange
+            elif method == "set_api_key":
+                api_key = params.get("apiKey", "")
+                secret = params.get("secret", "")
+                if api_key:
+                    self.exchange.apiKey = api_key
+                if secret:
+                    self.exchange.secret = secret
+                response = create_response(request_id, result={"status": "ok"})
             # Try direct attribute first (methods, properties like timeframes, fees)
-            if hasattr(self.exchange, method):
+            elif hasattr(self.exchange, method):
                 attr: Any = getattr(self.exchange, method)
 
                 if callable(attr):
@@ -309,6 +333,7 @@ async def main() -> None:
     broker_address: str = "tcp://127.0.0.1:5555"
     api_key: Optional[str] = None
     secret: Optional[str] = None
+    sandbox: bool = False
 
     i: int = 3
     while i < len(sys.argv):
@@ -321,6 +346,9 @@ async def main() -> None:
         elif sys.argv[i] == "--secret" and i + 1 < len(sys.argv):
             secret = sys.argv[i + 1]
             i += 2
+        elif sys.argv[i] == "--sandbox":
+            sandbox = True
+            i += 1
         else:
             i += 1
 
@@ -330,6 +358,7 @@ async def main() -> None:
         broker_address=broker_address,
         api_key=api_key,
         secret=secret,
+        sandbox=sandbox,
     )
 
     await subprocess.start()
