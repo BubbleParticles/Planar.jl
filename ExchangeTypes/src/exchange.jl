@@ -81,13 +81,15 @@ function Exchange(sym::Symbol; account="", kwargs...)
     
     # Auto-start gateway if not running
     client = CcxtGateway.GatewayClient(; timeout=60.0)
-    in_set = Symbol(name) ∈ ExchangeTypes._ccxt_exchange_set
-    @info "Exchange($name): in_set=$in_set, set_size=$(length(ExchangeTypes._ccxt_exchange_set))"
-    if in_set
+    if Symbol(name) ∈ ExchangeTypes._ccxt_exchange_set
         try
             if !CcxtGateway.ping(client)
                 @debug "Gateway not responding, spawning..."
-                CcxtGateway.spawn_gateway()
+                try
+                    CcxtGateway.spawn_gateway()
+                catch
+                    @debug "spawn_gateway failed (may already be running)"
+                end
                 sleep(3)
             end
             resp = CcxtGateway.start_exchange(client, name)
@@ -100,6 +102,17 @@ function Exchange(sym::Symbol; account="", kwargs...)
                 else
                     @warn "Exchange $name start response: $resp"
                 end
+            end
+            # Quick poll: wait up to 5s for subprocess to be ready
+            for attempt in 1:5
+                try
+                    info = CcxtGateway.exchange_info(client, name)
+                    if info isa Union{Dict, JSON3.Object} && get(info, "running", false) == true
+                        break
+                    end
+                catch
+                end
+                sleep(1)
             end
     catch e
         @warn "Failed to start exchange $name on gateway: $e"

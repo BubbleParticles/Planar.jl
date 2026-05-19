@@ -346,7 +346,9 @@ end
         empty!(ExchangeTypes.CcxtGateway.Rest._started_exchanges)
 
         mock_get(url; kwargs...) = begin
-            if occursin("/admin/exchange_names", url)
+            if occursin("/ping", url)
+                HTTP.Response(200, JSON3.write(Dict("status" => "pong")))
+            elseif occursin("/admin/exchange_names", url)
                 HTTP.Response(200, JSON3.write(Dict("result" => ["binance"], "error" => nothing, "error_code" => nothing)))
             elseif occursin("/exchanges/binance/has", url)
                 HTTP.Response(200, JSON3.write(Dict("result" => Dict("fetchTicker" => true, "fetchOHLCV" => true), "error" => nothing, "error_code" => nothing)))
@@ -356,6 +358,8 @@ end
                 HTTP.Response(200, JSON3.write(Dict("result" => Dict("trading" => Dict("maker" => 0.001, "taker" => 0.001)), "error" => nothing, "error_code" => nothing)))
             elseif occursin("/exchanges/binance/get_propertynames", url)
                 HTTP.Response(200, JSON3.write(Dict("result" => ["fetchTicker", "fetchOHLCV", "timeframes", "fees"], "error" => nothing, "error_code" => nothing)))
+            elseif occursin("/exchanges/binance/status", url)
+                HTTP.Response(200, JSON3.write(Dict("result" => Dict("running" => true, "exchange_id" => "binance"), "error" => nothing, "error_code" => nothing)))
             else
                 error("Unexpected GET: $url")
             end
