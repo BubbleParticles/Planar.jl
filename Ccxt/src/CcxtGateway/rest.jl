@@ -144,9 +144,6 @@ const _started_exchanges = Dict{String, Float64}()
 
 function start_exchange(client::GatewayClient, exchange_id::String; 
     exchange_name=exchange_id, api_key="", secret="", password="", uid="")
-    if haskey(_started_exchanges, exchange_id)
-        return Dict("status" => "already_started", "exchange_id" => exchange_id, "started_at" => _started_exchanges[exchange_id])
-    end
     query = Dict{String, String}()
     query["exchange_name"] = exchange_name
     if !isempty(api_key)
