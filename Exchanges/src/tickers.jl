@@ -48,9 +48,16 @@ function leverage_func(exc, with_leveraged, verbose=true)
     end
 end
 
-@doc "Checks if `sym` in `spot` has volume above `min_vol`."
-function hasvolume(sym, spot; tickers=@tickers!(:spot), min_vol=1e4)
-    haskey(tickers, sym) && quotevol(tickers[sym]) > min_vol
+@doc "Checks if `sym` (or `spot`) has volume at or below `min_vol` (true = skip)."
+function hasvolume(sym, spot; tickers, min_vol)
+    spot_vol = if spot ∈ keys(tickers)
+        quotevol(tickers[spot])
+    elseif sym ∈ keys(tickers)
+        quotevol(tickers[sym])
+    else
+        return true
+    end
+    spot_vol <= min_vol
 end
 
 @doc """Get vector of market ids from exchange.
@@ -66,15 +73,49 @@ end
 
 $(TYPEDSIGNATURES)
 """
-function tickers(exc::Exchange=getexchange(), quot=config.qc; type=:spot, with_leveraged=false, args...)
+function tickers(
+    exc::Exchange=getexchange(), quot=config.qc;
+    min_vol=0, skip_fiat=true,
+    with_margin=config.margin != NoMargin(),
+    with_leverage=:no, as_vec=false, verbose=true,
+    type=markettype(exc),
+    cross_match::Tuple{Vararg{Symbol}}=(),
+)
     @tickers! type
-    tm = Dict(
-        p => t for (p, t) in tickers if
-            isquote(quoteid(get(exc.markets, p, Dict())), quot) &&
-            leverage_func(exc, with_leveraged)(p)
-    )
-    filter_markets(exc; quot, min_vol=0)
-    tm
+    lquot = lowercase(string(quot))
+    pairlist = as_vec ? String[] : Dict{String,Any}()
+    leverage_check = leverage_func(exc, with_leverage, verbose)
+    notinmarket(sym) = any(sym ∉ keys(getexchange!(e).markets) for e in cross_match)
+    function skip_check(sym, spot, islev, mkt)
+        notinmarket(sym) ||
+            (with_leverage == :no && islev) ||
+            (with_leverage == :only && !islev) ||
+            !leverage_check(spot) ||
+            hasvolume(sym, spot; tickers, min_vol) ||
+            (skip_fiat && isfiatpair(spot)) ||
+            (with_margin && Bool(get(mkt, "margin", false)))
+    end
+    for (sym, tkr) in tickers
+        mkt = get(exc.markets, sym, nothing)
+        mkt === nothing && continue
+        spot = spotsymbol(sym, mkt)
+        islev = isleveragedpair(spot)
+        skip_check(sym, spot, islev, mkt) && continue
+        if as_vec
+            push!(pairlist, sym)
+        else
+            isempty(quot) || isquote(quoteid(mkt), lquot) || continue
+            pairlist[sym] = tkr
+        end
+    end
+    isempty(pairlist) && verbose &&
+        @warn "No pairs found, check quote currency ($quot) and min volume parameters ($min_vol)."
+    if as_vec
+        unique!(pairlist)
+        sort!(pairlist; by=k -> quotevol(tickers[k]))
+    else
+        pairlist
+    end
 end
 
 const activeCache1Min = safettl(String, Dict, Minute(1))
@@ -191,36 +232,77 @@ end
 @doc "Default price precision for an exchange."
 function default_price_precision(exc)
     if exc.precision == excDecimalPlaces
-        8
+        2
     elseif exc.precision == excSignificantDigits
-        9
+        3
     elseif exc.precision == excTickSize
-        1e-8
+        1e-2
     end
 end
 
-@doc "Get the precision of a market, for a given key."
+@doc "Get the precision of a market, for a given key ('amount' or 'price')."
 function _get_precision(exc, mkt, k)
-    mkt_prec = get(mkt, "precision", nothing)
-    mkt_prec === nothing && return default_amount_precision(exc)
-    prec_val = get(mkt_prec, k, nothing)
-    prec_val === nothing && return default_amount_precision(exc)
-    to_num(prec_val)
+    prec = get(mkt, "precision", nothing)
+    prec === nothing && return default_amount_precision(exc)
+    v = get(prec, k, nothing)
+    v === nothing && return k in ("amount", "base") ? default_amount_precision(exc) : default_price_precision(exc)
+    to_num(v)
 end
+
+const DEFAULT_LEVERAGE = (; min=0.0, max=100.0)
+const DEFAULT_AMOUNT = (; min=1e-15, max=Inf)
+const DEFAULT_PRICE = (; min=1e-15, max=Inf)
+const DEFAULT_COST = (; min=1e-15, max=Inf)
+const DEFAULT_FIAT_COST = (; min=1e-8, max=Inf)
+
+_min_from_precision(::Nothing) = nothing
+_min_from_precision(v::Int) = 1.0 / 10.0^v
+_min_from_precision(v::Real) = v
 
 @doc "Get the `limits` for a market key, and a default."
 function _minmax_pair(mkt, l, prec, default)
-    min = try
-        to_float(l["min"])
-    catch
-        default
-    end
-    max = try
-        to_float(l["max"])
-    catch
-        1e8
-    end
-    min, max
+    k = string(l)
+    inner = get(mkt, k, nothing)
+    inner_dict = inner isa AbstractDict ? inner : nothing
+    Symbol(l) => (;
+        min=something(
+            inner_dict === nothing ? nothing : to_float(get(inner_dict, "min", nothing)),
+            _min_from_precision(prec),
+            default.min,
+        ),
+        max=something(
+            inner_dict === nothing ? nothing : to_float(get(inner_dict, "max", nothing)),
+            default.max,
+        ),
+    )
+end
+
+@doc """Get the minimum and maximum amount, cost, and price for a given pair from an exchange.
+
+$(TYPEDSIGNATURES)
+"""
+function market_limits(
+    pair, exc;
+    precision=(; price=nothing, amount=nothing),
+    default_leverage=DEFAULT_LEVERAGE,
+    default_amount=DEFAULT_AMOUNT,
+    default_price=DEFAULT_PRICE,
+    default_cost=(isfiatquote(pair) ? DEFAULT_FIAT_COST : DEFAULT_COST),
+)
+    mkt = get(exc.markets, pair, nothing)
+    mkt === nothing && return (;
+        leverage=(; min=0.0, max=100.0),
+        amount=(; min=1e-15, max=Inf),
+        price=(; min=1e-15, max=Inf),
+        cost=(; min=1e-15, max=Inf),
+    )
+    limits = mkt["limits"]
+    (;
+        (_minmax_pair(limits, :leverage, nothing, default_leverage),
+         _minmax_pair(limits, :amount, precision.amount, default_amount),
+         _minmax_pair(limits, :price, precision.price, default_price),
+         _minmax_pair(limits, :cost, nothing, default_cost))...,
+    )
 end
 
 @doc """Get the amount and price precision for a given pair from an exchange.
@@ -230,8 +312,10 @@ $(TYPEDSIGNATURES)
 function market_precision(pair, exc)
     mkt = get(exc.markets, pair, nothing)
     mkt === nothing && return (default_amount_precision(exc), default_price_precision(exc))
-    prec = mkt["precision"]
-    (get(prec, "amount", default_amount_precision(exc)), get(prec, "price", default_price_precision(exc)))
+    prec = get(mkt, "precision", Dict())
+    amt = decimal_to_size(_get_precision(exc, mkt, "amount"), exc.precision; exc)
+    prc = decimal_to_size(_get_precision(exc, mkt, "price"), exc.precision; exc)
+    (amt, prc)
 end
 
 @doc "Convert the string `n` to Float64."
@@ -272,15 +356,32 @@ end
 
 $(TYPEDSIGNATURES)
 """
-function market_fees(pair, exc; only_taker=false)
+function market_fees(pair, exc; only_taker=nothing)
     mkt = get(exc.markets, pair, nothing)
-    mkt === nothing && return (nothing, nothing)
-    mkt_fees = get(mkt, "taker", nothing)
-    mkt_fees === nothing && return (nothing, nothing)
-    fee = Float64(mkt_fees)
-    if only_taker
-        (nothing, fee)
+    if mkt === nothing
+        return (0.01, 0.01)
+    end
+    taker = get(mkt, "taker", nothing)
+    if taker === nothing
+        # Fall back to spot market fees
+        spot = get(exc.markets, spotpair(pair), nothing)
+        if spot === nothing
+            @warn "Failed to fetch $pair fees from $(exc.name), using default fees."
+            taker = 0.01
+            maker = 0.01
+        else
+            taker = something(get(spot, "taker", 0.01), 0.01)
+            maker = something(get(spot, "maker", 0.01), 0.01)
+        end
     else
-        (get(mkt, "maker", nothing) !== nothing ? Float64(mkt["maker"]) : nothing, fee)
+        maker = something(get(mkt, "maker", 0.01), 0.01)
+        taker = Float64(taker)
+    end
+    if only_taker === nothing
+        (; taker=Float64(taker), maker=Float64(maker), min=min(Float64(taker), Float64(maker)), max=max(Float64(taker), Float64(maker)))
+    elseif only_taker
+        Float64(taker)
+    else
+        Float64(maker)
     end
 end

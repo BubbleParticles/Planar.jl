@@ -470,7 +470,7 @@ end
     @testset "default_precision" begin
         e = Exchange(:test_dp)
         @test Exchanges.default_amount_precision(e) == 1e-8
-        @test Exchanges.default_price_precision(e) == 1e-8
+        @test Exchanges.default_price_precision(e) == 1e-2
     end
 
     @testset "py_str_to_float" begin
