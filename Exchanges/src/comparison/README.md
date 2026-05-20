@@ -38,7 +38,7 @@ migration from Python ccxt bindings to CcxtGateway HTTP calls.
 
 ### P2 — Missing features (exchange-specific)
 
-13. **Phemex WebSocket override** — removed entirely (requires Python, but should be noted)
+13. **Phemex WebSocket override** — removed entirely (needs Python subprocess hotfix)
 14. **Bybit/Phemex `dosetmargin`** — removed entirely
 15. **Binance sandbox skip in `marginmode!`** — removed
 16. **`marginmode!` options storage** — `exc.options` not set
