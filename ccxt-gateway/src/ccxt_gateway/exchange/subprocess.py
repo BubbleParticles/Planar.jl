@@ -127,6 +127,17 @@ class ExchangeSubprocess:
             except Exception as me:
                 logger.warning("Failed to pre-load markets for %s: %s", self.exchange_name, me)
 
+            # Sync clock with exchange server for accurate timestamps
+            try:
+                await self.exchange.load_time_difference()
+                logger.info(
+                    "Time difference for %s: %dms",
+                    self.exchange_name,
+                    self.exchange.options.get("timeDifference", 0),
+                )
+            except Exception as td:
+                logger.debug("Could not load time difference for %s: %s", self.exchange_name, td)
+
         except Exception as e:
             logger.error("Failed to initialize exchange %s: %s", self.exchange_name, e)
             raise
