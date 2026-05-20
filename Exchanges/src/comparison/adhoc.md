@@ -77,18 +77,11 @@ Functionally equivalent after migration. OK.
 - Binance-specific `_handle_leverage` (checks `haskey(resp, "leverage")`)
 - Binance `marginmode!` override (skip in sandbox)
 
-**New (28 lines):**
-- `_leverage_binance` — simple setLeverage call with side param
-- `_bybit_leverage_frompos` — reads positions for leverage detection
-- `_resp2code` — extracts code from response
+**New (89 lines):**
+- All of the above restored — **FIXED**
+- Replacement functions removed: `_leverage_binance`, `_resp2code` (kept)
 
-**Missing (from adhoc/leverage.jl):**
-- Phemex `dosetmargin` — complete feature removal
-- Bybit `dosetmargin` — complete feature removal
-- `_settle_from_market` 
-- `_negative_lev_if_cross`
-- Binance-specific `leverage_value` / `_handle_leverage` — lost exchange-specific logic
-- Binance `marginmode!` override — lost sandbox skip
+**Status:** All exchange-specific leverage logic restored.
 
 ## `adhoc/utils.jl`
 
