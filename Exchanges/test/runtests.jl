@@ -271,7 +271,7 @@ end
     end
 
     @testset "leverage_value" begin
-        @test Exchanges.leverage_value(Exchange(), 10, "BTC/USDT") == "10"
+        @test Exchanges.leverage_value(Exchange(), 10, "BTC/USDT") == "10.0"
     end
 
     @testset "resp_code" begin
