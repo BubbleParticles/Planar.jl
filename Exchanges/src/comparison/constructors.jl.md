@@ -51,21 +51,27 @@ end
 **New:**
 ```julia
 function exckeys!(exc, key, secret, pass, wa, pk)
-    if !isempty(key) || !isempty(secret)
-        call_exchange(default_client(), name, "set_api_key",
-            query=Dict("apiKey" => key, "secret" => secret))
+    if Symbol(exc.id) ∈ (:kucoin, :kucoinfutures)
+        key, secret = secret, key
     end
+    if !isempty(key) || !isempty(secret) || !isempty(pass)
+        call_exchange(default_client(), name, "set_api_key",
+            query=Dict("apiKey" => key, "secret" => secret,
+                       "password" => pass, "walletAddress" => wa, "privateKey" => pk))
+    end
+    authenticate!(exc)
+    nothing
 end
 ```
 
-| Aspect | Old | New | Missing? |
-|--------|-----|-----|----------|
-| Kucoin key swap | Swapped key/secret for `kucoin` and `kucoinfutures` | Not handled | **YES** |
-| password | Set via `exc.py.password = pass` | Not sent to gateway | **YES** |
-| walletAddress | Set via `exc.py.walletAddress = wa` | Not sent to gateway | **YES** |
-| privateKey | Set via `exc.py.privateKey = pk` | Not sent to gateway | **YES** |
-| authenticate! | Called after setting keys | Not called | **YES** |
-| Write when empty | Always writes (even empty strings) | Only writes if `!isempty(key) \|\| !isempty(secret)` | Minor behavioral difference |
+| Aspect | Old | New | Status |
+|--------|-----|-----|--------|
+| Kucoin key swap | Swapped key/secret for `kucoin` and `kucoinfutures` | Restored | **FIXED** |
+| password | Set via `exc.py.password = pass` | Sent to gateway | **FIXED** |
+| walletAddress | Set via `exc.py.walletAddress = wa` | Sent to gateway | **FIXED** |
+| privateKey | Set via `exc.py.privateKey = pk` | Sent to gateway | **FIXED** |
+| authenticate! | Called after setting keys | Restored | **FIXED** |
+| Write when empty | Always writes (even empty strings) | Only writes if any credential is non-empty | Acceptable difference |
 
 ## `authenticate!`
 
@@ -80,7 +86,7 @@ function authenticate!(exc::CcxtExchange, tries=3)
         end
         if resp isa Exception
             if tries > 0 && pyisinstance(resp, Ccxt._lazypy(Ccxt.ccxt, "ccxt").RequestTimeout)
-                return authenticate!(exc, tries - 1)  # Retry on timeout
+                return authenticate!(exc, tries - 1)
             end
             @error "exchange: auth error" resp
             false
@@ -100,15 +106,20 @@ authenticate!(::CcxtExchange, tries=3) = true
 authenticate!(::Exchange, tries=3) = nothing
 ```
 
-**Missing: EVERYTHING.** The old version actually called `authenticate()` on the Python exchange with timeout retry logic. New version is a complete no-op.
+| Aspect | Old | New | Status |
+|--------|-----|-----|--------|
+| Actual auth call | Called `authenticate()` on Python exchange | Returns `true` — gateway handles auth implicitly when keys are set | **Intentional change** |
+| Timeout retry | 3 retries on `RequestTimeout` | No retry needed (no actual call) | Acceptable — gateway is stateless for auth |
+| `_authenticate!` hook | Calls exchange-specific hook | Hook kept as no-op for Phemex | OK |
 
 ## `sandbox!`
 
-| Aspect | Old | New | Missing? |
-|--------|-----|-----|----------|
-| Error handling | Rethrows non-sandbox exceptions (`rethrow(e)`) | Silently catches all | **YES** — real errors hidden |
-| Assertion | `@assert issandbox(exc) "..."` after enable | Not checked | **YES** — no verification |
-| Key cleanup on sandbox disable | `elseif isempty(exc.py.secret) exckeys!(exc)` — conditional | `!flag && exckeys!(exc)` — unconditional | Behavioral difference (probably OK — always setting keys on sandbox disable is safer) |
+| Aspect | Old | New | Status |
+|--------|-----|-----|--------|
+| Error handling | Rethrows non-sandbox exceptions (`rethrow(e)`) | Restored — checks for "sandbox"/"Not Found"/"404" in error msg | **FIXED** |
+| Assertion | `@assert issandbox(exc) "..."` after enable | Restored | **FIXED** |
+| 404 handling | Python raises `BadResponse` | 404 from gateway treated as sandbox-unavailable | **FIXED** |
+| Key cleanup on sandbox disable | `elseif isempty(exc.py.secret) exckeys!(exc)` | `!flag && exckeys!(exc)` | Acceptable difference |
 
 ## `issandbox`
 
@@ -127,12 +138,10 @@ Now a no-op because `has` dict is populated by Exchange constructor. But the old
 
 ## `serialize` / `deserialize`
 
-| Aspect | Old | New | Missing? |
-|--------|-----|-----|----------|
-| Serialized data | `(exc.id, issandbox(exc), account(exc), e.params)` | `(exc.id, false, account(exc), nothing)` | `params` and `issandbox` flag replaced with constants `false` and `nothing` |
-| Deserialization | `getexchange!(id, params; sandbox, account)` | `getexchange!(id, nothing; sandbox=sandbox_flag, account=acc)` | `params` will be ignored by new `getexchange!` anyway |
-
-**Missing:** `sandbox_flag` is hardcoded to `false` in serialize. If exchange is in sandbox mode, that state is lost on serialization round-trip.
+| Aspect | Old | New | Status |
+|--------|-----|-----|--------|
+| Serialized data | `(exc.id, issandbox(exc), account(exc), e.params)` | `(exc.id, issandbox(exc), account(exc), nothing)` | `params` replaced with `nothing`, `issandbox` now correctly captured — **FIXED** |
+| Deserialization | `getexchange!(id, params; sandbox, account)` | `getexchange!(id, nothing; sandbox=sandbox_flag, account=acc)` | `params` will be ignored by `getexchange!` — acceptable |
 
 ## `ratelimit_njobs`
 
@@ -140,7 +149,7 @@ Present in both versions. OK.
 
 ## `check_timeout`
 
-Present in old (lines 583-585). **Removed in new.** Not critical but lost.
+Present in old (lines 583-585). Restored in new via `gettimeout(exc)` call — **FIXED**.
 
 ## `_fetchnoerr` / `timestamp` / `time`
 
