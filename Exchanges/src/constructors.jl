@@ -227,13 +227,13 @@ setflags!(args...; kwargs...) = nothing
 @doc "When serializing an exchange, serialize only its id."
 function serialize(s::AbstractSerializer, exc::E) where {E<:Exchange}
     serialize_type(s, E, false)
-    serialize(s, (exc.id, false, account(exc), nothing))
+    serialize(s, (exc.id, issandbox(exc), account(exc), nothing))
 end
 
 @doc "When serializing an exchange, serialize only its id."
 function serialize(s::AbstractSerializer, exc::E) where {E<:CcxtExchange}
     serialize_type(s, E, false)
-    serialize(s, (exc.id, false, account(exc), nothing))
+    serialize(s, (exc.id, issandbox(exc), account(exc), nothing))
 end
 
 @doc "When deserializing an exchange, use the deserialized id to construct the exchange."
@@ -556,6 +556,12 @@ function gettimeout(exc::Exchange)::Millisecond
     catch
         Millisecond(5000)
     end
+end
+
+@doc "Check that the exchange timeout is not too low wrt the interval."
+function check_timeout(exc::Exchange, interval=Second(5))
+    t = gettimeout(exc)
+    @assert Millisecond(interval) <= t "Interval ($interval) shouldn't be lower than the exchange set timeout ($t)"
 end
 
 @doc "The current timestamp from the exchange via gateway."
