@@ -20,6 +20,19 @@ import zmq.asyncio
 
 logger: logging.Logger = logging.getLogger(__name__)
 
+# ── Exchange hotfix registry ──────────────────────────────────────────
+# Maps exchange names to lists of async callables (exchange, exchange_id, name) -> None.
+# Registered fixes run during _init_exchange after markets are loaded.
+_HOTFIXES: Dict[str, List[Callable]] = {}
+
+def register_hotfix(exchange_name: str, fix: Callable) -> None:
+    """Register a hotfix function for a specific exchange."""
+    _HOTFIXES.setdefault(exchange_name, []).append(fix)
+
+def get_hotfixes(exchange_name: str) -> List[Callable]:
+    """Return all registered hotfixes for an exchange name."""
+    return _HOTFIXES.get(exchange_name, [])
+
 
 class ExchangeSubprocess:
     """Subprocess that handles CCXT calls for a specific exchange."""
@@ -127,16 +140,13 @@ class ExchangeSubprocess:
             except Exception as me:
                 logger.warning("Failed to pre-load markets for %s: %s", self.exchange_name, me)
 
-            # Sync clock with exchange server for accurate timestamps
-            try:
-                await self.exchange.load_time_difference()
-                logger.info(
-                    "Time difference for %s: %dms",
-                    self.exchange_name,
-                    self.exchange.options.get("timeDifference", 0),
-                )
-            except Exception as td:
-                logger.debug("Could not load time difference for %s: %s", self.exchange_name, td)
+            # Apply exchange-specific hotfixes (clock sync, WS overrides, etc.)
+            for fix in get_hotfixes(self.exchange_name):
+                try:
+                    await fix(self.exchange, self.exchange_id, self.exchange_name)
+                    logger.debug("Applied hotfix for %s", self.exchange_name)
+                except Exception as hf:
+                    logger.warning("Hotfix failed for %s: %s", self.exchange_name, hf)
 
         except Exception as e:
             logger.error("Failed to initialize exchange %s: %s", self.exchange_name, e)
@@ -434,6 +444,18 @@ async def main() -> None:
     )
 
     await subprocess.start()
+
+
+# ── Exchange hotfix registrations ─────────────────────────────────────
+
+async def _bybit_clock_sync(exchange: Any, exchange_id: str, exchange_name: str) -> None:
+    """Sync Bybit's server clock for accurate timestamps."""
+    try:
+        await exchange.load_time_difference()
+    except Exception:
+        logger.debug("Clock sync skipped for %s (fetch_time not supported)", exchange_name)
+
+register_hotfix("bybit", _bybit_clock_sync)
 
 
 if __name__ == "__main__":
