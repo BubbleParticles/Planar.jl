@@ -7,26 +7,48 @@ import .Misc.marginmode
 resp_code(resp, ::Type{<:ExchangeID}) = get(resp, "code", "")
 
 function _handle_leverage(e::Exchange, resp)
-    resp isa Exception && occursin("not modified", string(resp)) && return true
-    resp isa Exception && (@warn "exchanges: set leverage error" e resp; return false)
-    true
+    if resp isa Exception
+        if occursin("not modified", string(resp))
+            return true
+        else
+            @warn "exchanges: set leverage error" e resp
+            return false
+        end
+    else
+        return resptobool(e, resp)
+    end
 end
 
-leverage_value(exc, val, sym) = string(val)
+function leverage_value(::Exchange, val, ::Any)
+    string(round(Float64(val), digits=2))
+end
 
 @doc """Set leverage for exchange.
 
 $(TYPEDSIGNATURES)
 """
-function leverage!(exc::Exchange, v, sym; side=nothing, timeout=Second(10))
+function leverage!(exc::Exchange, v, sym; side=Long(), timeout=Second(5))
     name = string(exc.id)
-    query = Dict("symbol" => sym, "leverage" => string(v))
-    if side !== nothing
+    lev = leverage_value(exc, v, sym)
+    query = Dict("symbol" => sym, "leverage" => lev)
+    if side !== Long()
         query["side"] = string(side)
     end
     try
-        call_exchange(default_client(), name, "setLeverage"; query=query)
-        true
+        resp = call_exchange(default_client(), name, "setLeverage"; query=query)
+        success = _handle_leverage(exc, resp)
+        if !success
+            result = call_exchange(default_client(), name, "fetchLeverage", query=Dict("symbol" => sym))
+            side_key = side == Long() ? "longLeverage" : "shortLeverage"
+            resp_val = Float64(get(result, side_key, NaN))
+            return if isnan(resp_val)
+                false
+            else
+                parse(Float64, lev) == resp_val
+            end
+        else
+            true
+        end
     catch e
         @warn "Failed to set leverage" nameof(exc) v sym exception = e
         false
@@ -107,8 +129,8 @@ Base.string(::NoMargin) = ""
 function dosetmargin(exc, mode_str, symbol; kwargs...)
     try
         name = string(exc.id)
-        call_exchange(default_client(), name, "setMarginMode", query=Dict("marginMode" => mode_str, "symbol" => symbol))
-        true
+        resp = call_exchange(default_client(), name, "setMarginMode", query=Dict("marginMode" => mode_str, "symbol" => symbol))
+        resptobool(exc, resp)
     catch e
         @warn "Failed to set margin mode" nameof(exc) mode_str symbol exception = e
         false
@@ -119,21 +141,26 @@ end
 
 $(TYPEDSIGNATURES)
 """
-function marginmode!(exc::Exchange, mode, symbol; hedged=true, kwargs...)
+function marginmode!(exc::Exchange, mode, symbol; hedged=false, kwargs...)
     mode_str = string(mode)
-    if !dosetmargin(exc, mode_str, symbol; kwargs...)
-        @info "Exchange $(exc.id) does not support margin mode switching."
-        return false
-    end
-    if hedged
-        try
-            name = string(exc.id)
-            call_exchange(default_client(), name, "setPositionMode", query=Dict("hedged" => "true"))
-        catch
-            @info "Exchange $(exc.id) does not support hedge mode."
+    if mode_str in ("isolated", "cross")
+        exc.options["defaultMarginMode"] = mode_str
+        if !isempty(symbol)
+            ans = dosetmargin(exc, mode_str, symbol; hedged, kwargs...)
+            if ans isa Bool
+                return ans
+            else
+                @error "failed to set margin mode" exc = nameof(exc) err = ans
+                return false
+            end
+        else
+            return true
         end
+    elseif mode_str == "nomargin"
+        return true
+    else
+        error("Invalid margin mode $mode")
     end
-    true
 end
 
-marginmode(exc::Exchange) = get(getfield(exc, :markets), "defaultMarginMode", nothing) |> something("cross")
+marginmode(exc::Exchange) = get(exc.options, "defaultMarginMode", NoMargin())

@@ -28,7 +28,8 @@ mutable struct CcxtExchange{I<:ExchangeID} <: Exchange{I}
     const has::Dict{Symbol,Any}
     precision::ExcPrecisionMode
     _trace::Any
-    const _propnames::Vector{Symbol}  # All attribute names from the remote ccxt exchange instance (for tab completion)
+    const _propnames::Vector{Symbol}
+    options::Dict{String,Any}
 end
 
 @doc """ Closes the given exchange by removing it from caches.
@@ -65,6 +66,7 @@ function Exchange(x::Nothing; kwargs...)
         id, "", "", OrderedSet{String}(), OptionsDict(),
         Set{Symbol}(), Dict{Symbol,Union{Symbol,<:Number}}(),
         Dict{Symbol,Bool}(), excTickSize, nothing, Symbol[],
+        Dict{String,Any}(),
     )
 end
 
@@ -187,6 +189,7 @@ function Exchange(sym::Symbol; account="", kwargs...)
         id, name, account, tfs, OptionsDict(),
         Set{Symbol}(), fees_dict,
         has_sym, prec, nothing, pnames,
+        Dict{String,Any}(),
     )
     
     funcs = get(HOOKS, Symbol(id), ())::Union{Tuple{},Vector{Function}}
