@@ -48,8 +48,9 @@ _authenticate!(exc::Exchange{ExchangeID{:phemex}}) = nothing
 - `_override_phemex` — runtime Python class that overrides `handle_message` for WebSocket position updates
 - `HOOKS[:phemex]` registration
 
-The bybit `_load_time_diff` hook is handled by gateway subprocess init (load_time_difference called during exchange init). **FIXED in subprocess.**
-The phemex override **cannot work** without Python (creates Python class at runtime). A gateway-compatible replacement would need the subprocess to handle WebSocket position messages with a custom handler.
+The bybit `_load_time_diff` hook is now handled by gateway subprocess via the hotfix registry (`register_hotfix("bybit", _bybit_clock_sync)`). **FIXED in subprocess.**
+
+The phemex override could be implemented as a gateway subprocess hotfix — register a handler that creates the override class and patches the exchange. This is the right place for it (Python-side), but needs implementation.
 
 ## `adhoc/tickers.jl`
 
