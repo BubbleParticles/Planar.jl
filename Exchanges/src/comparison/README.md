@@ -49,5 +49,5 @@ migration from Python ccxt bindings to CcxtGateway HTTP calls.
 
 19. **`serialize`** — sandbox_flag hardcoded to false
 20. **`check_timeout`** — removed
-21. **Bybit `_load_time_diff` hook** — removed
-22. **`params` arg in `getexchange!`** — silently ignored
+21. **Bybit `_load_time_diff` hook** — now handled by gateway subprocess init (FIXED)
+22. **`params` arg in `getexchange!`** — silently ignored (no downstream usage)

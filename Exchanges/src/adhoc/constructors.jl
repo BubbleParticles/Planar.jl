@@ -1,10 +1,11 @@
 using .ExchangeTypes: HOOKS
 
 _doinit() = begin
-    # Bybit: old code registered _load_time_diff hook for clock sync
+    # Bybit: old code registered _load_time_diff hook for clock sync.
+    # Now handled by gateway subprocess init (load_time_difference).
     # Phemex: old code registered _override_phemex hook (creates Python class
     # at runtime to override handle_message for WebSocket position messages).
-    # These cannot be replicated without the Python subprocess.
+    # Cannot be replicated without Python subprocess modifications.
     nothing
 end
 
