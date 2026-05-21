@@ -319,12 +319,9 @@ function market_precision(pair, exc)
 end
 
 @doc "Convert the string `n` to Float64."
-function py_str_to_float(n)
-    try
-        parse(DFT, n)
-    catch
-        0.0
-    end
+function str_to_float(n)
+    something(tryparse(Float64, replace(string(n), "," => ".")), 0.0)::Float64
+end
 end
 
 @doc "Check if a given pair is active on an exchange."
