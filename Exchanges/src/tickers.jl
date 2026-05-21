@@ -327,24 +327,6 @@ function py_str_to_float(n)
     end
 end
 
-@doc """Get the minimum and maximum amount, cost, and price for a given pair from an exchange.
-
-$(TYPEDSIGNATURES)
-"""
-function market_limits(pair, exc; type=markettype(exc))
-    mkt = get(exc.markets, pair, nothing)
-    mkt === nothing && return (nothing, nothing, nothing, nothing, nothing, nothing)
-    limits = mkt["limits"]
-    amount = get(limits, "amount", nothing)
-    cost = get(limits, "cost", nothing)
-    price = get(limits, "price", nothing)
-    amt_prec, prc_prec = market_precision(pair, exc)
-    min_amt, max_amt = _minmax_pair(exc, amount, "amount", amt_prec)
-    min_cost, max_cost = _minmax_pair(exc, cost, "cost", prc_prec)
-    min_price, max_price = _minmax_pair(exc, price, "price", prc_prec)
-    (min_amt, max_amt, min_cost, max_cost, min_price, max_price)
-end
-
 @doc "Check if a given pair is active on an exchange."
 function is_pair_active(pair, exc)
     market = market!(pair, exc)
