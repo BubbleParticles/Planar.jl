@@ -90,7 +90,7 @@ end
 
 $(TYPEDSIGNATURES)
 """
-function jlpyconvert(v)
+function gatewayconvert(v)
     v === nothing && return nothing
     if v isa AbstractDict
         d = Dict{String,Any}()
@@ -124,7 +124,7 @@ function loadmarkets!(exc; cache=true, agemax=Day(1))
             raw = call_exchange(default_client(), name, "markets")
             if raw isa AbstractDict
                 mkpath(dirname(mkt))
-                flat = jlpyconvert(raw)
+                flat = gatewayconvert(raw)
                 if flat isa AbstractDict
                     cache_dict = Dict{String,String}("markets" => JSON.json(flat))
                     write(mkt, JSON.json(cache_dict))
