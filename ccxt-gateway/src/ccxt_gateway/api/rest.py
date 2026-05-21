@@ -14,6 +14,28 @@ logger: logging.Logger = logging.getLogger(__name__)
 router: APIRouter = APIRouter()
 
 
+async def _send_via_broker(
+    broker: Any,
+    process_manager: Any,
+    exchange_id: str,
+    request_msg: bytes,
+) -> Dict[str, Any]:
+    """Send a request via the broker, restarting the subprocess if needed."""
+    for attempt in range(2):
+        response_bytes: Optional[bytes] = await broker.send_request(exchange_id, request_msg)
+        if not response_bytes:
+            raise HTTPException(status_code=504, detail="No response from exchange subprocess")
+        response: Dict[str, Any] = parse_message(response_bytes)
+        if response.get("error") and response.get("error_code") == "EXCHANGE_NOT_FOUND" and attempt == 0:
+            logger.warning("Broker lost identity for %s, restarting subprocess...", exchange_id)
+            success: bool = await process_manager.restart_exchange(exchange_id)
+            if not success:
+                raise HTTPException(status_code=503, detail=f"Failed to restart exchange {exchange_id}")
+            continue
+        return response
+    return response  # unreachable, but keeps the type checker happy
+
+
 def get_process_manager(request: Request) -> Any:
     """Dependency to get process manager."""
     process_manager = getattr(request.app.state, "process_manager", None)
@@ -128,12 +150,7 @@ async def get_exchange_has(
         raise HTTPException(status_code=404, detail=f"Exchange {exchange_id} not found")
 
     request_msg: bytes = create_request(method="has", exchange_id=exchange_id)
-    response_bytes: Optional[bytes] = await broker.send_request(exchange_id, request_msg)
-
-    if not response_bytes:
-        raise HTTPException(status_code=504, detail="No response from exchange subprocess")
-
-    response: Dict[str, Any] = parse_message(response_bytes)
+    response = await _send_via_broker(broker, process_manager, exchange_id, request_msg)
 
     if response.get("error"):
         raise HTTPException(
@@ -156,12 +173,7 @@ async def get_exchange_metadata(
         raise HTTPException(status_code=404, detail=f"Exchange {exchange_id} not found")
 
     request_msg: bytes = create_request(method="metadata", exchange_id=exchange_id)
-    response_bytes: Optional[bytes] = await broker.send_request(exchange_id, request_msg)
-
-    if not response_bytes:
-        raise HTTPException(status_code=504, detail="No response from exchange subprocess")
-
-    response: Dict[str, Any] = parse_message(response_bytes)
+    response = await _send_via_broker(broker, process_manager, exchange_id, request_msg)
 
     if response.get("error"):
         raise HTTPException(
@@ -183,9 +195,10 @@ async def call_exchange_method(
     broker: Any = Depends(get_broker),
 ) -> Any:
     """Call a CCXT method on an exchange instance.
-    
-    If the exchange subprocess has crashed, it will be restarted automatically
-    and the request will be retried.
+
+    If the exchange subprocess has crashed, or if the broker lost track of
+    the subprocess ZMQ identity, the subprocess is restarted and the request
+    is retried once.
     """
     if exchange_id not in process_manager.processes:
         raise HTTPException(status_code=404, detail=f"Exchange {exchange_id} not found")
@@ -210,14 +223,7 @@ async def call_exchange_method(
         exchange_id=exchange_id,
     )
 
-    # Send request via broker
-    response_bytes: Optional[bytes] = await broker.send_request(exchange_id, request_msg)
-
-    if not response_bytes:
-        raise HTTPException(status_code=504, detail="No response from exchange subprocess")
-
-    # Parse response
-    response: Dict[str, Any] = parse_message(response_bytes)
+    response = await _send_via_broker(broker, process_manager, exchange_id, request_msg)
 
     if response.get("error"):
         raise HTTPException(
