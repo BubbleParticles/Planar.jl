@@ -64,6 +64,15 @@ class ExchangeSubprocess:
         self.sandbox: bool = sandbox
         self.parent_pid: int = os.getppid()
 
+        # Request kernel-delivered SIGTERM on parent death (Linux only)
+        try:
+            import ctypes
+            libc = ctypes.CDLL("libc.so.6", use_errno=True)
+            PR_SET_PDEATHSIG: int = 1
+            libc.prctl(PR_SET_PDEATHSIG, signal.SIGTERM, 0, 0, 0)
+        except Exception:
+            pass  # Best-effort; fallback to PPID polling in _message_loop
+
         self.context: zmq.asyncio.Context = zmq.asyncio.Context()
         self.socket: zmq.asyncio.Socket = self.context.socket(zmq.DEALER)
         self.socket.setsockopt(zmq.IDENTITY, exchange_id.encode("utf-8"))
@@ -168,18 +177,21 @@ class ExchangeSubprocess:
                 # Periodically check if parent process is still alive
                 _parent_check_count += 1
                 if _parent_check_count % 5 == 0:
-                    try:
-                        os.kill(self.parent_pid, 0)
-                    except OSError:
+                    if os.getppid() != self.parent_pid:
                         logger.warning(
-                            "Parent process %d died, shutting down subprocess %s",
-                            self.parent_pid, self.exchange_id,
+                            "Parent process %d died (reparented to %d), shutting down subprocess %s",
+                            self.parent_pid, os.getppid(), self.exchange_id,
                         )
                         self.running = False
                         break
 
                 # Receive multipart: [empty, message]
-                parts: List[bytes] = await self.socket.recv_multipart()
+                try:
+                    parts: List[bytes] = await asyncio.wait_for(
+                        self.socket.recv_multipart(), timeout=5.0,
+                    )
+                except asyncio.TimeoutError:
+                    continue  # Back to the top to check parent PID and running flag
                 if len(parts) < 2:
                     continue
 
