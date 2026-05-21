@@ -45,12 +45,12 @@ _authenticate!(exc::Exchange{ExchangeID{:phemex}}) = nothing
 ```
 
 **Missing:**
-- `_override_phemex` — runtime Python class that overrides `handle_message` for WebSocket position updates
-- `HOOKS[:phemex]` registration
+- `_override_phemex` — runtime Python class that overrides `handle_message` for WebSocket position updates (see `hotfixes.py`)
+- `HOOKS[:phemex]` registration — replaced by hotfix registry in subprocess
 
 The bybit `_load_time_diff` hook is now handled by gateway subprocess via the hotfix registry (`register_hotfix("bybit", _bybit_clock_sync)`). **FIXED in subprocess.**
 
-The phemex override could be implemented as a gateway subprocess hotfix — register a handler that creates the override class and patches the exchange. This is the right place for it (Python-side), but needs implementation.
+The phemex override is implemented as a gateway subprocess hotfix in `hotfixes.py` — `register_hotfix("phemex", _phemex_websocket_hotfix)` monkey-patches `handle_message` to intercept `positions_p` messages and wires up `watchPositions` via `aop.subscribe`/`aop_p.subscribe`. **FIXED in subprocess.**
 
 ## `adhoc/tickers.jl`
 
