@@ -8,7 +8,7 @@ using ..Types
 export GatewayClient, build_url
 export start_exchange, stop_exchange, exchange_has
 export call_exchange
-export list_exchanges, exchange_info, server_info, memory_usage, ping, spawn_gateway
+export list_exchanges, exchange_info, exchange_ready, server_info, memory_usage, ping, spawn_gateway
 export gateway_pid, stop_gateway, restart_gateway
 export set_http_get!, set_http_post!, set_http_delete!
 
@@ -195,6 +195,15 @@ end
 
 function exchange_info(client::GatewayClient, exchange_id::String)
     api_call(client, "GET", "/exchanges/$exchange_id/status")
+end
+
+function exchange_ready(client::GatewayClient, exchange_id::String)
+    try
+        resp = make_request(client, "GET", "/exchanges/$exchange_id/status")
+        return resp.status == 200
+    catch
+        return false
+    end
 end
 
 function server_info(client::GatewayClient)
