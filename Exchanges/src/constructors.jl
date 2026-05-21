@@ -74,9 +74,9 @@ Handles JSON3.Object and JSON3.Array types from gateway responses.
 """
 function _elconvert(v)
     if v isa AbstractDict
-        d = Dict{Any,Any}(pairs(v))
-        for (k, v) in d
-            d[k] = _elconvert(v)
+        d = Dict{String,Any}()
+        for (k, v) in pairs(v)
+            d[string(k)] = _elconvert(v)
         end
         d
     elseif v isa AbstractVector
@@ -93,9 +93,9 @@ $(TYPEDSIGNATURES)
 function jlpyconvert(v)
     v === nothing && return nothing
     if v isa AbstractDict
-        d = Dict{Any,Any}(pairs(v))
-        for (k, v) in d
-            d[k] = _elconvert(v)
+        d = Dict{String,Any}()
+        for (k, v) in pairs(v)
+            d[string(k)] = _elconvert(v)
         end
         d
     else
@@ -126,8 +126,8 @@ function loadmarkets!(exc; cache=true, agemax=Day(1))
                 mkpath(dirname(mkt))
                 flat = jlpyconvert(raw)
                 if flat isa AbstractDict
-                    cache_dict = Dict{String,String}("markets" => json(flat))
-                    write(mkt, json(cache_dict))
+                    cache_dict = Dict{String,String}("markets" => JSON.json(flat))
+                    write(mkt, JSON.json(cache_dict))
                     merge!(exc.markets, flat)
                 end
             end
