@@ -199,11 +199,15 @@ end
 
 function exchange_ready(client::GatewayClient, exchange_id::String)
     try
-        resp = make_request(client, "GET", "/exchanges/$exchange_id/status")
+        resp = make_request(client, "GET", "/exchanges/$exchange_id/has")
         return resp.status == 200
     catch
         return false
     end
+end
+
+function exchange_ready(exchange_id::String)
+    exchange_ready(default_client(), exchange_id)
 end
 
 function server_info(client::GatewayClient)
