@@ -1,5 +1,5 @@
 using .Misc: Long, Short
-using .ExchangeTypes: eids, issandbox
+using .ExchangeTypes: eids
 
 @doc "Binance-specific leverage formatting — integer leverage."
 leverage_value(::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}, val, ::Any) = string(round(Int, Float64(val)))
