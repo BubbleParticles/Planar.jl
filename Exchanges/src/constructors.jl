@@ -446,7 +446,7 @@ $(TYPEDSIGNATURES)
 function sandbox!(exc::Exchange; flag=!issandbox(exc), remove_keys=true)
     name = string(exc.id)
     success = try
-        call_exchange(default_client(), name, "setSandboxMode", query=Dict("enabled" => string(flag)))
+        call_exchange(default_client(), name, "setSandboxMode", query=Dict("enable" => string(flag)))
         true
     catch e
         msg = string(e)
