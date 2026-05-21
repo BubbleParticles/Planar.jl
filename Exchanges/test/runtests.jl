@@ -473,9 +473,9 @@ end
         @test Exchanges.default_price_precision(e) == 1e-2
     end
 
-    @testset "py_str_to_float" begin
-        @test Exchanges.py_str_to_float("3.14") ≈ 3.14
-        @test Exchanges.py_str_to_float("invalid") == 0.0
+    @testset "str_to_float" begin
+        @test Exchanges.str_to_float("3.14") ≈ 3.14
+        @test Exchanges.str_to_float("invalid") == 0.0
     end
 end
 
