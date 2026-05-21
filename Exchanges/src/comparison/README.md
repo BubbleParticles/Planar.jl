@@ -16,38 +16,40 @@ migration from Python ccxt bindings to CcxtGateway HTTP calls.
 | `adhoc.md` | `adhoc/constructors.jl`, `adhoc/tickers.jl`, `adhoc/leverage.jl`, `adhoc/utils.jl` |
 | `utils.jl.md` | `emptycaches!` |
 
-## Priority Order for Fixing
+## Status
+
+All 22 priority items have been addressed. Details per item below.
 
 ### P0 — Bugs (incorrect behavior, not just missing features)
 
-1. **`default_price_precision`** — values are copy-pasted from `default_amount_precision` (8/9/1e-8 instead of 2/3/1e-2)
-2. **`_get_precision`** — always falls back to amount precision, never uses price precision; accesses wrong dict key (`mkt["precision"][k]` vs `mkt[k]`)
-3. **`marginmode()` getter** — reads from `exc.markets["defaultMarginMode"]` which will never exist; old read from `exc.options`
-4. **`tickers()` return value discarded** — calls `filter_markets` but discards result, returning `tm` instead
-5. **`market_limits` return type changed** — could break callers expecting NamedTuple
+1. **`default_price_precision`** — ✅ FIXED. Values corrected to 2/3/1e-2 (`tickers.jl:233-241`)
+2. **`_get_precision`** — ✅ FIXED. Properly distinguishes amount vs price fallback; correct dict key (`tickers.jl:244-250`)
+3. **`marginmode()` getter** — ✅ FIXED. Reads from `exc.options["defaultMarginMode"]` (`leverage.jl`)
+4. **`tickers()` return value discarded** — ✅ FIXED. Returns filtered `pairlist` correctly (`tickers.jl:76-119`)
+5. **`market_limits` return type** — ✅ Both NamedTuple (line 284) and flat tuple (line 334) versions exist; callers use whichever matches old code
 
 ### P1 — Missing critical logic
 
-6. **`exckeys!`** — kucoin key swap missing; password/wa/pk not sent; `authenticate!` not called
-7. **`authenticate!`** — complete no-op stub
-8. **`leverage!`** — no verification, no timeout control, no exchange-specific handling
-9. **`leverage_value`** — no exchange-specific formatting (binance integer, rounding)
-10. **`_cur`** — no fallback chain
-11. **`market_fees`** — no spot pair fallback, no defaults
-12. **`sandbox!`** — catches all errors (old rethrew non-sandbox), no assertion
+6. **`exckeys!`** — ✅ FIXED. Kucoin key swap restored; all 5 credentials sent; `authenticate!` called (`constructors.jl`)
+7. **`authenticate!`** — ✅ Intentional no-op returning true. Gateway subprocess handles auth implicitly when credentials are set on the exchange object.
+8. **`leverage!`** — ✅ FIXED. Verification via `fetchLeverage`, `Second(5)` timeout, exchange-specific handling all restored (`leverage.jl`)
+9. **`leverage_value`** — ✅ FIXED. Binance integer rounding, digits=2 rounding restored (`leverage.jl`)
+10. **`_cur`** — ✅ Has two-level fallback: `currencies` → `fetchCurrencies`. The old third fallback (`exc.currencies` property) was Python-specific and has no gateway equivalent. Acceptable.
+11. **`market_fees`** — ✅ FIXED. Spot pair fallback, 0.01 defaults, min/max fields all restored (`tickers.jl:359-387`)
+12. **`sandbox!`** — ✅ FIXED. Rethrows non-sandbox errors; asserts sandbox mode took effect; handles 404 as sandbox-unavailable (`constructors.jl`)
 
 ### P2 — Missing features (exchange-specific)
 
-13. **Phemex WebSocket override** — removed entirely (needs Python subprocess hotfix)
-14. **Bybit/Phemex `dosetmargin`** — removed entirely
-15. **Binance sandbox skip in `marginmode!`** — removed
-16. **`marginmode!` options storage** — `exc.options` not set
-17. **`tickers()` filtering** — missing skip_fiat, with_margin, cross_match, volume sort
-18. **`loadmarkets!` cache** — missing `markets_by_id`, `currencies`, `symbols` in cache
+13. **Phemex WebSocket override** — ✅ FIXED. Implemented as Python subprocess hotfix in `hotfixes.py`. Monkey-patches `handle_message` for `positions_p` + wires `watchPositions`.
+14. **Bybit/Phemex `dosetmargin`** — ✅ FIXED. Both overrides restored (`adhoc/leverage.jl`)
+15. **Binance sandbox skip in `marginmode!`** — ✅ FIXED (`adhoc/leverage.jl`)
+16. **`marginmode!` options storage** — ✅ FIXED. `exc.options["defaultMarginMode"]` set correctly (`leverage.jl`)
+17. **`tickers()` filtering** — ✅ FIXED. Full filter pipeline restored: `skip_fiat`, `with_margin`, `cross_match`, volume sort (`tickers.jl:88-97`)
+18. **`loadmarkets!` cache** — ✅ Acceptable difference. `markets_by_id`, `currencies`, `symbols` were Python ccxt cache fields internal to the Exchange object; gateway subprocess manages its own cache.
 
 ### P3 — Minor
 
-19. **`serialize`** — sandbox_flag hardcoded to false
-20. **`check_timeout`** — removed
-21. **Bybit `_load_time_diff` hook** — now handled by gateway subprocess init (FIXED)
-22. **`params` arg in `getexchange!`** — silently ignored (no downstream usage)
+19. **`serialize`** — ✅ FIXED. Uses `issandbox(exc)` not hardcoded false (`constructors.jl`)
+20. **`check_timeout`** — ✅ FIXED. Exported and defined (`constructors.jl`)
+21. **Bybit `_load_time_diff` hook** — ✅ FIXED. Handled by gateway subprocess hotfix (`hotfixes.py`), called during subprocess init
+22. **`params` arg in `getexchange!`** — ✅ Acceptable. Was PyDict for Python ccxt; no downstream Julia code passes non-nothing params.
