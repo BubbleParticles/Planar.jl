@@ -57,11 +57,11 @@ end
         @test result["b"]["c"] == 2
     end
 
-    @testset "jlpyconvert" begin
-        @test Exchanges.jlpyconvert(nothing) === nothing
-        @test Exchanges.jlpyconvert(42) == 42
+    @testset "gatewayconvert" begin
+        @test Exchanges.gatewayconvert(nothing) === nothing
+        @test Exchanges.gatewayconvert(42) == 42
         d = Dict("x" => 10, "y" => [1, 2])
-        result = Exchanges.jlpyconvert(d)
+        result = Exchanges.gatewayconvert(d)
         @test result isa Dict
         @test result["x"] == 10
         @test result["y"] == [1, 2]
