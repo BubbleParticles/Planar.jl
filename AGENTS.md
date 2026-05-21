@@ -222,3 +222,83 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 9. **Gateway must be restarted for Python code changes**: The FastAPI layer may reload with `--reload`, but exchange subprocesses are independent. Restart the full gateway or stop/start the exchange to pick up subprocess changes.
 
 10. **Pidfile for gateway detection**: `/tmp/ccxt_gateway.pid` is written by the gateway on startup and removed on idle-shutdown. This file is used by `using Ccxt` to detect an already-running gateway.
+
+---
+
+## CCXT Migration Review Checklist
+
+Before committing changes to a migrated function, verify each item below. This checklist catches the most common migration errors found during the Exchanges refactor.
+
+### Parameter Name Audit
+
+The subprocess dispatches HTTP query params as `**kwargs` directly to ccxt methods. **Every keyword name must match the ccxt method's parameter name exactly.**
+
+- [ ] For each `call_exchange(…, method, query=Dict("key" => val))`, verify every `"key"` matches the ccxt method's parameter name
+  - Check the ccxt source or error message — Python tells you "Did you mean 'correct_name'?" on mismatch
+  - Common ccxt parameter names: `symbol`, `type`, `leverage`, `side`, `marginMode`, `hedged`, `enable`, `enabled`, `reduceOnly`, `newClientOrderId`, etc.
+  - **Gotcha:** `set_sandbox_mode()` uses `enable` not `enabled`
+- [ ] Verify the ccxt method actually accepts named parameters for the keys you're sending
+  - Some ccxt methods take positional args only — use the `params={}` dict pattern if needed
+  - The subprocess's `_call_method` expands the dict with `**`, so named params must match the function signature
+
+### Type Audit (String Safety)
+
+HTTP query parameters are **always strings**. ccxt methods expecting booleans, integers, or floats may misinterpret them.
+
+- [ ] For each ccxt method parameter in the query dict, check if ccxt handles string coercion
+  - Booleans: string `"true"` / `"false"` are both truthy in Python (`bool("false") == True`) — **never pass boolean strings for boolean params**
+  - Integers: strings like `"10"` usually work (ccxt calls `int()` internally)
+  - **Fix:** Convert `call_exchange` to use `body=` (POST) with native JSON types instead of `query=` (GET) when passing typed params
+- [ ] For boolean flags: either use POST body (preserves Julia Bool type through JSON) or convert to `"0"`/`"1"` or strip the param
+
+### Method Name Audit
+
+The subprocess dispatches method names via `getattr(self.exchange, method)`. The name must match a ccxt attribute.
+
+- [ ] Verify the method name exists on the ccxt exchange object
+  - ccxt uses snake_case internally but provides camelCase aliases via `__getattr__`
+  - Test with `hasattr(exchange, "yourMethod")` or check the error response
+- [ ] Special subprocess handlers exist for: `set_api_key`, `enableRateLimit`, `timeout`, `rateLimit`, `has`, `metadata`, `urls` — these don't go through generic dispatch
+- [ ] All other method names are passed through via `getattr` + `**kwargs`
+
+### Dispatch Path Audit
+
+Know which code path your call takes in the subprocess (`subprocess.py`):
+
+| Dispatch Condition | Behavior | Example Methods |
+|---|---|---|
+| `method in settable_props` | Sets attribute directly | `timeout`, `enableRateLimit`, `rateLimit` |
+| `method == "set_api_key"` | Sets 5 credentials | `set_api_key` |
+| `hasattr(exchange, method) && callable(attr)` | Calls with `**params` | `fetchTicker`, `setLeverage`, `setMarginMode` |
+| `hasattr(exchange, method) && !callable(attr)` | Lazy-loads attribute via `load_<method>()` | `markets`, `currencies`, `timeframes` |
+| No match | Returns error | — |
+
+- [ ] Verify your method name hits the expected dispatch path
+- [ ] For custom methods like `setSandboxMode`: verify `hasattr(exchange, "setSandboxMode")` is True before deploying
+
+### Duplicate Definition Audit
+
+- [ ] grep for the new function name across the entire package to ensure no pre-existing definition with the same signature
+- [ ] Run the package and check for `WARNING: Method definition … overwritten` which signals duplicates
+- [ ] Check both positional **and** keyword signatures — Julia dispatches on positional args only, so different kwargs don't disambiguate
+
+### Import Audit
+
+- [ ] After adding `using .OtherModule: sym1, sym2` to a file, verify every imported symbol actually exists in `OtherModule`
+- [ ] Run the calling module and check for `WARNING: Imported binding … was undeclared at import time` and `conflicts with an existing identifier`
+- [ ] Convention: `issandbox` lives in `Exchanges` (constructors.jl), **not** in `ExchangeTypes` — verify your import source is correct
+
+### One-Time Re-Evaluation of Exchanges Package
+
+Audit findings from the full scan of all 35 `call_exchange` sites:
+
+| Issue | Location | Severity | Status |
+|---|---|---|---|
+| `"enabled"` should be `"enable"` for `setSandboxMode` | `constructors.jl:449` | 🔴 Bug (fixed) | ✅ Fixed |
+| `issandbox` imported from wrong module | `adhoc/leverage.jl:2` | 🟡 Warning (fixed) | ✅ Fixed |
+| `market_limits` duplicate with same signature | `tickers.jl:284,334` | 🟡 Warning (fixed) | ✅ Fixed |
+| `"hedged" => "false"` string is truthy in Python | `adhoc/leverage.jl:60,75` | 🟠 Pre-existing (not migration) | ⚠️ See note |
+| `"side" => string(side)` — string `"Long"`/`"Short"` to ccxt | `leverage.jl:35` | 🟢 Acceptable (ccxt coerces) | ✅ OK |
+| All other params (`symbol`, `type`, `leverage`, `marginMode`, `value`, `flag`) | 30+ sites | 🟢 Standard ccxt names | ✅ OK |
+
+**Note on `"hedged" => "false"`:** Python's `bool("false")` is `True`, so this always sets hedged mode regardless of intent. This is a pre-existing bug also present in the original Python-ccxt bindings — not a migration regression. It only affects the Phemex/Bybit `dosetmargin` path and should be fixed separately by sending a JSON body (POST) with a native boolean instead of a GET query param.
