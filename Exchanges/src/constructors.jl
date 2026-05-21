@@ -124,12 +124,11 @@ function loadmarkets!(exc; cache=true, agemax=Day(1))
             raw = call_exchange(default_client(), name, "markets")
             if raw isa AbstractDict
                 mkpath(dirname(mkt))
-                cache_dict = Dict{Symbol,String}()
-                cache_dict[:markets] = json(Dict(pairs(raw)))
-                write(mkt, json(cache_dict))
-                conv = jlpyconvert(raw)
-                if conv isa AbstractDict
-                    merge!(exc.markets, conv)
+                flat = jlpyconvert(raw)
+                if flat isa AbstractDict
+                    cache_dict = Dict{String,String}("markets" => json(flat))
+                    write(mkt, json(cache_dict))
+                    merge!(exc.markets, flat)
                 end
             end
         catch e
