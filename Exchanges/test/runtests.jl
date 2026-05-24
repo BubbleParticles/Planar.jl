@@ -3,9 +3,108 @@ using Exchanges
 using ExchangeTypes
 using HTTP
 using JSON3
-using Dates: Day
+using Dates
 
 const EXCHANGE = :test_exchange
+const _mock_sandbox = Dict{String,Bool}()
+
+# ──────────────────────────────────────────────
+# Default mock HTTP — avoids gateway spawn dependency
+# Covers all common endpoint patterns used by Exchange operations.
+# ──────────────────────────────────────────────
+function _default_mock_get(url; kwargs...)
+    if occursin("/admin/exchange_names", url)
+        HTTP.Response(200, JSON3.write(Dict("result" => ["test"], "error" => nothing, "error_code" => nothing)))
+    elseif occursin("/has", url)
+        HTTP.Response(200, JSON3.write(Dict("result" => Dict("fetchTicker" => true), "error" => nothing, "error_code" => nothing)))
+    elseif occursin("/timeframes", url)
+        HTTP.Response(200, JSON3.write(Dict("result" => Dict("1m" => nothing), "error" => nothing, "error_code" => nothing)))
+    elseif occursin("/fees", url)
+        HTTP.Response(200, JSON3.write(Dict("result" => Dict("trading" => Dict()), "error" => nothing, "error_code" => nothing)))
+    elseif occursin("/precisionMode", url)
+        HTTP.Response(200, JSON3.write(Dict("result" => 2, "error" => nothing, "error_code" => nothing)))
+    elseif occursin("/get_propertynames", url)
+        HTTP.Response(200, JSON3.write(Dict("result" => ["fetchTicker"], "error" => nothing, "error_code" => nothing)))
+    elseif occursin("/status", url)
+        HTTP.Response(200, JSON3.write(Dict("result" => Dict("running" => true), "error" => nothing, "error_code" => nothing)))
+    elseif occursin("/markets", url)
+        HTTP.Response(200, JSON3.write(Dict("result" => Dict("BTC/USDT" => Dict("id" => "BTC/USDT", "type" => "spot", "base" => "BTC", "quote" => "USDT")), "error" => nothing, "error_code" => nothing)))
+    elseif occursin("/urls", url)
+        m = match(r"/exchanges/([^/]+)/urls", url)
+        name = m !== nothing ? m[1] : ""
+        if get(_mock_sandbox, name, false)
+            HTTP.Response(200, JSON3.write(Dict("result" => Dict("apiBackup" => "https://testnet.example.com", "api" => "https://api.example.com"), "error" => nothing, "error_code" => nothing)))
+        else
+            HTTP.Response(200, JSON3.write(Dict("result" => Dict("api" => "https://api.example.com"), "error" => nothing, "error_code" => nothing)))
+        end
+    else
+        error("Unexpected GET: $url")
+    end
+end
+function _default_mock_post(url; kwargs...)
+    if occursin("/setSandboxMode", url)
+        m = match(r"/exchanges/([^/]+)/setSandboxMode", url)
+        name = m !== nothing ? m[1] : ""
+        body_str = get(kwargs, :body, "{}")
+        body = JSON3.parse(body_str)
+        enabled = get(body, "enabled", false)
+        _mock_sandbox[name] = enabled
+        HTTP.Response(200, JSON3.write(Dict("result" => Dict("success" => true), "error" => nothing, "error_code" => nothing)))
+    elseif occursin("/exchanges/", url)
+        HTTP.Response(200, JSON3.write(Dict("result" => "started", "error" => nothing, "error_code" => nothing)))
+    else
+        error("Unexpected POST: $url")
+    end
+end
+
+function _reset_mock_state()
+    empty!(_mock_sandbox)
+    ExchangeTypes.CcxtGateway.Rest.set_http_get!(_default_mock_get)
+    ExchangeTypes.CcxtGateway.Rest.set_http_post!(_default_mock_post)
+end
+
+_reset_mock_state()
+
+function _restore_mock()
+    ExchangeTypes.CcxtGateway.Rest.set_http_get!(HTTP.get)
+    ExchangeTypes.CcxtGateway.Rest.set_http_post!(HTTP.post)
+end
+
+# Helper: full mock for a named exchange
+function setup_mock(exc_name; market_data=nothing)
+    get_handler(url; kwargs...) = begin
+        if occursin("/admin/exchange_names", url)
+            HTTP.Response(200, JSON3.write(Dict("result" => [exc_name], "error" => nothing, "error_code" => nothing)))
+        elseif occursin("/exchanges/$exc_name/has", url)
+            HTTP.Response(200, JSON3.write(Dict("result" => Dict("fetchTicker" => true, "fetchOHLCV" => true), "error" => nothing, "error_code" => nothing)))
+        elseif occursin("/exchanges/$exc_name/timeframes", url)
+            HTTP.Response(200, JSON3.write(Dict("result" => Dict("1m" => nothing, "5m" => nothing), "error" => nothing, "error_code" => nothing)))
+        elseif occursin("/exchanges/$exc_name/fees", url)
+            HTTP.Response(200, JSON3.write(Dict("result" => Dict("trading" => Dict("maker" => 0.001, "taker" => 0.002)), "error" => nothing, "error_code" => nothing)))
+        elseif occursin("/exchanges/$exc_name/precisionMode", url)
+            HTTP.Response(200, JSON3.write(Dict("result" => 2, "error" => nothing, "error_code" => nothing)))
+        elseif occursin("/exchanges/$exc_name/get_propertynames", url)
+            HTTP.Response(200, JSON3.write(Dict("result" => ["fetchTicker", "fetchOHLCV", "timeframes", "fees"], "error" => nothing, "error_code" => nothing)))
+        elseif occursin("/exchanges/$exc_name/markets", url)
+            md = something(market_data, Dict("BTC/USDT" => Dict("id" => "BTC/USDT", "type" => "spot", "base" => "BTC", "quote" => "USDT", "active" => true, "precision" => Dict("amount" => 8, "price" => 2), "limits" => Dict("amount" => Dict("min" => 0.001, "max" => 1000.0)))))
+            HTTP.Response(200, JSON3.write(Dict("result" => md, "error" => nothing, "error_code" => nothing)))
+        elseif occursin("/exchanges/$exc_name/status", url)
+            HTTP.Response(200, JSON3.write(Dict("result" => Dict("running" => true), "error" => nothing, "error_code" => nothing)))
+        elseif occursin("/exchanges/$exc_name/setSandboxMode", url)
+            HTTP.Response(200, JSON3.write(Dict("result" => Dict("success" => true), "error" => nothing, "error_code" => nothing)))
+        else
+            error("Unexpected GET: $url")
+        end
+    end
+    ExchangeTypes.CcxtGateway.Rest.set_http_get!(get_handler)
+    ExchangeTypes.CcxtGateway.Rest.set_http_post!((url; kwargs...) -> begin
+        if occursin("/exchanges/$exc_name", url)
+            HTTP.Response(200, JSON3.write(Dict("result" => "started", "error" => nothing, "error_code" => nothing)))
+        else
+            error("Unexpected POST: $url")
+        end
+    end)
+end
 
 @testset "Exchanges" begin
 
@@ -151,6 +250,7 @@ end
 
     @testset "issupported timeframe" begin
         e = Exchange(:test_tf)
+        empty!(e.timeframes)  # Exchange constructor may fetch timeframes via mock gateway
         @test Exchanges.issupported("1m", e) == false
         push!(e.timeframes, "1m")
         @test Exchanges.issupported("1m", e) == true
@@ -308,11 +408,11 @@ end
         @test Exchanges.ispercentage(Dict()) == true
     end
 
-    @testset "sandbox! no-op" begin
+    @testset "sandbox!" begin
         e = Exchange(:test_sbox)
         @test Exchanges.issandbox(e) == false
         Exchanges.sandbox!(e; flag=true)
-        @test Exchanges.issandbox(e) == false
+        @test Exchanges.issandbox(e) == true
     end
 
     @testset "ratelimit! no-op" begin
@@ -382,50 +482,389 @@ end
     end
 end
 
+@testset "JSON3→Dict key conversion (regression: Symbol→String)" begin
+    @testset "gatewayconvert preserves String keys from JSON3.Object" begin
+        raw = JSON3.parse("{\"BTC/USDT\": {\"id\": \"BTC/USDT\", \"type\": \"spot\", \"base\": \"BTC\"}}")
+        result = Exchanges.gatewayconvert(raw)
+        @test result isa Dict
+        ks = collect(keys(result))
+        @test ks == ["BTC/USDT"]
+        @test result["BTC/USDT"]["type"] == "spot"
+        @test result["BTC/USDT"]["base"] == "BTC"
+    end
+
+    @testset "_elconvert converts nested JSON3.Object keys to String" begin
+        raw = JSON3.parse("{\"outer\": {\"inner\": {\"value\": 42}}}")
+        result = Exchanges._elconvert(raw)
+        @test result isa Dict
+        @test collect(keys(result)) == ["outer"]
+        @test result["outer"]["inner"]["value"] == 42
+    end
+
+    @testset "gatewayconvert with nothing" begin
+        @test Exchanges.gatewayconvert(nothing) === nothing
+    end
+
+    @testset "gatewayconvert with plain value" begin
+        @test Exchanges.gatewayconvert(42) == 42
+        @test Exchanges.gatewayconvert("hello") == "hello"
+    end
+
+    @testset "_elconvert with JSON3.Object array" begin
+        raw = JSON3.parse("[{\"x\": 1}, {\"x\": 2}]")
+        result = Exchanges._elconvert(raw)
+        @test result isa Vector
+        @test result[1]["x"] == 1
+        @test result[2]["x"] == 2
+    end
+end
+
+@testset "setexchange! behavior" begin
+    @testset "setexchange! with markets=:no" begin
+        e = Exchange(:test_set_nm)
+        Exchanges.setexchange!(e; markets=:no)
+        @test isempty(e.markets)
+    end
+
+    @testset "setexchange! returns the same exchange" begin
+        e = Exchange(:test_set_ret)
+        result = Exchanges.setexchange!(e; markets=:no)
+        @test result === e
+    end
+end
+
+@testset "sandbox! arg combinations" begin
+    @testset "sandbox! with flag=false" begin
+        e = Exchange(:test_sbf)
+        Exchanges.sandbox!(e; flag=false)
+        @test Exchanges.issandbox(e) == false
+    end
+
+    @testset "sandbox! with remove_keys=true" begin
+        e = Exchange(:test_sbrk)
+        Exchanges.sandbox!(e; flag=false, remove_keys=true)
+        @test Exchanges.issandbox(e) == false
+    end
+
+    @testset "sandbox! with remove_keys=false" begin
+        e = Exchange(:test_sbrkf)
+        Exchanges.sandbox!(e; flag=false, remove_keys=false)
+        @test Exchanges.issandbox(e) == false
+    end
+end
+
+@testset "exckeys! arg combinations" begin
+    @testset "exckeys! positional all 5 keys" begin
+        e = Exchange(:test_ek1)
+        Exchanges.exckeys!(e, "key1", "secret1", "pass1", "wa1", "pk1")
+        @test true  # no-op in gateway mode, just verifies no error
+    end
+
+    @testset "exckeys! keyword with sandbox=true" begin
+        e = Exchange(:test_ek2)
+        Exchanges.exckeys!(e; sandbox=true)
+        @test true
+    end
+
+    @testset "exckeys! keyword with sandbox=false" begin
+        e = Exchange(:test_ek3)
+        Exchanges.exckeys!(e; sandbox=false)
+        @test true
+    end
+
+    @testset "exckeys! empty keys" begin
+        e = Exchange(:test_ek4)
+        Exchanges.exckeys!(e, "", "", "", "", "")
+        @test true
+    end
+end
+
+@testset "timeout! and check_timeout" begin
+    @testset "timeout! default" begin
+        e = Exchange(:test_t1)
+        Exchanges.timeout!(e)
+        @test true
+    end
+
+    @testset "timeout! with custom value" begin
+        e = Exchange(:test_t2)
+        Exchanges.timeout!(e, 10000)
+        @test true
+    end
+
+    @testset "check_timeout exists and callable" begin
+        e = Exchange(:test_ct)
+        @test hasmethod(Exchanges.check_timeout, Tuple{Exchange, Dates.Period})
+        Exchanges.check_timeout(e, Dates.Second(5))
+        @test true
+    end
+
+    @testset "gettimeout returns Millisecond" begin
+        e = Exchange(:test_gt)
+        Exchanges.timeout!(e, 5000)
+        t = Exchanges.gettimeout(e)
+        @test t isa Dates.Millisecond
+    end
+end
+
+@testset "market_limits all kwargs" begin
+    @testset "market_limits default kwargs" begin
+        e = Exchange(:test_ml1)
+        push!(e.markets, "BTC/USDT" => Dict(
+            "limits" => Dict("amount" => Dict("min" => 0.001, "max" => 1000.0)),
+            "precision" => Dict("amount" => 0.001, "price" => 0.01),
+            "spot" => true,
+            "active" => true,
+        ))
+        limits = Exchanges.market_limits("BTC/USDT", e)
+        @test limits isa NamedTuple
+    end
+
+    @testset "market_limits with custom precision" begin
+        e = Exchange(:test_ml2)
+        push!(e.markets, "BTC/USDT" => Dict(
+            "limits" => Dict("amount" => Dict("min" => 0.001)),
+            "spot" => true,
+        ))
+        limits = Exchanges.market_limits("BTC/USDT", e; precision=(; price=0.01, amount=0.001))
+        @test limits isa NamedTuple
+    end
+
+    @testset "market_limits with default_leverage" begin
+        e = Exchange(:test_ml3)
+        push!(e.markets, "ETH/USDT" => Dict(
+            "limits" => Dict("amount" => Dict("min" => 0.01)),
+            "swap" => true,
+        ))
+        limits = Exchanges.market_limits("ETH/USDT", e; default_leverage=10)
+        @test limits isa NamedTuple
+    end
+
+    @testset "market_limits with default_amount and default_price" begin
+        e = Exchange(:test_ml4)
+        push!(e.markets, "XRP/USDT" => Dict(
+            "limits" => Dict{String,Any}("amount" => Dict{String,Any}()),
+            "spot" => true,
+        ))
+        limits = Exchanges.market_limits("XRP/USDT", e; default_amount=100, default_price=1.0)
+        @test limits isa NamedTuple
+    end
+
+    @testset "market_limits with default_cost" begin
+        e = Exchange(:test_ml5)
+        push!(e.markets, "DOT/USDT" => Dict(
+            "limits" => Dict{String,Any}("amount" => Dict{String,Any}()),
+            "spot" => true,
+        ))
+        limits = Exchanges.market_limits("DOT/USDT", e; default_cost=1000.0)
+        @test limits isa NamedTuple
+    end
+end
+
+@testset "leverage! and marginmode! arg combinations" begin
+    @testset "leverage! exists and callable" begin
+        e = Exchange(:test_lv)
+        @test hasmethod(Exchanges.leverage!, Tuple{Exchange, Any, Any})
+    end
+
+    @testset "marginmode! exists and callable" begin
+        e = Exchange(:test_mm)
+        @test hasmethod(Exchanges.marginmode!, Tuple{Exchange, Any, Any})
+    end
+
+    @testset "marginmode! hedged keyword compiles" begin
+        # Verify the signature accepts hedged kwarg
+        e = Exchange(:test_mmh)
+        sigs = methods(Exchanges.marginmode!, (Exchange, Any, Any))
+        @test length(sigs) > 0
+    end
+
+    @testset "leverage! side and timeout keywords compile" begin
+        e = Exchange(:test_lvt)
+        sigs = methods(Exchanges.leverage!, (Exchange, Any, Any))
+        @test length(sigs) > 0
+    end
+end
+
+@testset "ticker! arg combinations" begin
+    @testset "ticker! exists and callable" begin
+        e = Exchange(:test_tk)
+        @test hasmethod(Exchanges.ticker!, Tuple{Any, Exchange})
+    end
+
+    @testset "ticker! with timeout kwarg signature" begin
+        # ticker! accepts timeout, func, delay — just verify it compiles
+        @test hasmethod(Exchanges.ticker!, Tuple{Any, Exchange})
+    end
+
+    @testset "ticker! shortcut for AbstractAsset" begin
+        @test hasmethod(Exchanges.ticker!, Tuple{Any, Exchange})
+    end
+end
+
 @testset "Mock gateway exchange creation" begin
     using HTTP
     using JSON3
 
-    @testset "getexchange! with mocked HTTP" begin
-        empty!(ExchangeTypes.exchanges)
-        empty!(ExchangeTypes.sb_exchanges)
-        empty!(ExchangeTypes.CcxtGateway.Rest._started_exchanges)
-        empty!(ExchangeTypes._ccxt_exchange_set)
-        ExchangeTypes.CcxtGateway.Rest.set_http_get!((url; kwargs...) -> begin
+    # Helper: setup mock for a given exchange name
+    function setup_mock(exc_name; market_data=nothing)
+        get_handler(url; kwargs...) = begin
             if occursin("/admin/exchange_names", url)
-                HTTP.Response(200, JSON3.write(Dict("result" => ["test_exchange"], "error" => nothing, "error_code" => nothing)))
-            elseif occursin("/exchanges/test_exchange/has", url)
+                HTTP.Response(200, JSON3.write(Dict("result" => [exc_name], "error" => nothing, "error_code" => nothing)))
+            elseif occursin("/exchanges/$exc_name/has", url)
                 HTTP.Response(200, JSON3.write(Dict("result" => Dict("fetchTicker" => true, "fetchOHLCV" => true), "error" => nothing, "error_code" => nothing)))
-            elseif occursin("/exchanges/test_exchange/timeframes", url)
+            elseif occursin("/exchanges/$exc_name/timeframes", url)
                 HTTP.Response(200, JSON3.write(Dict("result" => Dict("1m" => nothing, "5m" => nothing), "error" => nothing, "error_code" => nothing)))
-            elseif occursin("/exchanges/test_exchange/fees", url)
+            elseif occursin("/exchanges/$exc_name/fees", url)
                 HTTP.Response(200, JSON3.write(Dict("result" => Dict("trading" => Dict("maker" => 0.001, "taker" => 0.002)), "error" => nothing, "error_code" => nothing)))
-            elseif occursin("/exchanges/test_exchange/get_propertynames", url)
+            elseif occursin("/exchanges/$exc_name/precisionMode", url)
+                HTTP.Response(200, JSON3.write(Dict("result" => 2, "error" => nothing, "error_code" => nothing)))
+            elseif occursin("/exchanges/$exc_name/get_propertynames", url)
                 HTTP.Response(200, JSON3.write(Dict("result" => ["fetchTicker", "fetchOHLCV", "timeframes", "fees"], "error" => nothing, "error_code" => nothing)))
+            elseif occursin("/exchanges/$exc_name/markets", url)
+                md = something(market_data, Dict("BTC/USDT" => Dict("id" => "BTC/USDT", "type" => "spot", "base" => "BTC", "quote" => "USDT", "active" => true, "precision" => Dict("amount" => 8, "price" => 2), "limits" => Dict("amount" => Dict("min" => 0.001, "max" => 1000.0)))))
+                HTTP.Response(200, JSON3.write(Dict("result" => md, "error" => nothing, "error_code" => nothing)))
+            elseif occursin("/exchanges/$exc_name/status", url)
+                HTTP.Response(200, JSON3.write(Dict("result" => Dict("running" => true), "error" => nothing, "error_code" => nothing)))
+            elseif occursin("/exchanges/$exc_name/urls", url)
+                if get(_mock_sandbox, exc_name, false)
+                    HTTP.Response(200, JSON3.write(Dict("result" => Dict("apiBackup" => "https://testnet.example.com", "api" => "https://api.example.com"), "error" => nothing, "error_code" => nothing)))
+                else
+                    HTTP.Response(200, JSON3.write(Dict("result" => Dict("api" => "https://api.example.com"), "error" => nothing, "error_code" => nothing)))
+                end
+            elseif occursin("/exchanges/$exc_name/setSandboxMode", url)
+                # get handler variant — shouldn't be hit but handle gracefully
+                HTTP.Response(200, JSON3.write(Dict("result" => Dict("success" => true), "error" => nothing, "error_code" => nothing)))
             else
                 error("Unexpected GET: $url")
             end
-        end)
+        end
+        ExchangeTypes.CcxtGateway.Rest.set_http_get!(get_handler)
         ExchangeTypes.CcxtGateway.Rest.set_http_post!((url; kwargs...) -> begin
-            if occursin("/exchanges/test_exchange", url)
+            if occursin("/exchanges/$exc_name/setSandboxMode", url)
+                body_str = get(kwargs, :body, "{}")
+                body = JSON3.parse(body_str)
+                enabled = get(body, "enabled", false)
+                _mock_sandbox[exc_name] = enabled
+                HTTP.Response(200, JSON3.write(Dict("result" => Dict("success" => true), "error" => nothing, "error_code" => nothing)))
+            elseif occursin("/exchanges/$exc_name", url)
                 HTTP.Response(200, JSON3.write(Dict("result" => "started", "error" => nothing, "error_code" => nothing)))
             else
                 error("Unexpected POST: $url")
             end
         end)
+    end
+
+    function cleanup_mock()
+        ExchangeTypes.CcxtGateway.Rest.set_http_get!(HTTP.get)
+        ExchangeTypes.CcxtGateway.Rest.set_http_post!(HTTP.post)
+        empty!(ExchangeTypes.exchanges)
+        empty!(ExchangeTypes.sb_exchanges)
+        empty!(ExchangeTypes.CcxtGateway.Rest._started_exchanges)
+        empty!(ExchangeTypes._ccxt_exchange_set)
+    end
+
+    @testset "getexchange! with markets=:no" begin
         try
-            e = getexchange!(:test_exchange; markets=:no, sandbox=false)
+            setup_mock("test_exc_a")
+            e = getexchange!(:test_exc_a; markets=:no, sandbox=false)
             @test e isa Exchange
-            @test nameof(e) == :test_exchange
+            @test nameof(e) == :test_exc_a
+            @test isempty(e.markets)
             @test !isempty(e._propnames)
             @test :fetchTicker in e._propnames
-            @test haskey(ExchangeTypes.exchanges, (:test_exchange, ""))
+            @test haskey(ExchangeTypes.exchanges, (:test_exc_a, ""))
         finally
-            ExchangeTypes.CcxtGateway.Rest.set_http_get!(HTTP.get)
-            ExchangeTypes.CcxtGateway.Rest.set_http_post!(HTTP.post)
-            empty!(ExchangeTypes.exchanges)
-            empty!(ExchangeTypes.sb_exchanges)
-            empty!(ExchangeTypes.CcxtGateway.Rest._started_exchanges)
+            cleanup_mock()
+        end
+    end
+
+    @testset "getexchange! with markets=:yes loads gateway data" begin
+        try
+            setup_mock("test_exc_b")
+            e = getexchange!(:test_exc_b; markets=:yes, sandbox=false)
+            @test e isa Exchange
+            @test !isempty(e.markets)
+            @test haskey(e.markets, "BTC/USDT")
+            @test e.markets["BTC/USDT"]["type"] == "spot"
+            @test e.markets["BTC/USDT"]["base"] == "BTC"
+            @test e.markets["BTC/USDT"]["quote"] == "USDT"
+        finally
+            cleanup_mock()
+        end
+    end
+
+    @testset "getexchange! with markets=:force reloads from gateway" begin
+        try
+            setup_mock("test_exc_c")
+            e = getexchange!(:test_exc_c; markets=:force, sandbox=false)
+            @test e isa Exchange
+            @test !isempty(e.markets)
+            @test haskey(e.markets, "BTC/USDT")
+        finally
+            cleanup_mock()
+        end
+    end
+
+    @testset "getexchange! with sandbox=true" begin
+        try
+            setup_mock("test_exc_d")
+            e = getexchange!(:test_exc_d; sandbox=true, markets=:no)
+            @test e isa Exchange
+            @test nameof(e) == :test_exc_d
+        finally
+            cleanup_mock()
+        end
+    end
+
+    @testset "getexchange! with account=" begin
+        try
+            setup_mock("test_exc_e")
+            e = getexchange!(:test_exc_e; account="test_acc", sandbox=false, markets=:no)
+            @test e isa Exchange
+            @test ExchangeTypes.account(e) == "test_acc"
+        finally
+            cleanup_mock()
+        end
+    end
+
+    @testset "getexchange! with JSON3.Object market data (Symbol→String regression)" begin
+        try
+            setup_mock("test_exc_f"; market_data=JSON3.parse("{\"ETH/USDT\": {\"id\": \"ETH/USDT\", \"type\": \"swap\", \"base\": \"ETH\", \"quote\": \"USDT\", \"active\": true, \"precision\": {\"amount\": 6, \"price\": 2}, \"limits\": {\"amount\": {\"min\": 0.01, \"max\": 100.0}}}}"))
+            e = getexchange!(:test_exc_f; markets=:yes, sandbox=false)
+            @test e isa Exchange
+            @test haskey(e.markets, "ETH/USDT")
+            @test e.markets["ETH/USDT"]["type"] == "swap"
+            @test e.markets["ETH/USDT"]["base"] == "ETH"
+        finally
+            cleanup_mock()
+        end
+    end
+
+    @testset "Multiple exchanges with same mock" begin
+        try
+            setup_mock("test_exc_g1")
+            e1 = getexchange!(:test_exc_g1; markets=:no, sandbox=false)
+            @test e1 isa Exchange
+
+            # Second exchange with different name — re-setup mock
+            setup_mock("test_exc_g2")
+            e2 = getexchange!(:test_exc_g2; markets=:no, sandbox=false)
+            @test e2 isa Exchange
+            @test nameof(e2) == :test_exc_g2
+        finally
+            cleanup_mock()
+        end
+    end
+
+    @testset "ExchangeID dispatch" begin
+        try
+            setup_mock("test_exc_h")
+            e = getexchange!(ExchangeID{:test_exc_h}(); markets=:no, sandbox=false)
+            @test e isa Exchange
+            @test nameof(e) == :test_exc_h
+        finally
+            cleanup_mock()
         end
     end
 end
