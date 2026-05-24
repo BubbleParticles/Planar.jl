@@ -1,2 +1,26 @@
+name = "FetchTest"
+uuid = "12345678-1234-5678-1234-567812345678"
+version = "0.1.0"
+
 [deps]
-Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+Ccxt = "a58c4053-12c5-4e22-b66a-82c3bd74bf8a"
+Data = "934a4ae5-3fdb-4fa4-b6dd-2cd889d3d27b"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+ExchangeTypes = "16e96388-e60e-4b60-892f-986722d15ae4"
+Exchanges = "ab04e009-1d60-4d36-ac2f-58b9338a89b5"
+Fetch = "01b7c4b8-c42c-4ba7-97ce-8f8fab6ee59e"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+Instruments = "36fdd1e0-de92-434c-a120-c8ed410c5e3c"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+LMDB = "11f193de-5e89-5f17-923a-7d207d56daf9"
+Misc = "ff97321b-aa60-4104-8cd6-2e42973349ab"
+Pbar = "7aed521b-3ea6-427a-8031-5ecc7305f19e"
+Processing = "71db1b01-ba5b-4918-92ad-dd9436844736"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[compat]
+DataFrames = "1.8.2"
+HTTP = "1.11.0"
+JSON3 = "1.14.3"
+LMDB = "1.0.0"
+Test = "1.11.0"
