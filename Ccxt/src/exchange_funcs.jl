@@ -1,5 +1,7 @@
 # exchange_funcs.jl - Gateway helper functions
 
+using JSON3
+
 const HAS_CACHE_TTL = 300.0  # 5 minutes in seconds
 const _has_cache = Dict{String, Tuple{Dict{String, Any}, Float64}}()
 
