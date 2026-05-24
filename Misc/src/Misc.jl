@@ -9,9 +9,9 @@ if get(ENV, "JULIA_NOPRECOMP", "") == "all"
 else
     if occursin(string(@__MODULE__), get(ENV, "JULIA_NOPRECOMP", ""))
         __precompile__(false)
-        include("consts.jl")
     end
     include("module.jl")
+    include("consts.jl")
     __init__() = _doinit()
     include("precompile.jl")
 end

@@ -1,14 +1,13 @@
-using Exchanges: ExchangeID, pyfetch_timeout
-using Exchanges.Ccxt: _multifunc
+using Exchanges: ExchangeID
+using Exchanges.Ccxt: _multifunc, default_client, call_exchange
 using Exchanges.Misc: LittleDict
-using Exchanges.Python: pybuiltins
 @enum OrderBookLevel L1 L2 L3
 Base.convert(::Type{OrderBookLevel}, n::Integer) = OrderBookLevel(n - 1)
 
 @doc "Defines an array representing possible numbers of orders to fetch."
 const MAX_ORDERS = [5, 10, 20, 50, 100, 500, 1000]
-@doc "Initializes a LittleDict for storing order book functions keyed by order book level and exchange ID."
-const OB_FUNCTIONS = LittleDict{Tuple{OrderBookLevel,ExchangeID},Py}()
+@doc "Initializes a LittleDict for storing order book method names keyed by order book level and exchange ID."
+const OB_METHODS = LittleDict{Tuple{OrderBookLevel,ExchangeID},String}()
 @doc "Defines the time-to-live (TTL) for an order book as 5 seconds (after which it is stale)."
 const OB_TTL = Ref(Second(5))
 @doc "Defines the eviction time-to-live (TTL) for an order book as 5 minutes."
@@ -62,35 +61,32 @@ The `_update_orderbook!` function takes an exchange `exc`, an order book `ob`, a
 """
 function _update_orderbook!(exc, ob, sym, lvl, limit; init)
     ob.busy[] && return ob
-    f = @lget! OB_FUNCTIONS (lvl, exc.id) _multifunc(exc, _levelname(lvl), true)[1]
+    method_str = @lget! OB_METHODS (lvl, exc.id) begin
+        m, _ = _multifunc(string(exc.id), _levelname(lvl), true)
+        m
+    end
     t = @async begin
         ob.busy[] = true
         try
-            py_ob = pyfetch_timeout(
-                f,
-                getproperty(exc.py, string("fetch", _levelname(lvl))),
-                Second(2),
-                sym;
-                limit,
-            )
-            if py_ob isa Exception
-                @error "update ob: " py_ob
+            result = call_exchange(default_client(), string(exc.id), method_str, body=Dict("symbol" => sym, "limit" => limit))
+            if result isa Exception
+                @error "update ob: " result
                 ob.busy[] = false
                 return nothing
             end
-            let v = get(py_ob, "timestamp", 0)
-                ob.timestamp[] = dt(pyconvert(Int, pyint(Bool(v == pybuiltins.None) ? 0 : v)))
+            let v = get(result, "timestamp", 0)
+                ob.timestamp[] = dt(v === nothing ? 0 : Float64(v))
             end
             let asks = ob.asks
                 empty!(asks)
-                for a in py_ob["asks"]
-                    push!(asks, (pytofloat(a[0]), pytofloat(a[1])))
+                for a in result["asks"]
+                    push!(asks, (Float64(a[1]), Float64(a[2])))
                 end
             end
             let bids = ob.bids
                 empty!(bids)
-                for b in py_ob["bids"]
-                    push!(bids, (pytofloat(b[0]), pytofloat(b[1])))
+                for b in result["bids"]
+                    push!(bids, (Float64(b[1]), Float64(b[2])))
                 end
             end
         finally

@@ -2,17 +2,15 @@ using Exchanges.Instruments
 using Exchanges:
     Exchanges,
     Exchange,
-    setexchange!,
     tickers,
     getexchange!,
     issupported,
     save_ohlcv,
     to_float
 using Exchanges.Ccxt
-using Exchanges.Python
+using .Ccxt: CcxtGateway, default_client, call_exchange
 using Processing: cleanup_ohlcv_data, islast, resample, Processing
 using Processing.Pbar
-using .Python: pylist_to_matrix, pytofloat
 using Exchanges.Data:
     Data,
     load,
@@ -20,7 +18,6 @@ using Exchanges.Data:
     zi,
     PairData,
     DataFrame,
-    nrow,
     empty_ohlcv,
     contiguous_ts,
     Candle,
@@ -28,7 +25,7 @@ using Exchanges.Data:
     OHLCVTuple,
     ohlcvtuple
 import .Data: propagate_ohlcv!
-using .Data.DFUtils: lastdate, colnames, addcols!, copysubs!
+using .Data.DFUtils: lastdate, addcols!, copysubs!
 using .Data.DataStructures: SortedDict
 using .Data.Misc
 using .Data.Cache: save_cache, load_cache
@@ -42,38 +39,28 @@ using .Misc.Lang: @distributed, @parallel, Option, filterkws, @ifdebug, @deasser
 @doc "Used to slide the `since` param forward when retrying fetching (in case the requested timestamp is too old)."
 const SINCE_MIN_PERIOD = Millisecond(Day(30))
 
-function _to_candle(py, idx, range)
-    Candle(dt(pyconvert(Float64, py[idx])), (to_float(py[n]) for n in range)...)
-end
-Base.convert(::Type{Candle}, py::PyList) = _to_candle(py, 1, 2:6)
-Base.convert(::Type{Candle}, py::Py) = _to_candle(py, 0, 1:5)
-_pytoval(::Type{DateTime}, v) = dt(to_float(v))
-_pytoval(t::Type, v) = @something pyconvert(t, v) Data.default_value(t)
-_pytoval(t::Type, v, def) = @something pyconvert(t, v) def
-@doc "Defines the tuple type for OHLCV data, where each element represents a specific metric (Open, High, Low, Close, Volume)."
-const OHLCVTupleTypes = (DateTime, fill(Float64, 4)..., Option{Float64})
-# const OHLCVTupleTypes = (DateTime, (Float64 for _ in 1:4)..., Option{Float64})
-@doc """ This is the fastest (afaik) way to convert ccxt lists to dataframe friendly format.
+# Gateway OHLCV conversion (JSON array of arrays)
+_to_candle(v::AbstractVector) = Candle(dt(Float64(v[1])), (to_float(v[n]) for n in 2:6)...)
+Base.convert(::Type{Candle}, v::AbstractVector) = _to_candle(v)
 
-$(TYPEDSIGNATURES)
-
-This function converts the provided Python object to a tuple format suitable for dataframes, specifically tailored for OHLCV data.
-
-"""
-function Base.convert(::Type{OHLCVTuple}, py::Py)
+_to_ohlcv_vecs(v::AbstractVector)::OHLCVTuple = begin
     vecs = ohlcvtuple()
-    loopcols((c, v)) = push!(vecs[c], _pytoval(OHLCVTupleTypes[c], v))
-    looprows(cdl) = foreach(loopcols, enumerate(cdl))
-    foreach(looprows, py)
+    for row in v
+        push!(vecs[1], dt(Float64(row[1])))
+        for c in 2:5
+            push!(vecs[c], Float64(row[c]))
+        end
+        push!(vecs[6], row[6] === nothing ? nothing : Float64(row[6]))
+    end
     vecs
 end
-_to_ohlcv_vecs(v)::OHLCVTuple = convert(OHLCVTuple, v)
-@doc """ Converts a Python object to a DataFrame with OHLCV columns
+
+@doc """ Converts OHLCV data to a DataFrame with OHLCV columns
 
 $(TYPEDSIGNATURES)
 
 """
-Data.to_ohlcv(py::Py) = DataFrame(_to_ohlcv_vecs(py), OHLCV_COLUMNS)
+Data.to_ohlcv(data::AbstractVector) = DataFrame(_to_ohlcv_vecs(data), OHLCV_COLUMNS)
 
 function _check_from_to(from::F, to::T) where {F,T<:DateType}
     from = isnothing(from) ? nothing : timefloat(from)
@@ -102,7 +89,7 @@ function _fetch_ohlcv_from_to(
     timeframe;
     from="",
     to="",
-    params=PyDict(),
+    params=Dict{String,Any}(),
     sleep_t=1,
     cleanup=true,
     out=empty_ohlcv(),
@@ -110,14 +97,18 @@ function _fetch_ohlcv_from_to(
 )
     (from, to) = _check_from_to(from, to)
     @debug "Fetching $ohlcv_kind ohlcv for $pair from $(exc.name) at $timeframe - from: $(from |> dt) - to: $(to |> dt)."
-    py_fetch_func = ohlcv_func_bykind(exc, ohlcv_kind)
-    function fetch_func(pair, since, limit; usetimeframe=true)
-        kwargs = LittleDict()
+    gateway_func = ohlcv_func_bykind(exc, ohlcv_kind)
+    fetch_func = function (pair, since, limit; usetimeframe=true)
+        kwargs = LittleDict{Symbol,Any}(:symbol => pair)
         isnothing(since) || (kwargs[:since] = since)
         isnothing(limit) || (kwargs[:limit] = limit)
         usetimeframe && (kwargs[:timeframe] = timeframe)
-        isempty(params) || (kwargs[:params] = params)
-        pyfetch(py_fetch_func, pair; kwargs...)
+        if !isempty(params)
+            for (k, v) in params
+                kwargs[Symbol(k)] = v
+            end
+        end
+        gateway_func(; kwargs...)
     end
     limit = fetch_limit(exc, nothing)
     data = _fetch_loop(fetch_func, exc, pair; from, to, sleep_t, limit, out)
@@ -294,29 +285,25 @@ function __handle_error(e, fetch_func, pair, since, df, sleep_t, limit, converte
     if e isa TaskFailedException
         e = e.task.result
     end
-    if e isa PyException
-        if !isnothing(match(r"429([0]+)?", string(e._v)))
-            @debug "fetch: exchange error 429, too many requests."
-            sleep(sleep_t)
-            sleep_t = (sleep_t + 1) * 2
-            limit = isnothing(limit) ? limit : limit ÷ 2
-            _fetch_with_delay(
-                fetch_func,
-                pair;
-                since,
-                df,
-                sleep_t,
-                limit,
-                converter,
-                usetimeframe=limit > 500,
-            )
-        elseif isccxterror(e)
-            @error "fetch: failed fetch ohlcv" pair exception = e
-            @return_empty()
-        else
-            rethrow(e)
-        end
-    elseif e isa InterruptException
+    if e isa InterruptException
+        @return_empty()
+    elseif occursin(r"429([0]+)?", string(e))
+        @debug "fetch: exchange error 429, too many requests."
+        sleep(sleep_t)
+        sleep_t = (sleep_t + 1) * 2
+        limit = isnothing(limit) ? limit : limit ÷ 2
+        _fetch_with_delay(
+            fetch_func,
+            pair;
+            since,
+            df,
+            sleep_t,
+            limit,
+            converter,
+            usetimeframe=limit > 500,
+        )
+    elseif CcxtGateway.isccxterror(e)
+        @error "fetch: failed fetch ohlcv" pair exception = e
         @return_empty()
     else
         rethrow(e)
@@ -334,7 +321,7 @@ function __handle_fetch(
 )
     @debug "Calling into ccxt to fetch data: $pair since $(dt(since)), max: $limit, tf: $usetimeframe"
     data = fetch_func(pair, since, limit; usetimeframe)
-    dpl = pyisinstance(data, @py(list))
+    dpl = data isa AbstractVector
     if retry && (!dpl || length(data) == 0)
         if data isa Exception
             @warn "fetch ohlcv: unexpected value (retrying)" data
@@ -393,7 +380,7 @@ function _fetch_with_delay(
         )
         handled && return data
         # Apply conversion to fetched data
-        data::Union{Py,OHLCVTuple,<:AbstractArray,DataFrame} = converter(data)
+        data::Union{OHLCVTuple,<:AbstractArray,DataFrame} = converter(data)
         handle_empty(data) = df ? empty_ohlcv() : data
         handle_empty(data::DataFrame) = data
         handle_data(data) = df ? to_ohlcv(data) : data
@@ -434,15 +421,19 @@ function _fetch_ohlcv_with_delay(exc::Exchange, args...; ohlcv_kind=:default, kw
     limit = get(kwargs, :limit, nothing)
     limit = fetch_limit(exc, limit)
     timeframe = get(kwargs, :timeframe, config.min_timeframe)
-    params = get(kwargs, :params, PyDict())
-    py_fetch_func = ohlcv_func_bykind(exc, ohlcv_kind)
-    function fetch_func(pair, since, limit; usetimeframe=true)
-        kwargs = LittleDict()
-        isnothing(since) || (kwargs[:since] = since)
-        isnothing(limit) || (kwargs[:limit] = limit)
-        usetimeframe && (kwargs[:timeframe] = timeframe)
-        isempty(params) || (kwargs[:params] = params)
-        pyfetch(py_fetch_func, pair; kwargs...)
+    params = get(kwargs, :params, Dict{String,Any}())
+    gateway_func = ohlcv_func_bykind(exc, ohlcv_kind)
+    fetch_func = function (pair, since, limit; usetimeframe=true)
+        _kwargs = LittleDict{Symbol,Any}(:symbol => pair)
+        isnothing(since) || (_kwargs[:since] = since)
+        isnothing(limit) || (_kwargs[:limit] = limit)
+        usetimeframe && (_kwargs[:timeframe] = timeframe)
+        if !isempty(params)
+            for (k, v) in params
+                _kwargs[Symbol(k)] = v
+            end
+        end
+        gateway_func(; _kwargs...)
     end
     kwargs = collect(filterkws(:params, :timeframe, :limit; kwargs, pred=∉))
     _fetch_with_delay(fetch_func, args...; limit, kwargs...)

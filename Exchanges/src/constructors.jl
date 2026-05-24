@@ -174,7 +174,7 @@ function getexchange!(
             Exchange(nothing)
         else
             e = Exchange(x; account)
-            sandbox && sandbox!(e; flag=true, remove_keys=false)
+            sandbox ? sandbox!(e; flag=true, remove_keys=false) : sandbox!(e; flag=false)
             setexchange!(e; markets)
         end,
     )
@@ -315,7 +315,7 @@ macro tickers!(type=nothing, force=false, cache=TICKERS_CACHE100)
             elseif $force || !haskey($cache, k)
                 @assert hastickers($exc) "Exchange doesn't provide tickers list."
                 name = string($(exc).id)
-                raw = call_exchange(default_client(), name, "fetchTickers"; query=Dict("type" => string(tp)))
+                raw = call_exchange(default_client(), name, "fetchTickers"; body=Dict("params" => Dict("type" => string(tp))))
                 $cache[k] = $tickers = raw isa Dict ? Dict{String,Dict{String,Any}}(pairs(raw)) : Dict{String,Dict{String,Any}}()
             else
                 $tickers = $cache[k]
@@ -445,7 +445,7 @@ $(TYPEDSIGNATURES)
 function sandbox!(exc::Exchange; flag=!issandbox(exc), remove_keys=true)
     name = string(exc.id)
     success = try
-        call_exchange(default_client(), name, "setSandboxMode", query=Dict("enable" => string(flag)))
+        call_exchange(default_client(), name, "setSandboxMode", body=Dict("enabled" => flag))
         true
     catch e
         msg = string(e)
@@ -471,7 +471,7 @@ function issandbox(exc::Exchange)
         name = string(exc.id)
         urls = call_exchange(default_client(), name, "urls")
         if urls isa AbstractDict
-            urls_dict = Dict(pairs(urls))
+            urls_dict = Dict{String,Any}(string(k) => v for (k, v) in pairs(urls))
             haskey(urls_dict, "apiBackup") || get(urls_dict, "apiBackup", nothing) !== nothing
         else
             false
@@ -490,7 +490,7 @@ end
 function ratelimit!(exc::Exchange, flag=true)
     try
         name = string(exc.id)
-        call_exchange(default_client(), name, "enableRateLimit", query=Dict("flag" => string(flag)))
+        call_exchange(default_client(), name, "enableRateLimit", body=Dict("flag" => flag))
     catch
         @debug "ratelimit! via gateway failed"
     end

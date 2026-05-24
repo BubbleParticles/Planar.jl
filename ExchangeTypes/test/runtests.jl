@@ -198,6 +198,29 @@ end
         @test ExchangeTypes._has(e, :fetchTicker, :fetchOrderBook) == false
     end
 
+    @testset "has with nil (null from JSON) values" begin
+        e = Exchange(:test_exchange)
+        push!(e.has, :fetchTicker => nothing)
+        push!(e.has, :fetchBalance => true)
+        @test ExchangeTypes.has(e, :fetchTicker) == false
+        @test ExchangeTypes.has(e, :fetchBalance) == true
+        @test ExchangeTypes._has(e, :fetchTicker) == false
+        @test ExchangeTypes._has(e, :fetchTicker, :fetchBalance) == true
+        @test ExchangeTypes.has(e, (:fetchTicker, :fetchBalance)) == false
+        delete!(e.has, :fetchTicker)
+        delete!(e.has, :fetchBalance)
+    end
+
+    @testset "first with nil (null from JSON) values" begin
+        e = Exchange(:test_exchange)
+        push!(e.has, :fetchTicker => nothing)
+        push!(e.has, :fetchBalance => true)
+        result = ExchangeTypes.first(e, :fetchTicker, :fetchBalance)
+        @test result isa Function
+        delete!(e.has, :fetchTicker)
+        delete!(e.has, :fetchBalance)
+    end
+
     @testset "has with populated dict" begin
         e = Exchange(:test_exchange)
         push!(e.has, :fetchTicker => true)

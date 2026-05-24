@@ -2,7 +2,7 @@ function fetch_tickers(exc::Exchange, type)
     @assert hastickers(exc) "Exchange doesn't provide tickers list."
     name = string(exc.id)
     try
-        call_exchange(default_client(), name, "fetchTickers", query=Dict("type" => string(type)))
+        call_exchange(default_client(), name, "fetchTickers", body=Dict("params" => Dict("type" => string(type))))
     catch e
         @error "fetch tickers: " exception = e
         rethrow(e)
@@ -18,7 +18,7 @@ function fetch_tickers(exc::Exchange{ExchangeID{:bitrue}}, type)
     name = string(exc.id)
     markets = syms_by_market_type(exc, type)
     try
-        call_exchange(default_client(), name, "fetchTickers", query=Dict("symbols" => join(markets, ","), "type" => string(type)))
+        call_exchange(default_client(), name, "fetchTickers", body=Dict("symbols" => join(markets, ","), "params" => Dict("type" => string(type))))
     catch e
         @error "fetch tickers: " exception = e
         rethrow(e)
@@ -28,12 +28,12 @@ end
 function fetch_tickers(exc::Exchange{ExchangeID{:binance}}, type)
     @assert hastickers(exc) "Exchange doesn't provide tickers list."
     name = string(exc.id)
-    query = Dict{String,String}()
+    body = Dict{String,Any}()
     if type != :spot
-        query["type"] = string(type)
+        body["params"] = Dict("type" => string(type))
     end
     try
-        call_exchange(default_client(), name, "fetchTickers"; query=query)
+        call_exchange(default_client(), name, "fetchTickers"; body=body)
     catch e
         @error "fetch tickers: " exception = e
         rethrow(e)

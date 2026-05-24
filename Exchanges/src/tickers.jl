@@ -93,7 +93,7 @@ function tickers(
             !leverage_check(spot) ||
             hasvolume(sym, spot; tickers, min_vol) ||
             (skip_fiat && isfiatpair(spot)) ||
-            (with_margin && Bool(get(mkt, "margin", false)))
+            (with_margin && something(get(mkt, "margin", false), false))
     end
     for (sym, tkr) in tickers
         mkt = get(exc.markets, sym, nothing)
@@ -264,15 +264,16 @@ function _minmax_pair(mkt, l, prec, default)
     k = string(l)
     inner = get(mkt, k, nothing)
     inner_dict = inner isa AbstractDict ? inner : nothing
+    d = default isa Number ? (; min=0.0, max=Float64(default)) : default
     Symbol(l) => (;
         min=something(
             inner_dict === nothing ? nothing : to_float(get(inner_dict, "min", nothing)),
             _min_from_precision(prec),
-            default.min,
+            d.min,
         ),
         max=something(
             inner_dict === nothing ? nothing : to_float(get(inner_dict, "max", nothing)),
-            default.max,
+            d.max,
         ),
     )
 end
@@ -321,7 +322,6 @@ end
 @doc "Convert the string `n` to Float64."
 function str_to_float(n)
     something(tryparse(Float64, replace(string(n), "," => ".")), 0.0)::Float64
-end
 end
 
 @doc "Check if a given pair is active on an exchange."
