@@ -3,18 +3,15 @@ using .Misc: @skipoffline
 
 @preset let
     id = :okx
-    @assert Python.isinitialized_async(Python.gpa)
-    Python.py_start_loop()
     @precomp let
-        getexchange!(id; markets=:force).py
-        getexchange!(id; markets=:yes, sandbox=false).py
+        getexchange!(id; markets=:force)
+        getexchange!(id; markets=:yes, sandbox=false)
     end
     ExchangeTypes._closeall()
     emptycaches!()
     qc = "USDT"
     pair = "BTC/USDT"
     e = getexchange!(id; markets=:yes)
-    func = e.fetchTicker
     @precomp @skipoffline let
         futures(e)
         timestamp(e)
@@ -25,7 +22,6 @@ using .Misc: @skipoffline
         tickers(e, qc; min_vol=-1.0, with_leverage=:only, verbose=false)
         tickers(e, qc; min_vol=-1.0, with_leverage=:from)
         market!(pair, e)
-        ticker!(pair, e; func)
         is_pair_active(pair, e)
         market_precision(pair, e)
         market_limits(pair, e)
@@ -33,5 +29,4 @@ using .Misc: @skipoffline
     end
     ExchangeTypes._closeall()
     emptycaches!()
-    Python.py_stop_loop()
 end
