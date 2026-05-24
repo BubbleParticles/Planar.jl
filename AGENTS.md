@@ -13,6 +13,12 @@ Failing to load .envrc may cause missing package errors during test runs (e.g., 
 
 Include this check in your developer workflow before running `julia --project=PlanarDev test` or `julia --project=PlanarDev PlanarDev/test/runtests.jl`.
 
+**When using `timeout` on Julia commands**, always use the `-k` (kill-after) flag to ensure the process is fully terminated. Julia's precompilation may spawn background threads that outlive the main process. Example:
+
+```bash
+timeout -k 30 300 julia --project=PlanarDev test/runtests.jl
+```
+
 ---
 
 ## Development Tools
@@ -190,7 +196,8 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
    - First, rename existing Python-based functions with `_python` suffix
    - Add new CcxtGateway-based functions with original names
    - Mirror them 1:1 in logic to the Python versions
-   - Ensure outputs match using unit tests
+   - Check `PlanarDev/test/` for existing test files related to the package and move/adapt them into the package's own `test/` directory
+   - Build/update the package's test suite with pure unit tests (data conversion, helpers) and mock-HTTP integration tests using `Rest.set_http_get!/set_http_post!/set_http_delete!`
    - Remove `_python` functions only when fully migrated and tested
 
 7. **Use `call_exchange` for CCXT methods**: Do not add specific `fetch_*` functions to CcxtGateway. Downstream packages call them via `call_exchange(client, id, method, query=...)`.
@@ -200,6 +207,18 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 9. **Mock HTTP in tests**: Use `Rest.set_http_get!/set_http_post!/set_http_delete!` to inject mock HTTP functions. The `Ref{Function}` pattern allows swapping without changing function signatures.
 
 10. **Subprocess crash recovery**: The gateway auto-restarts crashed exchange subprocesses. The Julia side doesn't need retry logic — `call_exchange` will wait for the restart and retry the request.
+
+11. **Audit ALL files in the package, not just the "important" ones**: Grep for Python/ccxt references across every `.jl` file in the package before declaring migration done. A `precompile.jl` that's conditionally included is easy to miss.
+
+12. **Verify every function body survives edit surgery**: After every large deletion, search for every name referenced in error messages and confirm its definition still exists. Use e.g. `rg "^function name|^name\s*="` to verify.
+
+13. **Check file include order before moving includes**: When adding a new `include(...)` to a module file, read the full contents of the included file first — it may reference types defined in other includes. The wrong order breaks compilation.
+
+14. **Test with normal precompilation, not just `--compiled-modules=no`**: `--compiled-modules=no` skips `precompile.jl` entirely, hiding errors that only surface during real precompilation. Run at least one test with cached precompilation too.
+
+15. **Implement the test suite during refactoring, aiming for maximum coverage**: Before starting, search `PlanarDev/test/` for existing test files related to the package being refactored. After migration, create a `test/runtests.jl` with pure unit tests (data conversion, helpers) and mock-HTTP integration tests. Use `Rest.set_http_get!/set_http_post!/set_http_delete!` to mock gateway endpoints — see `Exchanges/test/runtests_fast.jl` for the pattern.
+
+16. **Coverage requirement: ≥80%, ideally >95%**: Every package must maintain at least 80% line coverage, with a target of >95%. Untested code is a liability — the gateway migration changes the data path (JSON3 vs Python objects, `body=` vs `query=`, `params` dict wrapping), and without coverage, regressions slip through. Use mock-HTTP (`Rest.set_http_get!/set_http_post!`) to test gateway-dependent code paths without spawning a live gateway. Pure unit tests cover data conversion, helper functions, and edge cases. Measure coverage with `julia --project=. -e 'using Pkg; Pkg.add("CoverageTools")'` and the `coverage --run` workflow.
 
 ### Gotchas
 
@@ -217,11 +236,17 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 
 7. **Julia function definitions**: Functions in Julia can be defined without the `function` keyword (e.g., `foo(x) = x + 1` or via assignment like `foo = x -> x + 1`). Search for all forms using patterns like `^\s*\w+\s*\(`, `^\s*\w+\s*=`, and `^\s*\w+\s*->`.
 
-8. **JSON3.Object is not Dict**: `JSON3.parse` returns `JSON3.Object`, not `Dict`. Use `Union{Dict, JSON3.Object}` for type assertions, or convert with `Dict{String, Any}(pairs(obj))`.
+8. **JSON3.Object is not Dict**: `JSON3.parse` returns `JSON3.Object`, not `Dict`. Use `Union{Dict, JSON3.Object}` for type assertions, or convert with `Dict{String, Any}(string(k) => v for (k, v) in pairs(obj))`. **Critical:** `pairs()` on `JSON3.Object` yields `Symbol` keys, not `String` keys — accessing with `haskey(dict, "string_key")` will fail. Always force `string(k)` when creating a lookup dict from JSON3 data.
 
 9. **Gateway must be restarted for Python code changes**: The FastAPI layer may reload with `--reload`, but exchange subprocesses are independent. Restart the full gateway or stop/start the exchange to pick up subprocess changes.
 
 10. **Pidfile for gateway detection**: `/tmp/ccxt_gateway.pid` is written by the gateway on startup and removed on idle-shutdown. This file is used by `using Ccxt` to detect an already-running gateway.
+
+11. **`JSON.jl` does NOT export `json`**: Only `JSON.json` is available; `using JSON` makes `JSON.parse` available but NOT the bare `json` function. Always use `JSON.json(...)` to serialize.
+
+12. **`nothing` from JSON `null` in boolean context**: `get(dict, key, false)` returns `nothing` when the dict contains a JSON `null` value, not `false`. Any `get` on a JSON-populated dict whose result is used as a `Bool` must be wrapped: `something(get(dict, key, false), false)`. The same applies to `any(pred, ...)` — the predicate must return `Bool`, not `nothing`.
+
+13. **`function name(args)` shadows existing variable `name`**: `function f(...)` always introduces a fresh local binding, even if `f` already names a variable in scope. After `f = some_callable()`, writing `function f(...) ... f(...) end` calls the new function recursively, not the original callable. Use `f = function (...) ... end` (assignment form) or rename one of them to avoid confusion.
 
 ---
 
@@ -236,10 +261,13 @@ The subprocess dispatches HTTP query params as `**kwargs` directly to ccxt metho
 - [ ] For each `call_exchange(…, method, query=Dict("key" => val))`, verify every `"key"` matches the ccxt method's parameter name
   - Check the ccxt source or error message — Python tells you "Did you mean 'correct_name'?" on mismatch
   - Common ccxt parameter names: `symbol`, `type`, `leverage`, `side`, `marginMode`, `hedged`, `enable`, `enabled`, `reduceOnly`, `newClientOrderId`, etc.
-  - **Gotcha:** `set_sandbox_mode()` uses `enable` not `enabled`
+  - **Gotcha:** `set_sandbox_mode()` uses `enabled` not `enable`
 - [ ] Verify the ccxt method actually accepts named parameters for the keys you're sending
   - Some ccxt methods take positional args only — use the `params={}` dict pattern if needed
   - The subprocess's `_call_method` expands the dict with `**`, so named params must match the function signature
+- [ ] **Expe** `params` in a `Dict("params" => Dict(...))` sub-dict when the ccxt method signature is `method(self, *args, params={})`. This applies to most `fetch*` methods where exchange-specific filtering (e.g. `type="swap"`) goes in the `params` argument — passing it as a top-level keyword will raise `TypeError: got an unexpected keyword argument`.
+  - Common examples: `fetchTickers`, `fetchOHLCV`, `fetchOrders`, `fetchMyTrades`
+  - The old Python bindings used `pyfetch(f; params=LittleDict(...))` which routed these into `params` automatically
 
 ### Type Audit (String Safety)
 
@@ -247,8 +275,8 @@ HTTP query parameters are **always strings**. ccxt methods expecting booleans, i
 
 - [ ] For each ccxt method parameter in the query dict, check if ccxt handles string coercion
   - Booleans: string `"true"` / `"false"` are both truthy in Python (`bool("false") == True`) — **never pass boolean strings for boolean params**
-  - Integers: strings like `"10"` usually work (ccxt calls `int()` internally)
-  - **Fix:** Convert `call_exchange` to use `body=` (POST) with native JSON types instead of `query=` (GET) when passing typed params
+  - Integers: strings like `"10"` usually work (ccxt calls `int()` internally), but `since` (epoch ms) fails as a string — see fix below
+  - **Fix:** `_first` in `ExchangeTypes` now passes `body=kwargs` (POST, preserves JSON types) instead of `query=kwargs` (GET, stringifies everything). Any code that bypasses `_first` and calls `call_exchange` directly must pass `body=` for typed params.
 - [ ] For boolean flags: either use POST body (preserves Julia Bool type through JSON) or convert to `"0"`/`"1"` or strip the param
 
 ### Method Name Audit
@@ -288,17 +316,63 @@ Know which code path your call takes in the subprocess (`subprocess.py`):
 - [ ] Run the calling module and check for `WARNING: Imported binding … was undeclared at import time` and `conflicts with an existing identifier`
 - [ ] Convention: `issandbox` lives in `Exchanges` (constructors.jl), **not** in `ExchangeTypes` — verify your import source is correct
 
-### One-Time Re-Evaluation of Exchanges Package
+---
 
-Audit findings from the full scan of all 35 `call_exchange` sites:
+## Lessons Learned (2026-05-23 — Fetch migration)
 
-| Issue | Location | Severity | Status |
-|---|---|---|---|
-| `"enabled"` should be `"enable"` for `setSandboxMode` | `constructors.jl:449` | 🔴 Bug (fixed) | ✅ Fixed |
-| `issandbox` imported from wrong module | `adhoc/leverage.jl:2` | 🟡 Warning (fixed) | ✅ Fixed |
-| `market_limits` duplicate with same signature | `tickers.jl:284,334` | 🟡 Warning (fixed) | ✅ Fixed |
-| `"hedged" => "false"` string is truthy in Python | `adhoc/leverage.jl:60,75` | 🟠 Pre-existing (not migration) | ⚠️ See note |
-| `"side" => string(side)` — string `"Long"`/`"Short"` to ccxt | `leverage.jl:35` | 🟢 Acceptable (ccxt coerces) | ✅ OK |
-| All other params (`symbol`, `type`, `leverage`, `marginMode`, `value`, `flag`) | 30+ sites | 🟢 Standard ccxt names | ✅ OK |
+During the Fetch package migration from Python ccxt to CcxtGateway, the following mistakes were made by the AI assistant. Documented to avoid repetition.
 
-**Note on `"hedged" => "false"`:** Python's `bool("false")` is `True`, so this always sets hedged mode regardless of intent. This is a pre-existing bug also present in the original Python-ccxt bindings — not a migration regression. It only affects the Phemex/Bybit `dosetmargin` path and should be fixed separately by sending a JSON body (POST) with a native boolean instead of a GET query param.
+### 1. Audit ALL files in the package, not just the "important" ones
+
+The assistant migrated `impl.jl`, `funding.jl`, and `orderbook.jl` but forgot to check `precompile.jl`, which still contained `Python.py_start_loop()` / `Python.py_stop_loop()` calls. Because precompile.jl is only included when `JULIA_PRECOMP` is set, `--compiled-modules=no` testing didn't catch it. **Always grep for Python/ccxt references across every `.jl` file in the package before declaring the migration done.**
+
+### 2. Verify every function body survives edit surgery
+
+When deleting large blocks of Python-specific code, the assistant accidentally removed the `_to_ohlcv_vecs` function body because it was adjacent to the deleted Python functions. **After every large deletion, search for every name referenced in error messages and confirm its definition still exists.** Use `rg "^function name|^name\s*="` to verify.
+
+### 3. Anticipate JSON `null` → Julia `nothing` coercion bugs
+
+The `_has` function used `get(h, s, false)` expecting only `true/false` values, but the gateway's JSON response can contain `null` which parses as `nothing`. **Any `get(dict, key, fallback)` where the dict was populated from JSON must wrap the result with `something(..., fallback)` to guard against `nothing` values.** The same applies to `any(pred, ...)` predicates — they must return a `Bool`, not `nothing`.
+
+### 4. Check file include order before moving includes
+
+When fixing the `consts.jl` unconditional include in `Misc.jl`, the assistant initially placed `include("consts.jl")` before `include("module.jl")`, but `consts.jl` references `Config` which is defined inside `module.jl`. **Always read the full contents of a file before deciding where to insert it in the include chain.**
+
+### 5. Test with normal precompilation, not just `--compiled-modules=no`
+
+`--compiled-modules=no` skips `precompile.jl` entirely, hiding errors that only surface during real precompilation. **Run at least one test with normal (cached) precompilation** (`julia --project=... -e 'using Package'` without `--compiled-modules=no`) to catch precompile-specific failures.
+
+### 6. Keep package tests in the package's own `test/` directory, not in `PlanarDev/test/`
+
+When writing tests for a specific package (e.g., `Fetch`), put them in `/project/<Package>/test/runtests.jl`, NOT in `/project/PlanarDev/test/runtests.jl`. The PlanarDev test runner loads all packages via `PlanarDev.jl`, which changes the module resolution order and can mask missing-import errors (like `UndefVarError(:JSON3, ExchangeTypes)`). Running a package's own tests via `julia --project=PlanarDev Fetch/test/runtests.jl` loads only the required dependency graph, exposing import bugs that PlanarDev's unified test environment hides.
+
+**Always move test groups from `PlanarDev/test/` into the individual package's `test/` directory when refactoring.**
+
+### 7. Test environment setup: use `Pkg.develop` for local packages
+
+When setting up a package's `test/Project.toml`, do NOT write it manually. Use Julia's Pkg:
+
+```julia
+# Start with just the header in test/Project.toml:
+# name = "FooTest"
+# uuid = ...  (generate via uuid4())
+# authors = [...]
+# version = "0.1.0"
+
+# Then in Julia:
+using Pkg
+Pkg.develop([
+    PackageSpec(path="/project/Foo"),           # the package under test
+    PackageSpec(path="/project/Bar"),           # all local transitive deps
+    PackageSpec(path="/project/Baz"),
+])
+Pkg.add(["HTTP", "JSON3", "DataFrames"])        # test-only extras
+```
+
+Then run: `julia --project=/project/Foo/test test/runtests.jl`
+
+This ensures the test environment is isolated and catches import bugs that PlanarDev's wider manifest would mask.
+
+---
+
+> For detailed audit findings, bug post-mortems, and historical refactoring notes, see `REFACTOR.md`.
