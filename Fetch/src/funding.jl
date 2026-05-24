@@ -1,12 +1,14 @@
 using Exchanges.Instruments
+using Exchanges: has
 using .TimeTicks
 using .Misc: DFT, FUNDING_PERIOD
 using .Misc.TimeToLive
 using .Misc.Lang: @lget!, @debug_backtrace
 using .Instruments.Derivatives
-using .Python: PyDict
 using Processing: _fill_missing_candles
 using Processing.Data: Not, select!
+using Exchanges.Ccxt
+using .Ccxt: CcxtGateway, default_client, call_exchange
 
 @doc """Retrieves all or a subset of funding data for a symbol from an exchange.
 
@@ -16,7 +18,9 @@ The `funding_data` function retrieves all funding data returned by an exchange `
 """
 function funding_data(exc::Exchange, sym::AbstractString)
     try
-        pyfetch(exc.fetchFundingRate, sym)
+        f = first(exc, :fetchFundingRate)
+        f === nothing && return nothing
+        f(; symbol=sym)
     catch
         @debug_backtrace
     end
@@ -33,22 +37,26 @@ The `funding_rate` function retrieves the funding rate for a symbol `s` from an 
 function funding_rate(exc::Exchange, s::AbstractString)
     id = exc.id
     @lget! FUNDING_RATE_CACHE (s, id) begin
-        resp = if exc.has[:fetchFundingRates]
-            rates = @lget! FUNDING_RATES_CACHE id pyfetch(exc.fetchFundingRates)
-            rates[s]
-        else
-            pyfetch(exc.fetchFundingRate, s)
-        end
-        get(k) =
-            let
-                v = (resp.get(k))
-                if Python.pyisTrue(pytype(v) == pybuiltins.str)
-                    pytofloat(v)
-                else
-                    pyconvert(Option{DFT}, v)
-                end
+        hasfr = has(exc, :fetchFundingRates)
+        resp = if hasfr
+            rates = @lget! FUNDING_RATES_CACHE id begin
+                f = first(exc, :fetchFundingRates)
+                f === nothing && return nothing
+                f()
             end
-        @something get("fundingRate") get("nextFundingRate") 0.00001
+            get(rates, s, nothing)
+        else
+            f = first(exc, :fetchFundingRate)
+            f === nothing && return nothing
+            f(; symbol=s)
+        end
+        if resp isa AbstractDict
+            rate = get(resp, "fundingRate", nothing)
+            rate === nothing && (rate = get(resp, "nextFundingRate", nothing))
+            something(rate, 0.00001)
+        else
+            0.00001
+        end
     end
 end
 funding_rate(exc, a::Derivative) = funding_rate(exc, a.raw)
@@ -56,27 +64,27 @@ funding_rate(ai) = funding_rate(ai.exchange, ai.asset)
 
 const FUNDING_RATE_COLUMNS = (:timestamp, :pair, :rate)
 const FUNDING_RATE_COLS = [FUNDING_RATE_COLUMNS...]
-@doc """Parses a row of funding data from a Python object.
+@doc """Parses a row of funding data from a JSON dict.
 
 $(TYPEDSIGNATURES)
 
-The `parse_funding_row` function takes a row of funding data `r` from a Python object and parses it into a format suitable for further processing or analysis.
+The `parse_funding_row` function takes a row of funding data `r` from the gateway response and parses it into a format suitable for further processing or analysis.
 """
-function parse_funding_row(r::Py)
-    pyconvert(Tuple{Int64,String,Float64}, (r["timestamp"], r["symbol"], r["fundingRate"]))
+function parse_funding_row(r::AbstractDict)
+    (Int64(r["timestamp"]), String(r["symbol"]), Float64(r["fundingRate"]))
 end
-@doc """Extracts futures data from a Python object.
+@doc """Extracts futures data from a response.
 
 $(TYPEDSIGNATURES)
 
-The `extract_futures_data` function takes futures data `data` from a Python object and extracts it into a format suitable for further processing or analysis.
+The `extract_futures_data` function takes futures data `data` and extracts it into a format suitable for further processing or analysis.
 """
-function extract_futures_data(data::Py)
+function extract_futures_data(data::AbstractVector)
     ts, sym, rate = DateTime[], String[], Float64[]
     for r in data
-        push!(ts, dt(pyconvert(Int64, r["timestamp"])))
-        push!(sym, pyconvert(String, r["symbol"]))
-        push!(rate, pyconvert(Float64, r["fundingRate"]))
+        push!(ts, dt(Float64(r["timestamp"])))
+        push!(sym, String(r["symbol"]))
+        push!(rate, Float64(r["fundingRate"]))
     end
     DataFrame([ts, sym, rate], FUNDING_RATE_COLS)
 end
@@ -95,26 +103,30 @@ function funding_history(
     assets::Vector;
     from::DateType="",
     to::DateType="",
-    params=Dict(),
+    params=Dict{String,Any}(),
     sleep_t=1,
     limit=nothing,
     cleanup=true,
 )
     from, to = from_to_dt(FUNDING_PERIOD, from, to)
     from, to = _check_from_to(from, to)
+    ff_func = first(exc, :fetchFundingRateHistory)
     ff =
         (pair, since, limit; kwargs...) -> begin
             try
-                pyfetch(exc.py.fetchFundingRateHistory, pair; since, limit, params)
+                q = Dict{Symbol,Any}(:symbol => pair, :since => since, :limit => limit)
+                if !isempty(params)
+                    q[:params] = params
+                end
+                ff_func(; q...)
             catch err
-                # HACK: `since` is supposed to be the timestamp of the beginning of the
-                # period to fetch. However if it considered invalid, use a negative value
-                # representing the milliseconds that have passed since the start date.
                 if occursin("Time Is Invalid", string(err))
                     delta = -Int(timefloat(now() - dt(since)))
-                    pyfetch(
-                        exc.py.fetchFundingRateHistory, pair; since=delta, limit, params
-                    )
+                    q2 = Dict{Symbol,Any}(:symbol => pair, :since => delta, :limit => limit)
+                    if !isempty(params)
+                        q2[:params] = params
+                    end
+                    ff_func(; q2...)
                 else
                     throw(err)
                 end
@@ -143,7 +155,6 @@ function funding_history(
         end for a in assets
     )
     if cleanup
-        # use a shorter timeframe to avoid overlapping
         half_tf = TimeFrame(Millisecond(FUNDING_PERIOD) / 2)
         f_tf = TimeFrame(Millisecond(FUNDING_PERIOD))
         for k in keys(ans)
@@ -160,12 +171,9 @@ $(TYPEDSIGNATURES)
 The `_cleanup_funding_history` function takes a DataFrame `df` of fetched funding history data for a `name` and performs cleanup operations on it. The `half_tf` and `f_tf` parameters are used in the cleanup process.
 """
 function _cleanup_funding_history(df, name, half_tf, f_tf)
-    # normalize timestamps
     df.timestamp[:] = apply.(half_tf, df.timestamp)
     unique!(df, :timestamp)
-    # resample to funding timestamp
     resample(df, half_tf, f_tf)
-    # add close because of fill_missing_candles
     df[!, :close] .= 0.0
     buildf(ts, args...) = (; timestamp=ts, pair=string(name), rate=0.0001, close=NaN)
     _fill_missing_candles(
@@ -178,7 +186,6 @@ function _cleanup_funding_history(df, name, half_tf, f_tf)
             (:timestamp, :pair, :rate, :close),Tuple{DateTime,String,DFT,DFT}
         },
     )
-    # remove close after fills
     select!(df, Not(:close))
 end
 
@@ -187,7 +194,7 @@ const FUNDING_RATE_TTL = Ref(Second(5))
 @doc "Initializes a safe TTL cache for storing funding rates with a specified TTL."
 const FUNDING_RATE_CACHE = safettl(Tuple{String,Symbol}, DFT, FUNDING_RATE_TTL[])
 @doc "Initializes a safe TTL cache for storing multiple funding rates with a specified TTL."
-const FUNDING_RATES_CACHE = safettl(Symbol, Py, FUNDING_RATE_TTL[])
+const FUNDING_RATES_CACHE = safettl(Symbol, Any, FUNDING_RATE_TTL[])
 assetkey(ai) = (ai.raw, ai.exchange.id)
 
 export funding_history, funding_rate

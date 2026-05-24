@@ -30,12 +30,12 @@ $(TYPEDSIGNATURES)
 function leverage!(exc::Exchange, v, sym; side=Long(), timeout=Second(5))
     name = string(exc.id)
     lev = leverage_value(exc, v, sym)
-    query = Dict("symbol" => sym, "leverage" => lev)
+    body = Dict("symbol" => sym, "leverage" => lev)
     if side !== Long()
-        query["side"] = string(side)
+        body["side"] = string(side)
     end
     try
-        resp = call_exchange(default_client(), name, "setLeverage"; query=query)
+        resp = call_exchange(default_client(), name, "setLeverage"; body=body)
         success = _handle_leverage(exc, resp)
         if !success
             result = call_exchange(default_client(), name, "fetchLeverage", query=Dict("symbol" => sym))

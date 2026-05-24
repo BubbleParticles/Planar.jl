@@ -1,8 +1,19 @@
+authors = ["zbc"]
 name = "Fetch"
 uuid = "01b7c4b8-c42c-4ba7-97ce-8f8fab6ee59e"
-authors = ["zbc"]
 version = "0.1.0"
 
 [deps]
 Exchanges = "ab04e009-1d60-4d36-ac2f-58b9338a89b5"
 Processing = "71db1b01-ba5b-4918-92ad-dd9436844736"
+
+[extras]
+Data = "934a4ae5-3fdb-4fa4-b6dd-2cd889d3d27b"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test", "HTTP", "JSON3", "DataFrames", "Data"]

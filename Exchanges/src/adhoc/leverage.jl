@@ -56,10 +56,10 @@ function dosetmargin(exc::Exchange{<:ExchangeID{:phemex}}, mode_str, symbol; kwa
     name = string(exc.id)
     try
         lev = _negative_lev_if_cross(mode_str)
-        query = Dict("symbol" => symbol)
-        call_exchange(default_client(), name, "setPositionMode", query=merge(query, Dict("hedged" => "false")))
+        body_dict = merge(Dict("symbol" => symbol), Dict("hedged" => false))
+        call_exchange(default_client(), name, "setPositionMode", body=body_dict)
         if lev !== nothing
-            call_exchange(default_client(), name, "setLeverage", query=merge(query, Dict("leverage" => string(lev))))
+            call_exchange(default_client(), name, "setLeverage", query=Dict("symbol" => symbol, "leverage" => string(lev)))
         end
         true
     catch e
@@ -72,7 +72,7 @@ end
 function dosetmargin(exc::Exchange{<:ExchangeID{:bybit}}, mode_str, symbol; kwargs...)
     name = string(exc.id)
     try
-        call_exchange(default_client(), name, "setPositionMode", query=Dict("symbol" => symbol, "hedged" => "false"))
+        call_exchange(default_client(), name, "setPositionMode", body=Dict("symbol" => symbol, "hedged" => false))
         sleep(0.1)
         resp = call_exchange(default_client(), name, "setMarginMode", query=Dict("marginMode" => mode_str, "symbol" => symbol))
         if resp isa AbstractDict

@@ -220,7 +220,7 @@ function Base.getproperty(e::CcxtExchange, k::Symbol)
         client = CcxtGateway.default_client()
         ex_id = string(e.id)
         m = string(k)
-        (args...; kwargs...) -> CcxtGateway.call_exchange(client, ex_id, m; query=kwargs)
+        (args...; kwargs...) -> CcxtGateway.call_exchange(client, ex_id, m; body=kwargs)
     end
 end
 
@@ -236,12 +236,12 @@ end
 
 _has(exc::Exchange, syms::Vararg{Symbol}) = begin
     h = getfield(exc, :has)
-    any(s -> get(h, s, false), syms)
+    any(s -> something(get(h, s, false), false), syms)
 end
 
 _has(exc::Exchange, s::Symbol) = begin
     h = getfield(exc, :has)
-    get(h, s, false)
+    something(get(h, s, false), false)
 end
 
 @doc """Checks which exchanges support a given feature via the gateway."""
@@ -273,7 +273,7 @@ function _first(exc::CcxtExchange, args::Vararg{Symbol})
             client = CcxtGateway.default_client()
             ex_id = string(exc.id)
             m = string(name)
-            return (args...; kwargs...) -> CcxtGateway.call_exchange(client, ex_id, m; query=kwargs)
+            return (args...; kwargs...) -> CcxtGateway.call_exchange(client, ex_id, m; body=kwargs)
         end
     end
 end
