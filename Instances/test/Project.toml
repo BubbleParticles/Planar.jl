@@ -1,0 +1,7 @@
+[deps]
+Exchanges = "ab04e009-1d60-4d36-ac2f-58b9338a89b5"
+Instances = "36291b3f-06ca-4570-b5b6-65fb8ed80b61"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[compat]
+Test = "1.11.0"

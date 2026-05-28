@@ -1,7 +1,7 @@
 using .Misc: MarginMode, WithMargin, Long, Short, PositionSide, ExecAction, HedgedMode
 import .Misc: opposite, reset!, Misc
 using .Instruments.Derivatives: Derivative
-using Exchanges: LeverageTier, LeverageTiersDict, leverage_tiers, tier
+using Exchanges: LeverageTier, leverage_tiers, tier
 import Exchanges: maxleverage, tier
 using .Lang: @ifdebug
 using Base: negate
@@ -59,7 +59,7 @@ $(FIELDS)
     "Whether the position is hedged or not"
     hedged::Bool = false
     "Leverage tiers applicable to the position"
-    tiers::Vector{LeverageTiersDict}
+    tiers::Vector{Vector{LeverageTier}}
     "Current tier applicable to the position"
     this_tier::Vector{LeverageTier}
     function Position{P,E,M}(
@@ -149,8 +149,8 @@ $(TYPEDSIGNATURES)
 The function retrieves the leverage tier applicable to the provided position and size, and returns the maximum leverage allowed within that tier.
 
 """
-maxleverage(po::Position, size::Real) = tier(po, size)[2].max_leverage
-maxleverage(po::Position) = po.this_tier[].max_leverage
+maxleverage(po::Position, size::Real) = tier(po, size).maxLeverage
+maxleverage(po::Position) = po.this_tier[].maxLeverage
 
 _status!(po::Position, ::PositionClose) = begin
     @assert po.status[] == PositionOpen()
@@ -212,7 +212,7 @@ initial(args...; kwargs...) = margin(args...; kwargs...)
 @doc "Position additional margin."
 additional(pos::Position) = pos.additional_margin[]
 @doc "Position maintenance margin rate."
-mmr(pos::Position) = pos.this_tier[].mmr
+mmr(pos::Position) = pos.this_tier[].maintenanceMarginRate
 @doc "Position notional value."
 notional(pos::Position) = pos.notional[]
 @doc "Held position."
@@ -267,7 +267,7 @@ This function adjusts the leverage tier of a given position (`po`) based on the 
 
 """
 function tier!(po::Position, size=notional(po))
-    po.this_tier[] = tier(po, size)[2]
+    po.this_tier[] = tier(po, size)
 end
 
 @doc "Update the entry price.

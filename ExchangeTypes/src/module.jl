@@ -4,6 +4,7 @@ using Ccxt.Misc.Lang: Option, waitfunc
 using Ccxt.Misc.DocStringExtensions
 using FunctionalCollections
 using JSON3
+using OrderedCollections
 
 include("exchangeid.jl")
 include("exchange.jl")

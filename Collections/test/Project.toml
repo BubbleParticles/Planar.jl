@@ -1,0 +1,5 @@
+[deps]
+Collections = "199ae5f6-b1b4-42af-853d-fd50a04203c4"
+ExchangeTypes = "16e96388-e60e-4b60-892f-986722d15ae4"
+Instances = "36291b3f-06ca-4570-b5b6-65fb8ed80b61"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
