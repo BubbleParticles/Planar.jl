@@ -1,6 +1,6 @@
+authors = ["zbc"]
 name = "Python"
 uuid = "e8cdc95d-7257-4c38-ab0e-cc8a28c19776"
-authors = ["zbc"]
 version = "0.1.0"
 
 [deps]
@@ -11,3 +11,6 @@ Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
+
+[extras]
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"

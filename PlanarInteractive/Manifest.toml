@@ -679,7 +679,7 @@ uuid = "460bff9d-24e4-43bc-9d9f-a8973cb893f4"
 version = "0.1.11"
 
 [[deps.ExchangeTypes]]
-deps = ["Ccxt", "FunctionalCollections", "OrderedCollections", "Serialization"]
+deps = ["Ccxt", "FunctionalCollections", "JSON3", "OrderedCollections", "Serialization"]
 path = "../ExchangeTypes"
 uuid = "16e96388-e60e-4b60-892f-986722d15ae4"
 version = "0.1.0"
@@ -741,7 +741,7 @@ uuid = "9aa1b823-49e4-5ca5-8b0f-3971ec8bab6a"
 version = "0.3.2"
 
 [[deps.Fetch]]
-deps = ["Exchanges", "Processing"]
+deps = ["Processing"]
 path = "../Fetch"
 uuid = "01b7c4b8-c42c-4ba7-97ce-8f8fab6ee59e"
 version = "0.1.0"

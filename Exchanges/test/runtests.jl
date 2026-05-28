@@ -1,9 +1,10 @@
 using Test
 using Exchanges
 using ExchangeTypes
-using HTTP
-using JSON3
-using Dates
+
+const HTTP = ExchangeTypes.CcxtGateway.HTTP
+const JSON3 = ExchangeTypes.JSON3
+const Dates = ExchangeTypes.Ccxt.Misc.TimeTicks.Dates
 
 const EXCHANGE = :test_exchange
 const _mock_sandbox = Dict{String,Bool}()
@@ -198,7 +199,7 @@ end
     end
 
     @testset "isfileyounger" begin
-        @test Exchanges.isfileyounger("/nonexistent/path", Day(1)) == false
+        @test Exchanges.isfileyounger("/nonexistent/path", Dates.Day(1)) == false
     end
 end
 
@@ -703,9 +704,6 @@ end
 end
 
 @testset "Mock gateway exchange creation" begin
-    using HTTP
-    using JSON3
-
     # Helper: setup mock for a given exchange name
     function setup_mock(exc_name; market_data=nothing)
         get_handler(url; kwargs...) = begin

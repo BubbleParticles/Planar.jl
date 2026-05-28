@@ -1,10 +1,7 @@
 [deps]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
-HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+Ccxt = "a58c4053-12c5-4e22-b66a-82c3bd74bf8a"
 ExchangeTypes = "16e96388-e60e-4b60-892f-986722d15ae4"
-
-[compat]
-Test = "1"
-JSON3 = "1.14.3"
-HTTP = "1"
+Lang = "29573954-25fe-4a2f-9b4b-dcb25d092053"
+Misc = "ff97321b-aa60-4104-8cd6-2e42973349ab"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TimeTicks = "1ce46816-3f51-4f52-9fcf-6d091670788d"

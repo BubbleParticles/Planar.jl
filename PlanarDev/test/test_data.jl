@@ -26,7 +26,7 @@ global z
 test_zarrinstance() = begin
     zi = Data.zinstance()
     @test zi isa ZarrInstance
-    if Data.lm.LibLMDB.LMDB_jll.is_available()
+    if isdefined(Data.lm, :LibLMDB) && Data.lm.LibLMDB.LMDB_jll.is_available()
         @test zi.store isa Data.LMDBDictStore
         @test startswith(zi.store.a.env.path, Data.DATA_PATH)
     end

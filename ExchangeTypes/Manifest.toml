@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "68459de481bc87be89e0990ed08eb5fa3c4b5e62"
+project_hash = "759c721a86f0fb1c38448e643711abebf0d448e0"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -82,7 +82,7 @@ uuid = "460bff9d-24e4-43bc-9d9f-a8973cb893f4"
 version = "0.1.11"
 
 [[deps.ExchangeTypes]]
-deps = ["Ccxt", "FunctionalCollections", "OrderedCollections", "Serialization"]
+deps = ["Ccxt", "FunctionalCollections", "JSON3", "OrderedCollections", "Serialization"]
 path = "."
 uuid = "16e96388-e60e-4b60-892f-986722d15ae4"
 version = "0.1.0"

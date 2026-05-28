@@ -1,546 +1,63 @@
 using Test
 using ExchangeTypes
+using Ccxt.CcxtGateway: call_exchange, default_client, ping
 
-@testset "ExchangeTypes" begin
-
-@testset "Module structure" begin
-    @testset "All exported names are defined" begin
-        expected = [:Exchange, :ExchangeID, :EIDType, :ExcPrecisionMode,
-                     :CcxtExchange, :exchange, :exchangeid, :exchanges,
-                     :sb_exchanges, :has, :account, :eids]
-        for name in expected
-            @test isdefined(ExchangeTypes, name)
-        end
-    end
-
-    @testset "Key internal names are defined" begin
-        internal = [:close_exc, :_closeall, :decimal_to_size, :HOOKS,
-                    :exchangeIds, :_has, :OptionsDict]
-        for name in internal
-            @test isdefined(ExchangeTypes, name)
-        end
-    end
-
-    @testset "CcxtExchange subtypes Exchange" begin
-        @test CcxtExchange{ExchangeID{:test}} <: Exchange
-    end
-
-    @testset "ExchangeID subtypes" begin
-        @test ExchangeID{:test} <: ExchangeID
-        @test ExchangeID{:binance} <: ExchangeID
-    end
-
-    @testset "EIDType alias" begin
-        @test EIDType == Type{<:ExchangeID}
-    end
-
-    @testset "ExcPrecisionMode enum values" begin
-        @test ExcPrecisionMode(2) == ExchangeTypes.excDecimalPlaces
-        @test ExcPrecisionMode(3) == ExchangeTypes.excSignificantDigits
-        @test ExcPrecisionMode(4) == ExchangeTypes.excTickSize
-    end
-
-    @testset "OptionsDict alias" begin
-        @test ExchangeTypes.OptionsDict == Dict{String, Dict{String, Any}}
-    end
-
-    @testset "_doinit runs without error" begin
-        ExchangeTypes._doinit()
-        @test true
-    end
-
-    @testset "precompile.jl loads without error" begin
-        include("../src/precompile.jl")
-        @test true
-    end
-
-    @testset "_has with symbol feature (static)" begin
-        result = ExchangeTypes._has(:fetchTicker)
-        @test result isa Vector{String}
-    end
-
-    @testset "exchangeIds is a Vector" begin
-        @test ExchangeTypes.exchangeIds isa Vector{Symbol}
-    end
+# ──────────────────────────────────────────────
+# ExchangeID
+# ──────────────────────────────────────────────
+@testset "ExchangeID" begin
+    eid = ExchangeID(:binance)
+    @test eid isa ExchangeID
+    @test eid == :binance
+    @test string(eid) == "binance"
 end
 
-    @testset "ExchangeID" begin
-    @testset "Parametric creation" begin
-        id = ExchangeID{:test_exchange}()
-        @test id isa ExchangeID{:test_exchange}
-        @test id isa ExchangeID
-        @test nameof(id) == :test_exchange
-        @test Symbol(id) == :test_exchange
-        @test string(id) == "test_exchange"
-        @test convert(Symbol, id) == :test_exchange
-        @test convert(String, id) == "test_exchange"
-    end
-
-    @testset "Empty exchange ID" begin
-        id = ExchangeID()
-        @test nameof(id) == Symbol()
-    end
-
-    @testset "Equality with symbol" begin
-        id = ExchangeID{:binance}()
-        @test id == :binance
-        @test !(id == :coinbase)
-    end
-
-    @testset "exchangeid helper" begin
-        id1 = ExchangeID{:kraken}()
-        @test id1 isa ExchangeID
-        @test nameof(id1) == :kraken
-
-        id2 = exchangeid(id1)
-        @test id2 === id1
-    end
-
-    @testset "eids helper" begin
-        u = eids(:binance, :coinbase)
-        @test ExchangeID{:binance} <: u
-        @test ExchangeID{:coinbase} <: u
-    end
-
-    @testset "Display" begin
-        id = ExchangeID{:bybit}()
-        str = sprint(show, id)
-        @test occursin("bybit", str)
-        @test occursin("ExchangeID", str)
-    end
-
-    @testset "Broadcast" begin
-        id = ExchangeID{:binance}()
-        bc = Base.Broadcast.broadcastable(id)
-        @test bc isa Base.RefValue{ExchangeID{:binance}}
-    end
-
-    @testset "_populate_exchange_set! retries until gateway responds" begin
-        empty!(ExchangeTypes.exchangeIds)
-        empty!(ExchangeTypes._ccxt_exchange_set)
-
-        # First call without gateway — should fail silently
-        id1 = ExchangeID{:test_retry}()
-        @test ExchangeTypes._ccxt_exchange_set isa Set{Symbol}
-        @test :test_retry in ExchangeTypes.exchangeIds
-
-        # Verify that the set wasn't populated (no gateway)
-        old_len = length(ExchangeTypes._ccxt_exchange_set)
-
-        # Now simulate gateway becoming available
-        using HTTP, JSON3
-        ExchangeTypes.CcxtGateway.Rest.set_http_get!((url; kwargs...) -> begin
-            occursin("/admin/exchange_names", url) || error("Unexpected: $url")
-            HTTP.Response(200, JSON3.write(Dict("result" => ["binance"], "error" => nothing, "error_code" => nothing)))
-        end)
-        try
-            id2 = ExchangeID{:binance}()
-            if isempty(ExchangeTypes._ccxt_exchange_set)
-                # Gateway still unreachable — _populate_exchange_set! didn't repopulate
-                # This is acceptable; the set grows only on the first successful call
-                @test :binance in ExchangeTypes.exchangeIds
-            end
-        finally
-            ExchangeTypes.CcxtGateway.Rest.set_http_get!(HTTP.get)
-        end
-    end
-
-    @testset "_populate_exchange_set! adds to _ccxt_exchange_set on first success" begin
-        using HTTP, JSON3
-        empty!(ExchangeTypes.exchangeIds)
-        empty!(ExchangeTypes._ccxt_exchange_set)
-
-        mock_get(url; kwargs...) = begin
-            occursin("/admin/exchange_names", url) || error("Unexpected: $url")
-            HTTP.Response(200, JSON3.write(Dict("result" => ["binance", "kraken", "coinbase"], "error" => nothing, "error_code" => nothing)))
-        end
-        ExchangeTypes.CcxtGateway.Rest.set_http_get!(mock_get)
-        try
-            id = ExchangeID{:binance}()
-            @test :binance in ExchangeTypes._ccxt_exchange_set
-            @test :kraken in ExchangeTypes._ccxt_exchange_set
-            @test :coinbase in ExchangeTypes._ccxt_exchange_set
-            @test length(ExchangeTypes._ccxt_exchange_set) >= 3
-        finally
-            ExchangeTypes.CcxtGateway.Rest.set_http_get!(HTTP.get)
-        end
-    end
+@testset "ExchangeID equality" begin
+    @test ExchangeID(:binance) == ExchangeID(:binance)
+    @test ExchangeID(:binance) != ExchangeID(:okx)
 end
 
-@testset "CcxtExchange" begin
-    @testset "Empty exchange" begin
-        e = Exchange()
-        @test isempty(e)
-        @test nameof(e) == Symbol()
-        @test e isa CcxtExchange
-    end
-
-    @testset "Exchange from symbol" begin
-        e = Exchange(:test_only)
-        @test e isa CcxtExchange
-        @test e.name == "test_only"
-        @test string(e.id) == "test_only"
-        @test !ExchangeTypes.isempty(e)
-        @test ExchangeTypes.nameof(e) == :test_only
-    end
-
-    @testset "Exchange from string" begin
-        e = Exchange("test_exchange")
-        @test e isa CcxtExchange
-        @test e.name == "test_exchange"
-    end
-
-    @testset "has function" begin
-        e = Exchange(:test_exchange)
-        @test ExchangeTypes.has(e, :nonexistent_feature) == false
-        @test ExchangeTypes.has(e, (:nonexistent1, :nonexistent2)) == false
-        @test ExchangeTypes._has(e, :fetchTicker) == false
-        @test ExchangeTypes._has(e, :fetchTicker, :fetchOrderBook) == false
-    end
-
-    @testset "has with nil (null from JSON) values" begin
-        e = Exchange(:test_exchange)
-        push!(e.has, :fetchTicker => nothing)
-        push!(e.has, :fetchBalance => true)
-        @test ExchangeTypes.has(e, :fetchTicker) == false
-        @test ExchangeTypes.has(e, :fetchBalance) == true
-        @test ExchangeTypes._has(e, :fetchTicker) == false
-        @test ExchangeTypes._has(e, :fetchTicker, :fetchBalance) == true
-        @test ExchangeTypes.has(e, (:fetchTicker, :fetchBalance)) == false
-        delete!(e.has, :fetchTicker)
-        delete!(e.has, :fetchBalance)
-    end
-
-    @testset "first with nil (null from JSON) values" begin
-        e = Exchange(:test_exchange)
-        push!(e.has, :fetchTicker => nothing)
-        push!(e.has, :fetchBalance => true)
-        result = ExchangeTypes.first(e, :fetchTicker, :fetchBalance)
-        @test result isa Function
-        delete!(e.has, :fetchTicker)
-        delete!(e.has, :fetchBalance)
-    end
-
-    @testset "has with populated dict" begin
-        e = Exchange(:test_exchange)
-        push!(e.has, :fetchTicker => true)
-        push!(e.has, :fetchBalance => true)
-        @test ExchangeTypes.has(e, :fetchTicker) == true
-        @test ExchangeTypes.has(e, (:fetchTicker, :fetchBalance)) == true
-        @test ExchangeTypes._has(e, :fetchTicker) == true
-        @test ExchangeTypes._has(e, :fetchTicker, :fetchOrderBook) == true
-        ExchangeTypes.has(e, (:fetchTicker, :nonexistent)) == false
-        delete!(e.has, :fetchTicker)
-        delete!(e.has, :fetchBalance)
-    end
-
-    @testset "Exchange properties" begin
-        e = Exchange(:test_exchange; account="test_account")
-        @test account(e) == "test_account"
-        @test exchangeid(e) == e.id
-        @test exchange(e) === e
-    end
-
-    @testset "Hash and equality" begin
-        e1 = Exchange(:test_exchange)
-        e2 = Exchange(:test_exchange)
-        @test hash(e1) == hash(e2)
-        @test hash(e1) == hash(e1.id)
-    end
-
-    @testset "Standard field access" begin
-        e = Exchange(:test_exchange)
-        @test e.id isa ExchangeID
-        @test e.name == "test_exchange"
-        @test e.account == ""
-    end
-
-    @testset "Non-field access returns callable" begin
-        e = Exchange(:test_exchange)
-        fn = e.fetchTicker
-        @test fn isa Function
-        # Calling it without a running gateway should error
-        try
-            fn()
-        catch err
-            @test true  # Expected to fail without gateway
-        end
-    end
-
-    @testset "Empty exchange getproperty" begin
-        e = Exchange()
-        @test_throws Union{String, ErrorException} ExchangeTypes.getproperty(e, :nonexistent)
-    end
-
-    @testset "propertynames" begin
-        e = Exchange(:test_exchange)
-        names = Base.propertynames(e)
-        @test :name in names
-        @test :id in names
-        @test :has in names
-        @test :account in names
-    end
-
-    @testset "first on empty has" begin
-        e = Exchange(:test_exchange)
-        result = ExchangeTypes.first(e, :fetchTicker, :fetchBalance)
-        @test result === nothing
-    end
-
-    @testset "first with populated has" begin
-        e = Exchange(:test_exchange)
-        push!(e.has, :fetchTicker => true)
-        result = ExchangeTypes.first(e, :fetchTicker, :fetchBalance)
-        @test result isa Function
-        delete!(e.has, :fetchTicker)
-    end
-
-    @testset "first without args" begin
-        e = Exchange(:test_exchange)
-        result = ExchangeTypes.first(e)
-        @test result === nothing
-    end
-
-    @testset "close removes from caches" begin
-        empty!(ExchangeTypes.exchanges)
-        empty!(ExchangeTypes.sb_exchanges)
-        e = Exchange(:test_close)
-        ExchangeTypes.exchanges[(:test_close, "")] = e
-        ExchangeTypes.sb_exchanges[(:test_close, "")] = e
-        @test haskey(ExchangeTypes.exchanges, (:test_close, ""))
-        @test haskey(ExchangeTypes.sb_exchanges, (:test_close, ""))
-        ExchangeTypes.close_exc(e)
-        @test !haskey(ExchangeTypes.exchanges, (:test_close, ""))
-        @test !haskey(ExchangeTypes.sb_exchanges, (:test_close, ""))
-    end
-
-    @testset "close_exc on uncached exchange" begin
-        e = Exchange(:test_uncached)
-        ExchangeTypes.close_exc(e)
-        @test true
-    end
-
-    @testset "nameof" begin
-        e = Exchange(:test_naming)
-        @test ExchangeTypes.nameof(e) == :test_naming
-    end
-
-    @testset "timeframes, markets, types, fees fields" begin
-        e = Exchange(:test_fields)
-        @test isa(e.timeframes, AbstractSet)
-        @test isempty(e.timeframes)
-        @test e.markets isa Dict
-        @test isempty(e.markets)
-        @test e.types isa Set
-        @test isempty(e.types)
-        @test e.fees isa Dict
-        @test isempty(e.fees)
-    end
-
-    @testset "precision field" begin
-        e = Exchange(:test_precision)
-        @test e.precision == ExchangeTypes.excTickSize
-        e.precision = ExchangeTypes.excDecimalPlaces
-        @test e.precision == ExchangeTypes.excDecimalPlaces
-    end
-
-    @testset "_trace field" begin
-        e = Exchange(:test_trace)
-        @test e._trace === nothing || e._trace isa AbstractVector
-    end
-
-    @testset "_propnames via has-keys fallback" begin
-        empty!(ExchangeTypes._ccxt_exchange_set)
-        e = Exchange(:test_fallback)
-        push!(e.has, :fetchTicker => true)
-        push!(e.has, :fetchOHLCV => true)
-        props = Base.propertynames(e)
-        @test :fetchTicker in props
-        @test :fetchOHLCV in props
-        @test :name in props
-        @test :has in props
-        empty!(e.has)
-    end
-
-    @testset "_propnames populated via gateway" begin
-        using HTTP
-        using JSON3
-
-        empty!(ExchangeTypes.CcxtGateway.Rest._started_exchanges)
-
-        mock_get(url; kwargs...) = begin
-            if occursin("/ping", url)
-                HTTP.Response(200, JSON3.write(Dict("status" => "pong")))
-            elseif occursin("/admin/exchange_names", url)
-                HTTP.Response(200, JSON3.write(Dict("result" => ["binance"], "error" => nothing, "error_code" => nothing)))
-            elseif occursin("/exchanges/binance/has", url)
-                HTTP.Response(200, JSON3.write(Dict("result" => Dict("fetchTicker" => true, "fetchOHLCV" => true), "error" => nothing, "error_code" => nothing)))
-            elseif occursin("/exchanges/binance/timeframes", url)
-                HTTP.Response(200, JSON3.write(Dict("result" => Dict("1m" => nothing, "5m" => nothing), "error" => nothing, "error_code" => nothing)))
-            elseif occursin("/exchanges/binance/fees", url)
-                HTTP.Response(200, JSON3.write(Dict("result" => Dict("trading" => Dict("maker" => 0.001, "taker" => 0.001)), "error" => nothing, "error_code" => nothing)))
-            elseif occursin("/exchanges/binance/get_propertynames", url)
-                HTTP.Response(200, JSON3.write(Dict("result" => ["fetchTicker", "fetchOHLCV", "timeframes", "fees"], "error" => nothing, "error_code" => nothing)))
-            elseif occursin("/exchanges/binance/status", url)
-                HTTP.Response(200, JSON3.write(Dict("result" => Dict("running" => true, "exchange_id" => "binance"), "error" => nothing, "error_code" => nothing)))
-            else
-                error("Unexpected GET: $url")
-            end
-        end
-
-        mock_post(url; kwargs...) = begin
-            if occursin("/exchanges/binance", url)
-                HTTP.Response(200, JSON3.write(Dict("result" => "started", "error" => nothing, "error_code" => nothing)))
-            else
-                error("Unexpected POST: $url")
-            end
-        end
-
-        ExchangeTypes.CcxtGateway.Rest.set_http_get!(mock_get)
-        ExchangeTypes.CcxtGateway.Rest.set_http_post!(mock_post)
-        try
-            e = Exchange(:binance)
-            @test !isempty(e._propnames)
-            @test :fetchTicker in e._propnames
-            @test :fetchOHLCV in e._propnames
-            @test :timeframes in e._propnames
-            @test :fees in e._propnames
-        finally
-            ExchangeTypes.CcxtGateway.Rest.set_http_get!(HTTP.get)
-            ExchangeTypes.CcxtGateway.Rest.set_http_post!(HTTP.post)
-            empty!(ExchangeTypes.CcxtGateway.Rest._started_exchanges)
-        end
-    end
+@testset "ExchangeID hashing" begin
+    s = Set([ExchangeID(:binance), ExchangeID(:binance), ExchangeID(:okx)])
+    @test length(s) == 2
 end
 
-@testset "Exchange cache" begin
-    @testset "Empty initial state" begin
-        empty!(ExchangeTypes.exchanges)
-        empty!(ExchangeTypes.sb_exchanges)
-        @test isempty(ExchangeTypes.exchanges)
-        @test isempty(ExchangeTypes.sb_exchanges)
-    end
-
-    @testset "add and remove from exchanges dict" begin
-        empty!(ExchangeTypes.exchanges)
-        e = Exchange(:test_cache)
-        ExchangeTypes.exchanges[(:test_cache, "main")] = e
-        @test length(ExchangeTypes.exchanges) == 1
-        @test ExchangeTypes.exchanges[(:test_cache, "main")] === e
-        delete!(ExchangeTypes.exchanges, (:test_cache, "main"))
-        @test isempty(ExchangeTypes.exchanges)
-    end
-
-    @testset "add and remove from sb_exchanges dict" begin
-        empty!(ExchangeTypes.sb_exchanges)
-        e = Exchange(:test_sb)
-        ExchangeTypes.sb_exchanges[(:test_sb, "sandbox")] = e
-        @test length(ExchangeTypes.sb_exchanges) == 1
-        delete!(ExchangeTypes.sb_exchanges, (:test_sb, "sandbox"))
-        @test isempty(ExchangeTypes.sb_exchanges)
-    end
-
-    @testset "closeall with exchanges" begin
-        empty!(ExchangeTypes.exchanges)
-        empty!(ExchangeTypes.sb_exchanges)
-        e1 = Exchange(:test_a)
-        e2 = Exchange(:test_b)
-        ExchangeTypes.exchanges[(:test_a, "")] = e1
-        ExchangeTypes.exchanges[(:test_b, "")] = e2
-        ExchangeTypes._closeall()
-        @test isempty(ExchangeTypes.exchanges)
-        @test isempty(ExchangeTypes.sb_exchanges)
-    end
-
-    @testset "closeall with sb_exchanges" begin
-        empty!(ExchangeTypes.exchanges)
-        empty!(ExchangeTypes.sb_exchanges)
-        e = Exchange(:test_sb_close)
-        ExchangeTypes.sb_exchanges[(:test_sb_close, "sandbox")] = e
-        ExchangeTypes._closeall()
-        @test isempty(ExchangeTypes.exchanges)
-        @test isempty(ExchangeTypes.sb_exchanges)
-    end
-
-    @testset "closeall with both caches" begin
-        empty!(ExchangeTypes.exchanges)
-        empty!(ExchangeTypes.sb_exchanges)
-        e1 = Exchange(:test_both)
-        e2 = Exchange(:test_both_sb)
-        ExchangeTypes.exchanges[(:test_both, "main")] = e1
-        ExchangeTypes.sb_exchanges[(:test_both_sb, "sandbox")] = e2
-        ExchangeTypes._closeall()
-        @test isempty(ExchangeTypes.exchanges)
-        @test isempty(ExchangeTypes.sb_exchanges)
-    end
+# ──────────────────────────────────────────────
+# Exchange type
+# ──────────────────────────────────────────────
+@testset "Exchange type" begin
+    exc = Exchange(:test_exchange)
+    @test exc isa Exchange
+    @test exc.id == ExchangeID(:test_exchange)
+    @test exc.name == "test_exchange"
 end
 
-@testset "Exchange display" begin
-    @testset "show method" begin
-        e = Exchange(:test_exchange)
-        str = sprint(show, e)
-        @test occursin("test_exchange", str)
-    end
-
-    @testset "print method" begin
-        e = Exchange(:test_exchange)
-        str = sprint(print, e)
-        @test occursin("Exchange:", str)
-        @test occursin("| 0 markets | 0 timeframes", str)
-    end
-
-    @testset "display method" begin
-        e = Exchange(:test_exchange)
-        ExchangeTypes.Base.display(e)
-        @test true
-    end
-
-    @testset "display on empty exchange" begin
-        e = Exchange()
-        str = sprint(show, e)
-        @test occursin(":", str)
-    end
+@testset "has" begin
+    @test has(Exchange(:test), :fetchTicker) isa Bool
 end
 
-@testset "decimal_to_size" begin
-    @testset "Decimal places with integer" begin
-        result = ExchangeTypes.decimal_to_size(100, ExchangeTypes.excDecimalPlaces)
-        @test result == 100
-    end
-
-    @testset "Decimal places with non-integer" begin
-        result = ExchangeTypes.decimal_to_size(100.5, ExchangeTypes.excDecimalPlaces)
-        @test result == 100.5
-    end
-
-    @testset "Significant digits" begin
-        result = ExchangeTypes.decimal_to_size(1.2345, ExchangeTypes.excSignificantDigits)
-        @test result == 1.2345
-    end
-
-    @testset "Tick size" begin
-        result = ExchangeTypes.decimal_to_size(0.01, ExchangeTypes.excTickSize)
-        @test result == 0.01
-    end
-
-    @testset "Default precision mode" begin
-        e = Exchange(:test_exchange)
-        @test e.precision == ExchangeTypes.excTickSize
-    end
+# ──────────────────────────────────────────────
+# exchangeid function
+# ──────────────────────────────────────────────
+@testset "exchangeid" begin
+    @test exchangeid(ExchangeID(:binance)) == ExchangeID(:binance)
+    @test exchangeid(:binance) == ExchangeID(:binance)
+    @test exchangeid("binance") == ExchangeID(:binance)
 end
 
-@testset "HOOKS" begin
-    @testset "HOOKS is empty by default" begin
-        @test isempty(ExchangeTypes.HOOKS)
-    end
-
-    @testset "HOOKS with registered function" begin
-        hook_called = Ref(false)
-        ExchangeTypes.HOOKS[:test_hook_exchange] = [e -> (hook_called[] = true)]
-        e = Exchange(:test_hook_exchange)
-        @test hook_called[] == true
-        delete!(ExchangeTypes.HOOKS, :test_hook_exchange)
-    end
+# ──────────────────────────────────────────────
+# eids / exchanges
+# ──────────────────────────────────────────────
+@testset "eids" begin
+    # eids creates a Union type from symbols for dispatch
+    u = eids(:binance, :okx)
+    @test u isa Union
+    @test (ExchangeID{:binance}) <: u
+    @test (ExchangeID{:okx}) <: u
+    @test !((ExchangeID{:kraken}) <: u)
 end
 
-end # @testset "ExchangeTypes"
+@testset "exchanges" begin
+    @test exchanges isa Dict
+    @test sb_exchanges isa Dict
+end

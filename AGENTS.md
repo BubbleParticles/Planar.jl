@@ -216,9 +216,26 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 
 14. **Test with normal precompilation, not just `--compiled-modules=no`**: `--compiled-modules=no` skips `precompile.jl` entirely, hiding errors that only surface during real precompilation. Run at least one test with cached precompilation too.
 
-15. **Implement the test suite during refactoring, aiming for maximum coverage**: Before starting, search `PlanarDev/test/` for existing test files related to the package being refactored. After migration, create a `test/runtests.jl` with pure unit tests (data conversion, helpers) and mock-HTTP integration tests. Use `Rest.set_http_get!/set_http_post!/set_http_delete!` to mock gateway endpoints — see `Exchanges/test/runtests_fast.jl` for the pattern.
+15. **Implement the test suite during refactoring, aiming for maximum coverage**: Before starting, search `PlanarDev/test/` for existing test files related to the package being refactored. After migration, create a `test/runtests.jl` with pure unit tests (data conversion, helpers) and mock-HTTP integration tests. Use `Rest.set_http_get!/set_http_post!/set_http_delete!` to mock gateway endpoints — see `Exchanges/test/runtests_fast.jl` for the pattern. The full setup workflow:
+    - Create `test/Project.toml` with **no** `name`/`uuid`/`version`/`authors` header (just `[deps]` and optionally `[compat]`)
+    - Use `Pkg.develop` for all local transitive deps + the package under test, `Pkg.add` for public test-only deps
+    - In `test/runtests.jl`, set up mock HTTP handlers before constructing any exchange — the `else` catch-all branch should return `nothing` for unknown endpoints
+    - For endpoint-specific test data (currency tiers, market limits, sandbox mode), add explicit `occursin` branches before the catch-all
+    - Seed exchange markets manually (`exc.markets["SYM"] = Dict{String,Any}(...)`) and push types (`push!(exc.types, :swap)`) to avoid gateway calls for market metadata
+    - Use the inner constructor `AssetInstance(a, data, exc, margin; limits, precision, fees)` to bypass gateway-dependent outer constructors
+    - Verify with `julia --project=<pkg> -e "import Pkg; Pkg.test()"` from the repo root — this catches environment mismatches that direct `include` invocations miss
 
 16. **Coverage requirement: ≥80%, ideally >95%**: Every package must maintain at least 80% line coverage, with a target of >95%. Untested code is a liability — the gateway migration changes the data path (JSON3 vs Python objects, `body=` vs `query=`, `params` dict wrapping), and without coverage, regressions slip through. Use mock-HTTP (`Rest.set_http_get!/set_http_post!`) to test gateway-dependent code paths without spawning a live gateway. Pure unit tests cover data conversion, helper functions, and edge cases. Measure coverage with `julia --project=. -e 'using Pkg; Pkg.add("CoverageTools")'` and the `coverage --run` workflow.
+
+17. **Test via `Pkg.test()` as the canonical invocation**: The standard Julia convention is `julia --project=<pkg> -e 'using Pkg; Pkg.test()'`. Keep the test suite runnable this way — it catches environment mismatches that direct `include` invocations miss. Ensure `test/Project.toml` has no `name`/`uuid`/`version`/`authors` header (those fields cause Pkg to treat the test project as a real package, fail precompilation with "Missing source file", and prevent `Pkg.test()` from succeeding).
+
+18. **Minimize dependencies — upstream packages must not depend on downstream ones**: Keep the dependency graph acyclic with all edges pointing downstream (from foundational to application-level). An upstream package (e.g. `ExchangeTypes`, `Misc`) must never import a downstream package (e.g. `Exchanges`, `Instances`, `Fetch`). A downstream package's `test/Project.toml` must not add extra packages that would create reverse edges — if test-only fixtures or helpers are needed, define them locally in the test file rather than pulling in a downstream package as a test dependency. This prevents circular resolution issues, precompilation failures, and manifests that silently mask import bugs.
+
+19. **Use relative paths for local package dependencies in test Manifests**: When running `Pkg.develop(PackageSpec(path=...))` for a local package in a test environment, pass a relative path (e.g. `"../Foo"` from `Pkg/test/`) rather than an absolute one like `"/project/Foo"`. Absolute paths hardcode the container layout and break when the repository is relocated. Relative paths are resolved from the `test/` directory automatically.
+
+20. **Minimize test deps with `const` aliases**: When reducing a test package's direct dependencies, use `const Foo = Instances.ParentModule.Bar` aliases instead of `using Bar` to access packages that exist only as transitive deps. Direct `using Bar` in a Pkg.test() environment may fail with "Package not found in current path" because the test environment only guarantees direct deps on LOAD_PATH. Prefer reaching through already-loaded parent modules (e.g. `const HTTP = Instances.Exchanges.ExchangeTypes.CcxtGateway.HTTP`).
+
+21. **Search for orphan files across ALL included `.jl` files, not just `module.jl`**: When checking if a source file is orphaned, grep for `include("filename")` across every `.jl` file in `src/`, not only `module.jl`. Files can be included from non-root files (e.g. `impl.jl` includes `dispatch.jl`, `load.jl` includes `candles.jl`). A file missing from `module.jl` is not necessarily orphaned if it's included transitively.
 
 ### Gotchas
 
@@ -247,6 +264,12 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 12. **`nothing` from JSON `null` in boolean context**: `get(dict, key, false)` returns `nothing` when the dict contains a JSON `null` value, not `false`. Any `get` on a JSON-populated dict whose result is used as a `Bool` must be wrapped: `something(get(dict, key, false), false)`. The same applies to `any(pred, ...)` — the predicate must return `Bool`, not `nothing`.
 
 13. **`function name(args)` shadows existing variable `name`**: `function f(...)` always introduces a fresh local binding, even if `f` already names a variable in scope. After `f = some_callable()`, writing `function f(...) ... f(...) end` calls the new function recursively, not the original callable. Use `f = function (...) ... end` (assignment form) or rename one of them to avoid confusion.
+
+14. **`using M: Sub` imports only the module binding, not its exports**: After `using Instances.TimeTicks: Dates`, `Dates` is a module binding in scope but `now()`, `DateTime(...)`, etc. are NOT directly available — use `Dates.now()`, `Dates.DateTime(...)`. Only `using Dates` (without qualification) brings Dates' exports into scope.
+
+15. **Importing macro-generated bindings triggers undeclared warnings**: A bare function like `tf` that is only defined as a side effect of a macro (`@tf_str`) may cause `WARNING: Imported binding TimeTicks.tf was undeclared at import time` when imported via `using M: tf`. Only import the macro itself (`@tf_str`) and omit the macro-generated binding. The `@tf_str` macro call syntax (`tf"..."`) does not require the bare `tf` name to be in scope.
+
+16. **`const Dates = Parent.Dates` does not bring Dates' exports into scope**: A `const` alias provides only the module binding. `now()`, `DateTime(...)`, `Second(1)`, `Day(10)` remain undefined — use `Dates.now()`, `Dates.DateTime(...)`, `Dates.Second(1)`, `Dates.Day(10)`. Only `using Dates` (without qualification) or explicit import (`using Dates: now, DateTime`) brings them into scope.
 
 ---
 
@@ -353,11 +376,10 @@ When writing tests for a specific package (e.g., `Fetch`), put them in `/project
 When setting up a package's `test/Project.toml`, do NOT write it manually. Use Julia's Pkg:
 
 ```julia
-# Start with just the header in test/Project.toml:
-# name = "FooTest"
-# uuid = ...  (generate via uuid4())
-# authors = [...]
-# version = "0.1.0"
+# Start with a minimal test/Project.toml containing only:
+# [deps]
+# No name/uuid/version/authors header — those fields cause Pkg.test() to
+# treat the test project as a package and fail precompilation.
 
 # Then in Julia:
 using Pkg
@@ -372,6 +394,21 @@ Pkg.add(["HTTP", "JSON3", "DataFrames"])        # test-only extras
 Then run: `julia --project=/project/Foo/test test/runtests.jl`
 
 This ensures the test environment is isolated and catches import bugs that PlanarDev's wider manifest would mask.
+
+**Always verify the test suite runs via `Pkg.test()` from the package root:** `julia --project=/project/Foo -e 'using Pkg; Pkg.test()'`. This is the standard Julia convention and catches environment mismatches that direct invocation can hide.
+
+---
+
+## Dependency Tree
+
+See [`DEPENDENCY_TREE.md`](./DEPENDENCY_TREE.md) for the full tree (40 packages + 7 user strategies).
+
+**Key rules:**
+- Arrows point **downstream** (foundational → application-level). An upstream package must never `using` a downstream one.
+- A package must list all directly-imported packages in its `[deps]`; accessing a module as `Dep.SubModule` is OK as long as `Dep` is in `[deps]`.
+- `test/Project.toml` must have **no** `name`, `uuid`, `version`, or `authors` header.
+- Test dependencies should be minimized via `const` aliases through already-loaded parent modules.
+- `Manifest.toml` paths must be relative to the `test/` directory, not absolute.
 
 ---
 

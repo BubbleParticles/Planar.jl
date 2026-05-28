@@ -7,7 +7,7 @@ using OrderTypes: ByPos, AssetEvent, positionside, Instruments, ordertype
 using .Data: load, zi, empty_ohlcv, DataFrame, DataStructures
 using .Data.DFUtils: daterange, timeframe
 import .Data: stub!
-using .Data.DataFrames: metadata
+using .Data.DataFrames: metadata, metadata!
 using .Instruments: Instruments, compactnum, AbstractAsset, Cash, add!, sub!, Misc
 import .Instruments: _hashtuple, cash!, cash, freecash, value, raw, bc, qc
 using .Misc: config, MarginMode, NoMargin, WithMargin, MM, DFT, toprecision, ZERO

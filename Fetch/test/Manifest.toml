@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "f0bccede2217772a1bd48be9b47297c252fdb89d"
+project_hash = "9b7eaeaea8377a2a54303d451eced825cdd9afb9"
 
 [[deps.AWS]]
 deps = ["Base64", "Compat", "Dates", "Downloads", "GitHub", "HTTP", "IniFile", "JSON", "MbedTLS", "Mocking", "OrderedCollections", "Random", "SHA", "ScopedValues", "Sockets", "URIs", "UUIDs", "XMLDict"]
@@ -75,7 +75,7 @@ version = "0.4.2"
 
 [[deps.Ccxt]]
 deps = ["FileWatching", "HTTP", "JSON3", "MbedTLS", "Misc", "OrderedCollections", "PrecompileTools", "WebSockets"]
-path = "/project/Ccxt"
+path = "../../Ccxt"
 uuid = "a58c4053-12c5-4e22-b66a-82c3bd74bf8a"
 version = "0.2.0"
 
@@ -162,7 +162,7 @@ version = "4.1.1"
 
 [[deps.Data]]
 deps = ["CodecZlib", "DataFrames", "DataFramesMeta", "DataStructures", "LMDB", "Misc", "Reexport", "Serialization", "Zarr"]
-path = "/project/Data"
+path = "../../Data"
 uuid = "934a4ae5-3fdb-4fa4-b6dd-2cd889d3d27b"
 version = "0.1.1"
 
@@ -228,13 +228,13 @@ version = "0.1.11"
 
 [[deps.ExchangeTypes]]
 deps = ["Ccxt", "FunctionalCollections", "JSON3", "OrderedCollections", "Serialization"]
-path = "/project/ExchangeTypes"
+path = "../../ExchangeTypes"
 uuid = "16e96388-e60e-4b60-892f-986722d15ae4"
 version = "0.1.0"
 
 [[deps.Exchanges]]
 deps = ["Coverage", "Data", "ExchangeTypes", "Instruments", "JSON", "Pbar", "Reexport", "Serialization"]
-path = "/project/Exchanges"
+path = "../../Exchanges"
 uuid = "ab04e009-1d60-4d36-ac2f-58b9338a89b5"
 version = "0.1.0"
 
@@ -251,14 +251,8 @@ version = "1.2.3"
 
 [[deps.Fetch]]
 deps = ["Exchanges", "Processing"]
-path = "/project/Fetch"
+path = ".."
 uuid = "01b7c4b8-c42c-4ba7-97ce-8f8fab6ee59e"
-version = "0.1.0"
-
-[[deps.FetchTest]]
-deps = ["Ccxt", "Data", "DataFrames", "ExchangeTypes", "Exchanges", "Fetch", "HTTP", "Instruments", "JSON3", "Misc", "Pbar", "Processing", "Test"]
-path = "."
-uuid = "12345678-1234-5678-1234-567812345678"
 version = "0.1.0"
 
 [[deps.FilePathsBase]]
@@ -327,7 +321,7 @@ weakdeps = ["ArrowTypes", "Parsers"]
 
 [[deps.Instruments]]
 deps = ["Lang", "Misc", "Printf"]
-path = "/project/Instruments"
+path = "../../Instruments"
 uuid = "36fdd1e0-de92-434c-a120-c8ed410c5e3c"
 version = "0.1.0"
 
@@ -516,7 +510,7 @@ version = "2.28.1010+0"
 
 [[deps.Misc]]
 deps = ["ConcurrentCollections", "Dates", "Distributed", "DocStringExtensions", "FunctionalCollections", "JSON3", "Logging", "LoggingExtras", "OrderedCollections", "Pkg", "PrecompileTools", "Reexport", "Serialization", "TOML", "TimeTicks"]
-path = "/project/Misc"
+path = "../../Misc"
 uuid = "ff97321b-aa60-4104-8cd6-2e42973349ab"
 version = "0.1.0"
 
@@ -595,7 +589,7 @@ version = "2.8.4"
 
 [[deps.Pbar]]
 deps = ["Term", "TimeTicks"]
-path = "/project/Pbar"
+path = "../../Pbar"
 uuid = "7aed521b-3ea6-427a-8031-5ecc7305f19e"
 version = "0.1.0"
 
@@ -645,7 +639,7 @@ version = "1.11.0"
 
 [[deps.Processing]]
 deps = ["Data", "Pbar", "StatsBase"]
-path = "/project/Processing"
+path = "../../Processing"
 uuid = "71db1b01-ba5b-4918-92ad-dd9436844736"
 version = "0.1.0"
 

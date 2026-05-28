@@ -1,2 +1,6 @@
 [deps]
-Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+Data = "934a4ae5-3fdb-4fa4-b6dd-2cd889d3d27b"
+Lang = "29573954-25fe-4a2f-9b4b-dcb25d092053"
+Misc = "ff97321b-aa60-4104-8cd6-2e42973349ab"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TimeTicks = "1ce46816-3f51-4f52-9fcf-6d091670788d"
