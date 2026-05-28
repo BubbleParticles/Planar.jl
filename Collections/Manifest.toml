@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "4626f8dcbf412242ce8f0beea11e855f325d6a4a"
+project_hash = "fec20046e7009d0c6d90fa89517707231d04cf76"
 
 [[deps.AWS]]
 deps = ["Base64", "Compat", "Dates", "Downloads", "GitHub", "HTTP", "IniFile", "JSON", "MbedTLS", "Mocking", "OrderedCollections", "Random", "SHA", "ScopedValues", "Sockets", "URIs", "UUIDs", "XMLDict"]
@@ -97,7 +97,7 @@ uuid = "944b1d66-785c-5afd-91f1-9de20f533193"
 version = "0.7.8"
 
 [[deps.Collections]]
-deps = ["Instances"]
+deps = ["Ccxt", "Data", "DataFrames", "DataFramesMeta", "ExchangeTypes", "Exchanges", "Instances", "Instruments", "Lang", "Misc", "OrderTypes", "TimeTicks"]
 path = "."
 uuid = "199ae5f6-b1b4-42af-853d-fd50a04203c4"
 version = "0.1.0"
@@ -173,9 +173,9 @@ version = "1.16.0"
 
 [[deps.DataFrames]]
 deps = ["Compat", "DataAPI", "DataStructures", "Future", "InlineStrings", "InvertedIndices", "IteratorInterfaceExtensions", "LinearAlgebra", "Markdown", "Missings", "PooledArrays", "PrecompileTools", "PrettyTables", "Printf", "Random", "Reexport", "SentinelArrays", "SortingAlgorithms", "Statistics", "TableTraits", "Tables", "Unicode"]
-git-tree-sha1 = "d8928e9169ff76c6281f39a659f9bca3a573f24c"
+git-tree-sha1 = "5fab31e2e01e70ad66e3e24c968c264d1cf166d6"
 uuid = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-version = "1.8.1"
+version = "1.8.2"
 
 [[deps.DataFramesMeta]]
 deps = ["Chain", "DataFrames", "MacroTools", "OrderedCollections", "PrettyTables", "Reexport", "TableMetadataTools"]
@@ -227,7 +227,7 @@ uuid = "460bff9d-24e4-43bc-9d9f-a8973cb893f4"
 version = "0.1.11"
 
 [[deps.ExchangeTypes]]
-deps = ["Ccxt", "FunctionalCollections", "OrderedCollections", "Serialization"]
+deps = ["Ccxt", "FunctionalCollections", "JSON3", "OrderedCollections", "Serialization"]
 path = "../ExchangeTypes"
 uuid = "16e96388-e60e-4b60-892f-986722d15ae4"
 version = "0.1.0"

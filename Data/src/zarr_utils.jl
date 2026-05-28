@@ -324,7 +324,7 @@ end
 const ZINSTANCE_INIT_FUNC = Ref{Union{Function,Type}}(ZarrInstance)
 if @load_preference("data_store", "lmdb") == "lmdb"
     using LMDB: LMDB as lm
-    if lm.LibLMDB.LMDB_jll.is_available()
+    if isdefined(lm, :LibLMDB) && lm.LibLMDB.LMDB_jll.is_available()
         include("lmdbstore.jl")
         ZINSTANCE_INIT_FUNC[] = zilmdb
     end

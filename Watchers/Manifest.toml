@@ -27,12 +27,6 @@ git-tree-sha1 = "9876e1e164b144ca45e9e3198d0b689cadfed9ff"
 uuid = "66dad0bd-aa9a-41b7-9441-69ab47430ed8"
 version = "1.1.3"
 
-[[deps.ArgParse]]
-deps = ["Logging", "TextWrap"]
-git-tree-sha1 = "22cf435ac22956a7b45b0168abbc871176e7eecc"
-uuid = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
-version = "1.2.0"
-
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
 version = "1.1.2"
@@ -72,18 +66,6 @@ version = "1.21.7+0"
 git-tree-sha1 = "eb4cb44a499229b3b8426dcfb5dd85333951ff90"
 uuid = "fa961155-64e5-5f13-b03f-caf6b980ea82"
 version = "0.4.2"
-
-[[deps.Ccxt]]
-deps = ["FileWatching", "HTTP", "JSON3", "MbedTLS", "Misc", "OrderedCollections", "PrecompileTools", "WebSockets"]
-path = "../Ccxt"
-uuid = "a58c4053-12c5-4e22-b66a-82c3bd74bf8a"
-version = "0.2.0"
-
-    [deps.Ccxt.extensions]
-    CcxtPythonExt = "Python"
-
-    [deps.Ccxt.weakdeps]
-    Python = "e8cdc95d-7257-4c38-ab0e-cc8a28c19776"
 
 [[deps.Chain]]
 git-tree-sha1 = "765487f32aeece2cf28aa7038e29c31060cb5a69"
@@ -142,18 +124,6 @@ version = "1.6.0"
     IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
     LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
     StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
-
-[[deps.Coverage]]
-deps = ["ArgParse", "Artifacts", "CoverageTools", "Downloads", "HTTP", "JSON", "LibGit2", "MbedTLS", "SHA", "Scratch"]
-git-tree-sha1 = "41c077a9bf7c18a8f35b818ec87b982d84b99f08"
-uuid = "a2441757-f6aa-5fb2-8edb-039e3f45d037"
-version = "1.7.0"
-
-[[deps.CoverageTools]]
-deps = ["JuliaSyntax", "TOML"]
-git-tree-sha1 = "59e6cf93c468aa21bd22578c41b69b5784e34955"
-uuid = "c36e975a-824b-4404-a568-ef97ca766997"
-version = "1.4.1"
 
 [[deps.Crayons]]
 git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
@@ -226,18 +196,6 @@ git-tree-sha1 = "d36f682e590a83d63d1c7dbd287573764682d12a"
 uuid = "460bff9d-24e4-43bc-9d9f-a8973cb893f4"
 version = "0.1.11"
 
-[[deps.ExchangeTypes]]
-deps = ["Ccxt", "FunctionalCollections", "OrderedCollections", "Serialization"]
-path = "../ExchangeTypes"
-uuid = "16e96388-e60e-4b60-892f-986722d15ae4"
-version = "0.1.0"
-
-[[deps.Exchanges]]
-deps = ["Coverage", "Data", "ExchangeTypes", "Instruments", "JSON", "Pbar", "Reexport", "Serialization"]
-path = "../Exchanges"
-uuid = "ab04e009-1d60-4d36-ac2f-58b9338a89b5"
-version = "0.1.0"
-
 [[deps.ExprTools]]
 git-tree-sha1 = "27415f162e6028e81c72b82ef756bf321213b6ec"
 uuid = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
@@ -250,7 +208,7 @@ uuid = "8f5d6c58-4d21-5cfd-889c-e3ad7ee6a615"
 version = "1.2.3"
 
 [[deps.Fetch]]
-deps = ["Exchanges", "Processing"]
+deps = ["Processing"]
 path = "../Fetch"
 uuid = "01b7c4b8-c42c-4ba7-97ce-8f8fab6ee59e"
 version = "0.1.0"
@@ -319,12 +277,6 @@ weakdeps = ["ArrowTypes", "Parsers"]
     ArrowTypesExt = "ArrowTypes"
     ParsersExt = "Parsers"
 
-[[deps.Instruments]]
-deps = ["Lang", "Misc", "Printf"]
-path = "../Instruments"
-uuid = "36fdd1e0-de92-434c-a120-c8ed410c5e3c"
-version = "0.1.0"
-
 [[deps.InteractiveUtils]]
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
@@ -371,11 +323,6 @@ weakdeps = ["ArrowTypes"]
 
     [deps.JSON3.extensions]
     JSON3ArrowExt = ["ArrowTypes"]
-
-[[deps.JuliaSyntax]]
-git-tree-sha1 = "0d4b3dab95018bcf3925204475693d9f09dc45b8"
-uuid = "70703baa-626e-46a2-a12c-08ffd08c73b4"
-version = "1.0.2"
 
 [[deps.JuliaSyntaxHighlighting]]
 deps = ["StyledStrings"]
@@ -684,12 +631,6 @@ git-tree-sha1 = "ac4b837d89a58c848e85e698e2a2514e9d59d8f6"
 uuid = "7e506255-f358-4e82-b7e4-beb19740aa63"
 version = "1.6.0"
 
-[[deps.Scratch]]
-deps = ["Dates"]
-git-tree-sha1 = "9b81b8393e50b7d4e6d0a9f14e192294d3b7c109"
-uuid = "6c6a2e73-6563-6170-7368-637461726353"
-version = "1.3.0"
-
 [[deps.SentinelArrays]]
 deps = ["Dates", "Random"]
 git-tree-sha1 = "ebe7e59b37c400f694f52b58c93d26201387da70"
@@ -814,11 +755,6 @@ deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 version = "1.11.0"
 
-[[deps.TextWrap]]
-git-tree-sha1 = "43044b737fa70bc12f6105061d3da38f881a3e3c"
-uuid = "b718987f-49a8-5099-9789-dcd902bef87d"
-version = "1.0.2"
-
 [[deps.TimeFrames]]
 deps = ["Dates", "Test"]
 git-tree-sha1 = "168631df303a1b26c7d33db6a463f8a9da3a3fdf"
@@ -889,12 +825,6 @@ deps = ["Fetch", "HTTP", "JSON3", "Statistics", "URIs"]
 path = "."
 uuid = "4a3f9c16-ec8e-48c6-a58d-938fc30e2b4b"
 version = "0.1.0"
-
-[[deps.WebSockets]]
-deps = ["Base64", "Dates", "HTTP", "Logging", "Sockets"]
-git-tree-sha1 = "4162e95e05e79922e44b9952ccbc262832e4ad07"
-uuid = "104b5d7c-a370-577a-8038-80a2059c5097"
-version = "1.6.0"
 
 [[deps.XML2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Zlib_jll"]

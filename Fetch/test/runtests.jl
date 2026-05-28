@@ -1,13 +1,11 @@
 using Test
 using Fetch
 using Exchanges
-using ExchangeTypes
-using HTTP
-using JSON3
-using Dates
 
-const DataFrame = Exchanges.Data.DataFrame
-using Misc: ContiguityException
+const ExchangeTypes = Exchanges.ExchangeTypes
+const HTTP = ExchangeTypes.CcxtGateway.HTTP
+const JSON3 = ExchangeTypes.JSON3
+const ContiguityException = ExchangeTypes.Ccxt.Misc.ContiguityException
 
 # ──────────────────────────────────────────────
 # Default mock HTTP — avoids gateway spawn dependency
