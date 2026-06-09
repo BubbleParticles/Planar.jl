@@ -1,4 +1,5 @@
 include("Python.jl")
+using .Python: Py, pyfetch, pyconvert, StreamHandler, isdict, islist
 include("constructors.jl")
 include("currency.jl")
 include("tickers.jl")
@@ -18,6 +19,7 @@ export issandbox, ratelimit!, isratelimited, ispercentage
 export timestamp, timeout!, check_timeout
 export ticker!, lastprice
 export leverage!, marginmode!
+export Py, pyfetch, pyconvert, StreamHandler, isdict, islist
 
 using Reexport
 @reexport using ExchangeTypes
