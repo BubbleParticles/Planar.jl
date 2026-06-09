@@ -1,7 +1,6 @@
 using .Misc.Lang: Lang, @preset, @precomp, @m_str, @ignore
 
 @preset let
-    st.Instances.Exchanges.Python.py_start_loop()
     kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binance) : (;)
     s = st.strategy(st.BareStrat; mode=Paper(), kwargs...)
     s[:log_to_stdout] = true
@@ -39,5 +38,4 @@ using .Misc.Lang: Lang, @preset, @precomp, @m_str, @ignore
     st.Instances.Exchanges.emptycaches!()
     stop!(s)
     st.Instances.Exchanges.ExchangeTypes._closeall()
-    st.Instances.Exchanges.Python.py_stop_loop()
 end

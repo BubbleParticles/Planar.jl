@@ -1,8 +1,6 @@
 using Strategies
 
 @eval Strategies begin
-    ExchangeTypes.Python.py_stop_loop()
-    ExchangeTypes.Python.py_start_loop()
     s = strategy(:BareStrat; exchange=:phemex)
     assets(s)
     instances(s)
@@ -24,5 +22,4 @@ using Strategies
     show(io, s)
     close(io)
     ExchangeTypes._closeall()
-    ExchangeTypes.Python.py_stop_loop()
 end

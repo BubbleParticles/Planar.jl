@@ -2,7 +2,6 @@ using .Lang: @preset, @precomp
 @preset let
     using Metrics.Stubs
 
-    st.Instances.Exchanges.Python.py_start_loop()
     s = Stubs.stub_strategy(; dostub=false)
     Stubs.gensave_trades(; s, dosave=false)
     ai = first(s.universe)
@@ -18,5 +17,4 @@ using .Lang: @preset, @precomp
         balloons(s, ai; tf=tf"1d")
         balloons(s; tf=tf"1d")
     end
-    st.Instances.Exchanges.Python.py_stop_loop()
 end

@@ -1,7 +1,6 @@
 using .Lang: @preset, @precomp, @m_str, @ignore
 
 @preset let
-    st.Instances.Exchanges.Python.py_start_loop()
     kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binance) : (;)
     s = st.strategy(st.BareStrat; kwargs...)
     @precomp begin
@@ -23,5 +22,4 @@ using .Lang: @preset, @precomp, @m_str, @ignore
         start!(s; doreset=false)
     end
     @compile_call
-    st.Instances.Exchanges.Python.py_stop_loop()
 end
