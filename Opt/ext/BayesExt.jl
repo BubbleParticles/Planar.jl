@@ -125,11 +125,9 @@ export boptimize!
 
 if occursin("Opt", get(ENV, "JULIA_PRECOMP", ""))
     @preset begin
-        st.Instances.Exchanges.Python.py_start_loop()
         s = Opt._precomp_strat(BayesExt)
 
         @precomp boptimize!(s, maxiterations=10)
-        st.Instances.Exchanges.Python.py_stop_loop()
     end
 end
 end

@@ -83,7 +83,6 @@ function stub_strategy(mod=StubStrategy, args...; dostub=true, cfg=Config(), kwa
 end
 
 @preset let
-    Python.py_start_loop()
     cfg = Config()
     @precomp let
         try
@@ -109,5 +108,4 @@ end
             end
         end
     end
-    Python.py_stop_loop()
 end

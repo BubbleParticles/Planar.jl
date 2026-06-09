@@ -21,7 +21,6 @@ function _precomp_strat(mod=Opt)
 end
 
 @preset begin
-    st.Instances.Exchanges.Python.py_start_loop()
     s = _precomp_strat()
     ect = invokelatest(getfield, Opt, :ect)
     function st.call!(::typeof(s), ::ect.OptSetup)
@@ -62,5 +61,4 @@ end
         optimize(s, maxiters=2)
     end
 
-    st.Instances.Exchanges.Python.py_stop_loop()
 end
