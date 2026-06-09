@@ -3,7 +3,7 @@ module BareStrat
 using ..Strategies: Strategies as st
 using .st
 using .st.ExchangeTypes
-using .st.ExchangeTypes.Ccxt: ccxt_exchange
+
 using .st.TimeTicks
 using .st: AssetCollection
 import .st: call!
