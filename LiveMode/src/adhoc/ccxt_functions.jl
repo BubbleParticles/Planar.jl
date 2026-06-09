@@ -1,4 +1,4 @@
-using .Python: pyis, pybuiltins
+
 
 function ccxt_orders_func!(a, exc::Exchange{ExchangeID{:bybit}})
     a[:live_orders_func] = if has(exc, :fetchOrder)
@@ -6,16 +6,18 @@ function ccxt_orders_func!(a, exc::Exchange{ExchangeID{:bybit}})
         @assert has(exc, (:fetchOpenOrders, :fetchClosedOrders))
         fetch_open_func = first(exc, :fetchOpenOrdersWs, :fetchOpenOrders)
         fetch_closed_func = first(exc, :fetchClosedOrdersWs, :fetchClosedOrders)
-        (ai; ids=(), side=BuyOrSell, kwargs...) -> let out = pylist()
+        (ai; ids=(), side=BuyOrSell, kwargs...) -> begin
             sym = raw(ai)
             if isempty(ids)
+                out = []
                 @sync begin
-                    @async out.extend(_fetch_orders(ai, fetch_open_func; side, kwargs...))
-                    @async out.extend(_fetch_orders(ai, fetch_closed_func; side, kwargs...))
+                    @async append!(out, _fetch_orders(ai, fetch_open_func; side, kwargs...))
+                    @async append!(out, _fetch_orders(ai, fetch_closed_func; side, kwargs...))
                 end
             else
+                out = []
                 @sync for id in ids
-                    @async out.append(_execfunc(fetch_func, id, sym; kwargs...))
+                    @async push!(out, _execfunc(fetch_func, id, sym; kwargs...))
                 end
             end
             out
@@ -26,8 +28,9 @@ function ccxt_orders_func!(a, exc::Exchange{ExchangeID{:bybit}})
 end
 
 _phemex_ispending(o) =
-    let status = get_py(get_py(o, "info"), "execStatus")
-        pyeq(Bool, Python.pytype(status), pybuiltins.str) && occursin("Pending", string(status))
+    let info = isdict(o) ? get(o, "info", Dict{String,Any}()) : Dict{String,Any}()
+        status = get(info, "execStatus", nothing)
+        status isa AbstractString && occursin("Pending", string(status))
     end
 
 @doc "Sets up the [`fetch_open_orders`](@ref) or [`fetch_closed_orders`](@ref) closure for the ccxt exchange instance. (phemex)"
@@ -41,7 +44,7 @@ function ccxt_open_orders_func!(a, exc::Exchange{ExchangeID{:phemex}}; open=true
                 ans = _fetch_orders(ai, orders_func; eid, kwargs...)
                 @debug "open/closed orders phemex: " ans
                 if isnothing(ans)
-                    return pylist()
+                    return []
                 else
                     removefrom!(_phemex_ispending, ans)
                 end
@@ -56,10 +59,10 @@ function ccxt_open_orders_func!(a, exc::Exchange{ExchangeID{:phemex}}; open=true
                 end
                 canceled_ords = removefrom!(
                     _phemex_ispending,
-                    @something(fetch(ot), pylist())
+                    @something(fetch(ot), [])
                 )
-                closed_ords = @something fetch(ct) pylist()
-                closed_ords.extend(canceled_ords)
+                closed_ords = @something fetch(ct) []
+                append!(closed_ords, canceled_ords)
                 closed_ords
             end
         end
@@ -67,16 +70,17 @@ function ccxt_open_orders_func!(a, exc::Exchange{ExchangeID{:phemex}}; open=true
         fetch_func = get(a, :live_orders_func, nothing)
         @assert !isnothing(fetch_func) "`live_orders_func` must be set before `live_$(oc)_orders_func`"
         eid = typeof(exchangeid(exc))
-        pred_func = o -> pyeq(Bool, resp_order_status(o, eid), @pyconst("open"))
+        pred_func = o -> string(resp_order_status(o, eid)) == "open"
         status_pred_func = if open
             (o) -> pred_func(o) && !_phemex_ispending(o)
         else
             !pred_func
         end
-        (ai; kwargs...) -> let out = pylist()
+        (ai; kwargs...) -> begin
+            out = []
             all_orders = fetch_func(ai; kwargs...)
             for o in all_orders
-                status_pred_func(o) && out.append(o)
+                status_pred_func(o) && push!(out, o)
             end
             out
         end

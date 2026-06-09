@@ -1,7 +1,6 @@
 import .LiveMode.Watchers.Fetch: fetch_ohlcv, propagate_ohlcv!, update_ohlcv!
 import .Processing.Data: load_ohlcv
 using .Exchanges: exchangeid, account
-using .Exchanges.ExchangeTypes: params
 
 function fetch_ohlcv(
     s::Strategy;
@@ -10,7 +9,7 @@ function fetch_ohlcv(
     pairs=(raw(a) for a in assets(s)),
     fetch_kwargs...,
 )
-    exc = getexchange!(exchangeid(s), params(exc); sandbox, account=account(exc))
+    exc = getexchange!(exchangeid(s); sandbox, account=account(exc))
     tf_str = string(tf)
     pairs_str = collect(pairs)
     fetch_ohlcv(exc, tf_str, pairs_str; fetch_kwargs...)

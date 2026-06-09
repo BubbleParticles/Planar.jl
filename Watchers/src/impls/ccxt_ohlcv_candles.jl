@@ -37,7 +37,7 @@ function ccxt_ohlcv_candles_watcher(
     a = Dict{Symbol,Any}()
     a[k"ids"] = [string(v) for v in syms]
     a[k"issandbox"] = issandbox(exc)
-    a[k"excparams"] = params(exc)
+    a[k"excparams"] = Dict{String,Any}()
     a[k"excaccount"] = account(exc)
     a[k"ohlcv_method"] = :candles
     @setkey! a exc

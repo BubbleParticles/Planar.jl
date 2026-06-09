@@ -1,65 +1,30 @@
-using .Lang: @ifdebug
-using .Python: @pystr, @pyconst, PyDict
-using .Python.PythonCall.Core: pyisint
 using .OrderTypes
-using .Misc: IsolatedMargin, CrossMargin, NoMargin
+using .Misc: IsolatedMargin, CrossMargin, NoMargin, DFT, ZERO
 const ot = OrderTypes
 
-_execfunc(f::Py, args...; kwargs...) = pyfetch(f, args...; kwargs...)
-function _execfunc_timeout(f::Py, args...; timeout, kwargs...)
-    pyfetch_timeout(f, Returns(missing), timeout, args...; kwargs...)
-end
-# Native functions shouldn't require a timeout
+_execfunc(f, args...; kwargs...) = f(args...; kwargs...)
+_execfunc_timeout(f, args...; timeout, kwargs...) = f(args...; kwargs...)
 _execfunc(f::Function, args...; kwargs...) = f(args...; kwargs...)
 
-@doc "Converts a Python object to a string."
-pytostring(v) = pytruth(v) ? string(v) : ""
-@doc "Get the value of a Python container by key."
-get_py(v::Union{Py,PyDict}, k) = get(v, @pystr(k), pybuiltins.None)
-@doc "Get the value of a Python container by key, with a default value."
-get_py(v::Union{Py,PyDict}, k, def) = get(v, @pystr(k), def)
-@doc "Get the value of a Python container by multiple keys."
-get_py(v::Union{Py,PyDict}, def, keys::Vararg{String}) = begin
-    for k in keys
-        ans = get_py(v, k)
-        pyisnone(ans) || (return ans)
-    end
-    return def
-end
-macro get_py(v, k, def)
-    e = quote
-        @get $v @pystr($k) $def
-    end
-    esc(e)
-end
+get_str(v, k) = something(get(v, string(k), nothing), "") |> string
+get_float(v, k) = Float64(something(get(v, string(k), 0.0), 0.0))
+get_bool(v, k) = something(get(v, string(k), false), false) == true
 
-@doc "Get value of key as a string."
-get_string(v::Union{Py,PyDict}, k) = get_py(v, k) |> pytostring
-@doc "Get value of key as a float."
-get_float(v::Union{Py,PyDict}, k) = get_py(v, k) |> pytofloat
-@doc "Get value of key as a boolean."
-get_bool(v::Union{Py,PyDict}, k) = get_py(v, k) |> pytruth
-
-function _option_float(o::Union{Py,PyDict}, k; nonzero=false)
-    let v = get_py(o, k)
-        if pyisinstance(v, pybuiltins.float)
-            ans = pytofloat(v)
-            if nonzero && iszero(ans)
-            else
-                ans
-            end
+function _option_float(o, k; nonzero=false)
+    v = get(o, string(k), nothing)
+    if v isa Number
+        ans = Float64(v)
+        if nonzero && iszero(ans)
+            nothing
+        else
+            ans
         end
+    else
+        nothing
     end
 end
 
-@doc """ Retrieves a float value from a Python response.
-
-$(TYPEDSIGNATURES)
-
-This function retrieves a float value from a Python response `resp` for a given key `k`. If the key isn't found, it returns a default value `def`. If the key is found and the retrieved value isn't approximately equal to `def`, it logs a warning and returns the retrieved value.
-
-"""
-function get_float(resp::Union{Py,PyDict}, k, def, args...; ai)
+function get_float(resp, k, def, args...; ai)
     v = _option_float(resp, k)
     if isnothing(v)
         def
@@ -76,68 +41,61 @@ function get_float(resp::Union{Py,PyDict}, k, def, args...; ai)
     end
 end
 
-@doc "Get the timestamp from a Python object, by accessing the first of key available."
 get_timestamp(py, keys=("lastUpdateTimestamp", "timestamp")) =
     for k in keys
-        v = get_py(py, k)
-        pyisnone(v) || return v
+        v = get(py, string(k), nothing)
+        v !== nothing && return v
     end
 
-_tryasdate(py) = tryparse(DateTime, rstrip(string(py), 'Z'))
-pytodate(py::Union{Py,PyDict}) = pytodate(py, "lastUpdateTimestamp", "timestamp")
-@doc "Convert a Python object to a date."
-function pytodate(py::Union{Py,PyDict}, keys...)
+_tryasdate(v) = tryparse(DateTime, rstrip(string(v), 'Z'))
+pytodate(py) = pytodate(py, "lastUpdateTimestamp", "timestamp")
+function pytodate(py, keys...)
     v = get_timestamp(py, keys)
-    if pyisinstance(v, pybuiltins.str)
+    if v isa AbstractString
         _tryasdate(v)
-    elseif pyisinstance(v, pybuiltins.int)
-        pyconvert(Int, v) |> dt
-    elseif pyisinstance(v, pybuiltins.float)
-        pyconvert(DFT, v) |> dt
+    elseif v isa Integer
+        Int(v) |> TimeTicks.dt
+    elseif v isa Number
+        DFT(v) |> TimeTicks.dt
     end
 end
-function pytodate(py::Union{Py,PyDict}, ::EIDType, args...; kwargs...)
+function pytodate(py, ::EIDType, args...; kwargs...)
     pytodate(py, args...; kwargs...)
 end
-@doc "Convert a Python object to a date, defaulting to `now()`."
-get_time(v::Union{Py,PyDict}, keys...) = @something pytodate(v, keys...) now()
+get_time(v, keys...) = @something pytodate(v, keys...) now()
 
-_pystrsym(v::String) = @pystr(uppercase(v))
-_pystrsym(v::Symbol) = @pystr(uppercase(string(v)))
-_pystrsym(ai::AssetInstance) = @pystr(ai.bc)
+_pystrsym(v::String) = uppercase(v)
+_pystrsym(v::Symbol) = uppercase(string(v))
+_pystrsym(ai::AssetInstance) = ai.bc
 
-_ccxtordertype(::ot.LimitOrderType) = @pyconst "limit"
-_ccxtordertype(::ot.MarketOrderType) = @pyconst "market"
-_ccxtorderside(::BySide{Buy}) = @pyconst "buy"
-_ccxtorderside(::BySide{Sell}) = @pyconst "sell"
-_ccxtobside(::BySide{Buy}) = @pyconst "bids"
-_ccxtobside(::BySide{Sell}) = @pyconst "asks"
-_ccxtorderside(::Union{AnyBuyOrder,Type{<:AnyBuyOrder}}) = @pyconst "buy"
-_ccxtorderside(::Union{AnySellOrder,Type{<:AnySellOrder}}) = @pyconst "sell"
-_ccxtmarginmode(::IsolatedMargin) = @pyconst "isolated"
-_ccxtmarginmode(::NoMargin) = pybuiltins.None
-_ccxtmarginmode(::CrossMargin) = @pyconst "cross"
+_ccxtordertype(::ot.LimitOrderType) = "limit"
+_ccxtordertype(::ot.MarketOrderType) = "market"
+_ccxtorderside(::BySide{Buy}) = "buy"
+_ccxtorderside(::BySide{Sell}) = "sell"
+_ccxtobside(::BySide{Buy}) = "bids"
+_ccxtobside(::BySide{Sell}) = "asks"
+_ccxtorderside(::Union{AnyBuyOrder,Type{<:AnyBuyOrder}}) = "buy"
+_ccxtorderside(::Union{AnySellOrder,Type{<:AnySellOrder}}) = "sell"
+_ccxtmarginmode(::IsolatedMargin) = "isolated"
+_ccxtmarginmode(::NoMargin) = nothing
+_ccxtmarginmode(::CrossMargin) = "cross"
 _ccxtmarginmode(v) = marginmode(v) |> _ccxtmarginmode
 
-@doc "Convert a ccxt order type to a LiveMode order type."
 ordertype_fromccxt(resp, eid::EIDType) =
     let v = resp_order_type(resp, eid)
-        if pyeq(Bool, v, @pyconst "market")
+        if string(v) == "market"
             if resp_order_reduceonly(resp, eid)
                 ot.ForcedOrderType
             else
                 ot.MarketOrderType
             end
-        elseif pyeq(Bool, v, @pyconst "limit")
+        elseif string(v) == "limit"
             ordertype_fromtif(resp, eid)
         else
-            # when CCXT doesn't fill the order type
-            # we use the type from our side of the request
             nothing
         end
     end
 
-@doc "Convert a Planar order type to a ccxt time-in-force string."
 function _ccxttif(exc, type)
     if type <: AnyPostOnlyOrder
         @assert has(exc, :createPostOnlyOrder) "Exchange $(nameof(exc)) doesn't support post only orders."
@@ -156,38 +114,35 @@ function _ccxttif(exc, type)
     end
 end
 
-@doc "Convert a ccxt time-in-force string to a Planar order type."
-ordertype_fromtif(o::Py, eid::EIDType) =
+ordertype_fromtif(o, eid::EIDType) =
     let tif = resp_order_tif(o, eid)
-        if pyeq(Bool, tif, @pyconst("PO"))
+        if tif == "PO" || string(tif) == "PO"
             ot.PostOnlyOrderType
-        elseif pyeq(Bool, tif, @pyconst("GTC"))
+        elseif tif == "GTC" || string(tif) == "GTC"
             ot.GTCOrderType
-        elseif pyeq(Bool, tif, @pyconst("FOK"))
+        elseif tif == "FOK" || string(tif) == "FOK"
             ot.FOKOrderType
-        elseif pyeq(Bool, tif, @pyconst("IOC"))
+        elseif tif == "IOC" || string(tif) == "IOC"
             ot.IOCOrderType
         end
     end
 
-@doc "Convert a ccxt order side to a Planar order side."
-_orderside(o::Union{Py,PyDict}, eid) =
+_orderside(o, eid) =
     let v = resp_order_side(o, eid)
-        if pyeq(Bool, v, @pyconst("buy"))
+        if string(v) == "buy"
             Buy
-        elseif pyeq(Bool, v, @pyconst("sell"))
+        elseif string(v) == "sell"
             Sell
         end
     end
 
-@doc "Get the order id from a ccxt order object as a string."
-_orderid(o::Union{Py,PyDict}, eid::EIDType) =
+_orderid(o, eid::EIDType) =
     let v = resp_order_id(o, eid)
-        if pyisinstance(v, pybuiltins.str)
+        if v isa AbstractString
             return string(v)
         else
             v = resp_order_clientid(o, eid)
-            if pyisinstance(v, pybuiltins.str)
+            if v isa AbstractString
                 return string(v)
             end
         end
@@ -197,9 +152,8 @@ function _checkordertype(exc, sym)
     @assert has(exc, sym) "Exchange $(nameof(exc)) doesn't support $sym orders."
 end
 
-@doc "Get the ccxt order type string from a Planar order type."
 function _ccxtordertype(exc, type)
-    @pystr if type <: AnyLimitOrder
+    if type <: AnyLimitOrder
         _checkordertype(exc, :createLimitOrder)
         "limit"
     elseif type <: AnyMarketOrder
@@ -210,19 +164,15 @@ function _ccxtordertype(exc, type)
     end
 end
 
-@doc "Get the ccxt exchange specific time-in-force value."
 time_in_force_value(::Exchange, v) = v
-@doc "Get the ccxt exchange specific time-in-force key."
 time_in_force_key(::Exchange) = "timeInForce"
 
-@doc "Tests if a ccxt order object is filled."
-function resp_isfilled(resp::Union{Py,PyDict}, ::EIDType)
+function resp_isfilled(resp, ::EIDType)
     get_float(resp, "filled") == get_float(resp, "amount") &&
         iszero(get_float(resp, "remaining"))
 end
 
-@doc "Tests if a ccxt order object is synced by comparing filled amount and trades."
-function isorder_synced(o, ai, resp::Union{Py,PyDict}, eid::EIDType=exchangeid(ai))
+function isorder_synced(o, ai, resp, eid::EIDType=exchangeid(ai))
     @debug "is order synced:" _module = LogSyncOrder filled_amount(o) resp_order_filled(
         resp, eid
     ) resp_order_trades(resp, eid)
@@ -244,14 +194,13 @@ function isorder_synced(o, ai, resp::Union{Py,PyDict}, eid::EIDType=exchangeid(a
     return v
 end
 
-@doc "Determine the Planar order side from a ccxt order object."
 function _ccxt_sidetype(
     resp, eid::EIDType; o=nothing, getter=resp_trade_side, def::Type{<:OrderSide}=Sell
 )::Type{<:OrderSide}
     side = getter(resp, eid)
-    if pyeq(Bool, side, @pyconst("buy"))
+    if string(side) == "buy"
         Buy
-    elseif pyeq(Bool, side, @pyconst("sell"))
+    elseif string(side) == "sell"
         Sell
     elseif applicable(orderside, o)
         orderside(o)
@@ -260,29 +209,29 @@ function _ccxt_sidetype(
     end
 end
 
-_ccxtisstatus(status::String, what) = pyeq(Bool, @pystr(status), @pystr(what))
-function _ccxtisstatus(resp::Py, statuses::Vararg{String})
+_ccxtisstatus(status::String, what) = status == what
+function _ccxtisstatus(resp, statuses::Vararg{String})
     this_statuses = if isempty(statuses)
         ("open", "closed", "canceled", "rejected", "expired")
     else
         statuses
     end
-    any(x -> _ccxtisstatus(x, resp), this_statuses)
+    s = string(resp)
+    any(x -> s == x, this_statuses)
 end
 function _ccxtisstatus(resp, status::String, eid::EIDType)
-    pyeq(Bool, resp_order_status(resp, eid), @pystr(status))
+    string(resp_order_status(resp, eid)) == status
 end
 function _ccxtisstatus(resp, eid::EIDType)
     _ccxtisstatus(resp_order_status(resp, eid))
 end
-@doc "Tests if a ccxt order object is open."
-_ccxtisopen(resp, eid::EIDType) = pyeq(Bool, resp_order_status(resp, eid), @pyconst("open"))
-_ccxtisopen(resp, eid::EIDType, ::Val{:status}) = let status = resp_order_status(resp, eid)
-    (pyeq(Bool, status, @pyconst("open")), status)
+_ccxtisopen(resp, eid::EIDType) = string(resp_order_status(resp, eid)) == "open"
+function _ccxtisopen(resp, eid::EIDType, ::Val{:status})
+    status = string(resp_order_status(resp, eid))
+    (status == "open", status)
 end
-@doc "Tests if a ccxt order object is closed."
 function _ccxtisclosed(resp, eid::EIDType)
-    pyeq(Bool, resp_order_status(resp, eid), @pyconst("closed"))
+    string(resp_order_status(resp, eid)) == "closed"
 end
 
 balance_type(s::NoMarginStrategy) = attr(s, :balance_type, :spot)
@@ -290,59 +239,59 @@ balance_type(s::MarginStrategy) = attr(s, :balance_type, :swap)
 
 function _ccxt_balance_args(s, kwargs)
     params, rest = split_params(kwargs)
-    @lget! params "type" @pystr(balance_type(s))
+    @lget! params "type" string(balance_type(s))
     (; params, rest)
 end
 
 resp_trade_cost(resp, ::EIDType)::DFT = get_float(resp, "cost")
 resp_trade_amount(resp, ::EIDType)::DFT = get_float(resp, Trf.amount)
-resp_trade_amount(resp, ::EIDType, ::Type{Py}) = get_py(resp, Trf.amount)
+resp_trade_amount(resp, ::EIDType, ::Type{Any}) = get(resp, Trf.amount, nothing)
 resp_trade_price(resp, ::EIDType)::DFT = get_float(resp, Trf.price)
-resp_trade_price(resp, ::EIDType, ::Type{Py}) = get_py(resp, Trf.price)
-resp_trade_timestamp(resp, ::EIDType) = get_py(resp, Trf.timestamp, @pyconst(0))
+resp_trade_price(resp, ::EIDType, ::Type{Any}) = get(resp, Trf.price, nothing)
+resp_trade_timestamp(resp, ::EIDType) = something(get(resp, Trf.timestamp, 0), 0)
 resp_trade_timestamp(resp, ::EIDType, ::Type{DateTime}) = get_time(resp)
-resp_trade_symbol(resp, ::EIDType) = get_py(resp, Trf.symbol, @pyconst(""))
-resp_trade_id(resp, ::EIDType) = get_py(resp, Trf.id, @pyconst(""))
-resp_trade_side(resp, ::EIDType) = get_py(resp, Trf.side)
-resp_trade_fee(resp, ::EIDType) = get_py(resp, Trf.fee)
-resp_trade_fees(resp, ::EIDType) = get_py(resp, Trf.fees)
-resp_trade_order(resp, ::EIDType) = get_py(resp, Trf.order)
-resp_trade_order(resp, ::EIDType, ::Type{String}) = get_py(resp, Trf.order) |> pytostring
-resp_trade_type(resp, ::EIDType) = get_py(resp, Trf.type)
-resp_trade_tom(resp, ::EIDType) = get_py(resp, Trf.takerOrMaker)
-resp_trade_info(resp, ::EIDType) = get_py(resp, "info")
+resp_trade_symbol(resp, ::EIDType) = something(get(resp, Trf.symbol, ""), "")
+resp_trade_id(resp, ::EIDType) = something(get(resp, Trf.id, ""), "")
+resp_trade_side(resp, ::EIDType) = get(resp, Trf.side, nothing)
+resp_trade_fee(resp, ::EIDType) = get(resp, Trf.fee, nothing)
+resp_trade_fees(resp, ::EIDType) = get(resp, Trf.fees, nothing)
+resp_trade_order(resp, ::EIDType) = get(resp, Trf.order, nothing)
+resp_trade_order(resp, ::EIDType, ::Type{String}) = string(something(get(resp, Trf.order, ""), ""))
+resp_trade_type(resp, ::EIDType) = get(resp, Trf.type, nothing)
+resp_trade_tom(resp, ::EIDType) = get(resp, Trf.takerOrMaker, nothing)
+resp_trade_info(resp, ::EIDType) = get(resp, "info", nothing)
 
 resp_order_remaining(resp, ::EIDType)::DFT = get_float(resp, "remaining")
-resp_order_remaining(resp, ::EIDType, ::Type{Py}) = get_py(resp, "remaining")
+resp_order_remaining(resp, ::EIDType, ::Type{Any}) = get(resp, "remaining", nothing)
 resp_order_filled(resp, ::EIDType)::DFT = get_float(resp, "filled")
-resp_order_filled(resp, ::EIDType, ::Type{Py}) = get_py(resp, "filled")
+resp_order_filled(resp, ::EIDType, ::Type{Any}) = get(resp, "filled", nothing)
 resp_order_cost(resp, ::EIDType)::DFT = get_float(resp, "cost")
-resp_order_cost(resp, ::EIDType, ::Type{Py}) = get_py(resp, "cost")
+resp_order_cost(resp, ::EIDType, ::Type{Any}) = get(resp, "cost", nothing)
 resp_order_average(resp, ::EIDType)::DFT = get_float(resp, "average_price")
-resp_order_average(resp, ::EIDType, ::Type{Py}) = get_py(resp, "average_price")
-resp_order_price(resp, ::EIDType, ::Type{Py}) = get_py(resp, "price")
+resp_order_average(resp, ::EIDType, ::Type{Any}) = get(resp, "average_price", nothing)
+resp_order_price(resp, ::EIDType, ::Type{Any}) = get(resp, "price", nothing)
 function resp_order_price(resp, ::EIDType, args...; kwargs...)::DFT
     get_float(resp, "price", args...; kwargs...)
 end
-resp_order_amount(resp, ::EIDType, ::Type{Py}) = get_py(resp, "amount")
+resp_order_amount(resp, ::EIDType, ::Type{Any}) = get(resp, "amount", nothing)
 function resp_order_amount(resp, ::EIDType, args...; kwargs...)::DFT
     get_float(resp, "amount", args...; kwargs...)
 end
-resp_order_trades(resp, ::EIDType) = get_py(resp, (), "trades")
-resp_order_type(resp, ::EIDType) = get_py(resp, "type")
-resp_order_tif(resp, ::EIDType) = get_py(resp, "timeInForce")
-resp_order_lastupdate(resp, ::EIDType) = get_py(resp, "lastUpdateTimestamp")
+resp_order_trades(resp, ::EIDType) = get(resp, "trades", nothing)
+resp_order_type(resp, ::EIDType) = something(get(resp, "type", ""), "")
+resp_order_tif(resp, ::EIDType) = something(get(resp, "timeInForce", ""), "")
+resp_order_lastupdate(resp, ::EIDType) = get(resp, "lastUpdateTimestamp", nothing)
 resp_order_timestamp(resp, ::EIDType) = pytodate(resp)
-resp_order_timestamp(resp, ::EIDType, ::Type{Py}) = get_py(resp, "timestamp")
-resp_order_id(resp, ::EIDType) = get_py(resp, "id")
+resp_order_timestamp(resp, ::EIDType, ::Type{Any}) = get(resp, "timestamp", nothing)
+resp_order_id(resp, ::EIDType) = something(get(resp, "id", ""), "")
 resp_order_id(resp, eid::EIDType, ::Type{String})::String =
-    resp_order_id(resp, eid) |> pytostring
-resp_order_clientid(resp, ::EIDType) = get_py(resp, "clientOrderId")
-resp_order_symbol(resp, ::EIDType) = get_py(resp, "symbol", @pyconst(""))
-resp_order_side(resp, ::EIDType) = get_py(resp, Trf.side)
-resp_order_status(resp, ::EIDType) = get_py(resp, "status")
+    string(something(resp_order_id(resp, eid), ""))
+resp_order_clientid(resp, ::EIDType) = something(get(resp, "clientOrderId", ""), "")
+resp_order_symbol(resp, ::EIDType) = something(get(resp, "symbol", ""), "")
+resp_order_side(resp, ::EIDType) = get(resp, Trf.side, nothing)
+resp_order_status(resp, ::EIDType) = something(get(resp, "status", ""), "")
 function resp_order_status(resp, eid::EIDType, ::Type{String})
-    resp_order_status(resp, eid) |> pytostring
+    string(something(resp_order_status(resp, eid), ""))
 end
 resp_order_loss_price(resp, ::EIDType)::Option{DFT} =
     _option_float(resp, "stopLossPrice"; nonzero=true)
@@ -352,17 +301,17 @@ resp_order_stop_price(resp, ::EIDType)::Option{DFT} =
     _option_float(resp, "stopPrice"; nonzero=true)
 resp_order_trigger_price(resp, ::EIDType)::Option{DFT} =
     _option_float(resp, "triggerPrice"; nonzero=true)
-resp_order_info(resp, ::EIDType) = get_py(resp, "info")
-resp_order_reduceonly(resp, ::EIDType) = pytruth(get_py(resp, "reduceOnly"))
+resp_order_info(resp, ::EIDType) = get(resp, "info", nothing)
+resp_order_reduceonly(resp, ::EIDType) = something(get(resp, "reduceOnly", false), false) == true
 
-resp_position_symbol(resp, ::EIDType) = get_py(resp, Pos.symbol)
+resp_position_symbol(resp, ::EIDType) = get(resp, Pos.symbol, nothing)
 function resp_position_symbol(resp, ::EIDType, ::Type{String})
-    get_py(resp, Pos.symbol) |> pytostring
+    string(something(get(resp, Pos.symbol, ""), ""))
 end
 resp_position_contracts(resp, ::EIDType)::DFT = get_float(resp, Pos.contracts)
 resp_position_entryprice(resp, ::EIDType)::DFT = get_float(resp, Pos.entryPrice)
 resp_position_mmr(resp, ::EIDType)::DFT = get_float(resp, "maintenanceMarginPercentage")
-resp_position_side(resp, ::EIDType) = get_py(resp, @pyconst(""), Pos.side).lower()
+resp_position_side(resp, ::EIDType) = lowercase(string(something(get(resp, Pos.side, ""), "")))
 resp_position_unpnl(resp, ::EIDType)::DFT = get_float(resp, Pos.unrealizedPnl)
 resp_position_leverage(resp, ::EIDType)::DFT = get_float(resp, Pos.leverage)
 resp_position_liqprice(resp, ::EIDType)::DFT = get_float(resp, Pos.liquidationPrice)
@@ -375,37 +324,43 @@ resp_position_lastprice(resp, ::EIDType)::DFT = get_float(resp, Pos.lastPrice)
 resp_position_markprice(resp, ::EIDType)::DFT = get_float(resp, Pos.markPrice)
 resp_position_hedged(resp, ::EIDType)::Bool = get_bool(resp, Pos.hedged)
 resp_position_timestamp(resp, ::EIDType)::DateTime = get_time(resp)
-resp_position_margin_mode(resp, ::EIDType) = get_py(resp, Pos.marginMode)
+resp_position_margin_mode(resp, ::EIDType) = get(resp, Pos.marginMode, nothing)
 function resp_position_margin_mode(resp, eid::EIDType, ::Val{:parsed})
     v = resp_position_margin_mode(resp, eid)
-    if pyisnone(v)
+    if isnothing(v)
         nothing
     else
         marginmode(v)
     end
 end
 
-resp_code(resp, ::EIDType) = get_py(resp, "code")
-resp_ticker_price(resp, ::EIDType, k) = get_py(resp, k)
-resp_event_type(resp, eid::EIDType)::Type{<:Union{ot.ExchangeEvent,ot.Order,ot.Trade}} =
+resp_code(resp, ::EIDType) = get(resp, "code", nothing)
+resp_ticker_price(resp, ::EIDType, k) = get(resp, string(k), nothing)
+resp_event_type(resp, eid::EIDType) =
     begin
-        if haskey(resp, @pyconst("clientOrderId"))
-            if iszero(resp_order_amount(resp, eid))
-                ot.ExchangeEvent{eid}
-            else
-                ot.Order
-            end
-        elseif haskey(resp, @pyconst("order"))
-            ot.Trade
-        elseif haskey(resp, @pyconst("contracts"))
-            ot.PositionEvent
-        elseif haskey(resp, @pyconst("total")) &&
-            haskey(resp, @pyconst("free")) &&
-            haskey(resp, @pyconst("used"))
-            ot.BalanceUpdated
-        elseif islist(resp) && !isempty(resp) && let v = first(resp)
-            pyisint(first(v)) && length(v) == 6
+        if islist(resp) && !isempty(resp) && let v = first(resp)
+            first(v) isa Integer && length(v) == 6
         end
             ot.OHLCVUpdated
+        elseif applicable(haskey, resp, "clientOrderId")
+            if haskey(resp, "clientOrderId")
+                if iszero(resp_order_amount(resp, eid))
+                    ot.ExchangeEvent{eid}
+                else
+                    ot.Order
+                end
+            elseif haskey(resp, "order")
+                ot.Trade
+            elseif haskey(resp, "contracts")
+                ot.PositionEvent
+            elseif haskey(resp, "total") &&
+                haskey(resp, "free") &&
+                haskey(resp, "used")
+                ot.BalanceUpdated
+            else
+                nothing
+            end
+        else
+            nothing
         end
     end

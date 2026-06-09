@@ -47,8 +47,8 @@ Base.getindex(bal::BalanceDict, sym::Symbol) = bal.assets[sym]
 Base.getindex(bal::BalanceDict, ai::AssetInstance) = getindex(bal, bc(ai))
 Base.getindex(bal::BalanceDict, c::AbstractCash) = getindex(bal, nameof(c))
 Base.getindex(bal::BalanceDict, s::Strategy) = getindex(bal, s.cash)
-Base.setindex!(bal::BalanceDict, sym::Symbol, v) = setindex!(bal.assets, sym, v)
-Base.setindex!(bal::BalanceDict, ai::AssetInstance, v) = setindex!(bal, bc(ai), v)
+Base.setindex!(bal::BalanceDict, v, sym::Symbol) = setindex!(bal.assets, v, sym)
+Base.setindex!(bal::BalanceDict, v, ai::AssetInstance) = setindex!(bal, v, bc(ai))
 Base.delete!(bal::BalanceDict, sym::Symbol) = delete!(bal.assets, sym)
 Base.delete!(bal::BalanceDict, ai::AssetInstance) = delete!(bal, bc(ai))
 Base.empty(::Type{<:BalanceDict{T}}) where {T} = BalanceDict{T}()
@@ -127,12 +127,12 @@ end
 $(TYPEDSIGNATURES)
 
 The function `_handle_bal_resp` takes a response `resp` from a balance fetch operation.
-If the response is a `PyException`, it returns `nothing`.
+If the response is an `Exception`, it returns `nothing`.
 If the response is a dictionary, it returns the response as is.
 For any other type of response, it logs an unhandled response message and returns `nothing`.
 """
 function _handle_bal_resp(resp)
-    if resp isa PyException
+    if resp isa Exception
         @debug "force fetch bal: error" _module = LogBalance resp
         return nothing
     elseif isdict(resp)

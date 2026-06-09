@@ -123,12 +123,14 @@ end
 
 function api_call(client::GatewayClient, method::String, path::String, exchange_id::String; 
     query=nothing, body=nothing)
+    _ensure_gateway_running()
     resp = make_request(client, method, path, exchange_id; query, body)
     get_data(resp)
 end
 
 function api_call(client::GatewayClient, method::String, path::String; 
     query=nothing, body=nothing)
+    _ensure_gateway_running()
     resp = make_request(client, method, path; query, body)
     get_data(resp)
 end
@@ -292,6 +294,51 @@ end
 
 const _default_client = Ref{GatewayClient}()
 const _gateway_pid = Ref{Union{Int, Nothing}}(nothing)
+const _gateway_initialized = Ref(false)
+const _gateway_init_lock = ReentrantLock()
+
+function _check_gateway_up()
+    if isassigned(_gateway_pid) && _gateway_pid[] !== nothing
+        try
+            run(pipeline(`kill -0 $(_gateway_pid[])`; stderr=devnull))
+            return true
+        catch
+            _gateway_pid[] = nothing
+        end
+    end
+    if isfile(REST_GATEWAY_PIDFILE)
+        pid = try
+            parse(Int, split(strip(read(REST_GATEWAY_PIDFILE, String)))[1])
+        catch
+            nothing
+        end
+        if pid !== nothing
+            try
+                run(pipeline(`kill -0 $pid`; stderr=devnull))
+                _gateway_pid[] = pid
+                return true
+            catch
+            end
+        end
+    end
+    try
+        return ping(GatewayClient(; timeout=2.0))
+    catch
+        return false
+    end
+end
+
+function _ensure_gateway_running()
+    get(ENV, "CCXT_GATEWAY_DISABLE", "") == "true" && return nothing
+    _gateway_initialized[] && return nothing
+    lock(_gateway_init_lock) do
+        _gateway_initialized[] && return nothing
+        if !_check_gateway_up()
+            spawn_gateway()
+        end
+        _gateway_initialized[] = true
+    end
+end
 
 # Paths for PID and lock files — computed relative to this file's location
 function _rest_gateway_dir()
@@ -337,21 +384,59 @@ function _find_gateway_file(relpath::String)
     error("File not found: $relpath (searched: $(join(unique(paths), ", ")))")
 end
 
+function _check_python_works(python_exe::String)
+    try
+        run(pipeline(`$python_exe -c "import decimal; import asyncio; import json"`; stderr=devnull))
+        return true
+    catch e
+        @debug "Python check failed for $python_exe: $e"
+        return false
+    end
+end
+
+function _fix_venv_pyvenv_cfg(venv_cfg::String)
+    system_python = _find_system_python()
+    system_python === nothing && return false
+    system_bin_dir = dirname(system_python)
+    try
+        cfg = read(venv_cfg, String)
+        new_home = "home = $system_bin_dir"
+        if occursin(r"^home\s*="m, cfg)
+            cfg = replace(cfg, r"^home\s*=.*"m => new_home)
+        else
+            cfg = new_home * "\n" * cfg
+        end
+        write(venv_cfg, cfg)
+        @debug "Fixed pyvenv.cfg home -> $system_bin_dir"
+        return true
+    catch e
+        @debug "Failed to fix pyvenv.cfg: $e"
+        return false
+    end
+end
+
 function _ensure_gateway_venv(gateway_dir::String)
     venv_dir = normpath(joinpath(gateway_dir, ".venv"))
     venv_python = normpath(joinpath(venv_dir, "bin", "python"))
     venv_cfg = normpath(joinpath(venv_dir, "pyvenv.cfg"))
-    # Fast path: venv is fully intact
-    if isfile(venv_python)
-        @debug "Venv python found at $venv_python"
+    # Fast path: venv is fully intact AND functional
+    if isfile(venv_python) && _check_python_works(venv_python)
+        @debug "Venv python found and verified at $venv_python"
         return venv_python
     end
-    # Venv dir exists but python symlink is broken — repair in place
+    # Venv exists but Python is broken — try repair
     if isdir(venv_dir) && isfile(venv_cfg)
-        @debug "Venv exists at $venv_dir but python is broken; repairing symlink..."
+        @debug "Venv exists at $venv_dir but Python is broken; attempting repair..."
+        # First check: pyvenv.cfg might point to a broken uv-managed Python
+        # Try fixing it to point to the system Python instead
+        if _fix_venv_pyvenv_cfg(venv_cfg) && _check_python_works(venv_python)
+            @debug "Venv repaired via pyvenv.cfg fix at $venv_python"
+            return venv_python
+        end
+        # Second check: symlink might be broken — repair symlink
         _repair_venv_python(venv_dir)
-        if isfile(venv_python)
-            @debug "Venv python repaired at $venv_python"
+        if isfile(venv_python) && _check_python_works(venv_python)
+            @debug "Venv repaired via symlink fix at $venv_python"
             return venv_python
         end
     end
@@ -363,27 +448,66 @@ function _ensure_gateway_venv(gateway_dir::String)
     end
     try
         @debug "Trying uv venv..."
-        run(`uv venv $venv_dir`)
+        run(`uv venv --clear $venv_dir`)
         run(`uv pip install --python $venv_dir --quiet -e $gateway_dir`)
         @debug "Venv created with uv successfully"
+        if !_check_python_works(venv_python)
+            @debug "uv venv produced broken Python, falling back to python3..."
+            error("uv Python is broken")
+        end
     catch e
-        @debug "uv failed ($e), falling back to python3 -m venv..."
-        run(`python3 -m venv $venv_dir`)
-        run(`$venv_dir/bin/pip install --quiet --no-input -e $gateway_dir`)
-        @debug "Venv created with python3 successfully"
+        @debug "uv approach failed ($e), falling back to python3 -m venv..."
+        try rm(venv_dir; recursive=true) catch end
+        try
+            run(`python3 -m venv $venv_dir`)
+            run(`$venv_dir/bin/pip install --quiet --no-input -e $gateway_dir`)
+            @debug "Venv created with python3 successfully"
+        catch e2
+            @debug "python3 -m venv failed ($e2), trying without ensurepip..."
+            try rm(venv_dir; recursive=true) catch end
+            run(`python3 -m venv --without-pip $venv_dir`)
+            run(`uv pip install --python $venv_dir --quiet -e $gateway_dir`)
+            @debug "Venv created with python3 (--without-pip) + uv pip install"
+        end
     end
     isfile(venv_python) || error("Failed to create venv at $venv_dir")
+    _check_python_works(venv_python) || error("Created venv at $venv_dir has broken Python (system python3 may be missing modules)")
     return venv_python
 end
 
 function _repair_venv_python(venv_dir::String)
+    # Remove venv-internal symlinks to avoid loops (e.g. python3 -> python)
+    # but keep the main `python` symlink if it points to a valid real file.
+    for name in ["python3", "python3.11", "python3.12", "python3.13", "python3.14"]
+        candidate = normpath(joinpath(venv_dir, "bin", name))
+        if islink(candidate)
+            target = try readlink(candidate) catch; "" end
+            if startswith(target, "python") || !isfile(candidate)
+                try rm(candidate) catch end
+            end
+        end
+    end
+    # If `python` exists, check it resolves to a working interpreter
+    python_link = normpath(joinpath(venv_dir, "bin", "python"))
+    if isfile(python_link) && !islink(python_link)
+        return  # Real python binary exists — nothing to repair
+    end
+    if islink(python_link)
+        target = try readlink(python_link) catch; "" end
+        # If it points to a relative name within the venv, it may be stale
+        if startswith(target, "python")
+            try rm(python_link) catch end
+        elseif isfile(python_link)
+            return  # Absolute symlink to a working python — OK
+        end
+    end
+    # Try each candidate — must be a REAL file (not a venv-internal symlink)
     for candidate in ["python3", "python3.11", "python3.12", "python3.13", "python3.14"]
         exe = normpath(joinpath(venv_dir, "bin", candidate))
-        if isfile(exe)
+        if isfile(exe) && !islink(exe)
             @debug "Found valid python at $exe; symlinking bin/python -> $candidate"
-            broken = normpath(joinpath(venv_dir, "bin", "python"))
-            try rm(broken) catch end
-            try symlink(candidate, broken) catch end
+            try rm(python_link) catch end
+            try symlink(candidate, python_link) catch end
             return
         end
     end
@@ -391,9 +515,8 @@ function _repair_venv_python(venv_dir::String)
     system_python = _find_system_python()
     if system_python !== nothing
         @debug "Symlinking bin/python -> $system_python"
-        broken = normpath(joinpath(venv_dir, "bin", "python"))
-        try rm(broken) catch end
-        try symlink(system_python, broken) catch end
+        try rm(python_link) catch end
+        try symlink(system_python, python_link) catch end
     end
 end
 

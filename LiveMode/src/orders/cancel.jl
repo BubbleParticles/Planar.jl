@@ -28,20 +28,20 @@ function live_cancel(s, ai; ids=(), side=BuyOrSell, confirm=false, since=nothing
     end
     done = try
         resp = func(s, ai; kwargs...)
-        if resp isa PyException
+        if resp isa Exception
             @warn "live cancel: failed" ai = raw(ai) resp @caller
             false
         elseif isnothing(resp)
             @debug "live cancel: response is nothing" _module = LogCancelOrder @caller
             true
-        elseif pyisinstance(resp, pybuiltins.dict)
+        elseif isdict(resp)
             if resptobool(exchange(ai), resp)
                 true
             else
                 @warn "live cancel: failed (wrong status code)" ai = raw(ai) resp
                 false
             end
-        elseif pyisinstance(resp, pybuiltins.list)
+        elseif islist(resp)
             true
         else
             @warn "live cancel: failed (unhandled response)" ai = raw(ai) resp
@@ -64,7 +64,7 @@ function live_cancel(s, ai; ids=(), side=BuyOrSell, confirm=false, since=nothing
         else
             side_str = _ccxtorderside(side)
             for o in open_orders
-                pyeq(Bool, resp_order_side(o, eid), side_str) && begin
+                string(resp_order_side(o, eid)) == side_str && begin
                     @warn "live cancel: confirm failed" side
                     return false
                 end

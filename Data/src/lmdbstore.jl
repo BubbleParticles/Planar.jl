@@ -100,7 +100,7 @@ za._pdict(d::LMDBDictStore, p) = dictview(d.a, keys(d.a; prefix=_withsuffix(p)))
 $(TYPEDSIGNATURES)
 """
 get_zgroup(store::za.AbstractStore) = begin
-    if !Zarr.is_zgroup(store, "")
+    if !is_zgroup(store, "")
         zgroup(store, "")
     end
     @debug "Data: opening store $store"

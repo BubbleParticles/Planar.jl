@@ -1,7 +1,7 @@
 using ..Data: df!, _contiguous_ts, nrow, save_ohlcv, zi, check_all_flag, snakecased
 using ..Data.DFUtils: firstdate, lastdate, copysubs!, addcols!
 using ..Data.DataFramesMeta
-using ..Fetch.Exchanges.ExchangeTypes: params
+
 using ..Fetch.Exchanges: Exchange, account, getexchange!
 using ..Fetch.Exchanges.Ccxt: _multifunc, Py
 using ..Fetch.Exchanges.Python: islist, isdict, StreamHandler

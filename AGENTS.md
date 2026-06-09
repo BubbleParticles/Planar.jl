@@ -233,7 +233,7 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 
 19. **Use relative paths for local package dependencies in test Manifests**: When running `Pkg.develop(PackageSpec(path=...))` for a local package in a test environment, pass a relative path (e.g. `"../Foo"` from `Pkg/test/`) rather than an absolute one like `"/project/Foo"`. Absolute paths hardcode the container layout and break when the repository is relocated. Relative paths are resolved from the `test/` directory automatically.
 
-20. **Minimize test deps with `const` aliases**: When reducing a test package's direct dependencies, use `const Foo = Instances.ParentModule.Bar` aliases instead of `using Bar` to access packages that exist only as transitive deps. Direct `using Bar` in a Pkg.test() environment may fail with "Package not found in current path" because the test environment only guarantees direct deps on LOAD_PATH. Prefer reaching through already-loaded parent modules (e.g. `const HTTP = Instances.Exchanges.ExchangeTypes.CcxtGateway.HTTP`).
+20. **Minimize test deps with `const` aliases or qualified `using`**: When reducing a test package's direct dependencies, use `const Foo = Instances.ParentModule.Bar` aliases or `using Instances.ParentModule.Bar: symbol` instead of `using Bar` to access packages that exist only as transitive deps. Direct `using Bar` in a Pkg.test() environment may fail with "Package not found in current path" because the test environment only guarantees direct deps on LOAD_PATH. Prefer reaching through already-loaded parent modules (e.g. `const HTTP = Instances.Exchanges.ExchangeTypes.CcxtGateway.HTTP`, `using Data.Zarr: ZArray`, `using Data.DataFrames`).
 
 21. **Search for orphan files across ALL included `.jl` files, not just `module.jl`**: When checking if a source file is orphaned, grep for `include("filename")` across every `.jl` file in `src/`, not only `module.jl`. Files can be included from non-root files (e.g. `impl.jl` includes `dispatch.jl`, `load.jl` includes `candles.jl`). A file missing from `module.jl` is not necessarily orphaned if it's included transitively.
 
@@ -270,6 +270,18 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 15. **Importing macro-generated bindings triggers undeclared warnings**: A bare function like `tf` that is only defined as a side effect of a macro (`@tf_str`) may cause `WARNING: Imported binding TimeTicks.tf was undeclared at import time` when imported via `using M: tf`. Only import the macro itself (`@tf_str`) and omit the macro-generated binding. The `@tf_str` macro call syntax (`tf"..."`) does not require the bare `tf` name to be in scope.
 
 16. **`const Dates = Parent.Dates` does not bring Dates' exports into scope**: A `const` alias provides only the module binding. `now()`, `DateTime(...)`, `Second(1)`, `Day(10)` remain undefined — use `Dates.now()`, `Dates.DateTime(...)`, `Dates.Second(1)`, `Dates.Day(10)`. Only `using Dates` (without qualification) or explicit import (`using Dates: now, DateTime`) brings them into scope.
+
+17. **`searchsortedlast` uses `<=` semantics, not `<`**: When computing the exclusive upper bound for a date-range delete on a sorted ZArray, `searchsortedlast` finds the last element `<=` target, but you need the last element `<` target. Use `searchsortedfirst(view, val, ...) - 1` to get the correct view index, then convert to global index with `view_idx + from_idx - 2`.
+
+18. **`Metadata` is immutable**: `Zarr.Metadata{T,N,C,F}` is an immutable struct — `za.metadata.fill_value = newval` throws `setfield!: immutable struct`. To test metadata-recovery paths without live data, corrupt the stored JSON in the underlying store (e.g., `store["path/.zarray"] = codeunits(corrupted)`) and reopen.
+
+19. **`DictStore` needs its own `delete!` with `recursive`**: The generic `delete!(store::AbstractStore, ...; recursive=true)` has no specific method for `DictStore`, causing infinite recursion. Provide a method that iterates `_pkeys(store, path)` and deletes each matching key.
+
+20. **`save_data` / `load_data` in Data/series.jl are dead code**: Despite being exported, `save_data` and `load_data` are never called anywhere in the codebase. Their internal `@to_mat` macro (`Matrix{Float64}(data)`) is incompatible with their own `assert first(data)[data_col] isa DateTime` assertion — Matrix{Float64} can't hold DateTimes. Skip testing them during refactoring; focus on the live code paths.
+
+21. **Vendored vs upstream Zarr API diff**: When switching from vendored `Zarr` to upstream, check every function signature. Upstream `is_zarray`/`is_zgroup` require a `ZarrFormat(2)` first argument, while the vendored version accepted just `(store, path)`. Other functions (`zcreate`, `zopen`, `BloscCompressor`, `fill_value_decoding`, `zgroup`, `isemptysub`) share the same API. Verify with `methods(f)` on both versions.
+
+22. **Upstream Zarr v0.10.0 does NOT export `BloscCompressor` or `DictStore`**: Use explicit `using Zarr: BloscCompressor, DictStore` rather than relying on re-export. Non-exported names are still importable via qualified import.
 
 ---
 

@@ -1,6 +1,5 @@
 using .Executors.Instruments: freecash
 using .Executors: @price!, @amount!
-using .Python: pybool
 using .Data: default_value
 
 @doc "Represents a trigger order with fields for the order type, price, and trigger condition."
@@ -14,10 +13,10 @@ The function transforms the order type, price, and trigger price into a Python d
 This dictionary is compatible with the ccxt cryptocurrency trading library.
 """
 function trigger_dict(exc, v)
-    out = pydict()
-    out[@pyconst("type")] = _ccxtordertype(exc, v.type)
-    out[@pyconst("price")] = pyconvert(Py, v.price)
-    out[@pyconst("triggerPrice")] = pyconvert(Py, v.trigger)
+    out = Dict{String,Any}()
+    out["type"] = _ccxtordertype(exc, v.type)
+    out["price"] = v.price
+    out["triggerPrice"] = v.trigger
     out
 end
 
@@ -74,12 +73,8 @@ end
 
 function pygetorconvert!(params, k, v)
     this_v = get(params, k, nothing)
-    if !isnothing(this_v)
-        if !(this_v isa Py)
-            params[k] = @py this_v
-        end
-    else
-        params[k] = @py if v isa Type
+    if isnothing(this_v)
+        params[k] = if v isa Type
             default_value(v)
         else
             v
@@ -148,35 +143,35 @@ function live_send_order(
     exc = exchange(ai)
     side = _ccxtorderside(t)
     type = _ccxtordertype(exc, t)
-    params = PyDict{Py,Py}(@pystr(k) => pyconvert(Py, v) for (k, v) in kwargs)
+    params = Dict{String,Any}(string(k) => v for (k, v) in kwargs)
     tif = _ccxttif(exc, t)
     if !isempty(tif)
-        tif_k = @pystr(time_in_force_key(exc))
-        tif_v = @pystr(time_in_force_value(exc, asset(ai), tif))
+        tif_k = string(time_in_force_key(exc))
+        tif_v = string(time_in_force_value(exc, asset(ai), tif))
         pygetorconvert!(params, tif_k, tif_v)
     end
     function supportmsg(feat)
         @warn "send order: not supported" feat exc = nameof(exc)
     end
 
-    postOnly = @pyconst("postOnly")
-    reduceOnly = @pyconst("reduceOnly")
-    stopLoss = @pyconst("stopLoss")
-    stopLossPrice = @pyconst("stopLossPrice")
-    takeProfitPrice = @pyconst("takeProfitPrice")
-    triggerPrice = @pyconst("triggerPrice")
-    triggerDirection = @pyconst("triggerDirection")
+    postOnly = "postOnly"
+    reduceOnly = "reduceOnly"
+    stopLoss = "stopLoss"
+    stopLossPrice = "stopLossPrice"
+    takeProfitPrice = "takeProfitPrice"
+    triggerPrice = "triggerPrice"
+    triggerDirection = "triggerDirection"
 
     if has(exc, :createPostOnlyOrder)
         pygetorconvert!(params, postOnly, post_only)
-    elseif pyisTrue(get(params, postOnly, false))
+    elseif get(params, postOnly, false) == true
         supportmsg("post only")
         delete!(params, postOnly)
     end
     if s isa MarginStrategy
         if has(exc, :createReduceOnlyOrder)
             pygetorconvert!(params, reduceOnly, reduce_only)
-        elseif pyisTrue(get(params, reduceOnly, false))
+        elseif get(params, reduceOnly, false) == true
             supportmsg("reduce only")
             delete!(params, reduceOnly)
         end
@@ -232,26 +227,26 @@ function live_send_order(
     end
     trailing = if !isnothing(trailing_percent)
         if has(exc, :createTrailingPercentOrder)
-            pygetorconvert!(params, trailingPercent, trailing_percent)
+            pygetorconvert!(params, "trailingPercent", trailing_percent)
         else
             supportmsg("trailing percent order")
         end
     elseif !isnothing(trailing_amount)
         if has(exc, :createTrailingAmountOrder)
-            pygetorconvert!(params, trailingAmount, trailing_amount)
+            pygetorconvert!(params, "trailingAmount", trailing_amount)
         else
             supportmsg("trailing amount order")
         end
     end
     if !isnothing(trailing)
         if !isnothing(trailing_trigger_price)
-            pygetorconvert!(params, trailingTriggerPrice, trailing_trigger_price)
+            pygetorconvert!(params, "trailingTriggerPrice", trailing_trigger_price)
         elseif !isnothing(trailing_trigger_amount)
             if !(price isa Number)
                 @warn "send order: trailing amount order needs price input parameter" price
                 price = lastprice(ai)
             end
-            pygetorconvert!(params, trailingTriggerPrice, price)
+            pygetorconvert!(params, "trailingTriggerPrice", price)
         end
     end
     # start monitoring before sending the create request
@@ -283,7 +278,7 @@ function live_send_order(
             @warn "send order: failed" sym ai exception = resp args params
             dec_pending_orders!(ai)
             resp
-        elseif pyisnone(resp_order_id(resp, exchangeid(ai)))
+        elseif isnothing(resp_order_id(resp, exchangeid(ai)))
             dec_pending_orders!(ai)
             nothing
         else

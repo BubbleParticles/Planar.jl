@@ -116,14 +116,14 @@ function send_orders!(s, ai, updates; orders_byid, events, asset_cond, strategy_
         if updates isa InterruptException
             throw(updates)
         else
-            @ifdebug ispyminor_error(updates) ||
+            @ifdebug (updates isa InvalidStateException) ||
                 @debug "watch orders: fetching error" _module = LogWatchOrder ai updates
             if !iswatch
                 sleep(1)
             end
         end
     else
-        for resp in pylist(updates)
+        for resp in updates
             date = resp_order_timestamp(resp, exchangeid(ai))
             func = () -> handle_order!(s, ai, orders_byid, resp)
             sendrequest!(ai, date, func; events)
@@ -240,15 +240,15 @@ asset_orders_stop_task(s, ai) = asset_orders_stop_task(asset_tasks(ai).byname)
 
 @doc """ Generates a unique enough hash for an order. """
 function _order_kv_hash(resp, eid::EIDType)
-    p1 = resp_order_price(resp, eid, Py)
-    p2 = resp_order_timestamp(resp, eid, Py)
+    p1 = resp_order_price(resp, eid, Any)
+    p2 = resp_order_timestamp(resp, eid, Any)
     p3 = resp_order_stop_price(resp, eid)
     p4 = resp_order_trigger_price(resp, eid)
-    p5 = resp_order_amount(resp, eid, Py)
-    p6 = resp_order_cost(resp, eid, Py)
-    p7 = resp_order_average(resp, eid, Py)
-    p8 = resp_order_filled(resp, eid, Py)
-    p9 = resp_order_remaining(resp, eid, Py)
+    p5 = resp_order_amount(resp, eid, Any)
+    p6 = resp_order_cost(resp, eid, Any)
+    p7 = resp_order_average(resp, eid, Any)
+    p8 = resp_order_filled(resp, eid, Any)
+    p9 = resp_order_remaining(resp, eid, Any)
     p10 = resp_order_status(resp, eid)
     p10 = resp_order_loss_price(resp, eid)
     p10 = resp_order_profit_price(resp, eid)
@@ -287,12 +287,12 @@ end
 @doc """ Generates a unique enough hash for an order, preferably based on the last update, or the order info otherwise. """
 order_update_hash(resp, eid) = begin
     last_update = resp_order_lastupdate(resp, eid)
-    if pyisnone(last_update)
+    if isnothing(last_update)
         info = resp_order_info(resp, eid)
-        if pyisnone(info)
+        if isnothing(info)
             _order_kv_hash(resp, eid)
         else
-            pydicthash(info)
+            hash(info)
         end
     else
         hash(last_update)
@@ -570,7 +570,7 @@ function handle_order!(s, ai, orders_byid, resp)
     catch e
         @ifdebug LogWatchOrder isdefined(Main, :e) && (Main.e[] = e)
         @debug_backtrace LogWatchOrder
-        ispyminor_error(e) || @error e
+        (e isa InvalidStateException) || @error e
     end
 end
 

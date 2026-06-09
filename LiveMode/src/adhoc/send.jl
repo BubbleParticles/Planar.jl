@@ -21,12 +21,12 @@ function live_send_order(
     invoke(live_send_order, Tuple{LiveStrategy,AssetInstance,Type{<:Order}}, s, ai, t, args...; amount, price, stop_trigger, profit_trigger, stop_loss, take_profit, kwargs...)
 end
 
-function create_order_func(exc::Exchange{ExchangeID{:binance}}, func, args...; params=LittleDict{Py,Any}(), kwargs...)
-    postOnly = @pyconst "postOnly"
-    timeInForce = @pyconst "timeInForce"
+function create_order_func(exc::Exchange{ExchangeID{:binance}}, func, args...; params=LittleDict{Any,Any}(), kwargs...)
+    postOnly = "postOnly"
+    timeInForce = "timeInForce"
     if haskey(params, postOnly)
-        if pytruth(pop!(params, postOnly))
-            params[timeInForce] = @pyconst("PO")
+        if pop!(params, postOnly, false)
+            params[timeInForce] = "PO"
         end
     end
     _execfunc(func, args...; params, kwargs...)

@@ -1,6 +1,9 @@
 using Reexport
 @reexport using Zarr
-using Zarr: AbstractStore, DirectoryStore, is_zarray, isemptysub, ZArray
+using Zarr: AbstractStore, DirectoryStore, isemptysub, ZArray, ZarrFormat
+const ZARR_FORMAT = ZarrFormat(2)
+is_zarray(store, path) = Zarr.is_zarray(ZARR_FORMAT, store, path)
+is_zgroup(store, path) = Zarr.is_zgroup(ZARR_FORMAT, store, path)
 using .TimeTicks
 using Misc: DATA_PATH, isdirempty
 using .Lang: @lget!, Option
@@ -70,7 +73,7 @@ function delete!(z::ZArray; ok=true)
     ok && begin
         delete!(z.storage, z.path; recursive=true)
         store_type = typeof(z.storage)
-        @assert store_type <: DirectoryStore || store_type <: LMDBDictStore "$store_type does not support array deletion."
+        @assert store_type <: DirectoryStore || store_type <: AbstractDictStore "$store_type does not support array deletion."
     end
 end
 
@@ -117,8 +120,9 @@ function zdelete!(
         end
         function search_to(from_idx)
             to = serialized ? tobytes(to_dt) : convert(eltype(z), to_dt)
-            searchsortedlast(view(selected, from_idx:lastindex(selected)), to; by=by_func) +
-            from_idx
+            v = view(selected, from_idx:lastindex(selected))
+            view_idx = searchsortedfirst(v, to; by=by_func)
+            view_idx + from_idx - 2
         end
         if isnothing(from_dt)
             if isnothing(to_dt)
@@ -219,7 +223,7 @@ mutable struct ZarrInstance{S<:AbstractStore}
     function ZarrInstance(data_path=joinpath(DATA_PATH, "store"))
         @lget! zcache data_path begin
             ds = DirectoryStore(data_path)
-            if !Zarr.is_zgroup(ds, "")
+            if !is_zgroup(ds, "")
                 @assert isdirempty(data_path) "Directory at $(data_path) must be empty."
                 zgroup(ds, "")
             end

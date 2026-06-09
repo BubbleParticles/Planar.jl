@@ -1,8 +1,3 @@
-
-_nameof(f::Py) =
-    if hasproperty(f, :__name__)
-        string(getproperty(f, :__name__))
-    end
 _nameof(f::Function) = string(nameof(f))
 function _cancel_orders(ai::AssetInstance{<:AbstractAsset,<:eids(:binance)}, side, ids, orders_f, cancel_multi_f)
     exc = exchange(ai)

@@ -2,7 +2,6 @@ using .Misc.Lang: Lang, @preset, @precomp, @m_str, @ignore
 
 @preset let
     # ENV["JULIA_DEBUG"] = "LiveMode" # "LogBalance,LogWatchBalance,LogWatchLocks,TraceWatchLocks"
-    st.Instances.Exchanges.Python.py_start_loop()
     run_funcs(exchange, margin) = begin
         s = st.strategy(st.BareStrat; mode=Live(), exchange, margin)
         s[:sync_history_limit] = 0
@@ -110,5 +109,4 @@ using .Misc.Lang: Lang, @preset, @precomp, @m_str, @ignore
     @debug "PRECOMP: live mode closing"
     Watchers._closeall()
     st.Instances.Exchanges.ExchangeTypes._closeall()
-    st.Instances.Exchanges.Python.py_stop_loop()
 end

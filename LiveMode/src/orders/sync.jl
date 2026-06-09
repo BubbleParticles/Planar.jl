@@ -408,7 +408,7 @@ function replay_order!(s::LiveStrategy, o, ai; resp, exec=false, decommit=false)
             otr = fetch_order_trades(s, ai, o.id)
         else
             otr
-        end |> PyList
+        end |> collect
     end
     # Sanity check between local and exc trades by
     # comparing the amount of the first trade
