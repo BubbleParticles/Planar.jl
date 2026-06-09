@@ -1,6 +1,6 @@
 using .Misc: LittleDict
 using .Misc.Lang: @logerror, @debug_backtrace
-using .Instances.Exchanges: Py, pyfetch, @pystr, @pyconst, has
+using .Instances.Exchanges: Py, pyfetch, has
 using SimMode: trade!
 using .Executors: AnyGTCOrder
 using .OrderTypes: ImmediateOrderType, OrderCanceled

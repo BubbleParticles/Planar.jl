@@ -1,5 +1,4 @@
 using .Misc.Lang: @lget!, @deassert, Option
-using .Python: @py, pydict
 using .Executors:
     AnyGTCOrder, AnyMarketOrder, AnyLimitOrder, AnyIOCOrder, AnyFOKOrder, AnyPostOnlyOrder
 using LRUCache

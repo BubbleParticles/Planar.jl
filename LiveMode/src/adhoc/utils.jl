@@ -3,7 +3,7 @@ using .Exchanges.ExchangeTypes: eids, Ccxt
 import .Exchanges.ExchangeTypes: _has
 import Base.first
 
-_tif_value(v) = @pystr if v == "PO"
+_tif_value(v) = if v == "PO"
     "PostOnly"
 elseif v == "FOK"
     "FillOrKill"
@@ -16,7 +16,7 @@ else
 end
 
 function time_in_force_key(::Exchange{<:eids(:phemex, :bybit)}, ::AbstractAsset)
-    @pyconst "timeInForce"
+    "timeInForce"
 end
 function time_in_force_value(::Exchange{<:eids(:phemex)}, ::Option{<:AbstractAsset}, v)
     _tif_value(v)

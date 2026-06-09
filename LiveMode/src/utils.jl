@@ -2,7 +2,6 @@ using PaperMode.OrderTypes
 using PaperMode: SimMode, strategy_logger!
 using .SimMode: _simmode_defaults!
 using .Lang: @lget!, Option, @get, MatchString
-using .Python: @pystr, @pyconst, Py, PyList, @py, pylist, pytuple, pyne
 using .TimeTicks: dtstamp
 using .Misc:
     LittleDict,

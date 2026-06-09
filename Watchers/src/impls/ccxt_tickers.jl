@@ -60,7 +60,7 @@ function ccxt_tickers_watcher(
         attrs[:iswatch] = iswatch::Bool
     end
     attrs[:issandbox] = issandbox(exc)
-    attrs[:excparams] = params(exc)
+    attrs[:excparams] = Dict{String,Any}()
     attrs[:excaccount] = account(exc)
     _sym!(attrs, syms) # FIXME: this line should be removed
     _ids!(attrs, syms)

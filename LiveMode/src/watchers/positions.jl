@@ -5,7 +5,6 @@ using Watchers.WatchersImpls: _tfunc!, _tfunc, _exc!, _exc, _lastpushed!, _lastp
 using .PaperMode: sleep_pad
 using .Exchanges: check_timeout, current_account
 using .Lang: splitkws, safenotify, safewait
-using ..Python: pyimport, pycall, pylist
 using .OrderTypes: Long
 
 const CcxtPositionsVal = Val{:ccxt_positions}
@@ -20,7 +19,7 @@ This named tuple `PositionTuple` has fields for date (`:date`), notification con
 """
 const PositionTuple = NamedTuple{
     (:date, :notify, :read, :closed, :resp),
-    Tuple{DateTime,Base.Threads.Condition,Ref{Bool},Ref{Bool},Py},
+    Tuple{DateTime,Base.Threads.Condition,Ref{Bool},Ref{Bool},Any},
 }
 const PositionsDict2 = Dict{String,PositionTuple}
 
@@ -28,7 +27,7 @@ function _debug_getup(w, prop=:time)
     @something get(get(last(w.buffer, 1), 1, (;)), prop, nothing) ()
 end
 function _debug_getval(w, k="datetime"; src=_debug_getup(w, :value))
-    @something get(@get(src, 1, pydict()), k, nothing) ()
+    @something get(@get(src, 1, Dict{String,Any}()), k, nothing) ()
 end
 
 @doc """ Sets up a watcher for CCXT positions.
@@ -60,7 +59,7 @@ function ccxt_positions_watcher(
     attrs[:interval] = interval
     attrs[:iswatch] = iswatch
     _exc!(attrs, exc)
-    watcher_type = Union{Py,PyList}
+    watcher_type = Any
     wid = string(wid, "-", hash((exc.id, nameof(s), account(s))))
     watcher(
         watcher_type,
@@ -172,7 +171,7 @@ end
 """
 function _positions_process_push!(w, tasks, v; fetched=false)
     if !isnothing(v)
-        if !isnothing(_dopush!(w, pylist(v)))
+        if !isnothing(_dopush!(w, v))
             push!(tasks, @async process!(w; fetched))
             filter!(!istaskdone, tasks)
         end
@@ -195,52 +194,7 @@ function _w_positions_watch_mode(
             notify(buf_notify)
             maybe_backoff!(errors, v)
         end
-        # Seed initial positions when running in stub CCXT mode to avoid stalls
-        if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
-            try
-                sp = pyimport("stubex.patch")
-                out = pylist()
-                for ai in s.universe
-                    try
-                        pos = pycall(sp._make_position, Any, raw(ai))
-                        out.append(pos)
-                    catch e
-                        @warn "ccxt: stub position generation failed for" ai e
-                    end
-                end
-                # push stubbed positions into the processing buffer
-                _positions_process_push!(w, tasks, out; fetched=false)
-                # Ensure asset instances have a last position set so posside(ai) doesn't return `nothing`.
-                # This avoids freecash dispatch falling back to Instruments.freecash when no position is present.
-                try
-                    for ai in s.universe
-                        try
-                            # Only set lastpos if it's currently nothing; ignore non-margin instances
-                            isnothing(ai.lastpos[]) || continue
-                        catch
-                        end
-                        try
-                            ai.lastpos[] = position(ai, Long())
-                        catch
-                            # ignore if position(ai, Long()) is not applicable (NoMargin instances)
-                        end
-                    end
-                catch
-                end
-                # mark seed as processed to prevent the stall guard from firing
-                _lastprocessed!(w, now())
-                _lastcount!(w, out)
-            catch e
-                @warn "ccxt: stubex.patch import/generation failed" e
-                # Fallback: mark seed as processed and notify to avoid stall/wait
-                try
-                    _lastprocessed!(w, now())
-                    _lastcount!(w, ())
-                    safenotify(w.beacon.process)
-                catch
-                end
-            end
-        end
+        # Stub CCXT mode no longer supported (Python removed)
         h =
             w[:positions_handler] = watch_positions_handler(
                 exc,
@@ -249,7 +203,7 @@ function _w_positions_watch_mode(
                 params,
                 rest...,
             )
-        start_handler!(h)
+        # start_handler!(h) — removed in non-Python mode
     end
     function watch_positions_func(w)
         if init[]
@@ -399,7 +353,7 @@ end
 function Watchers._stop!(w::Watcher, ::CcxtPositionsVal)
     handler = attr(w, :positions_handler, nothing)
     if !isnothing(handler)
-        stop_handler!(handler)
+        # stop_handler!(handler) — removed in non-Python mode
     end
     pt = attr(w, :positions_task, nothing)
     if istaskrunning(pt)
@@ -426,22 +380,8 @@ end
 - `w`: The watcher object.
 """
 function _positions_from_messages(w::Watcher)
-    exc = w.exc
-    messages = pygetattr(exc, "_positions_messages", nothing)
-    if pyisjl(messages)
-        tasks = @lget! w.attrs :message_tasks Task[]
-        parse_func = exc.parsePositions
-        vec = pyjlvalue(messages)
-        if vec isa Vector
-            while !isempty(vec)
-                msg = popfirst!(vec)
-                pup = parse_func(msg)
-                _dopush!(w, pylist(pup))
-                push!(tasks, @async process!(w))
-            end
-            filter!(!istaskdone, tasks)
-        end
-    end
+    # No message queue in non-Python mode
+    nothing
 end
 
 function Watchers._fetch!(w::Watcher, ::CcxtPositionsVal)
@@ -478,7 +418,7 @@ function _posupdate(prev, date, resp)
     prev.read[] = false
     PositionTuple((; date, prev.notify, prev.read, prev.closed, resp))
 end
-_deletek(py, k=@pyconst("info")) = haskey(py, k) && py.pop(k)
+_deletek(d, k="info") = haskey(d, k) && delete!(d, k)
 function _last_updated_position(long_dict, short_dict, sym)
     lp = get(long_dict, sym, nothing)
     sp = get(short_dict, sym, nothing)

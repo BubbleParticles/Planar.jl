@@ -1,17 +1,5 @@
 using .Instances: MarginInstance, raw, cash, cash!
-using .Python:
-    PyException,
-    pyisinstance,
-    pybuiltins,
-    @pystr,
-    @pyconst,
-    pytryfloat,
-    pytruth,
-    pyconvert,
-    pyeq
 using Watchers: buffer
-using .Python: pyisTrue, pyisnone, Py
-using .Python.PythonCall: pyeq
 using .Misc.Lang: @lget!, Option, @caller
 using .Executors.OrderTypes: ByPos
 using .Executors: committed, marginmode, update_leverage!, liqprice!, update_maintenance!
@@ -46,43 +34,25 @@ using .Instances:
 using Base: negate
 import .Instances: posside
 
-_ispossym(py, sym, eid::EIDType) = pyeq(Bool, resp_position_symbol(py, eid), @pystr(sym))
+_ispossym(py, sym, eid::EIDType) = string(resp_position_symbol(py, eid)) == sym
 posside(s::Strategy, ai::MarginInstance) = @something posside(ai) get_position_side(s, ai)
 
-@doc """ Handles the response from a position fetch request.
-
-$(TYPEDSIGNATURES)
-
-This function takes a response from a position fetch request and an asset instance.
-It verifies the response, checks if it matches the requested side (buy/sell), and whether it is for the correct asset.
-It returns the relevant position if found, otherwise it returns 'nothing'.
-
-"""
 function _handle_pos_resp(resp, ai, side)
     sym = raw(ai)
     eid = exchangeid(ai)
-    if resp isa PyException
+    if resp isa Exception
         @debug "force fetch pos: error $sym($side)" _module = LogPosFetch resp
         return nothing
     elseif islist(resp)
         return resp
     elseif isdict(resp) && _ccxtposside(resp, eid) == side && _ispossym(resp, sym, eid)
-        return pylist((resp,))
+        return [resp]
     else
         @debug "force fetch pos: unhandled response $sym($side)" _module = LogPosFetch resp
         return nothing
     end
 end
 
-@doc """ Fetches and processes the current position for a specific asset and side.
-
-$(TYPEDSIGNATURES)
-
-This function forces a fetch of the current position for a specific asset and side (buy/sell) through the `fetch_positions` function.
-It then processes the response using the `_handle_pos_resp` function.
-The position is then stored in the position watcher and processed.
-
-"""
 function _force_fetchpos(s, ai, side; waitfor=s[:positions_base_timeout][], fallback_kwargs)
     @timeout_start
     let cache = _positions_resp_cache(s.attrs)
@@ -115,8 +85,6 @@ function _force_fetchpos(s, ai, side; waitfor=s[:positions_base_timeout][], fall
         timeout = @timeout_now()
         if timeout > Second(0)
             @debug "force fetch pos: fetching" _module = LogPosForceFetch ai timeout
-            # NOTE: don't pass neighter the instance nor the side, always fetch all positions
-            # otherwise it breaks watcher updates processing
             let resp = fetch_positions(s; timeout, fallback_kwargs...)
                 _handle_pos_resp(resp, ai, side)
             end
@@ -133,8 +101,6 @@ function _force_fetchpos(s, ai, side; waitfor=s[:positions_base_timeout][], fall
             @debug_backtrace LogPosForceFetch
         end exchangeid(ai)
         @debug "force fetch pos: processing" _module = LogPosForceFetch ai
-        # Directly populate the position view from the response
-        # to avoid the async processing pipeline
         _process_force_fetch_resp!(w, s, resp, ai, side)
         skip_if_updated() && return nothing
         waitsync(ai; waitfor=@timeout_now)
@@ -142,11 +108,6 @@ function _force_fetchpos(s, ai, side; waitfor=s[:positions_base_timeout][], fall
     @debug "force fetch pos: done" _module = LogPosForceFetch ai lastdate(w)
 end
 
-"""Directly populate position view from a force-fetch response.
-
-This bypasses the async processing pipeline to make force fetch work
-correctly in test scenarios where async tasks don't complete.
-"""
 function _process_force_fetch_resp!(w, s, resp, ai, side)
     eid = exchangeid(ai)
     data_date = now()
@@ -169,13 +130,12 @@ function _process_force_fetch_resp!(w, s, resp, ai, side)
             pup_date = data_date
             pup = _posupdate(pup_date, r)
             @lock w._exec.buffer_lock begin
-                push!(w.buffer, (pup_date, pylist(resp)))
+                push!(w.buffer, (pup_date, [resp]))
             end
             target_dict[sym] = pup
             last_dict[sym] = pos_side
             safenotify(w.beacon.process)
         end
-        # Update last_event_date so waitsync can detect the update
         ai[:last_event_date] = data_date
     end
     return nothing
@@ -192,16 +152,6 @@ function _isstale(ai, pup, side, since)
     end
 end
 
-@doc """ Retrieves the current position for a specific asset and side.
-
-$(TYPEDSIGNATURES)
-
-This function retrieves the current position for a specific asset and side (buy/sell) through the `get_positions` function.
-If the function is forced to fetch, or if the data is outdated, it will fetch the position again using the `_force_fetchpos` function.
-It waits for the position update to occur and then returns the position update.
-Prefer to use `since` argument, only use `force` to ensure that the latest update is fetched.
-
-"""
 function live_position(
     s::LiveStrategy,
     ai,
@@ -252,13 +202,6 @@ function live_position(
     end
 end
 
-@doc """ Retrieves the current position update for a specific asset.
-
-$(TYPEDSIGNATURES)
-
-This function retrieves the current position update for a specific asset through the `live_position` function and logs the status of the position update.
-
-"""
 function _pup(s, ai, args...; kwargs...)
     pup = live_position(s, ai, args...; kwargs...)
     if isnothing(pup)
@@ -269,15 +212,6 @@ function _pup(s, ai, args...; kwargs...)
     pup
 end
 
-@doc """ Retrieves the number of contracts for a specific asset in a live strategy.
-
-$(TYPEDSIGNATURES)
-
-This function retrieves the current position update for a specific asset through the `_pup` function.
-It then extracts the number of contracts from the position update.
-If the asset is short, the function returns the negative of the number of contracts.
-
-"""
 function live_contracts(
     s::LiveStrategy,
     ai,
@@ -321,14 +255,6 @@ function live_contracts(
     end
 end
 
-@doc """ Retrieves the notional value of a specific asset in a live strategy.
-
-$(TYPEDSIGNATURES)
-
-This function retrieves the current position update for a specific asset through the `_pup` function.
-It then extracts the notional value from the position update.
-
-"""
 function live_notional(s::LiveStrategy, ai, args...; kwargs...)
     @debug "live notional:" _module = LogPosSync ai
     pup = _pup(s, ai, args...; kwargs...)
@@ -345,15 +271,7 @@ function live_notional(s::LiveStrategy, ai, args...; kwargs...)
     end
 end
 
-@doc """ Retrieves the maintenance margin requirement (MMR) for a position.
-
-$(TYPEDSIGNATURES)
-
-This function first tries to retrieve the MMR from the live position.
-If the retrieved MMR is zero or less, it falls back to the MMR value stored in the position.
-
-"""
-_ccxtmmr(lp::Py, pos, eid) =
+_ccxtmmr(lp, pos, eid) =
     let v = resp_position_mmr(lp, eid)
         if v > 0.0
             v
@@ -362,7 +280,6 @@ _ccxtmmr(lp::Py, pos, eid) =
         end
     end
 
-@doc """ Defines a named tuple for positions.  """
 const Pos = NamedTuple(
     Symbol(f) => f for f in (
         "liquidationPrice",
@@ -393,34 +310,14 @@ const Pos = NamedTuple(
 
 _ccxtposside(::ByPos{Long}) = "long"
 _ccxtposside(::ByPos{Short}) = "short"
-@doc """ Checks if a position is short.
 
-$(TYPEDSIGNATURES)
-
-This function checks if a position is short by comparing the side of the position with the string "short".
-It returns `true` if the position is short, and `false` otherwise.
-
-"""
-function _ccxtisshort(v::Py, eid::EIDType)
-    pyeq(Bool, resp_position_side(v, eid), @pyconst("short"))
+function _ccxtisshort(v, eid::EIDType)
+    string(resp_position_side(v, eid)) == "short"
 end
-@doc """ Checks if a position is long.
 
-$(TYPEDSIGNATURES)
+_ccxtislong(v, eid::EIDType) = string(resp_position_side(v, eid)) == "long"
 
-This function checks if a position is long by comparing the side of the position with the string "long".
-It returns `true` if the position is long, and `false` otherwise.
-
-"""
-_ccxtislong(v::Py, eid::EIDType) = pyeq(Bool, resp_position_side(v, eid), @pyconst("long"))
-@doc """ Returns the `PositionSide` of a position from the ccxt position object.
-
-$(TYPEDSIGNATURES)
-
-This function retrieves and returns the side (long/short) of a given position.
-
-"""
-_ccxtposside(v::Py, eid::EIDType; def=Long()) =
+_ccxtposside(v, eid::EIDType; def=Long()) =
     if _ccxtislong(v, eid)
         Long()
     elseif _ccxtisshort(v, eid)
@@ -429,22 +326,12 @@ _ccxtposside(v::Py, eid::EIDType; def=Long()) =
         _ccxtpnlside(v, eid; def)
     end
 
-@doc """ Returns the side of a position for a live margin strategy.
-
-$(TYPEDSIGNATURES)
-
-This function retrieves the side (buy/sell) of a given position from a live margin strategy.
-If the side is "sell", it returns Short().
-If the side is "buy", it returns Long().
-If the side is neither "sell" nor "buy", it issues a warning and defaults to the provided default side (Long by default).
-
-"""
-function _ccxtposside(::MarginStrategy{Live}, v::Py, eid::EIDType; def=Long())
+function _ccxtposside(::MarginStrategy{Live}, v, eid::EIDType; def=Long())
     side = resp_order_side(v, eid)
     is_reduce_only = resp_order_reduceonly(v, eid)
-    if pyeq(Bool, side, @pyconst("sell"))
+    if string(side) == "sell"
         ifelse(is_reduce_only, Long(), Short())
-    elseif pyeq(Bool, side, @pyconst("buy"))
+    elseif string(side) == "buy"
         ifelse(is_reduce_only, Short(), Long())
     else
         @warn "Side value not found, defaulting to $def" resp = v
@@ -461,16 +348,6 @@ _ccxtposside(v::String) =
         error("wrong position side value $v")
     end
 
-@doc """ Returns the price of a position.
-
-$(TYPEDSIGNATURES)
-
-This function retrieves the last price of a position.
-If the last price is zero or less, it tries to retrieve the mark price.
-If the mark price is also zero or less, it defaults to the last price of the asset.
-It returns the retrieved price.
-
-"""
 function _ccxtposprice(ai, update)
     eid = exchangeid(ai)
     lp = resp_position_lastprice(update, eid)
@@ -487,14 +364,6 @@ function _ccxtposprice(ai, update)
     end
 end
 
-@doc """ Determines the side of a position based on its unrealized profit and loss (PNL).
-
-$(TYPEDSIGNATURES)
-
-This function determines the side (long/short) of a position based on its unrealized PNL, liquidation price, and entry price.
-If the unrealized PNL is greater than or equal to zero and the liquidation price is less than the entry price, it returns Long(). Otherwise, it returns Short().
-
-"""
 function _ccxtpnlside(update, eid::EIDType; def=Long())
     unpnl = resp_position_unpnl(update, eid)
     liqprice = resp_position_liqprice(update, eid)
@@ -516,31 +385,20 @@ function _ccxtpnlside(update, eid::EIDType; def=Long())
     end
 end
 
-@doc """ Determines the side of a position based on information from CCXT library.
-
-$(TYPEDSIGNATURES)
-
-This function first checks if the CCXT position side is provided.
-If not, it infers the side from the position state or from the provided position object, if available.
-If the CCXT side is provided, it checks if it's "short" or "long", and returns Short() or Long() respectively.
-If the CCXT side is neither "short" nor "long", it infers the side from the position state and returns it.
-If the side can't be parsed, a function `default_side_func` can be passed as argument that takes as input the response and returns a `PositionSide`.
-
-"""
 function posside_fromccxt(
     update, eid::EIDType, p::Option{ByPos}=nothing; default_side_func=Returns(nothing)
 )
     ccxt_side = resp_position_side(update, eid)
-    def_side = isnothing(p) ? Long() : posside(p) # NOTE: posside(...) can still be nothing
-    if pyisnone(ccxt_side)
+    def_side = isnothing(p) ? Long() : posside(p)
+    if isnothing(ccxt_side) || isempty(ccxt_side)
         @debug "ccxt posside: side not provided, inferring from position state" _module =
             LogCcxtFuncs @caller
         @something _ccxtpnlside(update, eid, def=def_side) default_side_func(update)
     else
-        side_str = ccxt_side.lower()
-        if pyeq(Bool, side_str, @pyconst("short"))
+        side_str = lowercase(string(ccxt_side))
+        if side_str == "short"
             Short()
-        elseif pyeq(Bool, side_str, @pyconst("long"))
+        elseif side_str == "long"
             Long()
         else
             @debug "ccxt posside: side flag not valid (non open pos?), inferring from position state" _module =
@@ -553,17 +411,7 @@ function posside_fromccxt(
     end
 end
 
-@doc """ Checks if a position is open based on information from CCXT library.
-
-$(TYPEDSIGNATURES)
-
-This function checks if a position is open by checking if the number of contracts is greater than zero.
-It also checks if the initial margin, notional, and liquidation price are non-zero.
-If the number of contracts is greater than zero, but any of the other three values are zero, it issues a warning about the position state being dirty.
-The function returns `true` if the number of contracts is greater than zero, indicating that the position is open, and `false` otherwise.
-
-"""
-function _ccxt_isposopen(pos::Py, eid::EIDType)
+function _ccxt_isposopen(pos, eid::EIDType)
     c = resp_position_contracts(pos, eid) > 0.0
     i = !iszero(resp_position_initial_margin(pos, eid))
     n = !iszero(resp_position_notional(pos, eid))
@@ -574,17 +422,7 @@ function _ccxt_isposopen(pos::Py, eid::EIDType)
     c
 end
 
-@doc """ Checks if a position is closed based on information from CCXT library.
-
-$(TYPEDSIGNATURES)
-
-This function checks if a position is closed by checking if the number of contracts is zero.
-It also checks if the initial margin, notional, unrealized PNL, and liquidation price are non-zero.
-If the number of contracts is zero, but any of the other four values are non-zero, it issues a warning about the position state being dirty.
-The function returns `true` if the number of contracts is zero, indicating that the position is closed, and `false` otherwise.
-
-"""
-function _ccxt_isposclosed(pos::Py, eid::EIDType)
+function _ccxt_isposclosed(pos, eid::EIDType)
     c = iszero(resp_position_contracts(pos, eid))
     i = !iszero(resp_position_initial_margin(pos, eid))
     n = !iszero(resp_position_notional(pos, eid))

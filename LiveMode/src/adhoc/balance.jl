@@ -2,9 +2,9 @@ using .Lang: splitkws, @get
 
 function _ccxt_balance_args(s::Strategy{<:ExecMode, N, ExchangeID{:phemex}}, kwargs) where {N}
     params, rest = split_params(kwargs)
-    @lget! params "type" @pystr(balance_type(s))
+    @lget! params "type" string(balance_type(s))
     if s.qc == :USDT
-        params["settle"] = @pyconst("USDT")
+        params["settle"] = "USDT"
     end
     (; params, rest)
 end
@@ -26,11 +26,11 @@ function _fetch_balance(
     args...;
     timeout=gettimeout(exc),
     type=:unified,
-    params=pydict(),
+    params=Dict{String,Any}(),
     kwargs...,
 )
     # assume bybit UTA
-    params[@pyconst("type")] = @pystr type lowercase(string(type))
+    params["type"] = lowercase(string(type))
     _execfunc_timeout(_exc_balance_func(exc), args...; timeout, params, kwargs...)
 end
 
@@ -42,12 +42,12 @@ function _fetch_balance(
     timeout=gettimeout(exc),
     type=:swap,
     code=nothing,
-    params=pydict(),
+    params=Dict{String,Any}(),
     kwargs...,
 )
-    params[@pyconst("type")] = @pystr type lowercase(string(type))
+    params["type"] = lowercase(string(type))
     if type != :spot
-        params["code"] = @pystr code uppercase(string(@something code qc))
+        params["code"] = uppercase(string(@something code qc))
     end
 
     _execfunc_timeout(_exc_balance_func(exc); timeout, params, kwargs...)
@@ -61,10 +61,10 @@ function _fetch_balance(
     timeout=gettimeout(exc),
     type=:swap,
     code=nothing,
-    params=pydict(),
+    params=Dict{String,Any}(),
     kwargs...,
 )
-    params["code"] = @pystr code uppercase(string(@something code qc))
+    params["code"] = uppercase(string(@something code qc))
     if haskey(params, "type")
         delete!(params, "type")
     end
@@ -80,7 +80,7 @@ function _fetch_balance(
     timeout=gettimeout(exc),
     type=:swap,
     code=nothing,
-    params=pydict(),
+    params=Dict{String,Any}(),
     kwargs...,
 )
     for k in ("code", "type")
@@ -96,10 +96,10 @@ _parse_balance(::Exchange, v) = v
 
 function _parse_balance(exc::Exchange{<:eids(:binanceusdm)}, v)
     get_dict(k) =
-        if !haskey(v, k) || pyisnone(v[k])
-            v[k] = pydict()
+        if !haskey(v, string(k)) || isnothing(get(v, string(k), nothing))
+            v[string(k)] = Dict{String,Any}()
         else
-            v[k]
+            v[string(k)]
         end
     try
         assets = v["info"]["assets"]
@@ -110,19 +110,19 @@ function _parse_balance(exc::Exchange{<:eids(:binanceusdm)}, v)
         markets = exc.markets_by_id
         for a in assets
             id = a["asset"]
-            adict = v[id] = pydict()
-            adict["free"] = free_bal[id] = pytofloat(a["availableBalance"])
+            adict = v[id] = Dict{String,Any}()
+            adict["free"] = free_bal[id] = Float64(a["availableBalance"])
             adict["used"] = used_bal[id] = missing
-            adict["total"] = total_bal[id] = get_py(a, "", "walletBalance") |> pytofloat
+            adict["total"] = total_bal[id] = Float64(get(a, "walletBalance", 0.0))
         end
         for p in positions
             id = p["symbol"]
             if haskey(markets, id)
-                sym = markets[id][0]["symbol"]
-                symdict = v[sym] = pydict()
-                symdict["free"] = free_bal[sym] = p["positionAmt"] |> pytofloat
+                sym = markets[id][1]["symbol"]
+                symdict = v[sym] = Dict{String,Any}()
+                symdict["free"] = free_bal[sym] = Float64(p["positionAmt"])
                 symdict["used"] = used_bal[sym] = missing
-                symdict["total"] = total_bal[sym] = p["isolatedWallet"] |> pytofloat
+                symdict["total"] = total_bal[sym] = Float64(p["isolatedWallet"])
             end
         end
     catch
@@ -139,7 +139,7 @@ function _fetch_balance(
     timeout=gettimeout(exc),
     type=:future,
     code=nothing,
-    params=pydict(),
+    params=Dict{String,Any}(),
     kwargs...,
 )
     @lget! params "type" lowercase(string(type))
@@ -155,7 +155,7 @@ function _fetch_balance(
     timeout=gettimeout(exc),
     type=nothing,
     code=nothing,
-    params=pydict(),
+    params=Dict{String,Any}(),
     kwargs...,
 )
     # BitMEX doesn't support the 'type' parameter, so we remove it

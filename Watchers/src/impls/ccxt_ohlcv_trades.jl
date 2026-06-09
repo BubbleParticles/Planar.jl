@@ -80,7 +80,7 @@ function ccxt_ohlcv_watcher(
         attrs[:iswatch] = iswatch
     end
     attrs[:issandbox] = issandbox(exc)
-    attrs[:excparams] = params(exc)
+    attrs[:excparams] = Dict{String,Any}()
     attrs[:excaccount] = account(exc)
     attrs[k"load_timeframe"] = load_timeframe
     attrs[:load_path] = load_path

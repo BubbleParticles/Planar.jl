@@ -168,7 +168,7 @@ function _live_sync_position!(
 
     # Margin/hedged mode are immutable so just check for mismatch
     let mm = resp_position_margin_mode(resp, eid)
-        if !pyisnone(mm) && pyne(Bool, mm, _ccxtmarginmode(pos))
+        if !isnothing(mm) && string(mm) != _ccxtmarginmode(pos)
             @warn "sync pos: position margin mode mismatch (attempt switch..)" ai loc = marginmode(
                 pos
             ) rem = mm
@@ -217,7 +217,7 @@ function _live_sync_position!(
         @warn "sync pos: $(ai) unable to sync $what from $(nameof(exchange(ai))), got $val"
     end
     # price is always positive
-    ep = pytofloat(ep_in)
+    ep = Float64(ep_in)
     ep = if ep > zero(DFT)
         if !isapprox(entryprice(pos), ep; rtol=1e-3)
             @warn_unsynced "entryprice" entryprice(pos) ep

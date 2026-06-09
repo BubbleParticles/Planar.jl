@@ -50,7 +50,7 @@ function ccxt_orderbook_watcher(exc::Exchange, sym; level=L1, interval=Second(1)
     _tfr!(attrs, timeframe)
     attrs[:oblevel] = level
     attrs[:issandbox] = issandbox(exc)
-    attrs[:excparams] = params(exc)
+    attrs[:excparams] = Dict{String,Any}()
     attrs[:excaccount] = account(exc)
     _ob_func(attrs, OrderBookLevel(level))
     watcher_type = DataFrame

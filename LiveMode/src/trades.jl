@@ -19,13 +19,13 @@ function _check_and_filter(resp; ai, since, kind="")
         else
             filter(t -> trade_timestamp(t, exchangeid(ai)) >= since, resp)
         end
-    elseif pyisinstance(resp, pybuiltins.list)
+    elseif islist(resp)
         if isnothing(since)
             resp
         else
-            out = pylist()
+            out = []
             for t in resp
-                trade_timestamp(t, exchangeid(ai)) >= since && out.append(t)
+                trade_timestamp(t, exchangeid(ai)) >= since && push!(out, t)
             end
             out
         end
@@ -36,7 +36,7 @@ function _check_and_filter(resp; ai, since, kind="")
 end
 
 function trade_timestamp(v, eid::EIDType)
-    pyconvert(Int, resp_trade_timestamp(v, eid)) |> TimeTicks.dtstamp
+    Int(resp_trade_timestamp(v, eid)) |> TimeTicks.dtstamp
 end
 
 @doc """ Fetches and filters the user's trades.
@@ -144,14 +144,16 @@ If the currency doesn't match either, it returns zero for both.
 
 """
 function _feecost(
-    fee_dict, ai, ::EIDType=exchangeid(ai); qc_py=@pystr(qc(ai)), bc_py=@pystr(bc(ai))
+    fee_dict, ai, ::EIDType=exchangeid(ai)
 )
-    cur = get_py(fee_dict, "currency")
-    @debug "live fee cost" _module = LogCreateTrade cur qc_py bc_py
-    if pyeq(Bool, cur, qc_py)
+    cur = get(fee_dict, "currency", nothing)
+    qc_str = qc(ai)
+    bc_str = bc(ai)
+    @debug "live fee cost" _module = LogCreateTrade cur qc_str bc_str
+    if string(cur) == qc_str
         @debug "live fee cost: quote currency" _module = LogCreateTrade _getfee(fee_dict)
         (_getfee(fee_dict), 0.0)
-    elseif pyeq(Bool, cur, bc_py)
+    elseif string(cur) == bc_str
         @debug "live fee cost: base currency" _module = LogCreateTrade _getfee(fee_dict)
         (0.0, _getfee(fee_dict))
     else
@@ -245,17 +247,15 @@ If the response does not contain either, it calculates the default trade fees.
 function _tradefees(resp, side, ai; actual_amount, net_cost)
     eid = exchangeid(ai)
     v = resp_trade_fee(resp, eid)
-    if pyisinstance(v, pybuiltins.dict)
+    if isdict(v)
         @debug "live trade fees: " _module = LogCreateTrade _feecost(v, ai, eid)
         return _feecost(v, ai, eid)
     end
     v = resp_trade_fees(resp, eid)
     fees_quote, fees_base = 0.0, 0.0
-    if pyisinstance(v, pybuiltins.list) && !isempty(v)
-        qc_py = @pystr(qc(ai))
-        bc_py = @pystr(bc(ai))
+    if islist(v) && !isempty(v)
         for fee in v
-            (q, b) = _feecost(fee, ai, eid; qc_py, bc_py)
+            (q, b) = _feecost(fee, ai, eid)
             fees_quote += q
             fees_base += b
         end
@@ -281,7 +281,7 @@ If they do not match, it issues a warning and returns `false`.
 
 """
 function isordersymbol(ai, o, resp, eid::EIDType; getter=resp_trade_symbol)::Bool
-    pyeq(Bool, getter(resp, eid), @pystr(raw(ai))) || begin
+    string(getter(resp, eid)) == raw(ai) || begin
         @warn "Mismatching trade for $(raw(ai))($(resp_trade_symbol(resp, eid))), order: $(o.asset), refusing construction."
         return false
     end
@@ -295,8 +295,8 @@ This function checks if the response from the exchange is of the expected type.
 If the response is not of the expected type, it issues a warning and returns `false`.
 
 """
-function isordertype(ai, o, resp, ::EIDType; type=pybuiltins.dict)::Bool
-    if !pyisinstance(resp, type)
+function isordertype(ai, o, resp, ::EIDType; type=isdict)::Bool
+    if !isdict(resp)
         @warn "Invalid response for order $(raw(ai)), order: $o, refusing construction."
         false
     else
