@@ -1,7 +1,5 @@
 using .Lang: @preset, @precomp, @m_str, @ignore
 
-include("precompile_call.jl")
-
 @preset let
     st.Instances.Exchanges.Python.py_start_loop()
     kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binance) : (;)

@@ -162,5 +162,9 @@ end
 using Planar: _activate_and_import
 tools!() = _activate_and_import(:StrategyTools, :stt)
 
+function _doinit()
+    # no deferred initialization needed
+end
+
 export backtest_strat, loadstrat!, symnames, default_data_loader
 export @environment!, stub!, resetenv!, togglewatch!, tools!

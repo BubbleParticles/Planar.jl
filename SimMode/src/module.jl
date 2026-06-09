@@ -22,6 +22,7 @@ using Executors: attr
 import Executors: call!
 @importcash!
 
+include("precompile_call.jl")
 include("trades.jl")
 include("orders/utils.jl")
 include("orders/limit.jl")
