@@ -62,6 +62,17 @@ function _searchsubdict(d2, p, condition)
     collect(o)
 end
 
+function Base.delete!(store::AbstractDictStore, paths::Vararg{AbstractString}; recursive=true)
+    p = joinpath(paths...)
+    if recursive
+        for k in _pkeys(store, p)
+            Base.delete!(store, k)
+        end
+    else
+        Base.delete!(store, p)
+    end
+end
+
 #getsub(d::DictStore, p, n) = _substore(d,p).subdirs[n]
 #getsub(d::AbstractDictStore, p, n) = _substore(d,p).subdirs[n]
 

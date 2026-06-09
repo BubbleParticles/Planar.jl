@@ -1,6 +1,6 @@
 using .PaperMode.SimMode: trade!
 using .Lang: splitkws
-using .Python: pydicthash
+
 using LRUCache
 
 @doc """ Determines the date from which trades should be watched on startup.
@@ -193,7 +193,7 @@ function send_trades!(
         if updates isa InterruptException
             throw(updates)
         else
-            @ifdebug ispyminor_error(updates) ||
+            @ifdebug (updates isa InvalidStateException) ||
                 @debug "watch trades: fetching error" _module = LogWatchTrade ai updates
             if !iswatch
                 sleep(1)
@@ -201,7 +201,7 @@ function send_trades!(
         end
     elseif islist(updates)
         @debug "watch trades: resp" _module = LogWatchTrade2 updates
-        for resp in pylist(updates)
+        for resp in updates
             date = resp_trade_timestamp(resp, exchangeid(ai), DateTime)
             func = () -> handle_trade!(s, ai, orders_byid, resp)
             sendrequest!(ai, date, func; events)
@@ -240,39 +240,11 @@ This function retrieves the asset trades task for a given asset instance `ai` fr
 function asset_trades_task(s::Strategy, ai::AssetInstance)
     @something get(asset_tasks(ai).byname, :trades_task, nothing) watch_trades!(s, ai)
 end
-@doc """ Checks if an exception is a specific Python exception.
-
-$(TYPEDSIGNATURES)
-
-This function checks if an exception `e` is a specific Python exception `pyexception`.
-
-"""
-function ispyexception(e, pyexception)
-    pyisinstance(e, pyexception) || try
-        hasproperty(e, :args) &&
-            (length(e.args) > 0 && pyisinstance(e.args[1], pyexception))
-    catch
-        @debug_backtrace LogCcxtFuncs
-        @ifdebug isdefined(Main, :e) && Main.e isa Ref{Any} && (Main.e[] = e)
-        @error "Can't check exception of type $(typeof(e))"
-        false
-    end
-end
-function ispyminor_error(e)
-    ispycanceled_error(e) || ispyinvstate_error(e)
-end
-function ispyinvstate_error(e)
-    ispyexception(e, Python.gpa.pyaio.InvalidStateError)
-end
-function ispycanceled_error(e)
-    ispyexception(e, Python.gpa.pyaio.CanceledError)
-end
-
 @doc """ Generates a minimal hash for a trade response. """
 _trade_kv_hash(resp, eid::EIDType) = begin
-    p1 = resp_trade_price(resp, eid, Py)
+    p1 = resp_trade_price(resp, eid, Any)
     p2 = resp_trade_timestamp(resp, eid)
-    p3 = resp_trade_amount(resp, eid, Py)
+    p3 = resp_trade_amount(resp, eid, Any)
     p4 = resp_trade_side(resp, eid)
     p5 = resp_trade_type(resp, eid)
     p6 = resp_trade_tom(resp, eid)
@@ -282,12 +254,12 @@ end
 @doc """ Uses the trade id to generate a hash, otherwise uses the trade info. """
 function trade_hash(resp, eid)
     id = resp_trade_id(resp, eid)
-    if pyisnone(id)
+    if isnothing(id)
         info = resp_trade_info(resp, eid)
-        if pyisnone(info)
+        if isnothing(info)
             _trade_kv_hash(resp, eid)
         else
-            pydicthash(info)
+            hash(info)
         end
     else
         hash(id)
@@ -451,7 +423,7 @@ function handle_trade!(s, ai, orders_byid, resp)
     catch e
         @ifdebug LogWatchTrade isdefined(Main, :e) && (Main.e[] = e)
         @debug_backtrace LogWatchTrade
-        ispyminor_error(e) || @error e
+        (e isa InvalidStateException) || @error e
     end
 end
 

@@ -1,6 +1,7 @@
 using .Instances: AssetInstance, Position
 using .Exchanges: is_pair_active
 using .Data.DFUtils: firstdate, lastdate, dateindex, colnames, nrow, setcols!
+using .TimeTicks: dt
 import .Instances: lastprice
 import .Executors: priceat
 isactive(ai::AssetInstance) = is_pair_active(raw(ai), exchange(ai))
@@ -21,18 +22,18 @@ function priceat(s::Strategy, ai::AssetInstance, date::DateTime; step=:open, sym
     try
         resp = fetch_candles(s, sym; since, timeframe, limit=1)
         @assert !isempty(resp) "Couldn't fetch candles for $(raw(ai)) at date $(date)"
-        candle = resp[0]
-        @assert pyconvert(Int, candle[0]) |> dt >= date
+        candle = resp[1]
+        @assert Int(candle[1]) |> dt >= date
         idx = if step == :open
-            1
-        elseif step == :high
             2
-        elseif step == :low
+        elseif step == :high
             3
-        elseif step == :close
+        elseif step == :low
             4
+        elseif step == :close
+            5
         end
-        return pytofloat(candle[idx])
+        return Float64(candle[idx])
     catch
         return nothing
     end
@@ -53,12 +54,12 @@ function lastprice(ai::AssetInstance, bs::BySide; last_fallback=true)
     eid = exchangeid(ai)
     side_str = _ccxtorderside(bs)
     price = resp_ticker_price(tk, eid, side_str)
-    if pyisnone(price)
+    if isnothing(price)
         if last_fallback
-            get_float(tk, @pyconst("last"))
+            get_float(tk, "last")
         end
     else
-        pytofloat(price)
+        Float64(price)
     end
 end
 
@@ -76,10 +77,10 @@ function lastprice(s, ai::AssetInstance, bs::BySide, ::Val{:ob})
     ob = fetch_l2ob(s, ai)
     if isdict(ob)
         @deassert get_string(ob, "symbol") == raw(ai)
-        side_list = get_py(ob, _ccxtobside(bs))
+        side_list = get(ob, string(_ccxtobside(bs)), nothing)
         if islist(side_list)
             if !isempty(side_list)
-                return pytofloat(side_list[0][0])
+                return Float64(side_list[1][1])
             end
         end
     end

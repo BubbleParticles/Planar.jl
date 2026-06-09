@@ -145,7 +145,7 @@ function _save_ohlcv(
             # fetch the saved data and combine with new one
             # fetch saved data starting after the last date of the new data
             # which has to be >= saved_first_date because we checked for contig
-            saved_offset = Int(max(1, (data_last_ts - saved_first_ts + td) ÷ td))
+            saved_offset = Int((data_last_ts - saved_first_ts + td) ÷ td)
             saved_data = za[(saved_offset+1):end, :]
             szd = size(data, 1)
             ssd = size(saved_data, 1)

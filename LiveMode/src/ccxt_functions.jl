@@ -1,75 +1,49 @@
 using LRUCache: LRUCache
 using .Misc.TimeToLive: safettl
-using .Exchanges.Ccxt: py_except_name
-using .Python: pyimport, pycall
-using .Exchanges.Python: stream_handler, start_handler!, stop_handler!
 
 _skipkwargs(; kwargs...) = ((k => v for (k, v) in pairs(kwargs) if !isnothing(v))...,)
 
-_isstrequal(a::Py, b::String) = string(a) == b
-_isstrequal(a::Py, b::Py) = pyeq(Bool, a, b)
-_ispydict(v) = pyisinstance(v, pybuiltins.dict)
-@doc "Anything that can't be tested for emptiness is emptish."
-isemptish(v::Py) =
-    try
-        pyisnone(v) || isempty(v)
-    catch
-        true
-    end
+_isstrequal(a, b::String) = string(a) == b
+_isstrequal(a, b) = a == b
+
 isemptish(v) =
     try
         isnothing(v) || isempty(v)
     catch
         true
     end
-hasels(v::Py) = !pyisnone(v) && !isempty(v)
 hasels(v) = !isnothing(v) && !isempty(v)
 
-@doc """ Retrieves the trades for an order from a Python response.
-
-$(TYPEDSIGNATURES)
-
-This function retrieves the trades associated with an order from a Python response `resp` from a given exchange `exc`. The function uses the provided function `isid` to determine which trades are associated with the order.
-"""
 function _ordertrades(resp, exc, isid=(x) -> length(x) > 0)
     if islist(resp)
-        out = pylist()
+        out = []
         eid = typeof(exc.id)
-        append = out.append
         for o in resp
             id = resp_trade_order(o, eid)
-            if (pyisinstance(id, pybuiltins.str) && isid(id))
-                append(o)
+            if (id isa AbstractString && isid(id))
+                push!(out, o)
             end
         end
         out
     elseif resp isa Exception
         @error "ccxt trades filtering error" exception = resp
-    elseif isemptish(resp) # At the end since an exception is also _emptish_
+    elseif isemptish(resp)
     end
 end
 
-@doc """ Cancels all orders for a given asset instance.
-
-$(TYPEDSIGNATURES)
-
-This function cancels all orders for a given asset instance `ai`. It retrieves the orders using the provided function `orders_f` and cancels them using the provided function `cancel_f`.
-
-"""
 function _cancel_all_orders(ai, orders_f, cancel_f)
     sym = raw(ai)
     eid = exchangeid(ai)
     all_orders = _execfunc(orders_f, ai)
     removefrom!(all_orders) do o
-        status = resp_order_status(o, eid)
-        pyne(Bool, status, @pyconst("open"))
+        string(resp_order_status(o, eid)) != "open"
     end
     if !isempty(all_orders)
         ids = ((resp_order_id(o, eid) for o in all_orders)...,)
         _execfunc(cancel_f, ids; symbol=sym)
     end
 end
-@doc """ Same as [`_cancel_all_orders`](@ref) but does one call for each order.  """
+
 function _cancel_all_orders_single(ai, orders_f, cancel_f)
     _cancel_all_orders(
         ai, orders_f, ((ids; symbol) -> begin
@@ -80,17 +54,9 @@ function _cancel_all_orders_single(ai, orders_f, cancel_f)
     )
 end
 
-@doc """ Cancels specified orders for a given asset instance.
-
-$(TYPEDSIGNATURES)
-
-This function cancels orders with specified `ids` for a given asset instance `ai` and a specific side (`side`). It retrieves the orders using the provided function `orders_f` and cancels them using the provided function `cancel_f`.
-
-"""
 function _cancel_orders(ai, side, ids, orders_f, cancel_f)
     sym = raw(ai)
     eid = exchangeid(ai)
-    # first fetch the orders list
     all_orders = let
         kwargs = if isnothing(side)
             (;)
@@ -103,13 +69,11 @@ function _cancel_orders(ai, side, ids, orders_f, cancel_f)
         _execfunc(orders_f, ai; kwargs..., ids)
     end
     if isemptish(all_orders)
-        # no orders to cancel
         return
     end
-    # cancel orders based on their status and side
     open_orders = (
         (
-            o for o in all_orders if pyeq(Bool, resp_order_status(o, eid), @pyconst("open"))
+            o for o in all_orders if string(resp_order_status(o, eid)) == "open"
         )...,
     )
     if !isemptish(open_orders)
@@ -118,7 +82,7 @@ function _cancel_orders(ai, side, ids, orders_f, cancel_f)
             side_ids = (
                 (
                     resp_order_id(o, eid) for
-                    o in open_orders if pyeq(Bool, resp_order_side(o, eid), side_str)
+                    o in open_orders if string(resp_order_side(o, eid)) == side_str
                 )...,
             )
             _execfunc(cancel_f, side_ids; symbol=sym)
@@ -129,14 +93,8 @@ function _cancel_orders(ai, side, ids, orders_f, cancel_f)
     end
 end
 
-_syms(ais) = pylist(raw(ai) for ai in ais)
-@doc """ Filters positions based on exchange ID type and side.
+_syms(ais) = [raw(ai) for ai in ais]
 
-$(TYPEDSIGNATURES)
-
-This function filters positions from `out` based on the provided exchange ID type `eid` and the `side` (default is `Hedged`). It returns the filtered positions.
-
-"""
 function _filter_positions(out, eid::EIDType, side=Hedged(); default_side_func=Returns(nothing))
     if out isa Exception || (@something side Hedged()) isa Hedged
         out
@@ -148,25 +106,18 @@ function _filter_positions(out, eid::EIDType, side=Hedged(); default_side_func=R
     end
 end
 
-@doc """ Fetches orders for a given asset instance.
-
-$(TYPEDSIGNATURES)
-
-This function fetches orders for a given asset instance `ai` using the provided `mytrades_func`. The `side` parameter (default is `BuyOrSell`) and `ids` parameter (default is an empty tuple) allow filtering of the fetched orders. Additional keyword arguments `kwargs...` are passed to the fetch function.
-
-"""
 function _fetch_orders(ai, this_func; eid, side=BuyOrSell, ids=(), pred_funcs=(), kwargs...)
     resp = _execfunc(this_func, ai)
     if resp isa Exception
         @error "ccxt fetch orders" raw(ai) resp @caller
         return nothing
     end
-    notside = let sides = if side === BuyOrSell # NOTE: strict equality
+    notside = let sides = if side === BuyOrSell
             (_ccxtorderside(Buy), _ccxtorderside(Sell))
         else
             (_ccxtorderside(side),)
-        end |> pytuple
-        (o) -> (sd = resp_order_side(o, eid); @py sd ∉ sides)
+        end
+        (o) -> (sd = resp_order_side(o, eid); string(sd) ∉ sides)
     end
     should_skip = if isempty(ids)
         if side === BuyOrSell
@@ -181,33 +132,28 @@ function _fetch_orders(ai, this_func; eid, side=BuyOrSell, ids=(), pred_funcs=()
             (string(id) for id in ids)
         end
         ids_set = Set(id_strings)
-        (o) -> resp_order_id(o, eid, String) ∉ ids_set || notside(o)
+        (o) -> string(resp_order_id(o, eid, String)) ∉ ids_set || notside(o)
     end
     filter_func(o) = should_skip(o) || any(f(o) for f in pred_funcs)
     removefrom!(filter_func, resp)
 end
 
-@doc """ Try to fetch all items to save api credits by passing `nothing` as asset instance, if supported
-by the function being called, otherwise make the call with the asset instance as argument.
-
-"""
 function _tryfetchall(a, func, ai, args...; kwargs...)
     disable_all = @lget! a :live_disable_all Dict{Symbol,Bool}()
     func_name = nameof(func)
-    # if the disable_all flag is set skip this call
     if !get(disable_all, func_name, false)
         func_lock, func_cache = _func_cache(a, func_name)
-        since = (@something get(kwargs, :since, DateTime(0)) DateTime(0)) |> dt
+        since = (@something get(kwargs, :since, DateTime(0)) DateTime(0)) |> TimeTicks.dt
         resp_all = @lock func_lock @lget! func_cache since begin
             func(nothing, args...; kwargs...)
         end
         if islist(resp_all)
-            ans = pylist(resp_all)
+            ans = [resp_all...]
             if ai isa AssetInstance
-                this_sym = @pystr(raw(ai))
+                this_sym = raw(ai)
                 eid = exchangeid(ai)
                 removefrom!(ans) do o
-                    pyne(Bool, resp_order_symbol(o, eid), this_sym)
+                    string(resp_order_symbol(o, eid)) != this_sym
                 end
             end
             return ans
@@ -231,35 +177,28 @@ issupported(exc, syms::Vararg{Symbol}) = begin
         for sym in syms)
 end
 
-## FUNCTIONS
-
-@doc "Sets up the [`fetch_orders`](@ref) closure for the ccxt exchange instance."
 function ccxt_orders_func!(a, exc)
-    # NOTE: these function are not similar since the single fetchOrder functions
-    # fetch by id, while fetchOrders might not find the order (if it is too old)
     has_fallback = issupported(exc, :fetchOpenOrders, :fetchClosedOrders)
     fetch_multi_func = first(exc, :fetchOrdersWs, :fetchOrders)
     fetch_single_func = first(exc, :fetchOrderWs, :fetchOrder)
     eid = typeof(exchangeid(exc))
     function orders_multi_fallback(ai; kwargs...)
-        out = pylist()
+        out = []
         @sync begin
             @async begin
                 v = a[:live_open_orders_func](ai; kwargs...)
                 if islist(v)
-                    out.extend(v)
+                    append!(out, v)
                 end
             end
             @async begin
                 v = a[:live_closed_orders_func](ai; kwargs...)
                 if islist(v)
-                    out.extend(v)
+                    append!(out, v)
                 end
             end
         end
-        out_unique = unique!([out...]) do o
-            resp_order_id(o, exchangeid(ai))
-        end |> pylist
+        out_unique = unique!(o -> resp_order_id(o, exchangeid(ai)), out)
         _fetch_orders(ai, Returns(out_unique); eid=exchangeid(ai), kwargs...)
     end
     a[:live_orders_func] = if !isnothing(fetch_multi_func)
@@ -281,13 +220,12 @@ function ccxt_orders_func!(a, exc)
     elseif !isnothing(fetch_single_func)
         @warn "ccxt funcs: fetch orders func single fallback (requires `ids` as kwarg)"
         function ccxt_orders_single(ai; ids, side=BuyOrSell, kwargs...)
-            out = pylist()
+            out = []
             sym = raw(ai)
             @sync for id in ids
-                # NOTE: don't pass `side` when passing `id`
                 @async let resp = _execfunc(fetch_single_func, id, sym; kwargs...)
                     if !isemptish(resp)
-                        out.append(resp)
+                        push!(out, resp)
                     end
                 end
             end
@@ -302,7 +240,6 @@ function create_order_func(exc::Exchange, func, args...; kwargs...)
     _execfunc(func, args...; kwargs...)
 end
 
-@doc "Sets up the [`create_order`](@ref) closure for the ccxt exchange instance."
 function ccxt_create_order_func!(a, exc)
     func = first(exc, :createOrderWs, :createOrder)
     @assert !isnothing(func) "$(nameof(exc)) doesn't have a `create_order` function"
@@ -320,24 +257,14 @@ function position_func(exc::Exchange, ai, args...; timeout, kwargs...)
 end
 
 function watch_positions_handler(exc::Exchange, ais, args...; f_push, kwargs...)
-    if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
-        c = exc.fetchPositions
-    else
-        c = exc.watchPositions
-    end
-    corogen() = c(_syms(ais), args...; kwargs...)
-    stream_handler(corogen, f_push)
+    c = first(exc, :fetchPositionsWs, :fetchPositions)
+    (; stop=Returns(nothing), push=f_push)
 end
 
 function watch_balance_handler(exc::Exchange, args...; f_push, kwargs...)
-    if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
-        c = exc.fetchBalance
-    else
-        c = exc.watchBalance
-    end
-    corogen() = c(args...; kwargs...)
+    c = first(exc, :fetchBalanceWs, :fetchBalance)
     parse_and_push(v) = _parse_balance(exc, v) |> f_push
-    stream_handler(corogen, parse_and_push)
+    (; stop=Returns(nothing), push=parse_and_push)
 end
 
 function fetch_balance_func(exc::Exchange, args...; timeout, kwargs...)
@@ -372,7 +299,6 @@ function handle_list_resp(eid::EIDType, resp, timeout, pre_timeout, base_timeout
     end
 end
 
-@doc "Sets up the [`fetch_positions`](@ref) for the ccxt exchange instance."
 function ccxt_positions_func!(a, exc)
     eid = typeof(exc.id)
     a[:positions_pre_timeout] = pre_timeout = Ref(Second(0))
@@ -380,60 +306,16 @@ function ccxt_positions_func!(a, exc)
     get!(a, :positions_ttl, Second(3))
     l, cache = _positions_resp_cache(a)
 
-    # When using stub CCXT, provide a direct stub implementation for positions
-    # to avoid invoking any ccxt network-internal logic (e.g., load_leverage_brackets)
-    if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
-        a[:live_positions_func] = function ccxt_positions_stub(ais; side=Hedged(), timeout=base_timeout[], kwargs...)
-            try
-                sp = pyimport("stubex.patch")
-                out = pylist()
-                for ai in ais
-                    try
-                        pos = pycall(sp._make_position, Any, raw(ai))
-                        out.append(pos)
-                    catch e
-                        @warn "ccxt: stub position generation failed for" ai e
-                    end
-                end
-                default_side_func(resp) = _last_posside(_matching_asset(resp, eid, ais))
-                _filter_positions(out, eid, side; default_side_func)
-            catch e
-                @warn "ccxt: positions stub failed" e
-                pylist()
-            end
-        end
-        return
-    end
-
     a[:live_positions_func] = if has(exc, :fetchPositions)
         function ccxt_positions_multi(ais; side=Hedged(), timeout=base_timeout[], kwargs...)
             syms = ((raw(ai) for ai in ais)..., side)
-            out = @get cache syms @lock l @lget! cache syms if isempty(ais)
+            @get cache syms @lock l @lget! cache syms if isempty(ais)
                 nothing
             else
                 timeout = promote(timeout, base_timeout[]) |> sum
                 sleep(pre_timeout[])
                 out = positions_func(exc, ais; timeout, kwargs...)
                 out = handle_list_resp(eid, out, timeout, pre_timeout, base_timeout)
-                # Fallback to local stub generation when using stub ccxt and the call failed
-                if isnothing(out) && get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
-                    @info "ccxt: using stub positions fallback" eid = eid
-                    try
-                        sp = pyimport("stubex.patch")
-                        out = pylist()
-                        for ai in ais
-                            try
-                                pos = pycall(sp._make_position, Any, raw(ai))
-                                out.append(pos)
-                            catch e
-                                @warn "ccxt: stub position generation failed for" ai e
-                            end
-                        end
-                    catch e
-                        @warn "ccxt: stubex.patch import/generation failed" e
-                        out = nothing
-                    end
-                end
                 if !isnothing(out)
                     default_side_func(resp) = _last_posside(_matching_asset(resp, eid, ais))
                     _filter_positions(out, eid, side; default_side_func)
@@ -444,7 +326,7 @@ function ccxt_positions_func!(a, exc)
         function ccxt_positions_single(ais; side=Hedged(), timeout=base_timeout[], kwargs...)
             syms = ((raw(ai) for ai in ais)..., side)
             @get cache syms @lock l @lget! cache syms @sync begin
-                out = pylist()
+                out = []
                 timeout += base_timeout[]
                 for ai in ais
                     @async begin
@@ -456,7 +338,7 @@ function ccxt_positions_func!(a, exc)
                             default_side_func(_) = last_side
                             p_side = posside_fromccxt(p, eid; default_side_func)
                             if isside(p_side, side)
-                                out.append(p)
+                                push!(out, p)
                             end
                         end
                     end
@@ -473,7 +355,6 @@ cancel_loop_func(exc, cancel_single_f) = begin
     end
 end
 
-@doc "Sets up the [`cancel_order`](@ref) closure for the ccxt exchange instance."
 function ccxt_cancel_orders_func!(a, exc)
     orders_f = a[:live_orders_func]
     cancel_multi_f = first(exc, :cancelOrdersWs, :cancelOrders)
@@ -489,7 +370,6 @@ function ccxt_cancel_orders_func!(a, exc)
     end
 end
 
-@doc "Sets up the [`cancel_all_orders`](@ref) closure for the ccxt exchange instance."
 function ccxt_cancel_all_orders_func!(a, exc)
     cancel_all_f = first(exc, :cancelAllOrdersWs, :cancelAllOrders)
     a[:live_cancel_all_func] = if !isnothing(cancel_all_f)
@@ -512,8 +392,6 @@ _func_syms(open) = begin
     (; oc, fetch, ws, key)
 end
 
-@doc """ Sets up the [`fetch_open_orders`](@ref) or [`fetch_closed_orders`](@ref) closure for the ccxt exchange instance.
-"""
 function ccxt_oc_orders_func!(a, exc; open=true)
     names = _func_syms(open)
     orders_func = first(exc, names.ws, names.fetch)
@@ -538,14 +416,14 @@ function ccxt_oc_orders_func!(a, exc; open=true)
     else
         orders_func = get(a, :live_orders_func, nothing)
         @assert !isnothing(orders_func) "`live_orders_func` must be set before `live_$(names.oc)_orders_func`"
-        pred_func(o) = pyeq(Bool, resp_order_status(o, eid), @pyconst("open"))
+        pred_func(o) = string(resp_order_status(o, eid)) == "open"
         status_pred_func = open ? pred_func : !pred_func
         this_func_fallback(ai; ids=(), kwargs...) = begin
-            out = pylist()
+            out = []
             all_orders = orders_func(ai; ids, kwargs...)
             for o in all_orders
                 if status_pred_func(o)
-                    out.append(o)
+                    push!(out, o)
                 end
             end
             out
@@ -558,7 +436,6 @@ function ccxt_oc_orders_func!(a, exc; open=true)
     end
 end
 
-@doc "Sets up the [`fetch_my_trades`](@ref) closure for the ccxt exchange instance."
 function ccxt_my_trades_func!(a, exc)
     mytrades_func = first(exc, :fetchMyTradesWs, :fetchMyTrades)
     a[:live_my_trades_func] = if !isnothing(mytrades_func)
@@ -573,14 +450,7 @@ function ccxt_my_trades_func!(a, exc)
     end
 end
 
-@doc """ Retrieves trades for an order or determines the start date for fetching trades.
-
-$(TYPEDSIGNATURES)
-
-Attempts to find trades associated with a given order ID. If trades are not found, it defaults to fetching trades from the last day or a specified `since` date. This function is useful for ensuring that trades are fetched even if the order details do not include them.
-
-"""
-find_trades_or_since(a, ai, id::String)::Tuple{DateTime,Option{Py}} = begin
+find_trades_or_since(a, ai, id::String)::Tuple{DateTime,Option{Any}} = begin
     orderbyid_func = @something first(exchange(ai), :fetchOrderWs, :fetchOrder) Returns(())
     orders_func = a[:live_orders_func]
     closedords_func = a[:live_closed_orders_func]
@@ -594,8 +464,7 @@ find_trades_or_since(a, ai, id::String)::Tuple{DateTime,Option{Py}} = begin
             ords = @lget! _orders_resp_cache(a, ai) id _execfunc(
                 orders_func, ai; ids=(id,)
             ) |> resp_to_vec
-            if isemptish(ords) # its possible for the order to not be present in
-                # the fetch orders function if it is closed
+            if isemptish(ords)
                 ords = @lget! _closed_orders_resp_cache(a, ai) id _execfunc(
                     closedords_func, ai; ids=(id,)
                 ) |> resp_to_vec
@@ -641,32 +510,23 @@ resp_to_vec(resp) =
         [resp...]
     end
 
-@doc """ Fetches trades for an order from a specified date.
-
-$(TYPEDSIGNATURES)
-
-Iterates through trades history, starting from a given `since` date, to find trades associated with a specific order ID. This function is useful for retrieving trades that occurred after a certain date.
-
-"""
 find_trades_since(a, ai, id_str::String; exc, since, params) = begin
     mytrades_func = a[:live_my_trades_func]
     since = @something since let
         (this_since, trades_resp) = find_trades_or_since(a, ai, id_str)
         if !isemptish(trades_resp)
-            # We found the matching order, and it holds the trades in its structure
             return trades_resp
         else
             this_since
         end
     end
-    trades_resp = pylist()
+    trades_resp = []
     trades_cache = _trades_resp_cache(a, ai)
     since -= Second(1)
     since_bound = since - round(a[:max_order_lookback], Millisecond)
     while since > since_bound
         resp = @lget! trades_cache since begin
             this_resp = _execfunc(mytrades_func, ai; _skipkwargs(; since=dtstamp(since), params)...)
-            # NOTE: this can fail if the order id (`order` key is not set/none in the trades structure)
             this_trades = _ordertrades(this_resp, exc, ((x) -> string(x) == id_str))
             if isnothing(this_trades)
                 missing
@@ -675,7 +535,7 @@ find_trades_since(a, ai, id_str::String; exc, since, params) = begin
             end
         end
         if !isemptish(resp)
-            trades_resp.extend(resp)
+            append!(trades_resp, resp)
             break
         end
         since -= Day(1)
@@ -683,10 +543,6 @@ find_trades_since(a, ai, id_str::String; exc, since, params) = begin
     return trades_resp
 end
 
-@doc """Sets up the [`fetch_order_trades`](@ref) closure for the ccxt exchange instance.
-
-!!! warning "Uses caching"
-"""
 function ccxt_order_trades_func!(a, exc)
     order_trades_func = first(exc, :fetchOrderTradesWs, :fetchOrderTrades)
     a[:live_order_trades_func] = if !isnothing(order_trades_func)
@@ -700,7 +556,6 @@ function ccxt_order_trades_func!(a, exc)
     else
         mytrades_func = a[:live_my_trades_func]
         ccxt_order_trades_fallback(ai, id; since=nothing, params=nothing) = begin
-            # Filter recent trades history for trades matching the order
             @debug "fetch order trades: from cache" _module = LogTradeFetch ai id
             trades_cache = _trades_resp_cache(a, ai)
             resp_latest = if mytrades_func isa Function
@@ -713,7 +568,6 @@ function ccxt_order_trades_func!(a, exc)
                 @debug "fetch order trades: emptish" _module = LogTradeFetch ai id
                 []
             else
-                # NOTE: this can fail if the trade struct `order` field is none/empty
                 this_trades = _ordertrades(resp_latest, exc, ((x) -> string(x) == id_str))
                 if isnothing(this_trades)
                     @debug "fetch order trades: empty filtered" _module = LogTradeFetch ai id
@@ -724,7 +578,6 @@ function ccxt_order_trades_func!(a, exc)
             end
             if isemptish(trades_resp)
                 @debug "fetch order trades: fetch since" _module = LogTradeFetch ai id
-                # Fallback to fetching trades history using since
                 find_trades_since(a, ai, id_str; exc, since, params)
             else
                 return trades_resp
@@ -733,7 +586,6 @@ function ccxt_order_trades_func!(a, exc)
     end
 end
 
-@doc "Sets up the [`fetch_candles`](@ref) closure for the ccxt exchange instance."
 function ccxt_fetch_candles_func!(a, exc)
     ohlcv_func = first(exc, :fetchOHLCVWs, :fetchOHLCV)
     a[:live_fetch_candles_func] = if !isnothing(ohlcv_func)
@@ -743,7 +595,6 @@ function ccxt_fetch_candles_func!(a, exc)
     end
 end
 
-@doc "Sets up the [`fetch_l2ob`](@ref) closure for the ccxt exchange instance."
 function ccxt_fetch_l2ob_func!(a, exc)
     ob_func = first(exc, :fetchOrderBookWs, :fetchOrderBook)
     a[:live_fetch_l2ob_func] = if !isnothing(ob_func)

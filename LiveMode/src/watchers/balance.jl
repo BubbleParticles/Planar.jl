@@ -13,9 +13,7 @@ using Watchers.WatchersImpls:
     _lastcount
 @watcher_interface!
 using .Exchanges: check_timeout
-using .Exchanges.Python: @py
 using .Lang: splitkws, withoutkws, safenotify, safewait
-using ..Python: pyimport, pycall, pylist
 
 const CcxtBalanceVal = Val{:ccxt_balance_val}
 
@@ -37,7 +35,7 @@ function ccxt_balance_watcher(
     exc = st.exchange(s)
     check_timeout(exc, interval)
     attrs = Dict{Symbol,Any}()
-    params["type"] = @pystr(lowercase(string(balance_type(s))))
+    params["type"] = lowercase(string(balance_type(s)))
     _exc!(attrs, exc)
     attrs[:strategy] = s
     attrs[:iswatch] = if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
@@ -48,7 +46,7 @@ function ccxt_balance_watcher(
     end
     attrs[:func_kwargs] = (; params, kwargs...)
     attrs[:interval] = interval
-    watcher_type = Py
+    watcher_type = Any
     wid = string(wid, "-", hash((exc.id, nameof(s), account(s))))
     watcher(
         watcher_type,
@@ -193,7 +191,7 @@ Processes and updates the balance for a single symbol.
 function _balance_process_symbol!(
     w, s, symsdict, baldict, qc_upper, qc_lower, sym, sym_bal, date, assets_value
 )
-    if isdict(sym_bal) && haskey(sym_bal, @pyconst("free"))
+    if isdict(sym_bal) && haskey(sym_bal, "free")
         k = Symbol(sym)
         total = get_float(sym_bal, "total")
         free = _balance_compute_free(total, get_float(sym_bal, "free"), assets_value)
@@ -284,47 +282,7 @@ function _balance_init_watch!(state)
     w = state.w
     v = @lock w fetch_balance(s; state.timeout, state.params, state.rest...)
     _balance_process_bal!(state, w, v)
-    # Seed balance when using stub CCXT to ensure initial update is available
-    if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
-        try
-            sp = pyimport("stubex.utils")
-            # Seed per-universe balances so margin/no-margin instances receive
-            # realistic cash values. Pass `None` as the exchange arg and the
-            # market symbol as the second arg so the helper can derive base/quote.
-            try
-                for ai in s.universe
-                    try
-                        sym = raw(ai)
-                        stab = pycall(sp.generate_balance, Any, nothing, string(sym))
-                        _balance_process_bal!(state, w, stab)
-                    catch e
-                        @warn "ccxt: stub balance generation failed for" ai e
-                    end
-                end
-                # mark seed as processed to prevent the stall guard from firing
-                _lastprocessed!(w, now())
-                _lastcount!(w, ())
-            catch e
-                @warn "ccxt: stub balance generation failed" e
-                # Fallback: mark seed as processed and notify to avoid stall/wait
-                try
-                    _lastprocessed!(w, now())
-                    _lastcount!(w, ())
-                    safenotify(w.beacon.process)
-                catch
-                end
-            end
-        catch e
-            @warn "ccxt: stub balance generation failed" e
-            # Fallback: mark seed as processed and notify to avoid stall/wait
-            try
-                _lastprocessed!(w, now())
-                _lastcount!(w, ())
-                safenotify(w.beacon.process)
-            catch
-            end
-        end
-    end
+    # Stub CCXT mode no longer supported (Python removed)
     state_init = Ref(false)
     f_push(v) = begin
         push!(state.buf, v)
@@ -335,7 +293,7 @@ function _balance_init_watch!(state)
         w[:balance_handler] = watch_balance_handler(
             state.exc; f_push, state.params, state.rest...
         )
-    start_handler!(h)
+    # start_handler!(h) — removed in non-Python mode
     state_init
 end
 
@@ -363,7 +321,7 @@ function _balance_watch_closure(state)
                 maybe_backoff!(state.errors, v)
                 sleep(1)
             else
-                _balance_process_bal!(state, w, pydict(v))
+                _balance_process_bal!(state, w, v)
             end
         end
         nothing
@@ -444,9 +402,7 @@ _balance_task(w) = @lget! attrs(w) :balance_task _balance_task!(w)
 function Watchers._stop!(w::Watcher, ::CcxtBalanceVal)
     handler = attr(w, :balance_handler, nothing)
     @debug "balance watcher: stopping handler" _module = LogWatchBalance handler
-    if !isnothing(handler)
-        stop_handler!(handler)
-    end
+    # stop_handler!(handler) — removed in non-Python mode
     @debug "balance watcher: stopping task" _module = LogWatchBalance isstarted(w)
     bt = attr(w, :balance_task, nothing)
     if istaskrunning(bt)

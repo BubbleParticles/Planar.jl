@@ -1,0 +1,17 @@
+{
+  "id": "2go5k10f96l-ffeab1",
+  "title": "",
+  "model": "stepfun-ai/step-3.7-flash",
+  "messages": [],
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "cost": 0,
+    "calls": 0
+  },
+  "cost": 0,
+  "toolCalls": 0,
+  "createdAt": "2026-06-09T13:41:36.322Z",
+  "updatedAt": "2026-06-09T13:41:57.654Z"
+}

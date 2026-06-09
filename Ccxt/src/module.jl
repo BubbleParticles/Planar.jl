@@ -1,4 +1,9 @@
 # Ccxt main module - Python is now optional (loaded via extension)
+# Forward-declare Python types for compatibility with downstream packages
+# during migration period. Replace with CcxtGateway-native types after full migration.
+# Py is defined as an abstract type to avoid interfering with Julia dispatch.
+# Watchers defines Base.float(py::Py) which would catch ALL float() calls if Py = Any.
+abstract type Py end
 
 using FileWatching
 using Misc: DATA_PATH, Misc
@@ -59,19 +64,10 @@ end
 function _init()
     mkpath(MARKETS_PATH)
     _with_gateway_lock() do
-        if _check_existing_gateway()
-            @debug "CcxtGateway already running (PID $(CcxtGateway.Rest._gateway_pid[]))"
-            return
-        end
-        client = CcxtGateway.GatewayClient()
-        if !CcxtGateway.ping(client)
-            @debug "CcxtGateway not responding, spawning..."
-            try
-                CcxtGateway.spawn_gateway()
-            catch e
-                @warn "Failed to spawn CcxtGateway: $e"
-            end
-        end
+        _check_existing_gateway()
+        # NOTE: Gateway spawning is deferred to first actual use via
+        # CcxtGateway.Rest._ensure_gateway_running(). This avoids hangs
+        # during module load when the Python gateway isn't available.
     end
 end
 
