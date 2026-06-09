@@ -10,7 +10,6 @@ using .Misc.Lang: @preset, @precomp, @ignore
         end
     end
     HTTP.pushlayer!(closeconn_layer)
-    LiveMode.ExchangeTypes.Python.py_start_loop()
     mod = LiveMode.st.BareStrat
     kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binance) : (;)
     s = LiveMode.st.strategy(mod, Config(; mode=Live(), kwargs...))
@@ -78,7 +77,6 @@ using .Misc.Lang: @preset, @precomp, @ignore
         @debug "PRECOMP: remote 8" # lm.positions_watcher(s) lm.balance_watcher(s)
         dostop()
         @debug "PRECOMP: remote 9" # lm.positions_watcher(s) lm.balance_watcher(s)
-        LiveMode.ExchangeTypes.Python.py_stop_loop()
     catch e
         @error exception = (e, catch_backtrace())
     finally

@@ -245,12 +245,6 @@ using .Plotting.Misc.Lang: @preset, @precomp
 using Opt: Opt as opt, SimMode, st
 if occursin("Plotting", get(ENV, "JULIA_PRECOMP", ""))
     @preset begin
-        py = opt.st.Instances.Exchanges.Python
-        if py.pyisnull(py.gpa.pyaio)
-            py._async_init(py.PythonAsync())
-        else
-            py.py_start_loop()
-        end
         s = opt._precomp_strat(OptimizationExt)
         sess = opt.gridsearch(s; resume=false)
         # because BareStrat (in `user/strategies/BareStrat.jl`) does has opt functions commented out
@@ -263,7 +257,6 @@ if occursin("Plotting", get(ENV, "JULIA_PRECOMP", ""))
         catch exception
             @error "plotting: opt extension precompile failed" exception
         end
-        py.py_stop_loop()
     end
 end
 end

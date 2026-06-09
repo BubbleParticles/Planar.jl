@@ -11,9 +11,6 @@ using Exchanges:
     market_limits,
     market_fees
 id = :okx
-@assert Python.isinitialized_async(Python.gpa)
-Python.py_stop_loop()
-Python.py_start_loop()
 getexchange!(id; markets=:force).py
 getexchange!(id; markets=:yes, sandbox=false).py
 ExchangeTypes._closeall()
@@ -37,4 +34,3 @@ market_limits(pair, e)
 market_fees(pair, e)
 ExchangeTypes._closeall()
 emptycaches!()
-Python.py_stop_loop()

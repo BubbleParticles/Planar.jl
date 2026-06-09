@@ -136,11 +136,6 @@ resetenv!() = begin
         @environment!
         using .Python
     end
-    try
-        Python.py_stop_loop()
-    finally
-        Python.py_start_loop()
-    end
     exs.ExchangeTypes._closeall()
     Watchers._closeall()
     for pull_name in Python.HANDLERS
