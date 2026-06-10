@@ -1,6 +1,7 @@
 using .Misc.Lang: PrecompileTools, @preset, @precomp
 using .Misc: @skipoffline
 
+if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
 @preset let
     pair = "BTC/USDT"
     using .Data: zinstance
@@ -20,4 +21,5 @@ using .Misc: @skipoffline
             rm(tmp_zi.store.a)
         end
     end
+end
 end

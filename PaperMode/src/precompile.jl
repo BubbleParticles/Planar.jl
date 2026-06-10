@@ -1,5 +1,6 @@
 using .Misc.Lang: Lang, @preset, @precomp, @m_str, @ignore
 
+if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
 @preset let
     kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binance) : (;)
     s = st.strategy(st.BareStrat; mode=Paper(), kwargs...)
@@ -38,4 +39,5 @@ using .Misc.Lang: Lang, @preset, @precomp, @m_str, @ignore
     st.Instances.Exchanges.emptycaches!()
     stop!(s)
     st.Instances.Exchanges.ExchangeTypes._closeall()
+end
 end

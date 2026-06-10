@@ -1,5 +1,6 @@
 using .Lang: @preset, @precomp, @m_str, @ignore
 
+if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
 @preset let
     kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binance) : (;)
     s = st.strategy(st.BareStrat; kwargs...)
@@ -22,4 +23,5 @@ using .Lang: @preset, @precomp, @m_str, @ignore
         start!(s; doreset=false)
     end
     @compile_call
+end
 end

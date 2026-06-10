@@ -82,6 +82,7 @@ function stub_strategy(mod=StubStrategy, args...; dostub=true, cfg=Config(), kwa
     s
 end
 
+if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
 @preset let
     cfg = Config()
     @precomp let
@@ -104,8 +105,9 @@ end
                     @debug "stubs: " exception = (first(Base.catch_stack())...,)
                 else
                     rethrow(e)
-                end
-            end
         end
+    end
+end
+end
     end
 end
