@@ -1,5 +1,6 @@
 using .Lang: @preset, @precomp
 
+if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
 @preset let
     tries = 0
     @precomp begin
@@ -36,4 +37,5 @@ using .Lang: @preset, @precomp
         show(devnull, s)
     end
     ExchangeTypes._closeall()
+end
 end

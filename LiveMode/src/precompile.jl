@@ -1,5 +1,6 @@
 using .Misc.Lang: Lang, @preset, @precomp, @m_str, @ignore
 
+if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
 @preset let
     # ENV["JULIA_DEBUG"] = "LiveMode" # "LogBalance,LogWatchBalance,LogWatchLocks,TraceWatchLocks"
     run_funcs(exchange, margin) = begin
@@ -109,4 +110,5 @@ using .Misc.Lang: Lang, @preset, @precomp, @m_str, @ignore
     @debug "PRECOMP: live mode closing"
     Watchers._closeall()
     st.Instances.Exchanges.ExchangeTypes._closeall()
+end
 end
