@@ -9,7 +9,8 @@ This function creates an AssetInstance with the specified asset (`a`), data, exc
 """
 function Instances.AssetInstance(a; data, exc, margin, min_amount=1e-15)
     precision = market_precision(a.raw, exc)
-    limits = market_limits(a.raw, exc; default_amount=(min=min_amount, max=Inf), precision)
+    prec = (; amount=precision[1], price=precision[2])
+    limits = market_limits(a.raw, exc; default_amount=(min=min_amount, max=Inf), precision=prec)
     fees = market_fees(a.raw, exc)
     AssetInstance(a, data, exc, margin; limits, precision, fees)
 end
