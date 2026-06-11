@@ -335,6 +335,7 @@ function _ensure_gateway_running()
         _gateway_initialized[] && return nothing
         if !_check_gateway_up()
             spawn_gateway()
+            _check_gateway_up() || return nothing
         end
         _gateway_initialized[] = true
     end
