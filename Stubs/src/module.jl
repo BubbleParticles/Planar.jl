@@ -85,29 +85,33 @@ end
 if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
 @preset let
     cfg = Config()
-    @precomp let
-        try
-            s = stub_strategy(; cfg)
-            gensave_trades(; s, dosave=true)
-        catch
-            s = stub_strategy(; cfg, dostub=false)
-            while any(isempty(ai.history) for ai in s.universe)
-                gensave_trades(; s, dosave=true)
-            end
-            for ai in s.universe
-                save_stubtrades(ai)
-            end
+    try
+        @precomp let
             try
-                stub_strategy(; cfg, dostub=true)
-            catch e
-                if e isa UndefVarError
-                    stub_strategy(; dostub=false)
-                    @debug "stubs: " exception = (first(Base.catch_stack())...,)
-                else
-                    rethrow(e)
+                s = stub_strategy(; cfg)
+                gensave_trades(; s, dosave=true)
+            catch
+                s = stub_strategy(; cfg, dostub=false)
+                while any(isempty(ai.history) for ai in s.universe)
+                    gensave_trades(; s, dosave=true)
+                end
+                for ai in s.universe
+                    save_stubtrades(ai)
+                end
+                try
+                    stub_strategy(; cfg, dostub=true)
+                catch e
+                    if e isa UndefVarError
+                        stub_strategy(; dostub=false)
+                        @debug "stubs: " exception = (first(Base.catch_stack())...,)
+                    else
+                        rethrow(e)
+                    end
+                end
+            end
         end
+    catch e
+        @debug "Stubs precompile workload skipped: $e"
     end
 end
-end
-    end
 end
