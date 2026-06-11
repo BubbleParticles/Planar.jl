@@ -11,6 +11,7 @@ using ExchangeTypes: OptionsDict, CcxtExchange
 using ExchangeTypes.Ccxt: Ccxt, choosefunc
 import .Ccxt: issupported
 import ExchangeTypes.CcxtGateway: default_client, call_exchange
+const HTTP = ExchangeTypes.CcxtGateway.HTTP
 using JSON
 using Instruments
 using Instruments: Misc
