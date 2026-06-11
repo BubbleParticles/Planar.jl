@@ -312,10 +312,10 @@ $(TYPEDSIGNATURES)
 """
 function market_precision(pair, exc)
     mkt = get(exc.markets, pair, nothing)
-    mkt === nothing && return (default_amount_precision(exc), default_price_precision(exc))
+    mkt === nothing && return (Float64(default_amount_precision(exc)), Float64(default_price_precision(exc)))
     prec = get(mkt, "precision", Dict())
-    amt = decimal_to_size(_get_precision(exc, mkt, "amount"), exc.precision; exc)
-    prc = decimal_to_size(_get_precision(exc, mkt, "price"), exc.precision; exc)
+    amt = Float64(decimal_to_size(_get_precision(exc, mkt, "amount"), exc.precision; exc))
+    prc = Float64(decimal_to_size(_get_precision(exc, mkt, "price"), exc.precision; exc))
     (amt, prc)
 end
 

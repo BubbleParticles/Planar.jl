@@ -12,7 +12,7 @@ function Instances.AssetInstance(a; data, exc, margin, min_amount=1e-15)
     prec = (; amount=precision[1], price=precision[2])
     limits = market_limits(a.raw, exc; default_amount=(min=min_amount, max=Inf), precision=prec)
     fees = market_fees(a.raw, exc)
-    AssetInstance(a, data, exc, margin; limits, precision, fees)
+    AssetInstance(a, data, exc, margin; limits, precision=prec, fees)
 end
 @doc """ Creates an AssetInstance from strings.
 
