@@ -1,8 +1,11 @@
+authors = ["zbc"]
 name = "Strategies"
 uuid = "7a1c9c3a-7759-4314-aa2e-fd1262f248b0"
-authors = ["zbc"]
 version = "0.1.0"
 
 [deps]
 Collections = "199ae5f6-b1b4-42af-853d-fd50a04203c4"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+
+[extras]
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
