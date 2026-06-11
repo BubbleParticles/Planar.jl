@@ -330,6 +330,7 @@ end
 
 function _ensure_gateway_running()
     get(ENV, "CCXT_GATEWAY_DISABLE", "") == "true" && return nothing
+    Base.generating_output() && return nothing
     _gateway_initialized[] && return nothing
     lock(_gateway_init_lock) do
         _gateway_initialized[] && return nothing

@@ -86,13 +86,17 @@ function Exchange(sym::Symbol; account="", kwargs...)
     if Symbol(name) ∈ ExchangeTypes._ccxt_exchange_set
         try
             if !CcxtGateway.ping(client)
-                @debug "Gateway not responding, spawning..."
-                try
-                    CcxtGateway.spawn_gateway()
-                catch
-                    @debug "spawn_gateway failed (may already be running)"
+                if Base.generating_output()
+                    @debug "Precompilation: skipping gateway spawn"
+                else
+                    @debug "Gateway not responding, spawning..."
+                    try
+                        CcxtGateway.spawn_gateway()
+                    catch
+                        @debug "spawn_gateway failed (may already be running)"
+                    end
+                    sleep(3)
                 end
-                sleep(3)
             end
             resp = CcxtGateway.start_exchange(client, name)
             if resp isa Dict

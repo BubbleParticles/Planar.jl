@@ -267,7 +267,8 @@ This function adjusts the leverage tier of a given position (`po`) based on the 
 
 """
 function tier!(po::Position, size=notional(po))
-    po.this_tier[] = tier(po, size)
+    t = tier(po, size)
+    t !== nothing && (po.this_tier[] = t)
 end
 
 @doc "Update the entry price.
