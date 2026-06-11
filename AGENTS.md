@@ -237,6 +237,8 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 
 21. **Search for orphan files across ALL included `.jl` files, not just `module.jl`**: When checking if a source file is orphaned, grep for `include("filename")` across every `.jl` file in `src/`, not only `module.jl`. Files can be included from non-root files (e.g. `impl.jl` includes `dispatch.jl`, `load.jl` includes `candles.jl`). A file missing from `module.jl` is not necessarily orphaned if it's included transitively.
 
+22. **Test precompile workloads, not just module loading**: `CCXT_GATEWAY_DISABLE=true` suppresses `precompile.jl` entirely — running `using Foo` with it set only verifies module loading, not the precompile workload paths. Real failures (type mismatches, missing method dispatch, gateway errors) only surface when precompile workloads execute. Always test **without** `CCXT_GATEWAY_DISABLE` (and without `--compiled-modules=no`) before declaring a package "precompiles successfully". If the gateway is unavailable in your environment, acknowledge that precompile workloads were skipped rather than claiming success.
+
 ### Gotchas
 
 1. **Always wrap CcxtGateway calls in try/catch**: The gateway may not be running or may return errors. Always provide Python fallbacks with `_python` suffix.
@@ -282,6 +284,8 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 21. **Vendored vs upstream Zarr API diff**: When switching from vendored `Zarr` to upstream, check every function signature. Upstream `is_zarray`/`is_zgroup` require a `ZarrFormat(2)` first argument, while the vendored version accepted just `(store, path)`. Other functions (`zcreate`, `zopen`, `BloscCompressor`, `fill_value_decoding`, `zgroup`, `isemptysub`) share the same API. Verify with `methods(f)` on both versions.
 
 22. **Upstream Zarr v0.10.0 does NOT export `BloscCompressor` or `DictStore`**: Use explicit `using Zarr: BloscCompressor, DictStore` rather than relying on re-export. Non-exported names are still importable via qualified import.
+
+23. **Float64-wrap `something` chains in limits/amounts to satisfy parametric type constraints**: A `NamedTuple{(:min,:max)}` where `min` is `Int64` (from raw JSON market data via `to_float(v::Number)`) and `max` is `Float64` (from a default) creates a mixed-type NamedTuple. This fails dispatch against a `Limits{T<:Real}` signature requiring all fields to share the same concrete type. Always wrap the result of `something(...)` with `Float64(...)` in functions that build limits NamedTuples, or ensure every fallback/default arm produces the same type.
 
 ---
 
