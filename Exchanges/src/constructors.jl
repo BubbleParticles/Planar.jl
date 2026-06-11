@@ -449,7 +449,8 @@ function sandbox!(exc::Exchange; flag=!issandbox(exc), remove_keys=true)
         true
     catch e
         msg = string(e)
-        if occursin("sandbox", msg) || occursin("Not Found", msg) || occursin("404", msg)
+        if occursin("sandbox", msg) || occursin("Not Found", msg) || occursin("404", msg) ||
+           e isa HTTP.ConnectError
             @warn "sandbox! failed: $e"
             false
         else
