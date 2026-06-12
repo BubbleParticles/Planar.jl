@@ -80,7 +80,7 @@ if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
             @async run_funcs(:phemex, st.NoMargin())
         end
     catch e
-        @error exception = (e, catch_backtrace())
+        @debug "LiveMode precompile workload skipped" exception = (e, catch_backtrace())
     finally
         # Remove log files matching patterns in project root
         root_dir = dirname(dirname(@__DIR__))
