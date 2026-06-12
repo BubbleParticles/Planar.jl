@@ -302,6 +302,10 @@ _closeall() = begin
         catch
         end
     end
+    try
+        CcxtGateway.HTTP.ConnectionPool.closeall()
+    catch
+    end
 end
 
 Base.nameof(e::CcxtExchange) = Symbol(getfield(e, :id))
