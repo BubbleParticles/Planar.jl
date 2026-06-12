@@ -239,6 +239,8 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 
 22. **Test precompile workloads, not just module loading**: `CCXT_GATEWAY_DISABLE=true` suppresses `precompile.jl` entirely — running `using Foo` with it set only verifies module loading, not the precompile workload paths. Real failures (type mismatches, missing method dispatch, gateway errors) only surface when precompile workloads execute. Always test **without** `CCXT_GATEWAY_DISABLE` (and without `--compiled-modules=no`) before declaring a package "precompiles successfully". If the gateway is unavailable in your environment, acknowledge that precompile workloads were skipped rather than claiming success.
 
+23. **Fix the root cause of precompile failures, not just silence errors**: Wrapping a precompile workload in try/catch and logging with `@debug` changes nothing about the underlying problem — the API call still failed, the connection was still refused, the token was still invalid. Silencing prevents noise but does not fix the package. The proper fix is either (a) rewrite the precompile workload to avoid the failing operation entirely (e.g., don't make live HTTP calls during precompilation), or (b) supply mock endpoints so the workload exercises the real code path without depending on external services. Use try/catch only as a last resort when the failure is in an external dependency you cannot control (e.g., an upstream package's type instability).
+
 ### Gotchas
 
 1. **Always wrap CcxtGateway calls in try/catch**: The gateway may not be running or may return errors. Always provide Python fallbacks with `_python` suffix.
