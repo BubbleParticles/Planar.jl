@@ -2,7 +2,6 @@ using .Misc.Lang: @preset, @precomp, @ignore
 
 @preset let
     using Telegram.HTTP, Telegram.API
-    # ENV["JULIA_DEBUG"] = "Remote,LiveMode,LogWatchBalance"
     function closeconn_layer(handler)
         return function (req; kw...)
             HTTP.setheader(req, "Connection" => "close")
@@ -13,96 +12,57 @@ using .Misc.Lang: @preset, @precomp, @ignore
     mod = LiveMode.st.BareStrat
     kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binance) : (;)
     s = LiveMode.st.strategy(mod, Config(; mode=Live(), kwargs...))
-    # NOTE: needs a telegram token bot
-    ENV["TELEGRAM_BOT_TOKEN"] = "6911910250:AAERDZD9hc8e33_c63Wyw6xyWVXn_DhdHyU"
-    chat_id = ENV["TELEGRAM_BOT_CHAT_ID"] = "-1001996551827"
     Remote.TIMEOUT[] = 1
-    try
-        @debug "PRECOMP: remote 1"
+    token = get(ENV, "TELEGRAM_BOT_TOKEN", "")
+    if !isempty(token)
+        chat_id = get(ENV, "TELEGRAM_BOT_CHAT_ID", "")
         @precomp begin
             cl = tgclient(s)
-            # # Delete any existing webhook to avoid 409 conflicts during precompilation
             Remote.safe_delete_webhook(cl)
             tgstart!(s)
             tgstop!(s)
         end
-        cl = tgclient(s)
-        text = "abc123"
-        @debug "PRECOMP: remote 2"
-        @precomp @ignore begin
-            start_strategy(cl, s; text, chat_id)
-            while !isrunning(s)
-                @debug "PRECOMP: remote sleep"
-                sleep(0.1)
-            end
-            t = stop_strategy(cl, s; text="now", chat_id)
-            wait(t)
-            status(cl, s; text, chat_id)
-            daily(cl, s; text, chat_id)
-            weekly(cl, s; text, chat_id)
-            monthly(cl, s; text, chat_id)
-            balance(cl, s; text, chat_id)
-            @ignore assets(cl, s; isinput=true, text, chat_id)
-            @ignore config(cl, s; isinput=true, text, chat_id)
-            logs(cl, s; isinput=true, text, chat_id)
-
-            # # can't be precompiled because rely on multiple getUpdates
-            set(cl, s; text, chat_id)
-            get(cl, s; text, chat_id)
-            tgstop!(s)
-        end
-        @debug "PRECOMP: remote 3"
-        function dostop()
-            t = @async stop!(s)
-            start = now()
-            while !istaskdone(t)
-                sleep(0.1)
-                now() - start > Second(8) && break
-            end
-            if !istaskdone(t)
-                @warn "failed to stop strategy during precompilation"
-            end
-        end
-        dostop()
-        @debug "PRECOMP: remote 4"
-        empty!(TASK_STATE) # NOTE: Required to avod spurious errors
-        empty!(CLIENTS) # NOTE: Required to avod spurious errors
-        empty!(RUNNING) # NOTE: Required to avod spurious errors
-        @debug "PRECOMP: remote 5" # lm.positions_watcher(s) lm.balance_watcher(s)
-        HTTP.Connections.closeall()
-        @debug "PRECOMP: remote 6" # LiveMode.Watchers._closeall()
-        LiveMode.Watchers._closeall()
-        @debug "PRECOMP: remote 7" # LiveMode.ExchangeTypes._closeall()
-        LiveMode.ExchangeTypes._closeall()
-        @debug "PRECOMP: remote 8" # lm.positions_watcher(s) lm.balance_watcher(s)
-        dostop()
-        @debug "PRECOMP: remote 9" # lm.positions_watcher(s) lm.balance_watcher(s)
-    catch e
-        @error exception = (e, catch_backtrace())
-    finally
-        # Remove log files matching patterns in project root
-        root_dir = dirname(dirname(@__DIR__))
-        log_patterns = [
-            r"^misc\.live-error-.*\.log$",
-            r"^misc\.live-info-.*\.log$",
-            r"^misc\.live-warn-.*\.log$",
-        ]
-        try
-            files = readdir(root_dir)
-            for file in files
-                for pattern in log_patterns
-                    if occursin(pattern, file)
-                        filepath = joinpath(root_dir, file)
-                        if isfile(filepath)
-                            rm(filepath; force=true)
-                            @debug "Removed log file" file = filepath
-                        end
-                        break
-                    end
+        if !isempty(chat_id)
+            cl = tgclient(s)
+            text = "abc123"
+            @precomp @ignore begin
+                start_strategy(cl, s; text, chat_id)
+                while !isrunning(s)
+                    sleep(0.1)
                 end
+                t = stop_strategy(cl, s; text="now", chat_id)
+                wait(t)
+                status(cl, s; text, chat_id)
+                daily(cl, s; text, chat_id)
+                weekly(cl, s; text, chat_id)
+                monthly(cl, s; text, chat_id)
+                balance(cl, s; text, chat_id)
+                @ignore assets(cl, s; isinput=true, text, chat_id)
+                @ignore config(cl, s; isinput=true, text, chat_id)
+                logs(cl, s; isinput=true, text, chat_id)
+                set(cl, s; text, chat_id)
+                get(cl, s; text, chat_id)
+                tgstop!(s)
             end
-        catch e
-            @warn "Failed to remove log files" exception = e
         end
     end
+    function dostop()
+        t = @async stop!(s)
+        start = now()
+        while !istaskdone(t)
+            sleep(0.1)
+            now() - start > Second(8) && break
+        end
+        if !istaskdone(t)
+            @warn "failed to stop strategy during precompilation"
+        end
+    end
+    dostop()
+    empty!(TASK_STATE)
+    empty!(CLIENTS)
+    empty!(RUNNING)
+    HTTP.Connections.closeall()
+    LiveMode.Watchers._closeall()
+    LiveMode.ExchangeTypes._closeall()
+    dostop()
 end
