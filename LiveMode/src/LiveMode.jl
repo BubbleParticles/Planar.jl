@@ -22,7 +22,6 @@ Disambiguation:
 """
 module LiveMode
 
-__precompile__(false)
 include(joinpath(@__DIR__, "module.jl"))
 if occursin(string(@__MODULE__), get(ENV, "JULIA_PRECOMP", ""))
     include("precompile.jl")
