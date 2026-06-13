@@ -45,4 +45,10 @@ end
     @test length(result) == 3
 end
 
+@testset "read_ohlcv" begin
+    df = Stubs.read_ohlcv()
+    @test df isa Stubs.DataFrame
+    @test size(df, 1) > 0
+    @test size(df, 2) > 0
+end
 end

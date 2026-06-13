@@ -42,6 +42,29 @@ using Pbar
         Pbar.pbclose!(job)
         @test true
     end
+
+    @testset "RunningJob struct" begin
+        Pbar._doinit()
+        job = Pbar.Term.Progress.addjob!(Pbar.pbar[]; description="test", N=10)
+        rj = Pbar.RunningJob(; job=job)
+        @test rj.counter == 1
+        @test rj.job === job
+        @test rj.updated_at isa Pbar.DateTime
+    end
+
+    @testset "transient! toggles flag" begin
+        Pbar._doinit()
+        orig = Pbar.pbar[].transient
+        Pbar.transient!()
+        @test Pbar.pbar[].transient != orig
+    end
+
+    @testset "frequency! sets min_delta" begin
+        old = Pbar.min_delta[]
+        Pbar.frequency!(Pbar.Millisecond(100))
+        @test Pbar.min_delta[] == Pbar.Millisecond(100)
+        Pbar.frequency!(old)  # restore
+    end
 end
 
 end # module Runtests

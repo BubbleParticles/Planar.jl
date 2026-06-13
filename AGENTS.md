@@ -241,6 +241,8 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 
 23. **Fix the root cause of precompile failures, not just silence errors**: Wrapping a precompile workload in try/catch and logging with `@debug` changes nothing about the underlying problem — the API call still failed, the connection was still refused, the token was still invalid. Silencing prevents noise but does not fix the package. The proper fix is either (a) rewrite the precompile workload to avoid the failing operation entirely (e.g., don't make live HTTP calls during precompilation), or (b) supply mock endpoints so the workload exercises the real code path without depending on external services. Use try/catch only as a last resort when the failure is in an external dependency you cannot control (e.g., an upstream package's type instability).
 
+24. **Use `dt()` from TimeTicks, not `DateTime(Int64)`, to convert timestamp integers to DateTime**: `DateTime(2024)` interprets the integer as a year number (returns `2024-01-01`), not as milliseconds since epoch. Always use `dt(ts)` (which calls `unix2datetime(ts / 1000)`) to convert production Unix-ms timestamps to DateTime.
+
 ### Gotchas
 
 1. **Always wrap CcxtGateway calls in try/catch**: The gateway may not be running or may return errors. Always provide Python fallbacks with `_python` suffix.
@@ -288,6 +290,10 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 22. **Upstream Zarr v0.10.0 does NOT export `BloscCompressor` or `DictStore`**: Use explicit `using Zarr: BloscCompressor, DictStore` rather than relying on re-export. Non-exported names are still importable via qualified import.
 
 23. **Float64-wrap `something` chains in limits/amounts to satisfy parametric type constraints**: A `NamedTuple{(:min,:max)}` where `min` is `Int64` (from raw JSON market data via `to_float(v::Number)`) and `max` is `Float64` (from a default) creates a mixed-type NamedTuple. This fails dispatch against a `Limits{T<:Real}` signature requiring all fields to share the same concrete type. Always wrap the result of `something(...)` with `Float64(...)` in functions that build limits NamedTuples, or ensure every fallback/default arm produces the same type.
+
+24. **`TimeFrame("m")` suffix means month, not minute**: `TimeFrame("1m")` creates a Period of `Month(1)`, not `Minute(1)`. Use `TimeFrame("1min")` for minute intervals. Always verify by checking `tf.period` in a REPL before relying on it.
+
+25. **`dt()` from TimeTicks expects Unix ms, not Julia internal `Dates.value()` format**: `dt(ts)` calls `unix2datetime(ts / 1000)`. Mock data helpers (like `_make_ohlcv`) that use `Dates.value(DateTime(...))` produce Julian-internal ms (~6.38e13 for 2024), NOT Unix ms (~1.70e12 for 2024). Create test data with Unix-ms timestamps to match production format and work correctly with `dt()`.
 
 ---
 

@@ -109,3 +109,37 @@ end
     s = @caller()
     @test s isa String
 end
+
+@testset "_asbool" begin
+    @test Lang._asbool(true) == true
+    @test Lang._asbool(false) == false
+    @test Lang._asbool("true", :TestModule) == true
+    @test Lang._asbool("false", :TestModule) == false
+end
+
+@testset "@get macro" begin
+    d = Dict(:a => 42, :b => nothing)
+    @test Lang.@get(d, :a, 0) == 42
+    @test Lang.@get(d, :missingkey, 99) == 99
+end
+
+@testset "@asyncm macro" begin
+    r = Ref{Int}(0)
+    t = @asyncm (sleep(0.01); r[] = 42)
+    sleep(0.05)
+    @test r[] == 42
+end
+
+@testset "_isdebug" begin
+    withenv("JULIA_DEBUG" => "MyModule") do
+        @test Lang._isdebug("MyModule") == true
+    end
+    withenv("JULIA_DEBUG" => "nothing") do
+        @test Lang._isdebug("OtherModule") == false
+    end
+end
+
+@testset "@except macro" begin
+    result = Lang.@except(42)
+    @test result == 42
+end

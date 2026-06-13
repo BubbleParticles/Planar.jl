@@ -403,4 +403,95 @@ const mock_exc = _make_exchange(:test)
         coll = Collections.AssetCollection([ai_btc, ai_eth])
         @test Collections.iscashable(Instances.Instruments.Cash("USDT", 1000.0), coll)
     end
+
+    @testset "_daterange" begin
+        a_btc = parse(AbstractAsset, "BTC/USDT")
+        a_eth = parse(AbstractAsset, "ETH/USDT")
+        tf = TimeFrame("1min")
+        # Unix ms timestamp for 2024-01-01T00:00:00Z
+        base_ts = 1704067200000
+
+        # BTC: 100 rows starting at 2024-01-01 (1-minute candles = 60000 ms apart)
+        df1 = DataFrame(
+            timestamp = [Int64(base_ts + i*60000) for i in 0:99],
+            open = 50000.0, high = 50100.0, low = 49900.0, close = 50050.0, volume = 1000.0,
+        )
+        # ETH: 50 rows starting at 2024-01-01 00:30 (30 min later), so intersection starts later
+        df2 = DataFrame(
+            timestamp = [Int64(base_ts + (30+i)*60000) for i in 0:49],
+            open = 3000.0, high = 3020.0, low = 2980.0, close = 3010.0, volume = 500.0,
+        )
+
+        data_btc = SortedDict(tf => df1)
+        data_eth = SortedDict(tf => df2)
+
+        ai_btc = Instances.AssetInstance(
+            a_btc, data_btc, mock_exc, NoMargin();
+            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
+            precision=(; amount=8, price=2),
+            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
+        )
+        ai_eth = Instances.AssetInstance(
+            a_eth, data_eth, mock_exc, NoMargin();
+            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
+            precision=(; amount=8, price=2),
+            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
+        )
+
+        coll = Collections.AssetCollection([ai_btc, ai_eth])
+
+        # _daterange (intersection): latest start = 2024-01-01 00:30, earliest end = 2024-01-01 01:19
+        dr = Collections._daterange(coll)
+        @test dr.start == DateTime(2024, 1, 1, 0, 30, 0)
+        @test dr.stop == DateTime(2024, 1, 1, 1, 19, 0)
+
+        # _daterange_full (union): earliest start = 2024-01-01 00:00, latest end = 2024-01-01 01:39 + 1min
+        dr2 = Collections._daterange_full(coll)
+        @test dr2.start == DateTime(2024, 1, 1, 0, 0, 0)
+        @test dr2.stop == DateTime(2024, 1, 1, 1, 40, 0)  # M + tf
+    end
+
+    @testset "getindex chained triple" begin
+        a_btc = parse(AbstractAsset, "BTC/USDT")
+        a_eth = parse(AbstractAsset, "ETH/USDT")
+        tf = TimeFrame("1min")
+        data_btc = SortedDict(tf => _make_ohlcv(50000.0, 10))
+        data_eth = SortedDict(tf => _make_ohlcv(300.0, 10))
+
+        ai_btc = Instances.AssetInstance(
+            a_btc, data_btc, mock_exc, NoMargin();
+            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
+            precision=(; amount=8, price=2),
+            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
+        )
+        ai_eth = Instances.AssetInstance(
+            a_eth, data_eth, mock_exc, NoMargin();
+            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
+            precision=(; amount=8, price=2),
+            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
+        )
+
+        coll = Collections.AssetCollection([ai_btc, ai_eth])
+        # Triple-arg getindex: (exc, :col, idx)
+        result = coll[ExchangeID(:test), :instance, 1]
+        @test result === ai_btc
+    end
+
+    @testset "first with asset" begin
+        a_btc = parse(AbstractAsset, "BTC/USDT")
+        tf = TimeFrame("1m")
+        data_btc = SortedDict(tf => _make_ohlcv(50000.0, 10))
+
+        ai_btc = Instances.AssetInstance(
+            a_btc, data_btc, mock_exc, NoMargin();
+            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
+            precision=(; amount=8, price=2),
+            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
+        )
+
+        coll = Collections.AssetCollection([ai_btc])
+        df = first(coll, a_btc)
+        @test df isa DataFrame
+        @test first(df.timestamp) == Dates.value(DateTime(2024, 1, 1))
+    end
 end
