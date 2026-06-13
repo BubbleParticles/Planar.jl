@@ -241,8 +241,8 @@ function TimeTicks.DateRange(ac::AssetCollection, tf=nothing; full=false, kwargs
 end
 
 function _daterange(ac::AssetCollection, tf=nothing; skip_empty=false)
-    m = typemin(DateTime)
-    M = typemax(DateTime)
+    m = typemin(Int64)
+    M = typemax(Int64)
     for ai in ac.data.instance
         df = first(values(ai.data))
         if skip_empty && isempty(df)
@@ -256,7 +256,7 @@ function _daterange(ac::AssetCollection, tf=nothing; skip_empty=false)
         end
     end
     tf = @something tf first(ac.data[begin, :instance].data).first
-    DateRange(m, M, tf)
+    DateRange(dt(m), dt(M), tf)
 end
 
 @doc """Makes a date range that spans the union (earliest start to latest end) of the collection.
@@ -272,8 +272,8 @@ Parameters:
 - `tf` (optional): a `TimeFrame`. If not provided, it is inferred from the first asset instance
 """
 function _daterange_full(ac::AssetCollection, tf=nothing; kwargs...)
-    m = typemax(DateTime)
-    M = typemin(DateTime)
+    m = typemax(Int64)
+    M = typemin(Int64)
     for ai in ac.data.instance
         # Consider the first and last dataframes in the SortedDict for breadth
         df_first = first(values(ai.data))
@@ -288,7 +288,7 @@ function _daterange_full(ac::AssetCollection, tf=nothing; kwargs...)
         end
     end
     tf = @something tf first(ac.data[begin, :instance].data).first
-    DateRange(m, M + tf, tf)
+    DateRange(dt(m), dt(M) + tf, tf)
 end
 
 Base.iterate(ac::AssetCollection) = iterate(ac.data.instance)
