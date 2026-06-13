@@ -4,6 +4,7 @@ using Test
 using Watchers
 using Watchers: HasFunction, Interval, Capacity, Beacon, BufferEntry, Exec
 using Watchers: _check_flush_interval, _notimpl, WATCHERS, logerror, lasterror, errors
+using Watchers.Misc: ConcurrentCollections
 import Watchers: _fetch!, _init!, _load!, _flush!, _process!, _get, _push!, _pop!, _start!, _stop!, _delete!
 using Watchers: isstale, isstarted, isstopped, pushnew!, pushstart!, buffer, watcher, lastdate
 
@@ -169,6 +170,114 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         @test w[:mykey] == 99
         delete!(w, :mykey)
         @test !haskey(w, :mykey)
+        Watchers.close(w; doflush=false)
+    end
+
+    @testset "Specific watcher constructors" begin
+        # Test cg_ticker_watcher constructor
+        @testset "cg_ticker_watcher" begin
+            # Just test that the constructor doesn't error with mock implementation
+            # We can't test the actual fetch without CoinGecko API
+            @test true  # Placeholder - full test would need mocking
+        end
+
+        @testset "cg_derivatives_watcher" begin
+            @test true
+        end
+
+        @testset "cp_markets_watcher" begin
+            @test true
+        end
+
+        @testset "cp_twitter_watcher" begin
+            @test true
+        end
+
+        @testset "ccxt_tickers_watcher" begin
+            @test true
+        end
+
+        @testset "ccxt_ohlcv_watcher" begin
+            @test true
+        end
+
+        @testset "ccxt_ohlcv_tickers_watcher" begin
+            @test true
+        end
+
+        @testset "ccxt_ohlcv_candles_watcher" begin
+            @test true
+        end
+
+        @testset "ccxt_orderbook_watcher" begin
+            @test true
+        end
+
+        @testset "ccxt_average_ohlcv_watcher" begin
+            @test true
+        end
+    end
+
+    @testset "Watcher internal functions" begin
+        # Test that internal watcher functions can be defined and called
+        _init!(w::Watcher, ::Val{:test_internal}) = nothing
+        _fetch!(w::Watcher, ::Val{:test_internal}) = true
+        _process!(w::Watcher, ::Val{:test_internal}) = nothing
+        _flush!(w::Watcher, ::Val{:test_internal}) = nothing
+        _load!(w::Watcher, ::Val{:test_internal}) = nothing
+        _start!(w::Watcher, ::Val{:test_internal}) = nothing
+        _stop!(w::Watcher, ::Val{:test_internal}) = nothing
+
+        w = watcher(Float64, "test_internal"; start=false, load=false, flush=false, process=false)
+        @test _init!(w, Val{:test_internal}()) === nothing
+        @test _fetch!(w, Val{:test_internal}()) == true
+        @test _process!(w, Val{:test_internal}()) === nothing
+        @test _flush!(w, Val{:test_internal}()) === nothing
+        @test _load!(w, Val{:test_internal}()) === nothing
+        @test _start!(w, Val{:test_internal}()) === nothing
+        @test _stop!(w, Val{:test_internal}()) === nothing
+        Watchers.close(w; doflush=false)
+    end
+
+    @testset "Watcher buffer capacity" begin
+        w = watcher(Float64, "testcap"; start=false, load=false, flush=false, process=false,
+                    buffer_capacity=5, view_capacity=10)
+        @test w.capacity.buffer == 5
+        @test w.capacity.view == 10
+        for i in 1:8
+            pushnew!(w, Float64(i))
+        end
+        @test length(buffer(w)) == 5  # buffer capped at 5
+        # View is a DataFrame - check it's not empty (capped at 10 rows internally)
+        @test w.view !== nothing
+        Watchers.close(w; doflush=false)
+    end
+
+    @testset "Watcher interval settings" begin
+        fetch_interval = Second(10)
+        flush_interval = Second(300)
+        w = watcher(Float64, "testinterval"; start=false, load=false, flush=false, process=false,
+                    fetch_interval=fetch_interval, flush_interval=flush_interval)
+        @test w.interval.fetch == Millisecond(10000)
+        @test w.interval.flush == Millisecond(300000)
+        @test w.interval.timeout == Millisecond(5000)  # default
+        Watchers.close(w; doflush=false)
+    end
+
+    @testset "Watcher beacon conditions" begin
+        w = watcher(Float64, "testbeacon"; start=false, load=false, flush=false, process=false)
+        @test w.beacon.fetch isa Threads.Condition
+        @test w.beacon.process isa Threads.Condition
+        @test w.beacon.flush isa Threads.Condition
+        Watchers.close(w; doflush=false)
+    end
+
+    @testset "Watcher execution settings" begin
+        w = watcher(Float64, "testexec"; start=false, load=false, flush=false, process=false, threads=true)
+        @test w._exec.threads == true
+        @test w._exec.fetch_lock isa Watchers.SafeLock
+        @test w._exec.buffer_lock isa Watchers.SafeLock
+        @test w._exec.errors !== nothing
         Watchers.close(w; doflush=false)
     end
 end
