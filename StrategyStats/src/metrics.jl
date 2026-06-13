@@ -367,7 +367,7 @@ The `is_peaked` function takes the following parameters:
 """
 function is_peaked(ohlcv::DataFrame; thresh=0.05, n=26)
     @checksize
-    bb = bbands(ohlcv; n)
+    bb = bbands(ohlcv, n)
     ohlcv.close[end] / bb[end, 3] > 1 + thresh
 end
 
@@ -392,7 +392,7 @@ The function returns a boolean that indicates whether a bottom has occurred.
 """
 function is_bottomed(ohlcv::DataFrame; thresh=0.05, n=26)
     @checksize
-    bb = bbands(ohlcv; n)
+    bb = bbands(ohlcv, n)
     ohlcv.close[end] / bb[end, 1] < 1 + thresh
 end
 

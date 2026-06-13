@@ -1,4 +1,5 @@
 using Instances
+using Exchanges
 using Exchanges.ExchangeTypes
 using Exchanges: CurrencyCash, Exchange, LeverageTier
 using Instances.Instruments: @a_str, add!, sub!, cash!, value, freecash
@@ -456,6 +457,13 @@ end
 
     # isopen after mutations
     @test !Instances.isopen(po)
+
+    # tier lookup by notional (returns LeverageTier, not tuple)
+    @test Instances.tier(po, 50000.0) == tier1
+    @test Instances.tier(po, 0.0) == tier1
+
+    # _status! throws on close→close transition
+    @test_throws AssertionError Instances._status!(po, Instances.PositionClose())
 end
 
 # =============================================================
@@ -501,6 +509,10 @@ end
 
     @test Instances.pnl(po2, 40000.0) ≈ 5000.0  # (45000-40000)*1.0
     @test Instances.pnl(po2, 50000.0) ≈ -5000.0
+
+    # pnlpct for Long: pnl(po, v, 1.0) / price(po)
+    @test Instances.pnlpct(po, 50000.0) ≈ 5000.0 / 45000.0
+    @test Instances.pnlpct(po, 40000.0) ≈ -5000.0 / 45000.0
 end
 
 # =============================================================
@@ -535,6 +547,14 @@ end
     precision = (amount=1e-8, price=1e-8)
     fees = (taker=0.01, maker=0.01, min=0.01, max=0.01)
     data = SortedDict{TimeFrame,DataFrame}(tf"1m" => DataFrame())
+
+    # Seed leverage tiers to avoid gateway call
+    tier_key = (Symbol(exc.id), "BTC/USDT:USDT")
+    tier1 = LeverageTier(Dict(
+        "tier" => 1, "notionalFloor" => 0.0, "notionalCap" => 100000.0,
+        "maxLeverage" => 10.0, "maintenanceMarginRate" => 0.01,
+        "maintAmtNotional" => 0.0, "minNotional" => 0.0))
+    Exchanges._TIER_CACHES[tier_key] = ([tier1], time() * 1000)
 
     ai = Instances.AssetInstance(da, data, exc, Isolated(); limits=limits, precision=precision, fees=fees)
     @test ai isa Instances.AssetInstance
@@ -589,4 +609,118 @@ end
     @test (@rprice 100.125) == Instances.toprecision(100.125, ai.precision.price)
     @test (@ramount 0.00123) == Instances.toprecision(0.00123, ai.precision.amount)
     @test (@ramount 0.00125) == Instances.toprecision(0.00125, ai.precision.amount)
+end
+
+# =============================================================
+# 19. _roundpos
+# =============================================================
+@testset "_roundpos" begin
+    @test Instances._roundpos(1.23456, 2) ≈ 1.23
+    @test Instances._roundpos(-1.23456, 2) ≈ -1.23
+    @test Instances._roundpos(0.0, 5) == 0.0
+    @test Instances._roundpos(1.23456789, 4) ≈ 1.2345  # default precision with RoundToZero
+    @test Instances._roundpos(-1.23456789, 4) ≈ -1.2345
+end
+
+# =============================================================
+# 20. Base.iszero for AssetInstance
+# =============================================================
+@testset "Base.iszero for AssetInstance" begin
+    limits = (leverage=(min=1.0, max=10.0), amount=(min=1e-8, max=1e8),
+              price=(min=1e-8, max=1e8), cost=(min=1e-8, max=1e8))
+    precision = (amount=1e-8, price=1e-8)
+    fees = (taker=0.01, maker=0.01, min=0.01, max=0.01)
+    data = SortedDict{TimeFrame,DataFrame}(tf"1m" => DataFrame())
+    ai = Instances.AssetInstance(a, data, exc, NoMargin(); limits=limits, precision=precision, fees=fees)
+    @test iszero(ai)
+    add!(Instances.cash(ai), 0.5)
+    @test !iszero(ai)
+end
+
+# =============================================================
+# 21. _status! Position state transitions
+# =============================================================
+@testset "_status! transitions" begin
+    da = parse(Derivative, "BTC/USDT")
+    tier1 = LeverageTier(Dict(
+        "tier" => 1, "notionalFloor" => 0.0, "notionalCap" => 100000.0,
+        "maxLeverage" => 10.0, "maintenanceMarginRate" => 0.01,
+        "maintAmtNotional" => 0.0, "minNotional" => 0.0))
+    cc = CurrencyCash(exc, "BTC", 0.0)
+    po = Instances.Position{Long, ExchangeID{:mocktest}, Isolated}(
+        asset=da, min_size=0.001, cash=cc, cash_committed=cc,
+        tiers=[[tier1]], this_tier=[tier1])
+
+    # Default status is PositionClose
+    @test Instances.isopen(po) == false
+    @test po.status[] == Instances.PositionClose()
+
+    # Open → Close transition succeeds (default is close)
+    Instances._status!(po, Instances.PositionOpen())
+    @test Instances.isopen(po) == true
+
+    # Close → Open transition
+    Instances._status!(po, Instances.PositionClose())
+    @test Instances.isopen(po) == false
+
+    # Open → Open should error
+    Instances._status!(po, Instances.PositionOpen())
+    @test_throws AssertionError Instances._status!(po, Instances.PositionOpen())
+end
+
+# =============================================================
+# 22. _roundlev
+# =============================================================
+@testset "_roundlev" begin
+    da = parse(Derivative, "BTC/USDT:USDT")
+    tier1 = LeverageTier(Dict(
+        "tier" => 1, "notionalFloor" => 0.0, "notionalCap" => 100000.0,
+        "maxLeverage" => 10.0, "maintenanceMarginRate" => 0.01,
+        "maintAmtNotional" => 0.0, "minNotional" => 0.0))
+    cc = CurrencyCash(exc, "BTC", 0.0)
+    po = Instances.Position{Long, ExchangeID{:mocktest}, Isolated}(
+        asset=da, min_size=0.001, cash=cc, cash_committed=cc,
+        tiers=[[tier1]], this_tier=[tier1])
+
+    # Normal leverage within bounds, rounded to 2 decimal places (RoundToZero)
+    @test Instances._roundlev(po, 5.0) == 5.0
+    @test Instances._roundlev(po, 5.6789) ≈ 5.67
+    # Clamped to maxleverage (10.0)
+    @test Instances._roundlev(po, 20.0) == 10.0
+    # Clamped to min leverage (1.0)
+    @test Instances._roundlev(po, 0.5) == 1.0
+end
+
+# =============================================================
+# 23. nondust for MarginInstance
+# =============================================================
+@testset "nondust for MarginInstance" begin
+    da = parse(Derivative, "BTC/USDT:USDT")
+    tier_key = (Symbol(exc.id), "BTC/USDT:USDT")
+    tier1 = LeverageTier(Dict(
+        "tier" => 1, "notionalFloor" => 0.0, "notionalCap" => 100000.0,
+        "maxLeverage" => 10.0, "maintenanceMarginRate" => 0.01,
+        "maintAmtNotional" => 0.0, "minNotional" => 0.0))
+    Exchanges._TIER_CACHES[tier_key] = ([tier1], time() * 1000)
+    limits = (leverage=(min=1.0, max=10.0), amount=(min=1e-8, max=1e8),
+              price=(min=1e-8, max=1e8), cost=(min=10.0, max=1e8))
+    precision = (amount=1e-8, price=1e-8)
+    fees = (taker=0.01, maker=0.01, min=0.01, max=0.01)
+    data = SortedDict{TimeFrame,DataFrame}(tf"1m" => DataFrame())
+    ai = Instances.AssetInstance(da, data, exc, Isolated(); limits=limits, precision=precision, fees=fees)
+
+    # No position → returns 0
+    longpos = Instances.position(ai, Long())
+    shortpos = Instances.position(ai, Short())
+    @test Instances.nondust(ai, 50000.0, Long()) == 0.0
+    @test Instances.nondust(ai, 50000.0, Short()) == 0.0
+
+    # Add cash to position and verify nondust
+    # cost.min = 10.0, so 0.0001 BTC * 50000 * 1.0 = 5.0 < 10.0 → dust
+    Instances.Instruments.add!(Instances.cash(longpos), 0.0001)
+    @test Instances.nondust(ai, 50000.0, Long()) == 0.0
+
+    # 0.001 BTC * 50000 * 1.0 = 50.0 > 10.0 → not dust
+    Instances.Instruments.add!(Instances.cash(longpos), 0.001)
+    @test Instances.nondust(ai, 50000.0, Long()) > 0.0
 end
