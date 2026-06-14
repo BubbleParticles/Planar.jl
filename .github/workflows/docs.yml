@@ -32,7 +32,7 @@ jobs:
     env:
       CI: true
       JULIA_VERSION: 1.11
-      JULIA_NOPRECOMP: "all"
+      JULIA_PRECOMP: ""
     permissions: write-all
 
     steps:
