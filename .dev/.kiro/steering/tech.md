@@ -73,5 +73,5 @@ scripts/build.sh
 
 ## Code Style
 - **JuliaFormatter**: Blue style with 92 character margin
-- **Precompilation**: Selective via JULIA_PRECOMP/JULIA_NOPRECOMP env vars
+- **Precompilation**: Selective via JULIA_PRECOMP env var (JULIA_NOPRECOMP removed from source)
 - **Module Structure**: Hierarchical with clear separation of concerns

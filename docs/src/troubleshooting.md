@@ -98,26 +98,32 @@ julia> using Pkg; Pkg.status()
 - Use lazy initialization for Python-dependent objects
 - Avoid `@py` macros in precompilable functions
 
-### Persistent Precompilation Skipping
+### Precompilation Failures
 
-**Symptoms**: Packages consistently skip precompilation, slow startup times
+**Symptoms**: Package fails to load, precompilation hangs or errors, "breaks incremental compilation" warnings
 
 **Diagnostic Steps**:
-1. Check `JULIA_NOPRECOMP` environment variable
-2. Verify package dependencies are precompiled
-3. Look for circular dependency issues
+1. Check `JULIA_PRECOMP` environment variable — only packages listed here run precompile workloads
+2. Look for common precompile pitfalls:
+   - `@eval` into `Main` — use `$Pkg` interpolation instead of `using Pkg: Pkg`
+   - `__revise_mode__ = :eval` in source code — remove from production files
+   - Live HTTP calls or gateway connections — wrap in try/catch
+   - External strategy module loading (`strategy(:BareStrat)`) — wrap in try/catch
+3. Verify with `--compiled-modules=no` to bypass cached compilation
 
 **Solutions**:
 ```bash
 # Check environment variables
-echo $JULIA_NOPRECOMP
 echo $JULIA_PRECOMP
 
-# Clear environment variables if needed
-unset JULIA_NOPRECOMP
+# Test without cached precompilation
+julia --project=Planar --compiled-modules=no -e "using Pkg; Pkg.status()"
 
-# Force precompilation
+# Force full precompilation
 julia --project=Planar -e "using Pkg; Pkg.precompile()"
+
+# Clear precompile cache and retry
+rm -rf ~/.julia/compiled
 ```
 
 ### Debug Symbol Issues
