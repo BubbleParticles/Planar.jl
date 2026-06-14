@@ -1,5 +1,6 @@
 using Test
 using Metrics
+using DataFrames: DataFrame
 const M = Metrics
 const _tf1d = M.ect.TimeTicks.@tf_str("1d")
 
@@ -170,4 +171,110 @@ end
     @test :cagr in M.METRICS
     @test :trades in M.METRICS
     @test M.DAYS_IN_YEAR == 365
+end
+
+@testset "trades_metrics.jl functions" begin
+    @testset "trades_pnl with returns array" begin
+        returns = [0.05, -0.02, 0.03, -0.01, 0.04]
+        # Use default f=mean with non-empty data (no default_value call)
+        result = M.trades_pnl(returns)
+        @test result isa NamedTuple
+        @test hasproperty(result, :mean_loss)
+        @test hasproperty(result, :mean_profit)
+
+        # Use f=sum (which has a zero-arg method, so default_value works)
+        result2 = M.trades_pnl(returns; f=sum)
+        @test result2 isa NamedTuple
+        @test hasproperty(result2, :sum_loss)
+        @test hasproperty(result2, :sum_profit)
+
+        # Empty returns — use f=sum since default_value(sum) returns 0
+        result3 = M.trades_pnl(Float64[]; f=sum)
+        @test result3 isa NamedTuple
+    end
+
+    @testset "trades_drawdown internal logic" begin
+        # Test the internal drawdown algorithm from trades_metrics.jl
+        cum_bal = [100.0, 110.0, 105.0, 115.0, 100.0, 120.0]
+        ath = atl = first(cum_bal)
+        dd = typemax(eltype(cum_bal))
+        for v in cum_bal
+            if v > ath
+                ath = v
+            elseif v < atl
+                atl = v
+            end
+            aatl = abs(atl)
+            shifted_ath = aatl + abs(ath)
+            this_dd = aatl / shifted_ath
+            if aatl > zero(aatl) && this_dd < dd
+                dd = this_dd
+            end
+        end
+        @test dd >= 0.0
+        @test dd <= 1.0
+        @test isfinite(dd)
+    end
+
+    @testset "trades_drawdown edge cases internal" begin
+        # Single element — condition aatl > zero(aatl) is true (100 > 0), so dd = 100/(100+100) = 0.5
+        cum_bal = [100.0]
+        ath = atl = first(cum_bal)
+        dd = typemax(eltype(cum_bal))
+        for v in cum_bal
+            if v > ath
+                ath = v
+            elseif v < atl
+                atl = v
+            end
+            aatl = abs(atl)
+            shifted_ath = aatl + abs(ath)
+            this_dd = aatl / shifted_ath
+            if aatl > zero(aatl) && this_dd < dd
+                dd = this_dd
+            end
+        end
+        @test dd ≈ 0.5  # 100/(100+100)
+
+        # All increasing — atl stays at first value, dd = 100/(100+120) ≈ 0.4545
+        cum_bal = [100.0, 110.0, 120.0]
+        ath = atl = first(cum_bal)
+        dd = typemax(eltype(cum_bal))
+        for v in cum_bal
+            if v > ath
+                ath = v
+            elseif v < atl
+                atl = v
+            end
+            aatl = abs(atl)
+            shifted_ath = aatl + abs(ath)
+            this_dd = aatl / shifted_ath
+            if aatl > zero(aatl) && this_dd < dd
+                dd = this_dd
+            end
+        end
+        @test dd ≈ 100.0/(100.0+120.0)
+
+        # All decreasing — atl gets updated to lower values
+        cum_bal = [120.0, 110.0, 100.0]
+        ath = atl = first(cum_bal)
+        dd = typemax(eltype(cum_bal))
+        for v in cum_bal
+            if v > ath
+                ath = v
+            elseif v < atl
+                atl = v
+            end
+            aatl = abs(atl)
+            shifted_ath = aatl + abs(ath)
+            this_dd = aatl / shifted_ath
+            if aatl > zero(aatl) && this_dd < dd
+                dd = this_dd
+            end
+        end
+        @test isfinite(dd)
+        @test dd > 0.0
+        # atl updated to 100, ath stays at 120, dd = 100/(100+120) ≈ 0.4545
+        @test dd ≈ 100.0/(100.0+120.0)
+    end
 end

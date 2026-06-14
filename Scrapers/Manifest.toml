@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "7ea9c50022e273692458b01fd5cfbe366dc30f8b"
+project_hash = "a73883efa5dab2d25cdcde5dcadc5b2ee5d6b464"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "2d9c9a55f9c93e8887ad391fbae72f8ef55e1177"
@@ -144,6 +144,12 @@ version = "1.6.0"
     IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
     LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
     StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
+[[deps.CoverageTools]]
+deps = ["JuliaSyntax", "TOML"]
+git-tree-sha1 = "59e6cf93c468aa21bd22578c41b69b5784e34955"
+uuid = "c36e975a-824b-4404-a568-ef97ca766997"
+version = "1.4.1"
 
 [[deps.Crayons]]
 git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
@@ -344,6 +350,11 @@ version = "1.14.3"
 
     [deps.JSON3.weakdeps]
     ArrowTypes = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
+
+[[deps.JuliaSyntax]]
+git-tree-sha1 = "0d4b3dab95018bcf3925204475693d9f09dc45b8"
+uuid = "70703baa-626e-46a2-a12c-08ffd08c73b4"
+version = "1.0.2"
 
 [[deps.JuliaSyntaxHighlighting]]
 deps = ["StyledStrings"]
@@ -648,7 +659,7 @@ uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 version = "0.7.0"
 
 [[deps.Scrapers]]
-deps = ["CSV", "CodecZlib", "DBnomics", "EzXML", "HTTP", "Instruments", "Processing", "URIs", "ZipFile"]
+deps = ["CSV", "CodecZlib", "CoverageTools", "DBnomics", "Data", "EzXML", "HTTP", "Instruments", "Lang", "Misc", "Processing", "TimeTicks", "URIs", "ZipFile"]
 path = "."
 uuid = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
 version = "0.1.0"

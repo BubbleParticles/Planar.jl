@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "bf6496534390c8c897c95b80e35c483fadf3c3b3"
+project_hash = "349287f41a1b3789a64869e8a2cef8c3d922ca5c"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "2d9c9a55f9c93e8887ad391fbae72f8ef55e1177"
@@ -64,12 +64,6 @@ version = "0.5.0"
 uuid = "8bf52ea8-c179-5cab-976a-9e18b702a9bc"
 version = "1.11.0"
 
-[[deps.CSV]]
-deps = ["CodecZlib", "Dates", "FilePathsBase", "InlineStrings", "Mmap", "Parsers", "PooledArrays", "PrecompileTools", "SentinelArrays", "Tables", "Unicode", "WeakRefStrings", "WorkerUtilities"]
-git-tree-sha1 = "8d8e0b0f350b8e1c91420b5e64e5de774c2f0f4d"
-uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
-version = "0.10.16"
-
 [[deps.Ccxt]]
 deps = ["FileWatching", "HTTP", "JSON3", "MbedTLS", "Misc", "OrderedCollections", "PrecompileTools", "WebSockets"]
 path = "../../Ccxt"
@@ -121,12 +115,6 @@ deps = ["TranscodingStreams", "Zlib_jll"]
 git-tree-sha1 = "962834c22b66e32aa10f7611c08c8ca4e20749a9"
 uuid = "944b1d66-785c-5afd-91f1-9de20f533193"
 version = "0.7.8"
-
-[[deps.Collections]]
-deps = ["Instances"]
-path = "../../Collections"
-uuid = "199ae5f6-b1b4-42af-853d-fd50a04203c4"
-version = "0.1.0"
 
 [[deps.Compat]]
 deps = ["TOML", "UUIDs"]
@@ -188,7 +176,7 @@ version = "4.1.1"
 
 [[deps.Data]]
 deps = ["CodecZlib", "DataFrames", "DataFramesMeta", "DataStructures", "LMDB", "Misc", "Reexport", "Serialization", "Zarr"]
-path = "../../Data"
+path = "/project/Data"
 uuid = "934a4ae5-3fdb-4fa4-b6dd-2cd889d3d27b"
 version = "0.1.1"
 
@@ -252,12 +240,6 @@ deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 version = "1.7.0"
 
-[[deps.Engine]]
-deps = ["LiveMode"]
-path = "../../Engine"
-uuid = "2ee4d486-7c03-4138-87ff-17a01ae58543"
-version = "0.1.0"
-
 [[deps.ExceptionUnwrapping]]
 deps = ["Test"]
 git-tree-sha1 = "d36f682e590a83d63d1c7dbd287573764682d12a"
@@ -275,29 +257,6 @@ deps = ["Coverage", "Data", "ExchangeTypes", "Instruments", "JSON", "Pbar", "Ree
 path = "../../Exchanges"
 uuid = "ab04e009-1d60-4d36-ac2f-58b9338a89b5"
 version = "0.1.0"
-
-[[deps.Executors]]
-deps = ["Strategies"]
-path = "../../Executors"
-uuid = "8d044263-b64b-4593-bc6a-15d2ec3d7aea"
-version = "0.1.0"
-
-[[deps.Fetch]]
-deps = ["Exchanges", "Processing"]
-path = "../../Fetch"
-uuid = "01b7c4b8-c42c-4ba7-97ce-8f8fab6ee59e"
-version = "0.1.0"
-
-[[deps.FilePathsBase]]
-deps = ["Compat", "Dates"]
-git-tree-sha1 = "3bab2c5aa25e7840a4b065805c0cdfc01f3068d2"
-uuid = "48062228-2e41-5def-b9a4-89aafe57970f"
-version = "0.9.24"
-weakdeps = ["Mmap", "Test"]
-
-    [deps.FilePathsBase.extensions]
-    FilePathsBaseMmapExt = "Mmap"
-    FilePathsBaseTestExt = "Test"
 
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
@@ -449,7 +408,7 @@ version = "1.4.0"
 
 [[deps.Lang]]
 deps = ["Distributed", "DocStringExtensions", "Logging", "PrecompileTools", "Preferences"]
-path = "../../Lang"
+path = "/project/Lang"
 uuid = "29573954-25fe-4a2f-9b4b-dcb25d092053"
 version = "0.1.0"
 
@@ -486,12 +445,6 @@ version = "1.11.0"
 deps = ["Libdl", "OpenBLAS_jll", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 version = "1.12.0"
-
-[[deps.LiveMode]]
-deps = ["LRUCache", "PaperMode", "Watchers"]
-path = "../../LiveMode"
-uuid = "c1773ea8-8a7c-4b58-b57f-053be4f98df9"
-version = "0.1.0"
 
 [[deps.LogExpFunctions]]
 deps = ["DocStringExtensions", "IrrationalConstants", "LinearAlgebra"]
@@ -547,15 +500,9 @@ git-tree-sha1 = "ff69a2b1330bcb730b9ac1ab7dd680176f5896b8"
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
 version = "2.28.1010+0"
 
-[[deps.Metrics]]
-deps = ["CoverageTools", "Executors", "Pkg", "Planar", "Simulations", "Stubs"]
-path = "/project/Metrics"
-uuid = "3fcce980-bff0-41b4-8aec-9cac67d74284"
-version = "0.1.0"
-
 [[deps.Misc]]
 deps = ["ConcurrentCollections", "Dates", "Distributed", "DocStringExtensions", "FunctionalCollections", "JSON3", "Logging", "LoggingExtras", "OrderedCollections", "Pkg", "PrecompileTools", "Reexport", "Serialization", "TOML", "TimeTicks"]
-path = "../../Misc"
+path = "/project/Misc"
 uuid = "ff97321b-aa60-4104-8cd6-2e42973349ab"
 version = "0.1.0"
 
@@ -620,12 +567,6 @@ git-tree-sha1 = "94ba93778373a53bfd5a0caaf7d809c445292ff4"
 uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 version = "1.8.2"
 
-[[deps.PaperMode]]
-deps = ["Fetch", "SimMode"]
-path = "../../PaperMode"
-uuid = "b2ae67eb-72da-414f-85db-6054cbf44090"
-version = "0.1.0"
-
 [[deps.Parameters]]
 deps = ["OrderedCollections", "UnPack"]
 git-tree-sha1 = "34c0e9ad262e5f7fc75b10a9952ca7692cfc5fbe"
@@ -652,12 +593,6 @@ weakdeps = ["REPL"]
 
     [deps.Pkg.extensions]
     REPLExt = "REPL"
-
-[[deps.Planar]]
-deps = ["Engine", "MacroTools", "Pkg", "REPL", "Random", "Remote"]
-path = "/project/Planar"
-uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
-version = "1.6.11"
 
 [[deps.PooledArrays]]
 deps = ["DataAPI", "Future"]
@@ -726,12 +661,6 @@ git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
 uuid = "189a3867-3050-52da-a836-e630ba90ab69"
 version = "1.2.2"
 
-[[deps.Remote]]
-deps = ["JSON", "LiveMode", "PrettyTables", "Telegram"]
-path = "../../Remote"
-uuid = "711acd30-27b5-475d-809f-796ffbe15f78"
-version = "0.1.0"
-
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 version = "0.7.0"
@@ -751,12 +680,6 @@ version = "1.4.10"
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 version = "1.11.0"
-
-[[deps.SimMode]]
-deps = ["Executors", "Pbar", "Simulations"]
-path = "../../SimMode"
-uuid = "70084082-5615-4098-a9f0-eda0197c0e82"
-version = "0.1.0"
 
 [[deps.SimpleBufferStream]]
 git-tree-sha1 = "f305871d2f381d21527c770d4788c06c097c9bc1"
@@ -806,12 +729,6 @@ git-tree-sha1 = "c6f18e5a52a176a383f6f6c635e0f81feed1d6d4"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 version = "0.34.11"
 
-[[deps.Strategies]]
-deps = ["Collections", "Pkg"]
-path = "../../Strategies"
-uuid = "7a1c9c3a-7759-4314-aa2e-fd1262f248b0"
-version = "0.1.0"
-
 [[deps.StringManipulation]]
 deps = ["PrecompileTools"]
 git-tree-sha1 = "d05693d339e37d6ab134c5ab53c29fce5ee5d7d5"
@@ -839,12 +756,6 @@ version = "2.8.2"
     Measurements = "eff96d63-e80a-5855-80a2-b1b0885c5ab7"
     StaticArraysCore = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
     Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
-
-[[deps.Stubs]]
-deps = ["CSV", "Pkg", "Serialization", "SimMode"]
-path = "/project/Stubs"
-uuid = "19a5ee1f-efca-4178-b297-263c7ceb508d"
-version = "0.1.0"
 
 [[deps.StyledStrings]]
 uuid = "f489334b-da3d-4c2e-b8f0-e476e12c162b"
@@ -883,12 +794,6 @@ deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 version = "1.10.0"
 
-[[deps.Telegram]]
-deps = ["HTTP", "JSON3"]
-git-tree-sha1 = "4ac524cb90051721afa82c8a6c999df35dafbecd"
-uuid = "1da6f4ae-116c-4c38-8ee9-19974ff3601d"
-version = "1.1.5"
-
 [[deps.Term]]
 deps = ["AbstractTrees", "CodeTracking", "Dates", "Highlights", "InteractiveUtils", "Logging", "Markdown", "MyterialColors", "OrderedCollections", "Parameters", "PrecompileTools", "ProgressLogging", "REPL", "Tables", "UUIDs", "Unicode", "UnicodeFun"]
 git-tree-sha1 = "dfb5cd0af7f67f7487287fa7f83860fe0cb45899"
@@ -913,7 +818,7 @@ version = "0.2.0"
 
 [[deps.TimeTicks]]
 deps = ["Dates", "Lang", "Reexport", "Serialization", "TimeFrames"]
-path = "../../TimeTicks"
+path = "/project/TimeTicks"
 uuid = "1ce46816-3f51-4f52-9fcf-6d091670788d"
 version = "0.1.0"
 
@@ -970,28 +875,11 @@ version = "1.28.0"
     NaNMath = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
     Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
-[[deps.Watchers]]
-deps = ["Fetch", "HTTP", "JSON3", "Statistics", "URIs"]
-path = "../../Watchers"
-uuid = "4a3f9c16-ec8e-48c6-a58d-938fc30e2b4b"
-version = "0.1.0"
-
-[[deps.WeakRefStrings]]
-deps = ["DataAPI", "InlineStrings", "Parsers"]
-git-tree-sha1 = "0716e01c3b40413de5dedbc9c5c69f27cddfddfc"
-uuid = "ea10d353-3f73-51f8-a26c-33c1cb351aa5"
-version = "1.4.3"
-
 [[deps.WebSockets]]
 deps = ["Base64", "Dates", "HTTP", "Logging", "Sockets"]
 git-tree-sha1 = "4162e95e05e79922e44b9952ccbc262832e4ad07"
 uuid = "104b5d7c-a370-577a-8038-80a2059c5097"
 version = "1.6.0"
-
-[[deps.WorkerUtilities]]
-git-tree-sha1 = "cd1659ba0d57b71a464a29e64dbc67cfe83d54e7"
-uuid = "76eceee3-57b5-4d4a-8e66-0e911cebbf60"
-version = "1.6.1"
 
 [[deps.Zarr]]
 deps = ["Blosc", "CRC32c", "ChunkCodecCore", "ChunkCodecLibZlib", "ChunkCodecLibZstd", "DataStructures", "DateTimes64", "Dates", "DiskArrays", "HTTP", "JSON", "OffsetArrays", "OpenSSL", "Pkg", "URIs", "ZipArchives"]

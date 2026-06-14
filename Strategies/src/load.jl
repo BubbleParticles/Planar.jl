@@ -205,12 +205,11 @@ function strategy!(src::Symbol, cfg::Config)
         @eval parent begin
             try
                 let
-                    using Pkg: Pkg
                     if $isproject
                         @debug "loading: " strat = $project_file
-                        Pkg.activate($project_file; io=Base.devnull)
+                        $Pkg.activate($project_file; io=Base.devnull)
                         try
-                            Pkg.instantiate(; io=Base.devnull)
+                            $Pkg.instantiate(; io=Base.devnull)
                         catch e
                             @error "loading: failed instantiation" exception = e
                         end
@@ -230,7 +229,7 @@ function strategy!(src::Symbol, cfg::Config)
                 end
             finally
                 if $isproject
-                    Pkg.activate($prev_proj; io=Base.devnull)
+                    $Pkg.activate($prev_proj; io=Base.devnull)
                 end
             end
         end

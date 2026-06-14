@@ -7,14 +7,21 @@ function _precomp_strat(mod=Opt)
         using .SimMode.Misc: ZERO
 
         s = let kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binance) : (;)
-            st.strategy(st.BareStrat)
+            try
+                st.strategy(:BareStrat)
+            catch e
+                @warn "precomp: could not load BareStrat: $e"
+                nothing
+            end
         end
-        for ai in s.universe
-            append!(
-                st.Instances.ohlcv_dict(ai)[s.timeframe],
-                sml.Processing.Data.to_ohlcv(sml.synthohlcv());
-                cols=:union,
-            )
+        if !isnothing(s)
+            for ai in s.universe
+                append!(
+                    st.Instances.ohlcv_dict(ai)[s.timeframe],
+                    sml.Processing.Data.to_ohlcv(sml.synthohlcv());
+                    cols=:union,
+                )
+            end
         end
         s
     end

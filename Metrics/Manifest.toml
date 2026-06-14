@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "5221f4a2f6d1177d2b3f6852559372c6d5c84b0d"
+project_hash = "267e40f1d3f01b5fab7225add14a340b6df281d2"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "2d9c9a55f9c93e8887ad391fbae72f8ef55e1177"
@@ -252,6 +252,12 @@ deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 version = "1.7.0"
 
+[[deps.Engine]]
+deps = ["LiveMode"]
+path = "../Engine"
+uuid = "2ee4d486-7c03-4138-87ff-17a01ae58543"
+version = "0.1.0"
+
 [[deps.ExceptionUnwrapping]]
 deps = ["Test"]
 git-tree-sha1 = "d36f682e590a83d63d1c7dbd287573764682d12a"
@@ -274,6 +280,12 @@ version = "0.1.0"
 deps = ["Strategies"]
 path = "../Executors"
 uuid = "8d044263-b64b-4593-bc6a-15d2ec3d7aea"
+version = "0.1.0"
+
+[[deps.Fetch]]
+deps = ["Exchanges", "Processing"]
+path = "../Fetch"
+uuid = "01b7c4b8-c42c-4ba7-97ce-8f8fab6ee59e"
 version = "0.1.0"
 
 [[deps.FilePathsBase]]
@@ -475,6 +487,12 @@ deps = ["Libdl", "OpenBLAS_jll", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 version = "1.12.0"
 
+[[deps.LiveMode]]
+deps = ["LRUCache", "PaperMode", "Watchers"]
+path = "../LiveMode"
+uuid = "c1773ea8-8a7c-4b58-b57f-053be4f98df9"
+version = "0.1.0"
+
 [[deps.LogExpFunctions]]
 deps = ["DocStringExtensions", "IrrationalConstants", "LinearAlgebra"]
 git-tree-sha1 = "bba2d9aa057d8f126415de240573e86a8f39d2a1"
@@ -530,7 +548,7 @@ uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
 version = "2.28.1010+0"
 
 [[deps.Metrics]]
-deps = ["Executors", "Pkg", "Simulations", "Stubs"]
+deps = ["CoverageTools", "Executors", "Pkg", "Planar", "Simulations", "Stubs"]
 path = "."
 uuid = "3fcce980-bff0-41b4-8aec-9cac67d74284"
 version = "0.1.0"
@@ -602,6 +620,12 @@ git-tree-sha1 = "94ba93778373a53bfd5a0caaf7d809c445292ff4"
 uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 version = "1.8.2"
 
+[[deps.PaperMode]]
+deps = ["Fetch", "SimMode"]
+path = "../PaperMode"
+uuid = "b2ae67eb-72da-414f-85db-6054cbf44090"
+version = "0.1.0"
+
 [[deps.Parameters]]
 deps = ["OrderedCollections", "UnPack"]
 git-tree-sha1 = "34c0e9ad262e5f7fc75b10a9952ca7692cfc5fbe"
@@ -628,6 +652,12 @@ weakdeps = ["REPL"]
 
     [deps.Pkg.extensions]
     REPLExt = "REPL"
+
+[[deps.Planar]]
+deps = ["Engine", "MacroTools", "Pkg", "REPL", "Random", "Remote"]
+path = "../Planar"
+uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
+version = "1.6.11"
 
 [[deps.PooledArrays]]
 deps = ["DataAPI", "Future"]
@@ -696,6 +726,12 @@ git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
 uuid = "189a3867-3050-52da-a836-e630ba90ab69"
 version = "1.2.2"
 
+[[deps.Remote]]
+deps = ["JSON", "LiveMode", "PrettyTables", "Telegram"]
+path = "../Remote"
+uuid = "711acd30-27b5-475d-809f-796ffbe15f78"
+version = "0.1.0"
+
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 version = "0.7.0"
@@ -728,7 +764,7 @@ uuid = "777ac1f9-54b0-4bf8-805c-2214025038e7"
 version = "1.2.0"
 
 [[deps.Simulations]]
-deps = ["Data", "Instances", "IterTools", "Processing", "Random", "Statistics", "StatsBase"]
+deps = ["CoverageTools", "Data", "Instances", "IterTools", "Processing", "Random", "Statistics", "StatsBase", "TimeTicks"]
 path = "../Simulations"
 uuid = "a69aad36-f532-4133-ba48-77171b778e6d"
 version = "0.1.0"
@@ -847,6 +883,12 @@ deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 version = "1.10.0"
 
+[[deps.Telegram]]
+deps = ["HTTP", "JSON3"]
+git-tree-sha1 = "4ac524cb90051721afa82c8a6c999df35dafbecd"
+uuid = "1da6f4ae-116c-4c38-8ee9-19974ff3601d"
+version = "1.1.5"
+
 [[deps.Term]]
 deps = ["AbstractTrees", "CodeTracking", "Dates", "Highlights", "InteractiveUtils", "Logging", "Markdown", "MyterialColors", "OrderedCollections", "Parameters", "PrecompileTools", "ProgressLogging", "REPL", "Tables", "UUIDs", "Unicode", "UnicodeFun"]
 git-tree-sha1 = "dfb5cd0af7f67f7487287fa7f83860fe0cb45899"
@@ -927,6 +969,12 @@ version = "1.28.0"
     Latexify = "23fbe1c1-3f47-55db-b15f-69d7ec21a316"
     NaNMath = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
     Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+
+[[deps.Watchers]]
+deps = ["Fetch", "HTTP", "JSON3", "Statistics", "URIs"]
+path = "../Watchers"
+uuid = "4a3f9c16-ec8e-48c6-a58d-938fc30e2b4b"
+version = "0.1.0"
 
 [[deps.WeakRefStrings]]
 deps = ["DataAPI", "InlineStrings", "Parsers"]

@@ -243,6 +243,8 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 
 24. **Use `dt()` from TimeTicks, not `DateTime(Int64)`, to convert timestamp integers to DateTime**: `DateTime(2024)` interprets the integer as a year number (returns `2024-01-01`), not as milliseconds since epoch. Always use `dt(ts)` (which calls `unix2datetime(ts / 1000)`) to convert production Unix-ms timestamps to DateTime.
 
+25. **Coverage measurement for packages with local deps**: When `Pkg.test()` sandbox prevents local package resolution, measure coverage via `julia --project=test --code-coverage=user` with explicit `Pkg.develop` for local deps and `include("test/runtests.jl")`. CoverageTools' `FileCoverage.coverage` vector may contain `nothing` values — use `x !== nothing` guards when counting covered/executable lines.
+
 ### Gotchas
 
 1. **Always wrap CcxtGateway calls in try/catch**: The gateway may not be running or may return errors. Always provide Python fallbacks with `_python` suffix.
@@ -294,6 +296,16 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 24. **`TimeFrame("m")` suffix means month, not minute**: `TimeFrame("1m")` creates a Period of `Month(1)`, not `Minute(1)`. Use `TimeFrame("1min")` for minute intervals. Always verify by checking `tf.period` in a REPL before relying on it.
 
 25. **`dt()` from TimeTicks expects Unix ms, not Julia internal `Dates.value()` format**: `dt(ts)` calls `unix2datetime(ts / 1000)`. Mock data helpers (like `_make_ohlcv`) that use `Dates.value(DateTime(...))` produce Julian-internal ms (~6.38e13 for 2024), NOT Unix ms (~1.70e12 for 2024). Create test data with Unix-ms timestamps to match production format and work correctly with `dt()`.
+
+26. **`default_value(f::Function)` calls `Base.return_types(f)` (zero-arg)**: This fails for functions like `Statistics.mean` that have no zero-arg method (returns `Union{}`, then errors). When testing code paths that call `default_value(f)` on empty collections, use `f=sum` (which has `sum()` → `0`) instead of `f=mean` to avoid `ArgumentError: cannot construct a value of type Union{}`.
+
+27. **`--code-coverage` may not generate `.cov` files with cached precompilation**: In Julia 1.12, `--code-coverage=user` only writes `.cov` files for code that is newly compiled. If packages are loaded from cached `.ji` files, no `.cov` files are generated. Use `--compiled-modules=no` to force coverage file generation (at the cost of much longer startup). Alternatively, run `julia --project=test --code-coverage=user` even without `--compiled-modules=no` and the `.cov` files from the precompilation *of the test environment itself* may still appear in the source directories.
+
+28. **`using CodecZlib: Zlib` fails in recent CodecZlib v0.7.x**: `Zlib` is no longer a submodule or exported name. Use `ZlibCompressor`/`ZlibDecompressor` directly instead, e.g., `transcode(ZlibCompressor, data)` not `transcode(Zlib.Compress, data)`.
+
+29. **Precompile `@eval` into closed module `Main` breaks incremental compilation**: During package precompilation, any code that does `@eval Main begin ... using Pkg: Pkg ... end` will fail with `Creating a new global in closed module 'Main' breaks incremental compilation`. To fix, use `$Pkg` interpolation to refer to already-imported packages from the macro's calling module, instead of `using Pkg: Pkg` inside the eval block. More generally, strategy loading (`st.strategy(:BareStrat)`) evals into `Main`, which is incompatible with precompilation — wrap such calls in `try/catch` in precompile workloads, or skip them during `Base.generating_output()`.
+
+30. **`__revise_mode__ = :eval` in production code breaks precompilation**: The `__revise_mode__ = :eval` variable (used by Revise.jl to enable hot-reloading) causes `Evaluation into the closed module 'Metrics' breaks incremental compilation` when the module is loaded during precompilation. Remove this line from production source files — it belongs in development-only user settings.
 
 ---
 

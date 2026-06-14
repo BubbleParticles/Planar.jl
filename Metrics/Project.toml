@@ -1,10 +1,15 @@
 name = "Metrics"
 uuid = "3fcce980-bff0-41b4-8aec-9cac67d74284"
-authors = ["zbc"]
 version = "0.1.0"
+authors = ["zbc"]
 
 [deps]
+CoverageTools = "c36e975a-824b-4404-a568-ef97ca766997"
 Executors = "8d044263-b64b-4593-bc6a-15d2ec3d7aea"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 Simulations = "a69aad36-f532-4133-ba48-77171b778e6d"
 Stubs = "19a5ee1f-efca-4178-b297-263c7ceb508d"
+
+[compat]
+CoverageTools = "1.4.1"

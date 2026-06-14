@@ -6,13 +6,19 @@ authors = ["zbc"]
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CodecZlib = "944b1d66-785c-5afd-91f1-9de20f533193"
+CoverageTools = "c36e975a-824b-4404-a568-ef97ca766997"
 DBnomics = "748a5540-242a-11e9-3d63-bf3149dae578"
+Data = "934a4ae5-3fdb-4fa4-b6dd-2cd889d3d27b"
 EzXML = "8f5d6c58-4d21-5cfd-889c-e3ad7ee6a615"
 HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 Instruments = "36fdd1e0-de92-434c-a120-c8ed410c5e3c"
+Lang = "29573954-25fe-4a2f-9b4b-dcb25d092053"
+Misc = "ff97321b-aa60-4104-8cd6-2e42973349ab"
 Processing = "71db1b01-ba5b-4918-92ad-dd9436844736"
+TimeTicks = "1ce46816-3f51-4f52-9fcf-6d091670788d"
 URIs = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
 ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 
 [compat]
+CoverageTools = "1.4.1"
 ZipFile = "0.10.1"
