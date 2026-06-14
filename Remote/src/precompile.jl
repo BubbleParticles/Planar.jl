@@ -1,6 +1,16 @@
 using .Misc.Lang: @preset, @precomp, @ignore
 
 @preset let
+    # BareStrat must be loaded for the precompile workload.
+    # If unavailable (e.g., during CI), skip gracefully.
+    isdefined(LiveMode.st, :BareStrat) || begin
+        try
+            LiveMode.st.strategy(:BareStrat)
+        catch e
+            @warn "precomp: could not load BareStrat: $e"
+        end
+        isdefined(LiveMode.st, :BareStrat) || (@warn "precomp: BareStrat not available"; return nothing)
+    end
     using Telegram.HTTP, Telegram.API
     function closeconn_layer(handler)
         return function (req; kw...)

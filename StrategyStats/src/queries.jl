@@ -1,5 +1,10 @@
 module Query
 using ..Misc.DocStringExtensions
+using Statistics: mean
+using DataFrames: DataFrame, hcat, sort!
+using ..StrategyStats
+const sst = StrategyStats
+using DataFrames
 include("slope.jl")
 
 @doc """Filters exchange data based on slope angle and saves the output.

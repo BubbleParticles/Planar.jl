@@ -85,6 +85,69 @@ using Simulations.TimeTicks: DateTime, Minute, Second
             @test ls >= 0.0
             @test ls isa Float64
         end
+
+        @testset "sqrtspread" begin
+            @test Simulations.sqrtspread([100.0, 102.0, 101.0, 103.0, 99.0]) ≈ 0.894427 atol=1e-5
+            @test Simulations.sqrtspread([100.0]) == 0.0
+        end
+
+        @testset "coschspread" begin
+            high = [105.0, 108.0, 107.0, 110.0, 106.0, 109.0, 111.0, 112.0]
+            low  = [95.0,  98.0,  97.0,  90.0,  94.0,  93.0,  92.0,  91.0]
+            cs = Simulations.coschspread(high, low; window=0)
+            @test cs isa Float64
+            @test 0.0 <= cs <= 1.0
+
+            cs2 = Simulations.coschspread(high, low; window=3)
+            @test cs2 isa Float64
+        end
+
+        @testset "rollspread" begin
+            rs = Simulations.rollspread([100.0, 102.0, 101.0, 103.0])
+            @test rs isa Float64
+            @test rs >= 0.0
+        end
+
+        @testset "edgespread" begin
+            high = [105.0, 108.0, 107.0]
+            low  = [95.0,  98.0,  97.0]
+            es = Simulations.edgespread(high, low)
+            @test es isa Float64
+            @test es >= 0.0
+
+            @test Simulations.edgespread(100.0, 100.0) == 0.0
+            @test Simulations.edgespread(110.0, 90.0) > 0.0
+
+            high2 = [105.0, 108.0, 107.0, 110.0]
+            low2  = [95.0,  98.0,  97.0,  90.0]
+            es2 = Simulations.edgespread(high2, low2)
+            @test es2 isa Float64
+        end
+
+        @testset "edge2spread scalar" begin
+            @test Simulations.edge2spread(110.0, 90.0, 105.0, 95.0) ≈ 0.055928 atol=1e-5
+            @test Simulations.edge2spread(100.0, 100.0, 100.0, 100.0) == 0
+        end
+
+        @testset "abraspread" begin
+            ab = Simulations.abraspread(110.0, 90.0, 105.0)
+            @test ab isa Float64
+            @test ab >= 0.0
+
+            ab2 = Simulations.abraspread(100.0, 100.0, 100.0)
+            @test ab2 == 0.0
+        end
+
+        @testset "spread dispatch all variants" begin
+            @test Simulations.spread(Val(:sqrt), [100.0, 102.0, 101.0]) isa Float64
+            h = [105.0, 108.0, 107.0, 110.0]
+            l = [95.0, 98.0, 97.0, 90.0]
+            @test Simulations.spread(Val(:cosch), h, l; window=0) isa Float64
+            @test Simulations.spread(Val(:roll), [100.0, 102.0, 101.0]) isa Float64
+            @test Simulations.spread(Val(:edge), [105.0, 108.0], [95.0, 98.0]) isa Float64
+            @test Simulations.spread(Val(:edge2), 110.0, 90.0, 105.0, 95.0) isa Float64
+            @test Simulations.spread(Val(:abra), 110.0, 90.0, 105.0) isa Float64
+        end
     end
 
     @testset "liq.jl" begin
@@ -230,6 +293,15 @@ using Simulations.TimeTicks: DateTime, Minute, Second
             @test length(data[1]) == 51
             @test data[1][1] == DateTime(2020, 1, 1)
         end
+
+        @testset "_setorappend" begin
+            d = Dict{String, Vector{Int}}()
+            Simulations._setorappend(d, "a", [1, 2, 3])
+            @test d["a"] == [1, 2, 3]
+
+            Simulations._setorappend(d, "a", [4, 5])
+            @test d["a"] == [1, 2, 3, 4, 5]
+        end
     end
 
     @testset "rois.jl" begin
@@ -289,7 +361,13 @@ using Simulations.TimeTicks: DateTime, Minute, Second
             hit2, target2 = Simulations.isroi(1, 0.2, inv)
             @test hit2 == false
             @test isnan(target2)
+
+            inv2 = Simulations.RoiInverted(roi)
+            @test inv2[1] isa Tuple
+            @test length(inv2) == 3
         end
+
+
     end
 
     @testset "mootils.jl" begin
@@ -339,6 +417,7 @@ using Simulations.TimeTicks: DateTime, Minute, Second
             @test (1.0, 2.0, 3.0) |> (a, b, c) -> a + b + c == 6.0
         end
     end
+
 end
 
 end

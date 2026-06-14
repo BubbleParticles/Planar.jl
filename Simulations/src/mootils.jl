@@ -291,11 +291,19 @@ The `filsoc` function takes an array, a value, another array to match, and two o
 """
 function filsoc(arr, pct, match; inv::Bool=false, concat::Bool=true)
     pct_mask = inv ? arr .< pct : arr .> pct
-    sort_mask = sortperm(arr[pct_mask, :])
-    values = arr[pct_mask, :][sort_mask, :]
-
-    if concat && !isnothing(match)
-        values = hcat(values, match[pct_mask, :][sort_mask, :])
+    if ndims(arr) == 1
+        idxs = findall(pct_mask)
+        sort_idxs = sortperm(arr[pct_mask])
+        values = arr[pct_mask][sort_idxs]
+        if concat && !isnothing(match)
+            values = hcat(values, match[pct_mask][sort_idxs])
+        end
+    else
+        sort_mask = sortperm(arr[pct_mask, :]; dims=1)
+        values = arr[pct_mask, :][sort_mask, :]
+        if concat && !isnothing(match)
+            values = hcat(values, match[pct_mask, :][sort_mask, :])
+        end
     end
     return values
 end

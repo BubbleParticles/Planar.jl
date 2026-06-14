@@ -14,13 +14,13 @@ function slopefilter(
     @assert exc.issset "Global exchange variable is not set."
     pairs = tickers(exc, qc)
     pairs = load_ohlcv(zi, exc, pairs, timeframe)
-    pred = x -> slopeangle(x; window)
+    pred = x -> slopeangle(x; n=window)
     filterminmax(pred, pairs, minv, maxv)
 end
 
 @doc "[`slopefilter`](@ref) over a dictionary."
 function slopefilter(pairs::AbstractDict; minv=10.0, maxv=90.0, window=20)
-    pred = x -> slopeangle(x; window)
+    pred = x -> slopeangle(x; n=window)
     filterminmax(pred, pairs, minv, maxv)
 end
 
