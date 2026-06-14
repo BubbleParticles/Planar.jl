@@ -99,7 +99,7 @@ This function calculates the stop price based on the provided `Stoploss` instanc
 
 """
 function trailing_stop(stop::Stoploss, stop_price, high_price, high_profit)
-    if stop.trailing_loss
+    if isfinite(stop.trailing_loss)
         if !(isfinite(stop.trailing_offset) && high_profit < stop.trailing_offset)
             return max(
                 # trailing only increases

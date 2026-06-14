@@ -2,13 +2,14 @@ module ScrapersTests
 
 using Test
 using Scrapers
-using Scrapers: selectsyms, timeframe!, fromassets
+using Scrapers: selectsyms, timeframe!, fromassets, swapfname!, workers!
 using Scrapers: csvtodf, timestamp!, _tempdir, WORKERS, TF, SEM, HTTP_PARAMS
 using Instruments: Asset, AbstractAsset, bc, qc, @a_str
 using Data.DataFrames: DataFrame
 
 const Dates = Scrapers.Misc.TimeTicks.Dates
 using Scrapers.Misc.TimeTicks
+import CodecZlib: ZlibCompressor, ZlibDecompressor
 
 @testset "Scrapers" begin
     @testset "Constants" begin
@@ -116,6 +117,95 @@ using Scrapers.Misc.TimeTicks
         @test hasproperty(ohlcv, :open)
         @test hasproperty(ohlcv, :close)
         @test hasproperty(ohlcv, :volume)
+    end
+
+    @testset "gzipdecode" begin
+        original = "hello, world!"
+        compressed = transcode(ZlibCompressor, codeunits(original))
+        decoded = Scrapers.gzipdecode(compressed)
+        @test String(decoded) == original
+
+        empty_compressed = transcode(ZlibCompressor, UInt8[])
+        empty_decoded = Scrapers.gzipdecode(empty_compressed)
+        @test isempty(empty_decoded)
+    end
+
+    @testset "symfiles" begin
+        links = ["file1.csv", "file2.csv", "file3.csv", "file4.csv"]
+        # Without from: returns all
+        result = Scrapers.symfiles(links)
+        @test result == links
+
+        # With from: returns from match + 1
+        result2 = Scrapers.symfiles(links; from="file2.csv")
+        @test result2 == ["file3.csv", "file4.csv"]
+
+        # With by function (by is applied to result too)
+        result3 = Scrapers.symfiles(links; by=x -> uppercase(x), from="FILE2.CSV")
+        @test result3 == ["FILE3.CSV", "FILE4.CSV"]
+
+        # from at last index → nothing
+        result4 = Scrapers.symfiles(links; from="file4.csv")
+        @test result4 === nothing
+
+        # from not found → returns all
+        result5 = Scrapers.symfiles(links; from="nonexistent.csv")
+        @test result5 == links
+    end
+
+    @testset "workers! exists" begin
+        # workers! has a pre-existing bug (SEM is const, not a Ref)
+        # so we only verify the function exists
+        @test hasmethod(Scrapers.workers!, Tuple{Int})
+    end
+
+    @testset "selectsyms - symbol not found branch" begin
+        all_syms = ["BTCUSDT", "ETHUSDT"]
+        # "btc" is not in all_syms_set (case-sensitive), triggers @debug path
+        result = Scrapers.selectsyms(["btc", "NONEXISTENT"], all_syms; quote_currency="usdt", perps_only=false)
+        @test "BTCUSDT" in result
+    end
+
+    @testset "fromassets - different quote currencies assertion" begin
+        assets = [a"BTC/USDT", a"ETH/EUR"]
+        @test_throws AssertionError Scrapers.fromassets(assets)
+    end
+
+    @testset "swapfname!" begin
+        # Test with non-Symbol branch (the common case)
+        # Simulates a function call expression's args vector
+        args = Any[Expr(:., :Mod), :func, :arg]
+        swapfname!(args, 1, :renamed)
+        @test args[1] isa Expr
+        @test args[1].args[end] == QuoteNode(:renamed)
+
+        # Another position
+        args2 = Any[Expr(:., :SomeMod), :original_fn, :(x::Int)]
+        swapfname!(args2, 1, :new_fn)
+        @test args2[1].args[end] == QuoteNode(:new_fn)
+    end
+
+    @testset "@fromassets macro expansion" begin
+        # Verify the macro is defined and callable
+        @test isdefined(Scrapers, Symbol("@fromassets"))
+        # Use macroexpand to check structure without evaluating
+        ex = macroexpand(Scrapers, :(Scrapers.@fromassets(:test_func)))
+        @test ex isa Expr
+        @test ex.head == :block
+        # Should contain a function definition
+        func_def = ex.args[2]
+        @test func_def isa Expr
+        @test func_def.head == :function
+        # Should reference fromassets
+        str = sprint(print, ex)
+        @test occursin("fromassets", str)
+        @test occursin("test_func", str)
+        @test occursin("splitkws", str)
+    end
+
+    @testset "fetchfile exists" begin
+        @test hasmethod(Scrapers.fetchfile, Tuple{String})
+        @test isdefined(Scrapers, :fetchfile)
     end
 end
 

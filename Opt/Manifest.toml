@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "f068e367db4eeec093694441cea8ec43bec0c51f"
+project_hash = "4af971d72aafaca8cb475050848ae7c243d8d5a5"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "bbc22a9a08a0ef6460041086d8a7b27940ed4ffd"
@@ -561,6 +561,12 @@ git-tree-sha1 = "4a6b3eee0161c89700b6c1949feae8b851da5494"
 uuid = "b7d42ee7-0b51-5a75-98ca-779d3107e4c0"
 version = "0.4.1"
 
+[[deps.Engine]]
+deps = ["LiveMode"]
+path = "../Engine"
+uuid = "2ee4d486-7c03-4138-87ff-17a01ae58543"
+version = "0.1.0"
+
 [[deps.EnumX]]
 git-tree-sha1 = "c49898e8438c828577f04b92fc9368c388ac783c"
 uuid = "4e289a0a-7415-4d19-859d-a7e5c4648b56"
@@ -610,6 +616,12 @@ version = "0.10.14"
 git-tree-sha1 = "acebe244d53ee1b461970f8910c235b259e772ef"
 uuid = "9aa1b823-49e4-5ca5-8b0f-3971ec8bab6a"
 version = "0.3.2"
+
+[[deps.Fetch]]
+deps = ["Exchanges", "Processing"]
+path = "../Fetch"
+uuid = "01b7c4b8-c42c-4ba7-97ce-8f8fab6ee59e"
+version = "0.1.0"
 
 [[deps.FilePathsBase]]
 deps = ["Compat", "Dates"]
@@ -1027,6 +1039,12 @@ weakdeps = ["ChainRulesCore", "SparseArrays", "Statistics"]
     LinearMapsSparseArraysExt = "SparseArrays"
     LinearMapsStatisticsExt = "Statistics"
 
+[[deps.LiveMode]]
+deps = ["LRUCache", "PaperMode", "Watchers"]
+path = "../LiveMode"
+uuid = "c1773ea8-8a7c-4b58-b57f-053be4f98df9"
+version = "0.1.0"
+
 [[deps.LogExpFunctions]]
 deps = ["DocStringExtensions", "IrrationalConstants", "LinearAlgebra"]
 git-tree-sha1 = "13ca9e2586b89836fd20cccf56e57e2b9ae7f38f"
@@ -1177,7 +1195,7 @@ uuid = "bcdb8e00-2c21-11e9-3065-2b553b22f898"
 version = "3.5.0"
 
 [[deps.Metrics]]
-deps = ["Executors", "Pkg", "Simulations", "Stubs"]
+deps = ["CoverageTools", "Executors", "Pkg", "Planar", "Simulations", "Stubs"]
 path = "../Metrics"
 uuid = "3fcce980-bff0-41b4-8aec-9cac67d74284"
 version = "0.1.0"
@@ -1412,6 +1430,12 @@ weakdeps = ["StatsBase"]
     [deps.PDMats.extensions]
     StatsBaseExt = "StatsBase"
 
+[[deps.PaperMode]]
+deps = ["Fetch", "SimMode"]
+path = "../PaperMode"
+uuid = "b2ae67eb-72da-414f-85db-6054cbf44090"
+version = "0.1.0"
+
 [[deps.Parameters]]
 deps = ["OrderedCollections", "UnPack"]
 git-tree-sha1 = "34c0e9ad262e5f7fc75b10a9952ca7692cfc5fbe"
@@ -1438,6 +1462,12 @@ weakdeps = ["REPL"]
 
     [deps.Pkg.extensions]
     REPLExt = "REPL"
+
+[[deps.Planar]]
+deps = ["Engine", "MacroTools", "Pkg", "REPL", "Random", "Remote"]
+path = "../Planar"
+uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
+version = "1.6.11"
 
 [[deps.PooledArrays]]
 deps = ["DataAPI", "Future"]
@@ -1605,6 +1635,12 @@ version = "3.54.0"
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
 uuid = "189a3867-3050-52da-a836-e630ba90ab69"
 version = "1.2.2"
+
+[[deps.Remote]]
+deps = ["JSON", "LiveMode", "PrettyTables", "Telegram"]
+path = "../Remote"
+uuid = "711acd30-27b5-475d-809f-796ffbe15f78"
+version = "0.1.0"
 
 [[deps.Requires]]
 deps = ["UUIDs"]
@@ -1775,7 +1811,7 @@ uuid = "47aef6b3-ad0c-573a-a1e2-d07658019622"
 version = "1.5.1"
 
 [[deps.Simulations]]
-deps = ["Data", "Instances", "IterTools", "Processing", "Random", "Statistics", "StatsBase"]
+deps = ["CoverageTools", "Data", "Instances", "IterTools", "Processing", "Random", "Statistics", "StatsBase", "TimeTicks"]
 path = "../Simulations"
 uuid = "a69aad36-f532-4133-ba48-77171b778e6d"
 version = "0.1.0"
@@ -2055,6 +2091,12 @@ git-tree-sha1 = "67e469338d9ce74fc578f7db1736a74d93a49eb8"
 uuid = "ed4db957-447d-4319-bfb6-7fa9ae7ecf34"
 version = "0.1.3"
 
+[[deps.Telegram]]
+deps = ["HTTP", "JSON3"]
+git-tree-sha1 = "4ac524cb90051721afa82c8a6c999df35dafbecd"
+uuid = "1da6f4ae-116c-4c38-8ee9-19974ff3601d"
+version = "1.1.5"
+
 [[deps.TensorCore]]
 deps = ["LinearAlgebra"]
 git-tree-sha1 = "1feb45f88d133a655e001435632f019a9a1bcdb6"
@@ -2168,6 +2210,12 @@ deps = ["ConstructionBase"]
 git-tree-sha1 = "25008b734a03736c41e2a7dc314ecb95bd6bbdb0"
 uuid = "a7c27f48-0311-42f6-a7f8-2c11e75eb415"
 version = "0.1.6"
+
+[[deps.Watchers]]
+deps = ["Fetch", "HTTP", "JSON3", "Statistics", "URIs"]
+path = "../Watchers"
+uuid = "4a3f9c16-ec8e-48c6-a58d-938fc30e2b4b"
+version = "0.1.0"
 
 [[deps.WeakRefStrings]]
 deps = ["DataAPI", "InlineStrings", "Parsers"]

@@ -5,8 +5,8 @@ authors = ["zbc"]
 
 [deps]
 BlackBoxOptim = "a134a8b2-14d6-55f6-9291-3336d3ab0209"
+CoverageTools = "c36e975a-824b-4404-a568-ef97ca766997"
 Metrics = "3fcce980-bff0-41b4-8aec-9cac67d74284"
-
 Optimization = "7f7a1694-90dd-40f0-9382-eb1efda571ba"
 OptimizationBBO = "3e6eede4-6085-4f62-9a71-46d9bc1eb92b"
 OptimizationCMAEvolutionStrategy = "bd407f91-200f-4536-9381-e4ba712f53f8"
@@ -35,7 +35,7 @@ SimMode = {path = "../SimMode"}
 BayesExt = "BayesianOptimization"
 
 [compat]
-
+CoverageTools = "1.4.1"
 Optimization = "4.5.0"
 OptimizationBBO = "0.4.1"
 OptimizationCMAEvolutionStrategy = "0.3.0"

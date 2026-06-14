@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "6ec5e0d2fbc05da5c3fe7926231720ea4a8ddf92"
+project_hash = "29627cb2391205e00a00722eafe9d6a411afbd64"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "2d9c9a55f9c93e8887ad391fbae72f8ef55e1177"
@@ -753,7 +753,7 @@ uuid = "777ac1f9-54b0-4bf8-805c-2214025038e7"
 version = "1.2.0"
 
 [[deps.Simulations]]
-deps = ["Data", "Instances", "IterTools", "Processing", "Random", "Statistics", "StatsBase"]
+deps = ["Data", "Instances", "IterTools", "Processing", "Random", "Statistics", "StatsBase", "TimeTicks"]
 path = "../Simulations"
 uuid = "a69aad36-f532-4133-ba48-77171b778e6d"
 version = "0.1.0"
@@ -802,7 +802,7 @@ uuid = "7a1c9c3a-7759-4314-aa2e-fd1262f248b0"
 version = "0.1.0"
 
 [[deps.StrategyTools]]
-deps = ["OnlineTechnicalIndicators", "Pkg", "Planar", "Statistics"]
+deps = ["CoverageTools", "OnlineTechnicalIndicators", "Pkg", "Planar", "Statistics"]
 path = "."
 uuid = "bc793e09-ff97-408c-9766-388aa928ad5c"
 version = "0.1.0"
