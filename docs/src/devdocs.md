@@ -190,16 +190,27 @@ The `PlanarDev` package assists developers by providing helper functions for wor
 
 ### Precompilation Control
 
-To skip precompilation for selected modules, set the `JULIA_NOPRECOMP` environment variable:
+Package entry files (`src/<Package>.jl`) follow a uniform pattern: unconditional `include("module.jl")`, optionally followed by `include("precompile.jl")` when the package name appears in the `JULIA_PRECOMP` environment variable:
 
+```julia
+module Foo
+include("module.jl")
+if occursin(string(@__MODULE__), get(ENV, "JULIA_PRECOMP", ""))
+    include("precompile.jl")
+end
+end
+```
 
-Alternatively, you can manage environment variables with `direnv` (refer to the `.envrc` in the repository). To disable precompilation entirely for certain packages, use `JULIA_NOPRECOMP=all`. This is recommended only when altering low-level components of the module stack. Remember to clear the compilation cache when changing precompilation settings:
-
+The `JULIA_PRECOMP` variable (set in `.envrc`) determines which packages run precompile workloads. This replaces the old `JULIA_NOPRECOMP` deferred-loading pattern which has been removed from all source files.
 
 The `Exchanges` and `Fetch` packages contain a `compile.jl` file to generate precompile statements using [CompileBot.jl](https://github.com/aminya/CompileBot.jl). This is particularly useful for precompilation tasks that involve numerous web requests. However, this method is not currently used as it does not compile as many methods as `PrecompileTools`.
 
-!!! warning "Custom Precompilation"
-    For custom method precompilation, enclose your code with `py_start_loop` and `py_stop_loop` from the Python package to prevent Pkg from stalling due to lingering threads.
+!!! warning "Precompile Workload Restrictions"
+    Precompile workloads must not:
+    - Eval into `Main` (breaks incremental compilation — use `$Pkg` interpolation instead)
+    - Call live HTTP endpoints or start exchange gateways (wrap in try/catch or mock)
+    - Contain `__revise_mode__ = :eval` (belongs in user settings only)
+    - Load external strategy modules via `@eval parent begin ... using Pkg: Pkg ... end` (use `$Pkg` interpolation)
 
 ### Method Invalidation Strategy
 

@@ -307,6 +307,10 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 
 30. **`__revise_mode__ = :eval` in production code breaks precompilation**: The `__revise_mode__ = :eval` variable (used by Revise.jl to enable hot-reloading) causes `Evaluation into the closed module 'Metrics' breaks incremental compilation` when the module is loaded during precompilation. Remove this line from production source files — it belongs in development-only user settings.
 
+31. **Docs and config may still reference old env vars**: After removing `JULIA_NOPRECOMP` from source files, check `docs/`, `.envrc`, `.github/workflows/`, and `Dockerfile` for stale references. The env var remains defined but is no longer read by any package code.
+
+32. **All package entry files share the same structure**: Every package's `src/<Package>.jl` should follow: unconditional `include("module.jl")`, optional `__init__() = _doinit()`, and optionally `include("precompile.jl")` guarded by `JULIA_PRECOMP`. The old `JULIA_NOPRECOMP` if/else pattern has been removed from all 33 packages. Verify new packages match this pattern.
+
 ---
 
 ## CCXT Migration Review Checklist
@@ -444,8 +448,33 @@ See [`DEPENDENCY_TREE.md`](./DEPENDENCY_TREE.md) for the full tree (40 packages 
 - A package must list all directly-imported packages in its `[deps]`; accessing a module as `Dep.SubModule` is OK as long as `Dep` is in `[deps]`.
 - `test/Project.toml` must have **no** `name`, `uuid`, `version`, or `authors` header.
 - Test dependencies should be minimized via `const` aliases through already-loaded parent modules.
-- `Manifest.toml` paths must be relative to the `test/` directory, not absolute.
+  - `Manifest.toml` paths must be relative to the `test/` directory, not absolute.
 
 ---
+
+## Lessons Learned (2026-06-14 — Coverage & precompilation session)
+
+### 8. Keyword parameter names must match when refactoring function calls
+
+When refactoring a function call that passes keyword arguments through to another function, verify the parameter names match at every level. In `StrategyStats/src/slope.jl`, `slopefilter` accepted `window` as a keyword and passed it directly to `slopeangle(x; window)`, but `slopeangle` expected `n` not `window`. Any rename of a keyword parameter at one level must be mirrored at the call site with explicit mapping (`n=window`). **Always check the callee function's keyword signature before and after a rename.**
+
+### 9. Entry file JULIA_NOPRECOMP removal must verify module declaration matches regex
+
+When removing the deferred-loading `JULIA_NOPRECOMP` pattern from package entry files, some files have docstrings (via `@doc` or `"""..."""`) preceding the `module` declaration. A regex like `r"^(.*?)\bmodule\s+(\w+)"` will fail to match these. **Always handle docstring-prefixed module declarations — search for the `module` keyword directly rather than anchoring at line start.** Use `read` to verify the actual content structure before bulk-transform.
+
+### 10. Test infrastructure with heavy dependency chains requires precompile-failure tolerance
+
+Packages that depend on `Planar` (which depends on `Remote`, `LiveMode`, etc.) may fail to precompile in CI or fresh environments because strategy modules like `BareStrat` aren't available during precompilation. **Always wrap strategy-loading calls in precompile workloads with try/catch and fallback to `nothing`.** The `Remote` precompile workload previously hard-referenced `LiveMode.st.BareStrat` without first ensuring it was loaded — always use the safe pattern:
+
+```julia
+if !isdefined(ParentModule, :TheModule)
+    try
+        ParentModule.strategy_loader(:TheModule)
+    catch e
+        @warn "precomp: unavailable: $e"
+    end
+end
+isdefined(ParentModule, :TheModule) || return
+```
 
 > For detailed audit findings, bug post-mortems, and historical refactoring notes, see `REFACTOR.md`.
