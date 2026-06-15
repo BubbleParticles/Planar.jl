@@ -32,7 +32,6 @@ jobs:
     env:
       CI: true
       JULIA_VERSION: 1.11
-      JULIA_PRECOMP: ""
     permissions: write-all
 
     steps:
@@ -65,13 +64,13 @@ jobs:
           sudo apt-get install -y xauth
           # FIXME
           # [ -e ~/.cache/Planar.jl/data ] && rm -r ~/.cache/Planar.jl/data
-          julia --project=Planar docs/setup.jl
+          julia --compiled-modules=no --project=Planar docs/setup.jl
       - name: Build docs
         run: |
           # FIXME
           # [ -e ~/.cache/Planar.jl/data ] && rm -r ~/.cache/Planar.jl/data
           # export JULIA_CONDAPKG_OFFLINE=yes
-          julia --project=Planar docs/make.jl
+          julia --compiled-modules=no --project=Planar docs/make.jl
       - name: Checkout gh-pages branch
         uses: actions/checkout@v3
         with:
