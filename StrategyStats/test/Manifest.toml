@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "5ed59014a5e983254aa1c523bb9825b77f5e5487"
+project_hash = "5e6bd074885713f2708eaf3a96f11c52c403cd8e"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "2d9c9a55f9c93e8887ad391fbae72f8ef55e1177"
@@ -346,13 +346,13 @@ version = "1.1.1"
 
 [[deps.Instances]]
 deps = ["Exchanges", "OrderTypes"]
-path = "../../Instances"
+path = "/project/Instances"
 uuid = "36291b3f-06ca-4570-b5b6-65fb8ed80b61"
 version = "0.1.0"
 
 [[deps.Instruments]]
 deps = ["Lang", "Misc", "Printf"]
-path = "../../Instruments"
+path = "/project/Instruments"
 uuid = "36fdd1e0-de92-434c-a120-c8ed410c5e3c"
 version = "0.1.0"
 
@@ -617,7 +617,7 @@ version = "3.5.4+0"
 
 [[deps.OrderTypes]]
 deps = ["ExchangeTypes", "Instruments"]
-path = "../../OrderTypes"
+path = "/project/OrderTypes"
 uuid = "fba5cb4a-2089-4510-9d41-52be7ff19328"
 version = "0.1.0"
 
@@ -661,7 +661,7 @@ weakdeps = ["REPL"]
 
 [[deps.Planar]]
 deps = ["Engine", "MacroTools", "Pkg", "REPL", "Random", "Remote"]
-path = "../../Planar"
+path = "/project/Planar"
 uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 version = "1.6.11"
 
@@ -702,7 +702,7 @@ version = "1.11.0"
 
 [[deps.Processing]]
 deps = ["Data", "Pbar", "StatsBase"]
-path = "../../Processing"
+path = "/project/Processing"
 uuid = "71db1b01-ba5b-4918-92ad-dd9436844736"
 version = "0.1.0"
 
@@ -734,7 +734,7 @@ version = "1.2.2"
 
 [[deps.Remote]]
 deps = ["JSON", "LiveMode", "PrettyTables", "Telegram"]
-path = "../../Remote"
+path = "/project/Remote"
 uuid = "711acd30-27b5-475d-809f-796ffbe15f78"
 version = "0.1.0"
 
@@ -771,7 +771,7 @@ version = "1.2.0"
 
 [[deps.Simulations]]
 deps = ["CoverageTools", "Data", "Instances", "IterTools", "Processing", "Random", "Statistics", "StatsBase", "TimeTicks"]
-path = "../../Simulations"
+path = "/project/Simulations"
 uuid = "a69aad36-f532-4133-ba48-77171b778e6d"
 version = "0.1.0"
 
@@ -814,7 +814,7 @@ version = "0.34.11"
 
 [[deps.Strategies]]
 deps = ["Collections", "Pkg"]
-path = "../../Strategies"
+path = "/project/Strategies"
 uuid = "7a1c9c3a-7759-4314-aa2e-fd1262f248b0"
 version = "0.1.0"
 
@@ -863,7 +863,7 @@ version = "2.8.2"
 
 [[deps.Stubs]]
 deps = ["CSV", "Pkg", "Serialization", "SimMode"]
-path = "../../Stubs"
+path = "/project/Stubs"
 uuid = "19a5ee1f-efca-4178-b297-263c7ceb508d"
 version = "0.1.0"
 
