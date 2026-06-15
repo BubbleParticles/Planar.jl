@@ -20,9 +20,6 @@ struct Context{M<:ExecMode}
     function Context(::M, d::DateRange; kwargs...) where {M<:ExecMode}
         new{M}(d)
     end
-    function Context(mode, tf, from_date, to_date; kwargs...)
-        Context(mode, DateRange(from_date, to_date, tf); kwargs...)
-    end
     function Context(
         mode, timeframe::T, from_date::T, to_date::T; kwargs...
     ) where {T<:AbstractString}
@@ -30,6 +27,15 @@ struct Context{M<:ExecMode}
         to = convert(DateTime, to_date)
         tf = convert(TimeFrame, timeframe)
         Context(mode, DateRange(tf, from, to); kwargs...)
+    end
+    function Context(mode, tf::AbstractString, from_date::AbstractString, to_date::AbstractString; kwargs...)
+        from = convert(DateTime, from_date)
+        to = convert(DateTime, to_date)
+        tf = convert(TimeFrame, tf)
+        Context(mode, DateRange(tf, from, to); kwargs...)
+    end
+    function Context(mode, tf, from_date, to_date; kwargs...)
+        Context(mode, DateRange(from_date, to_date, tf); kwargs...)
     end
     function Context(mode, tf::TimeFrame, since::Period)
         to = now()

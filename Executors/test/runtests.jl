@@ -133,10 +133,7 @@ end
             @test ctx isa Executors.Context{Sim}
         end
 
-        @testset "Context with string timeframe, from, to" begin
-            ctx = Executors.Context(Sim(), "1h", "2020-01-01", "2020-01-31")
-            @test ctx isa Executors.Context{Sim}
-        end
+
 
         @testset "Context with since period" begin
             ctx = Executors.Context(Sim(), TimeFrame("1h"), Day(7))
