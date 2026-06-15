@@ -1,3 +1,5 @@
 [deps]
 Opt = "01937fd2-c099-442f-ae89-75fa208aad36"
+Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
+Remote = "711acd30-27b5-475d-809f-796ffbe15f78"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

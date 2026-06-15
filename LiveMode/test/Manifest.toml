@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "240aa5e8dc63160dd93d9db711d373dc81284a7c"
+project_hash = "aabad558f975e9449891f402b45eb0e66a0304f4"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "2d9c9a55f9c93e8887ad391fbae72f8ef55e1177"
@@ -124,7 +124,7 @@ version = "0.7.8"
 
 [[deps.Collections]]
 deps = ["Instances"]
-path = "/project/Collections"
+path = "../../Collections"
 uuid = "199ae5f6-b1b4-42af-853d-fd50a04203c4"
 version = "0.1.0"
 
@@ -188,7 +188,7 @@ version = "4.1.1"
 
 [[deps.Data]]
 deps = ["CodecZlib", "DataFrames", "DataFramesMeta", "DataStructures", "LMDB", "Misc", "Reexport", "Serialization", "Zarr"]
-path = "/project/Data"
+path = "../../Data"
 uuid = "934a4ae5-3fdb-4fa4-b6dd-2cd889d3d27b"
 version = "0.1.1"
 
@@ -278,7 +278,7 @@ version = "0.1.0"
 
 [[deps.Executors]]
 deps = ["Strategies"]
-path = "/project/Executors"
+path = "../../Executors"
 uuid = "8d044263-b64b-4593-bc6a-15d2ec3d7aea"
 version = "0.1.0"
 
@@ -346,13 +346,13 @@ version = "1.1.1"
 
 [[deps.Instances]]
 deps = ["Exchanges", "OrderTypes"]
-path = "/project/Instances"
+path = "../../Instances"
 uuid = "36291b3f-06ca-4570-b5b6-65fb8ed80b61"
 version = "0.1.0"
 
 [[deps.Instruments]]
 deps = ["Lang", "Misc", "Printf"]
-path = "/project/Instruments"
+path = "../../Instruments"
 uuid = "36fdd1e0-de92-434c-a120-c8ed410c5e3c"
 version = "0.1.0"
 
@@ -449,7 +449,7 @@ version = "1.4.0"
 
 [[deps.Lang]]
 deps = ["Distributed", "DocStringExtensions", "Logging", "PrecompileTools", "Preferences"]
-path = "/project/Lang"
+path = "../../Lang"
 uuid = "29573954-25fe-4a2f-9b4b-dcb25d092053"
 version = "0.1.0"
 
@@ -489,7 +489,7 @@ version = "1.12.0"
 
 [[deps.LiveMode]]
 deps = ["LRUCache", "PaperMode", "Watchers"]
-path = "../../LiveMode"
+path = "/project/LiveMode"
 uuid = "c1773ea8-8a7c-4b58-b57f-053be4f98df9"
 version = "0.1.0"
 
@@ -549,7 +549,7 @@ version = "2.28.1010+0"
 
 [[deps.Misc]]
 deps = ["ConcurrentCollections", "Dates", "Distributed", "DocStringExtensions", "FunctionalCollections", "JSON3", "Logging", "LoggingExtras", "OrderedCollections", "Pkg", "PrecompileTools", "Reexport", "Serialization", "TOML", "TimeTicks"]
-path = "/project/Misc"
+path = "../../Misc"
 uuid = "ff97321b-aa60-4104-8cd6-2e42973349ab"
 version = "0.1.0"
 
@@ -605,7 +605,7 @@ version = "3.5.4+0"
 
 [[deps.OrderTypes]]
 deps = ["ExchangeTypes", "Instruments"]
-path = "/project/OrderTypes"
+path = "../../OrderTypes"
 uuid = "fba5cb4a-2089-4510-9d41-52be7ff19328"
 version = "0.1.0"
 
@@ -634,7 +634,7 @@ version = "2.8.5"
 
 [[deps.Pbar]]
 deps = ["Term", "TimeTicks"]
-path = "/project/Pbar"
+path = "../../Pbar"
 uuid = "7aed521b-3ea6-427a-8031-5ecc7305f19e"
 version = "0.1.0"
 
@@ -802,7 +802,7 @@ version = "0.34.11"
 
 [[deps.Strategies]]
 deps = ["Collections", "Pkg"]
-path = "/project/Strategies"
+path = "../../Strategies"
 uuid = "7a1c9c3a-7759-4314-aa2e-fd1262f248b0"
 version = "0.1.0"
 
@@ -907,7 +907,7 @@ version = "0.2.0"
 
 [[deps.TimeTicks]]
 deps = ["Dates", "Lang", "Reexport", "Serialization", "TimeFrames"]
-path = "/project/TimeTicks"
+path = "../../TimeTicks"
 uuid = "1ce46816-3f51-4f52-9fcf-6d091670788d"
 version = "0.1.0"
 

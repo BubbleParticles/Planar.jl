@@ -1,6 +1,8 @@
 using Test
 using Fetch
 using Exchanges
+using Dates
+using DataFrames
 
 const ExchangeTypes = Exchanges.ExchangeTypes
 const HTTP = ExchangeTypes.CcxtGateway.HTTP
