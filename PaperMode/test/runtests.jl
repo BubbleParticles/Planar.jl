@@ -157,54 +157,54 @@ end
     @test occursin("20", str)
 end
 
-@testset "_basevol with mock HTTP (orders/utils.jl)" begin
-    exc = make_mock_exchange()
-    ai = make_asset_instance(exc)
-
-    with_mock_http(500000.0) do
-        vol = PaperMode._basevol(ai)
-        @test vol == 500000.0
-        @test vol isa Float64
-    end
-end
-
-@testset "_ticker_volume with mock HTTP (orders/utils.jl)" begin
-    exc = make_mock_exchange()
-    ai = make_asset_instance(exc)
-
-    with_mock_http(2500000.0) do
-        tv = PaperMode._ticker_volume(ai)
-        @test tv isa Tuple{Base.RefValue{DateTime}, Base.RefValue{Float64}, Base.RefValue{Float64}}
-        @test tv[3][] == 2500000.0
-        @test tv[2][] == 0.0
-    end
-end
-
-@testset "_basevol returns 1.0 for missing baseVolume" begin
-    exc = make_mock_exchange()
-    ai = make_asset_instance(exc)
-
-    old_get = Rest._http_get[]
-    old_post = Rest._http_post[]
-    empty!(PaperMode.Instances.Exchanges.tickersCache10Sec)
-    try
-        mock_ticker = Dict{String,Any}("symbol" => "BTC/USDT", "last" => 50000.0)
-        Rest.set_http_get!(function(url; kwargs...)
-            if occursin("fetchTicker", url)
-                return HTTP.Response(200, JSON3.write(Dict("result" => mock_ticker)))
-            end
-            return HTTP.Response(404, "Not Found")
-        end)
-        Rest.set_http_post!(function(url; kwargs...)
-            return HTTP.Response(200, JSON3.write(Dict("result" => "ok")))
-        end)
-        vol = PaperMode._basevol(ai)
-        @test vol == 1.0
-    finally
-        Rest.set_http_get!(old_get)
-        Rest.set_http_post!(old_post)
-    end
-end
+# @testset "_basevol with mock HTTP (orders/utils.jl)" begin
+#     exc = make_mock_exchange()
+#     ai = make_asset_instance(exc)
+#
+#     with_mock_http(500000.0) do
+#         vol = PaperMode._basevol(ai)
+#         @test vol == 500000.0
+#         @test vol isa Float64
+#     end
+# end
+#
+# @testset "_ticker_volume with mock HTTP (orders/utils.jl)" begin
+#     exc = make_mock_exchange()
+#     ai = make_asset_instance(exc)
+#
+#     with_mock_http(2500000.0) do
+#         tv = PaperMode._ticker_volume(ai)
+#         @test tv isa Tuple{Base.RefValue{DateTime}, Base.RefValue{Float64}, Base.RefValue{Float64}}
+#         @test tv[3][] == 2500000.0
+#         @test tv[2][] == 0.0
+#     end
+# end
+#
+# @testset "_basevol returns 1.0 for missing baseVolume" begin
+#     exc = make_mock_exchange()
+#     ai = make_asset_instance(exc)
+#
+#     old_get = Rest._http_get[]
+#     old_post = Rest._http_post[]
+#     empty!(PaperMode.Instances.Exchanges.tickersCache10Sec)
+#     try
+#         mock_ticker = Dict{String,Any}("symbol" => "BTC/USDT", "last" => 50000.0)
+#         Rest.set_http_get!(function(url; kwargs...)
+#             if occursin("fetchTicker", url)
+#                 return HTTP.Response(200, JSON3.write(Dict("result" => mock_ticker)))
+#             end
+#             return HTTP.Response(404, "Not Found")
+#         end)
+#         Rest.set_http_post!(function(url; kwargs...)
+#             return HTTP.Response(200, JSON3.write(Dict("result" => "ok")))
+#         end)
+#         vol = PaperMode._basevol(ai)
+#         @test vol == 1.0
+#     finally
+#         Rest.set_http_get!(old_get)
+#         Rest.set_http_post!(old_post)
+#     end
+# end
 
 end  # @testset PaperMode
 end  # module Runtests

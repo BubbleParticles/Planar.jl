@@ -149,9 +149,9 @@
         first_half = regimes[1:mid_point]
         second_half = regimes[mid_point+1:end]
         
-        # The dominant regime in each half should be different
-        mode1 = mode(first_half)
-        mode2 = mode(second_half)
+         # The dominant regime in each half should be different
+        mode1 = fs.StatsBase.mode(first_half)
+        mode2 = fs.StatsBase.mode(second_half)
         
         # Print some debug info
         println("First half regime distribution: ", countmap(first_half))
