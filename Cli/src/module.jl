@@ -1,5 +1,5 @@
 using Base.Iterators: flatten
-using Comonicon
+import Comonicon: @main, @cast
 using Data: load_ohlcv
 using Exchanges
 using Exchanges: tickers
