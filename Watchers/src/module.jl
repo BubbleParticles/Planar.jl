@@ -2,6 +2,7 @@ using Fetch: Fetch
 using Fetch.Data
 using Fetch.Python
 using Fetch.Misc
+using Ccxt
 using .Data: rangeafter
 using .Data.DataStructures: CircularBuffer
 using .Data.DataFrames: DataFrame
@@ -282,8 +283,8 @@ include("apis/frankfurter.jl")
 include("apis/fred.jl")
 include("impls/impls.jl")
 
-using .WatchersImpls: iswatchfunc
-export iswatchfunc
+using .WatchersImpls: iswatchfunc, ccxt_tickers_watcher, ccxt_ohlcv_watcher, ccxt_ohlcv_candles_watcher, ccxt_orderbook_watcher
+export iswatchfunc, ccxt_tickers_watcher, ccxt_ohlcv_watcher, ccxt_ohlcv_candles_watcher, ccxt_orderbook_watcher
 
 # Set up cleanup after all modules are loaded
 atexit(_closeall)

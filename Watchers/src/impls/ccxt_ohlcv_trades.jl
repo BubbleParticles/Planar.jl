@@ -3,35 +3,12 @@ using ..Fetch.Exchanges
 using ..Misc: Iterable
 using ..Fetch.Processing.TradesOHLCV
 using ..Fetch.Processing: trail!
-using ..Fetch.Python
 using ..Misc: sleep_pad
-using .Lang: @get
 
 const CcxtOHLCVVal = Val{:ccxt_ohlcv}
 
-# FIXME
-Python.pyconvert(::Type{DateTime}, py::Py) = dt(pyconvert(Int, py))
-Python.pyconvert(::Type{TradeSide}, py::Py) = TradeSide(py)
-Python.pyconvert(::Type{TradeRole}, py::Py) = TradeRole(py)
-function Python.pyconvert(::Type{FeesType}, py::Py)
-    if isdict(py)
-        cost = get(py, "cost", pybuiltins.None)
-        if pyisnone(cost)
-            cost = nothing
-        end
-        currency = get(py, "currency", pybuiltins.None)
-        if pyisnone(currency)
-            currency = nothing
-        end
-        (; cost, currency)
-    elseif pyisnone(py)
-        nothing
-    elseif pyisinstance(py, pybuiltins.float)
-        pytofloat(py)
-    else
-        error("watchers: invalid fees type $py")
-    end
-end
+using ..WatchersImpls: _wconvert, _wkey
+using ..Watchers: JSON3
 
 _trades(w::Watcher) = attr(w, :trades)
 _trades!(w) = setattr!(w, CcxtTrade[], :trades)
@@ -201,10 +178,13 @@ function _start!(w::Watcher, ::CcxtOHLCVVal)
 end
 
 function _parse_trades(w, pytrades)
-    this_trades = if isdict(pytrades)
-        @get pytrades _sym(w) pydict()
-    elseif islist(pytrades)
-        pylist(pytrades)
+    this_trades = if pytrades isa Union{Dict, JSON3.Object}
+        sym = _sym(w)
+        get(pytrades, sym, nothing) !== nothing ? pytrades[sym] : nothing
+    elseif pytrades isa AbstractVector
+        pytrades
+    else
+        nothing
     end
     if isnothing(this_trades)
         w[:backoff] += ms(500)
@@ -214,7 +194,7 @@ function _parse_trades(w, pytrades)
     end
     if !isempty(pytrades)
         new_trades = [
-            fromdict(CcxtTrade, String, py, pyconvert, pyconvert) for py in this_trades
+            fromdict(CcxtTrade, String, py, _wkey, _wconvert) for py in this_trades
         ]
         Main.tr = new_trades
         Main.wtr = _trades(w)

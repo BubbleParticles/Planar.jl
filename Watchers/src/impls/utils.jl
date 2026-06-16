@@ -2,9 +2,9 @@ using ..Data: df!, _contiguous_ts, nrow, save_ohlcv, zi, check_all_flag, snakeca
 using ..Data.DFUtils: firstdate, lastdate, copysubs!, addcols!
 using ..Data.DataFramesMeta
 
-using ..Fetch.Exchanges: Exchange, account, getexchange!
-using ..Fetch.Exchanges.Ccxt: _multifunc, Py
-using ..Fetch.Exchanges.Python: islist, isdict, StreamHandler
+using ..Fetch.Exchanges: Exchange, account, getexchange!, FeesType, DFT, TradeSide, TradeRole
+using ..TimeTicks: dt
+using ..Fetch.Exchanges.Ccxt: _multifunc
 using ..Fetch: fetch_candles
 using ..Lang
 using ..Lang: safenotify, safewait
@@ -12,6 +12,60 @@ using ..Misc: rangeafter, rangebetween
 using ..Fetch.Processing: cleanup_ohlcv_data, iscomplete, isincomplete, upsample
 using ..Watchers: logerror
 using ..Watchers: JSON3
+
+# JSON3-aware converters for fromdict (gateway data)
+_wconvert(::Type{DateTime}, v) = dt(Int(v))
+_wconvert(::Type{TradeSide}, v) = TradeSide(v)
+_wconvert(::Type{TradeRole}, v) = TradeRole(v)
+_wconvert(::Type{Vector{T}}, v) where {T} = [_wconvert(T, x) for x in v]
+function _wconvert(::Type{Union{Nothing, T}}, v) where {T}
+    isnothing(v) && return nothing
+    _wconvert(T, v)
+end
+_wconvert(::Type{T}, v) where {T<:DFT} = Float64(v)
+_wconvert(::Type{String}, v) = string(v)
+_wconvert(::Type{Symbol}, v) = Symbol(v)
+function _wconvert(::Type{Union{Nothing, DFT}}, v)
+    isnothing(v) && return nothing
+    Float64(v)
+end
+function _wconvert(::Type{Union{Nothing, String}}, v)
+    isnothing(v) && return nothing
+    string(v)
+end
+function _wconvert(::Type{Union{Nothing, TradeRole}}, v)
+    isnothing(v) && return nothing
+    TradeRole(v)
+end
+_wconvert(::Type{<:FeesType}, v) = _convert_fees(v)
+function _convert_fees(v)
+    if v isa Union{Dict, JSON3.Object}
+        cost = get(v, "cost", nothing)
+        currency = get(v, "currency", nothing)
+        (; cost=something(cost, nothing), currency=something(currency, nothing))
+    elseif isnothing(v)
+        nothing
+    elseif v isa Number
+        Float64(v)
+    else
+        error("watchers: invalid fees type $v")
+    end
+end
+
+_wkey(::Type{String}, k) = string(k)
+
+# Stream handler stubs for non-Python mode
+struct StreamHandler
+    stop::Function
+    push::Function
+end
+StreamHandler(; stop=Base.Returns(nothing), push=Base.Returns(nothing)) = StreamHandler(stop, push)
+
+function stream_handler(coro_func, f_push)
+    (; stop=Base.Returns(nothing), push=f_push)
+end
+start_handler!(h) = nothing
+stop_handler!(h) = nothing
 
 @add_statickeys! begin
     exc
@@ -179,7 +233,7 @@ _key(w::Watcher) = attr(w, :key)
 _view!(w, v) = setattr!(w, v, :view)
 _view(w) = attr(w, :view)
 
-function _dopush!(w, v; if_func=islist)
+function _dopush!(w, v; if_func=!isnothing)
     try
         if if_func(v)
             pushnew!(w, v, now())
@@ -193,7 +247,7 @@ function _dopush!(w, v; if_func=islist)
 end
 
 iswatchfunc(func::Function) = startswith(string(nameof(func)), "watch")
-iswatchfunc(func::Py) = startswith(string(func.__name__), "watch")
+iswatchfunc(func) = false
 
 @doc """ Returns the available data within the given window
 
@@ -530,7 +584,7 @@ function maybe_backoff!(errors, v)
     end
 end
 
-function new_handler_task(w; init_func, corogen_func, wrapper_func=pylist, if_func=islist)
+function new_handler_task(w; init_func, corogen_func, wrapper_func=identity, if_func=!isnothing)
     interval = w.interval.fetch
     buffer_size = max(w.capacity.buffer, w.capacity.view)
     buffer = Vector{Any}()

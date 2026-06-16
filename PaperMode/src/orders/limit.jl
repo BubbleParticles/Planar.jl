@@ -5,7 +5,13 @@ using SimMode: trade!
 using .Executors: AnyGTCOrder
 using .OrderTypes: ImmediateOrderType, OrderCanceled
 
-_asdate(d) = parse(DateTime, rstrip(d["datetime"], 'Z'))
+function _asdate(d)
+    if d isa AbstractString
+        s = rstrip(d, 'Z')
+        return DateTime(s, dateformat"yyyy-mm-ddTHH:MM:SS.s")
+    end
+    parse(DateTime, rstrip(d["datetime"], 'Z'))
+end
 
 @doc """ Updates a limit order in PaperMode.
 

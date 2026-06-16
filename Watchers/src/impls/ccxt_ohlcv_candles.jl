@@ -10,7 +10,7 @@ using .WatchersImpls:
     getexchange!,
     _exc!,
     _check_ids
-using .Watchers: logerror
+using .Watchers: logerror, JSON3
 using Base: Semaphore, acquire, release, ReentrantLock, current_task
 using .Data: DataFrame
 using .Misc: period
@@ -60,7 +60,7 @@ function ccxt_ohlcv_candles_watcher(
     if !isnothing(logfile)
         @setkey! a logfile
     end
-    watcher_type = Py
+    watcher_type = Any
     wid = string(
         CcxtOHLCVCandlesVal.parameters[1], "-", hash((exc.id, syms, a[k"issandbox"]))
     )
@@ -287,7 +287,7 @@ function _update_ohlcv_func(w)
         if snap isa Exception
             @error "ohlcv (candles): exception" exception = snap
             return nothing
-        elseif !isdict(snap)
+        elseif !(snap isa Union{Dict, JSON3.Object})
             @error "ohlcv (candles): unknown value" snap
             return nothing
         end
@@ -314,7 +314,7 @@ function _update_ohlcv_func(w)
                         for cdl in candles
                             cdl_ts = apply(tf, first(cdl) |> dt)
                             if cdl_ts == next_ts
-                                tup = (cdl_ts, (pytofloat(cdl[idx]) for idx in 2:6)...)
+                                tup = (cdl_ts, (Float64(cdl[idx]) for idx in 2:6)...)
                                 push!(this_df, tup)
                                 next_ts += tf
                             end
@@ -329,7 +329,7 @@ function _update_ohlcv_func(w)
                 state.nextcandle = tf_candles
             end
         end
-        snap.py
+        snap
     end
 end
 
@@ -343,7 +343,7 @@ function _update_ohlcv_func_single(w, sym)
         if snap isa Exception
             @error "ohlcv (candles): exception" exception = snap
             return nothing
-        elseif !islist(snap)
+        elseif !(snap isa AbstractVector)
             @error "ohlcv (candles): unknown value" snap
             return nothing
         end
@@ -366,7 +366,7 @@ function _update_ohlcv_func_single(w, sym)
             for cdl in state.nextcandle
                 cdl_ts = apply(tf, first(cdl) |> dt)
                 if cdl_ts == next_ts
-                    tup = (cdl_ts, (pytofloat(cdl[idx]) for idx in 2:6)...)
+                    tup = (cdl_ts, (Float64(cdl[idx]) for idx in 2:6)...)
                     push!(df, tup)
                     next_ts = cdl_ts
                     break
@@ -378,7 +378,7 @@ function _update_ohlcv_func_single(w, sym)
             end
             invokelatest(w[k"callback"], df, sym)
             state.nextcandle = snap
-            snap.py
+            snap
         end
     end
 end
