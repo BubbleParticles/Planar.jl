@@ -33,7 +33,7 @@ $(TYPEDSIGNATURES)
 The function retrieves trades within this range and then transforms them into a DataFrame using the `_tradesdf()` function.
 """
 function _tradesdf(ai::AssetInstance, from=firstindex(ai.history), to=lastindex(ai.history))
-    length(from:to) < 1 || length(s.history) == 0 && return nothing
+    isempty(from:to) || isempty(s.history) && return nothing
     _tradesdf(@view ai.history[from:to])
 end
 tradesdf(ai) = _tradesdf(ai.history)

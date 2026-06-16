@@ -338,7 +338,7 @@ function _get_filtered_assets(s, tf, min_vol, x_num)
     x_assets = assets[(end - effective_x_num + 1):end]
 
     # Check if there are enough assets for x and y
-    if length(x_assets) == 0 || length(y_assets) == 0
+    if isempty(x_assets) || isempty(y_assets)
          @warn "Not enough assets ($length(assets)) to select $x_num x_assets and remaining y_assets."
          return nothing, nothing, nothing # Indicate failure
     end

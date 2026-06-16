@@ -419,11 +419,14 @@ The waiting period increases with each failed attempt.
 """
 function _sticky_fetchto!(args...; kwargs...)
     backoff = 0.5
-    while true
-        _fetchto!(args...; kwargs...) && break
+    max_backoff = 60.0
+    for _ in 1:120
+        _fetchto!(args...; kwargs...) && return true
         sleep(backoff)
-        backoff += 0.5
+        backoff = min(backoff + 0.5, max_backoff)
     end
+    @warn "_sticky_fetchto! exhausted retries"
+    false
 end
 
 function _resolve(w, ohlcv_dst, ohlcv_src::DataFrame, sym=_sym(w))

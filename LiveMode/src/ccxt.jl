@@ -8,7 +8,7 @@ _execfunc(f::Function, args...; kwargs...) = f(args...; kwargs...)
 
 get_str(v, k) = something(get(v, string(k), nothing), "") |> string
 get_float(v, k) = Float64(something(get(v, string(k), 0.0), 0.0))
-get_bool(v, k) = something(get(v, string(k), false), false) == true
+get_bool(v, k) = something(get(v, string(k), false), false) === true
 
 function _option_float(o, k; nonzero=false)
     v = get(o, string(k), nothing)

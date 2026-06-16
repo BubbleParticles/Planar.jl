@@ -361,7 +361,7 @@ function load_session(
             root.arrays
         end
         arrs = filter(pair -> occursin(rgx, pair.first), all_arrs)
-        if length(arrs) == 0
+        if isempty(arrs)
             parts = ((k for k in (name, startstop, params_k, code) if k != ".*")...,)
             throw(KeyError(parts))
         elseif length(arrs) == 1
