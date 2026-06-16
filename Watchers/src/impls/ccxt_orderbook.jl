@@ -137,7 +137,7 @@ The function returns `true` if data was fetched and pushed, and `false` otherwis
 """
 function _fetch!(w::Watcher, ::CcxtOrderBookVal)
     ob = pyfetch(_tfunc(w), _sym(w))
-    if length(ob) > 0
+    if !isempty(ob)
         result = _ob_to_df(ob)
         pushnew!(w, result, _obtimestamp(result))
         true
@@ -171,7 +171,7 @@ The last flushed time is then updated to the time of the last data in the buffer
 function _flush!(w::Watcher, ::CcxtOrderBookVal)
     isempty(w.view) && return nothing
     range = rangeafter(w.buffer, (; time=_lastflushed(w)); by=x -> x.time)
-    if length(range) > 0
+    if !isempty(range)
         toflush = vcat(getproperty.(view(w.buffer, range), :value)...)
         save_data(zi[], _key(w), toflush; serialize=false, type=Float64)
         _lastflushed!(w, w.buffer[end].time)

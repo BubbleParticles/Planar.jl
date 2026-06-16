@@ -1077,7 +1077,7 @@ This function returns the last known price from the historical data for an `Asse
 """
 function lastprice(ai::AssetInstance, ::Val{:history})
     v = ai.history
-    if length(v) > 0
+    if !isempty(v)
         last(v).price
     else
         lastprice(ai; hist=true)
@@ -1086,7 +1086,7 @@ end
 
 function lastprice(ai::AssetInstance, date::DateTime)
     h = trades(ai)
-    if length(h) > 0
+    if !isempty(h)
         trade = last(h)
         if date >= trade.date
             return trade.price
@@ -1104,7 +1104,7 @@ This function returns the timeframe for an `AssetInstance`. The timeframe repres
 """
 function timeframe(ai::AssetInstance)
     data = getfield(ai, :data)
-    if length(data) > 0
+    if !isempty(data)
         first(keys(data))
     else
         @warn "asset: can't infer timeframe since there is not data"

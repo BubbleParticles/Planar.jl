@@ -93,7 +93,7 @@ function historical(date::DateTime; base=DEFAULT_BASE, symbols=DEFAULT_SYMBOLS, 
     if !isnothing(amount)
         query["amount"] = amount
     end
-    path = ApiPaths.historical * date_str
+    path = string(ApiPaths.historical, date_str)
     json = get(path, isempty(query) ? nothing : query)
     return jsontodict(json)
 end
@@ -104,7 +104,7 @@ function timeseries(from_date::DateTime, to_date::DateTime; base=DEFAULT_BASE, s
     to_str = Dates.format(to_date, dateformat"yyyy-mm-dd")
     
     # Frankfurter API uses date range format: YYYY-MM-DD..YYYY-MM-DD
-    path = ApiPaths.time_series * from_str * ".." * to_str
+    path = string(ApiPaths.time_series, from_str, "..", to_str)
     
     query = Dict{String,Any}()
     

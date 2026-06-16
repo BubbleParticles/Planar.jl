@@ -102,7 +102,7 @@ function default_process(w::Watcher, appendby::Function)
         appendby(attr(w, :view), w.buffer, w.capacity.view)
     else
         range = rangeafter(w.buffer, last_p; by=x -> x.time)
-        length(range) > 0 &&
+        !isempty(range) &&
             appendby(attr(w, :view), view(w.buffer, range), w.capacity.view)
     end
     setattr!(w, w.buffer[end], :last_processed)
