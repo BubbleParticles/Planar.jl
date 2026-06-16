@@ -1,10 +1,10 @@
 using Test
 using Fetch
 using Exchanges
-using Dates
 using DataFrames
 
 const ExchangeTypes = Exchanges.ExchangeTypes
+const Dates = ExchangeTypes.Misc.TimeTicks.Dates
 const HTTP = ExchangeTypes.CcxtGateway.HTTP
 const JSON3 = ExchangeTypes.JSON3
 const ContiguityException = ExchangeTypes.Ccxt.Misc.ContiguityException

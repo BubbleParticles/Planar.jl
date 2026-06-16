@@ -5,6 +5,7 @@ authors = ["zbc"]
 
 [deps]
 Exchanges = "ab04e009-1d60-4d36-ac2f-58b9338a89b5"
+Misc = "ff97321b-aa60-4104-8cd6-2e42973349ab"
 Processing = "71db1b01-ba5b-4918-92ad-dd9436844736"
 
 [extras]
@@ -16,4 +17,4 @@ Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "HTTP", "JSON3", "DataFrames", "Data"]
+test = ["Test", "HTTP", "JSON3", "DataFrames", "Data", "Misc"]
