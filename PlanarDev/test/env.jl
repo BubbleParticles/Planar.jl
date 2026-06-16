@@ -26,7 +26,6 @@ if NO_TMP
 end
 
 using PlanarDev
-using PlanarDev.Planar.Engine.Instances.Exchanges.Python.PythonCall.GC: enable as gc_enable, disable as gc_disable
 
 PROJECT_PATH = pathof(PlanarDev) |> dirname |> dirname
 push!(LOAD_PATH, dirname(PROJECT_PATH))

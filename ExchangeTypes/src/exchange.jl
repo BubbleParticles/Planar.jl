@@ -113,7 +113,7 @@ function Exchange(sym::Symbol; account="", kwargs...)
             for attempt in 1:5
                 try
                     info = CcxtGateway.exchange_info(client, name)
-                    if info isa Union{Dict, JSON3.Object} && get(info, "running", false) == true
+                    if info isa Union{Dict, JSON3.Object} && something(get(info, "running", false), false) == true
                         break
                     end
                 catch
@@ -263,7 +263,7 @@ function _has(feat::Symbol; full=true)
         try
             client = CcxtGateway.default_client()
             has_dict = CcxtGateway.get_cached_has(client, name)
-            if get(has_dict, feat_str, false)
+            if something(get(has_dict, feat_str, false), false)
                 push!(supported, name)
             end
         catch
