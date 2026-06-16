@@ -46,9 +46,13 @@ end
 end
 
 @testset "read_ohlcv" begin
-    df = Stubs.read_ohlcv()
-    @test df isa Stubs.DataFrame
-    @test size(df, 1) > 0
-    @test size(df, 2) > 0
+    if isfile(Stubs.OHLCV_FILE_PATH)
+        df = Stubs.read_ohlcv()
+        @test df isa Stubs.DataFrame
+        @test size(df, 1) > 0
+        @test size(df, 2) > 0
+    else
+        @test_skip "OHLCV file not found at $(Stubs.OHLCV_FILE_PATH)"
+    end
 end
 end

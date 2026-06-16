@@ -2,4 +2,5 @@
 CoverageTools = "c36e975a-824b-4404-a568-ef97ca766997"
 Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 StrategyTools = "bc793e09-ff97-408c-9766-388aa928ad5c"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

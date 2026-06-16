@@ -96,15 +96,15 @@ $(TYPEDSIGNATURES)
 This function iterates over the universe of a strategy. For each asset instance in the universe, it increments a counter by the length of the asset instance's history. The function returns the total count of trades.
 """
 function trades_count(s::Strategy, ::Val{:liquidations})
-    trades = 0
+    ntrades = 0
     liquidations = 0
     foreach(universe(s)) do ai
         this_trades = trades(ai)
         asset_liquidations = count((x -> x isa LiquidationTrade), this_trades)
-        trades += length(this_trades) - asset_liquidations
+        ntrades += length(this_trades) - asset_liquidations
         liquidations += asset_liquidations
     end
-    (; trades, liquidations)
+    (; trades=ntrades, liquidations)
 end
 
 function _count_trades(ai::AssetInstance; long=0, short=0, long_liq=0, short_liq=0)
