@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["zbc"]
 
 [deps]
+Ccxt = "a58c4053-12c5-4e22-b66a-82c3bd74bf8a"
 Fetch = "01b7c4b8-c42c-4ba7-97ce-8f8fab6ee59e"
 HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
