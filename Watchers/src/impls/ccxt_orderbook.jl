@@ -1,8 +1,8 @@
 using ..Fetch: OrderBookLevel, L1, L2, L3
+using ..Ccxt: CcxtGateway, default_client, call_exchange
 
 const CcxtOrderBookVal = Val{:ccxt_order_book}
 
-# da.DataFrame(AskOrderTuple{Float64}.(pyconvert.(Tuple, ob["bids"])))
 _l1func(w) = attr(w, :l1func)
 _l2func(w) = attr(w, :l2func)
 @doc """ Assigns the appropriate order book function based on the level.
@@ -87,8 +87,7 @@ function _init!(w::Watcher, ::CcxtOrderBookVal)
     _lastflushed!(w, DateTime(0))
 end
 
-Base.float(py::Py) = pyconvert(Float64, py)
-_totimestamp(v) = dt(pyconvert(Int, v))
+_totimestamp(v) = dt(Int(v))
 _timestamp!(d, v) = metadata!(d, "timestamp", v)
 _symbol!(d, ob) = metadata!(d, "symbol", string(ob["symbol"]))
 _obtimestamp(d::DataFrame) = metadata(d, "timestamp")
@@ -115,10 +114,10 @@ function _ob_to_df(ob)
     # the dataframe will be to the lower count
     for (bid, ask) in zip(ob["bids"], ob["asks"])
         push!(out.timestamp, ts)
-        push!(out.bid_price, float(ask[0]))
-        push!(out.bid_amount, float(ask[1]))
-        push!(out.ask_price, float(bid[0]))
-        push!(out.ask_amount, float(bid[1]))
+        push!(out.bid_price, Float64(ask[1]))
+        push!(out.bid_amount, Float64(ask[2]))
+        push!(out.ask_price, Float64(bid[1]))
+        push!(out.ask_amount, Float64(bid[2]))
     end
     d = df!(out)
     _timestamp!(d, ts)
@@ -136,8 +135,12 @@ The function returns `true` if data was fetched and pushed, and `false` otherwis
 
 """
 function _fetch!(w::Watcher, ::CcxtOrderBookVal)
-    ob = pyfetch(_tfunc(w), _sym(w))
-    if !isempty(ob)
+    client = default_client()
+    exc = _exc(w)
+    method = _tfunc(w)
+    sym = _sym(w)
+    ob = call_exchange(client, exc.id, method; query=Dict("symbol" => sym))
+    if !isnothing(ob) && !isempty(ob)
         result = _ob_to_df(ob)
         pushnew!(w, result, _obtimestamp(result))
         true

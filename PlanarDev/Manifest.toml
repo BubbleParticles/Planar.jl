@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "20a2a5014d7be8196233d18732176edd17ddbc78"
+project_hash = "83dee5f1168d1c40271400db09460564b81d4ede"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "2d9c9a55f9c93e8887ad391fbae72f8ef55e1177"
@@ -19,12 +19,6 @@ version = "1.1.3"
 git-tree-sha1 = "f9e9a66c9b7be1ad7372bbd9b062d9230c30c5ce"
 uuid = "dce04be8-c92d-5529-be00-80e4d2c0e197"
 version = "2.5.0"
-
-[[deps.ArgParse]]
-deps = ["Logging", "TextWrap"]
-git-tree-sha1 = "22cf435ac22956a7b45b0168abbc871176e7eecc"
-uuid = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
-version = "1.2.0"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -169,18 +163,6 @@ version = "1.6.0"
     LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
     StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
-[[deps.Coverage]]
-deps = ["ArgParse", "Artifacts", "CoverageTools", "Downloads", "HTTP", "JSON", "LibGit2", "MbedTLS", "SHA", "Scratch"]
-git-tree-sha1 = "41c077a9bf7c18a8f35b818ec87b982d84b99f08"
-uuid = "a2441757-f6aa-5fb2-8edb-039e3f45d037"
-version = "1.7.0"
-
-[[deps.CoverageTools]]
-deps = ["JuliaSyntax", "TOML"]
-git-tree-sha1 = "59e6cf93c468aa21bd22578c41b69b5784e34955"
-uuid = "c36e975a-824b-4404-a568-ef97ca766997"
-version = "1.4.1"
-
 [[deps.Crayons]]
 git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
 uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
@@ -271,13 +253,13 @@ uuid = "460bff9d-24e4-43bc-9d9f-a8973cb893f4"
 version = "0.1.11"
 
 [[deps.ExchangeTypes]]
-deps = ["Ccxt", "FunctionalCollections", "JSON3", "OrderedCollections", "Serialization"]
+deps = ["Ccxt", "FunctionalCollections", "JSON3", "OrderedCollections"]
 path = "../ExchangeTypes"
 uuid = "16e96388-e60e-4b60-892f-986722d15ae4"
 version = "0.1.0"
 
 [[deps.Exchanges]]
-deps = ["Coverage", "Data", "ExchangeTypes", "Instruments", "JSON", "Pbar", "Reexport", "Serialization"]
+deps = ["Data", "ExchangeTypes", "Instruments", "JSON", "Pbar", "Reexport", "Serialization"]
 path = "../Exchanges"
 uuid = "ab04e009-1d60-4d36-ac2f-58b9338a89b5"
 version = "0.1.0"
@@ -300,7 +282,7 @@ uuid = "8f5d6c58-4d21-5cfd-889c-e3ad7ee6a615"
 version = "1.2.3"
 
 [[deps.Fetch]]
-deps = ["Exchanges", "Processing"]
+deps = ["Exchanges", "Misc", "Processing"]
 path = "../Fetch"
 uuid = "01b7c4b8-c42c-4ba7-97ce-8f8fab6ee59e"
 version = "0.1.0"
@@ -421,11 +403,6 @@ version = "1.14.3"
 
     [deps.JSON3.weakdeps]
     ArrowTypes = "31f734f8-188a-4ce0-8406-c8a06bd891cd"
-
-[[deps.JuliaSyntax]]
-git-tree-sha1 = "0d4b3dab95018bcf3925204475693d9f09dc45b8"
-uuid = "70703baa-626e-46a2-a12c-08ffd08c73b4"
-version = "1.0.2"
 
 [[deps.JuliaSyntaxHighlighting]]
 deps = ["StyledStrings"]
@@ -565,7 +542,7 @@ uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
 version = "2.28.1010+0"
 
 [[deps.Misc]]
-deps = ["ConcurrentCollections", "Dates", "Distributed", "DocStringExtensions", "FunctionalCollections", "JSON3", "Logging", "LoggingExtras", "OrderedCollections", "Pkg", "PrecompileTools", "Reexport", "Serialization", "TOML", "TimeTicks"]
+deps = ["ConcurrentCollections", "Dates", "Distributed", "DocStringExtensions", "FunctionalCollections", "JSON3", "LoggingExtras", "OrderedCollections", "Pkg", "PrecompileTools", "Reexport", "Serialization", "TOML", "TimeTicks"]
 path = "../Misc"
 uuid = "ff97321b-aa60-4104-8cd6-2e42973349ab"
 version = "0.1.0"
@@ -750,7 +727,7 @@ uuid = "189a3867-3050-52da-a836-e630ba90ab69"
 version = "1.2.2"
 
 [[deps.Remote]]
-deps = ["JSON", "LiveMode", "PrettyTables", "Telegram"]
+deps = ["LiveMode", "PrettyTables", "Telegram"]
 path = "../Remote"
 uuid = "711acd30-27b5-475d-809f-796ffbe15f78"
 version = "0.1.0"
@@ -860,7 +837,7 @@ uuid = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
 version = "1.11.0"
 
 [[deps.Stubs]]
-deps = ["CSV", "Pkg", "Serialization", "SimMode"]
+deps = ["CSV", "Pkg", "SimMode"]
 path = "../Stubs"
 uuid = "19a5ee1f-efca-4178-b297-263c7ceb508d"
 version = "0.1.0"
@@ -924,11 +901,6 @@ version = "2.0.8"
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 version = "1.11.0"
-
-[[deps.TextWrap]]
-git-tree-sha1 = "43044b737fa70bc12f6105061d3da38f881a3e3c"
-uuid = "b718987f-49a8-5099-9789-dcd902bef87d"
-version = "1.0.2"
 
 [[deps.TimeFrames]]
 deps = ["Dates", "Test"]
@@ -1008,7 +980,7 @@ version = "1.28.0"
     Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [[deps.Watchers]]
-deps = ["Fetch", "HTTP", "JSON3", "Statistics", "URIs"]
+deps = ["Ccxt", "Fetch", "HTTP", "JSON3", "Statistics", "URIs"]
 path = "../Watchers"
 uuid = "4a3f9c16-ec8e-48c6-a58d-938fc30e2b4b"
 version = "0.1.0"

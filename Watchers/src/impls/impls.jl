@@ -59,7 +59,7 @@ function default_load_timeframe(tf::TimeFrame)
     end
 end
 
-export default_load_timeframe, getexchange!
+export default_load_timeframe, getexchange!, ccxt_tickers_watcher, ccxt_ohlcv_watcher, ccxt_ohlcv_candles_watcher, ccxt_orderbook_watcher
 
 include("utils.jl")
 include("caching.jl")

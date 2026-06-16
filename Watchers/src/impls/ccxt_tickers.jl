@@ -1,7 +1,7 @@
 using ..Fetch.Exchanges
 using .Exchanges.Ccxt: choosefunc
-using ..Python
-using .Python: pyisnone
+using ..WatchersImpls: _wconvert, _wkey
+using ..Watchers: JSON3
 
 baremodule LogTickersWatcher end
 
@@ -83,42 +83,16 @@ function ccxt_tickers_watcher(
 end
 ccxt_tickers_watcher(syms...) = ccxt_tickers_watcher([syms...])
 
-# FIXME
-wpyconvert(::Type{T}, py::Py) where {T} =
-    if pyisnone(py)
-        nothing
-    else
-        pyconvert(T, py)
-    end
-
-wpyconvert(::Type{F}, py::Py) where {F<:AbstractFloat} = begin
-    if pyisnone(py)
-        zero(F)
-    else
-        pyconvert(F, py)
-    end
-end
-wpyconvert(::Type{<:Union{Nothing,DateTime}}, py::Py) =
-    if pyisnone(py)
-        nothing
-    else
-        dt(pyconvert(Int, py))
-    end
-wpyconvert(::Type{T}, v::Symbol) where {T} = T(v)
-
 function _parse_ticker_snapshot(snap)
     result = Dict{String,CcxtTicker}()
-    if !(snap isa Py)
-        try
-            snap = pydict(snap)
-        catch
-            @error "watcher: failed to parse ticker snapshot" snap
-            return result
-        end
+    raw = snap isa Union{Dict, JSON3.Object} ? snap : nothing
+    if isnothing(raw)
+        @error "watcher: failed to parse ticker snapshot" snap
+        return result
     end
-    if !isempty(snap)
-        for py_ticker in snap.values()
-            ticker = fromdict(CcxtTicker, String, py_ticker, wpyconvert, wpyconvert)
+    if !isempty(raw)
+        for (_, py_ticker) in pairs(raw)
+            ticker = fromdict(CcxtTicker, String, py_ticker, _wkey, _wconvert)
             result[ticker.symbol] = ticker
         end
     end
