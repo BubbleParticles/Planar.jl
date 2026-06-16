@@ -109,20 +109,34 @@ function choosefunc(exchange_id::String, suffix::String, inputs::AbstractVector;
     hasinputs = length(inputs) > 0
     method, kind = _multifunc(exchange_id, suffix, hasinputs)
     client = CcxtGateway.default_client()
+    is_fetch = startswith(method, "fetch")
     
     if hasinputs
         if kind == :multi
-            data = CcxtGateway.call_exchange(client, exchange_id, method; kwargs...)
+            data = if is_fetch && !isempty(kwargs)
+                CcxtGateway.call_exchange(client, exchange_id, method; body=Dict("params" => kwargs))
+            else
+                CcxtGateway.call_exchange(client, exchange_id, method; kwargs...)
+            end
             return _out_as_input(inputs, data; elkey)
         else
             out = Dict{eltype(inputs), Any}()
             for i in inputs
-                out[i] = CcxtGateway.call_exchange(client, exchange_id, method; symbol=string(i), kwargs...)
+                kw = merge(kwargs, Dict(:symbol => string(i)))
+                out[i] = if is_fetch && !isempty(kw)
+                    CcxtGateway.call_exchange(client, exchange_id, method; body=Dict("params" => kw))
+                else
+                    CcxtGateway.call_exchange(client, exchange_id, method; kw...)
+                end
             end
             return _out_as_input(inputs, out; elkey)
         end
     else
-        return CcxtGateway.call_exchange(client, exchange_id, method; kwargs...)
+        return if is_fetch && !isempty(kwargs)
+            CcxtGateway.call_exchange(client, exchange_id, method; body=Dict("params" => kwargs))
+        else
+            CcxtGateway.call_exchange(client, exchange_id, method; kwargs...)
+        end
     end
 end
 

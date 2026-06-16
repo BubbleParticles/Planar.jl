@@ -133,7 +133,8 @@ function loadmarkets!(exc; cache=true, agemax=Day(1))
                 end
             end
         catch e
-            @warn e
+            @error "Failed to load markets from gateway" exc = exc.name exception = e
+            rethrow(e)
         end
     end
     if (isfileyounger(mkt, agemax) && cache) || isoffline()
@@ -475,7 +476,10 @@ function issandbox(exc::Exchange)
         urls = call_exchange(default_client(), name, "urls")
         if urls isa AbstractDict
             urls_dict = Dict{String,Any}(string(k) => v for (k, v) in pairs(urls))
-            haskey(urls_dict, "apiBackup") || get(urls_dict, "apiBackup", nothing) !== nothing
+            # Check for sandbox/testnet URLs
+            has_sandbox = haskey(urls_dict, "test") && urls_dict["test"] !== nothing
+            has_backup = haskey(urls_dict, "apiBackup") && urls_dict["apiBackup"] !== nothing
+            has_sandbox || has_backup
         else
             false
         end
@@ -543,7 +547,7 @@ end
 function timeout!(exc::Exchange, v=5000)
     try
         name = string(exc.id)
-        call_exchange(default_client(), name, "timeout", query=Dict("value" => string(v)))
+        call_exchange(default_client(), name, "timeout", body=Dict("value" => v))
     catch
         @debug "timeout! via gateway failed"
     end

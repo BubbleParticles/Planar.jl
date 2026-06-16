@@ -138,7 +138,7 @@ end
 function call_exchange(client::GatewayClient, exchange_id::String, ccxt_method::String; 
     query=nothing, body=nothing)
     path = "/exchanges/$exchange_id/$ccxt_method"
-    req_method = body !== nothing ? "POST" : (ccxt_method ∈ ("createOrder", "cancelOrder", "withdraw")) ? "POST" : "GET"
+    req_method = body !== nothing ? "POST" : (ccxt_method ∈ ("createOrder", "cancelOrder", "withdraw", "setLeverage", "setMarginMode", "setPositionMode", "setSandboxMode", "set_api_key", "enableRateLimit", "timeout", "rateLimit")) ? "POST" : "GET"
     api_call(client, req_method, path; query, body)
 end
 
