@@ -2,23 +2,26 @@ module PlottingTests
 
 using Test
 using Plotting
-using Plotting.Makie
-using Plotting.Metrics
-using Plotting.Processing
-using Plotting.Random
+using Makie
+using Metrics
+using Processing
+using Random
 
 @testset "Plotting" begin
     @testset "Module loads" begin
-        @test isdefined(Plotting, :plot)
-        @test isdefined(Plotting, :plot_equity)
-        @test isdefined(Plotting, :plot_trades)
+        @test isdefined(Plotting, :ohlcv)
+        @test isdefined(Plotting, :ohlcv!)
+        @test isdefined(Plotting, :tradesticks)
+        @test isdefined(Plotting, :tradesticks!)
+        @test isdefined(Plotting, :balloons)
     end
 
     @testset "Basic plot functions exist" begin
-        @test isdefined(Plotting, :plot_equity)
-        @test isdefined(Plotting, :plot_trades)
-        @test isdefined(Plotting, :plot_drawdown)
-        @test isdefined(Plotting, :plot_returns)
+        @test isdefined(Plotting, :ohlcv)
+        @test isdefined(Plotting, :ohlcv!)
+        @test isdefined(Plotting, :tradesticks)
+        @test isdefined(Plotting, :tradesticks!)
+        @test isdefined(Plotting, :balloons)
     end
 end
 
