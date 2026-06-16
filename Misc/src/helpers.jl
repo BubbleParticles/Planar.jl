@@ -154,7 +154,7 @@ function queryfromstruct(T::Type, sep=","; kwargs...)
         f = getproperty(query, s)
         isnothing(f) && continue
         ft = typeof(f)
-        hasmethod(length, (ft,)) && length(f) == 0 && continue
+        hasmethod(length, (ft,)) && isempty(f) && continue
         params[string(s)] =
             ft != String && hasmethod(iterate, (ft,)) ? join(f, sep) : string(f)
     end

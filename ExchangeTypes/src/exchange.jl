@@ -113,7 +113,7 @@ function Exchange(sym::Symbol; account="", kwargs...)
             for attempt in 1:5
                 try
                     info = CcxtGateway.exchange_info(client, name)
-                    if info isa Union{Dict, JSON3.Object} && something(get(info, "running", false), false) == true
+                    if info isa Union{Dict, JSON3.Object} && something(get(info, "running", false), false) === true
                         break
                     end
                 catch
@@ -286,10 +286,15 @@ function _first(exc::CcxtExchange, args::Vararg{Symbol})
             m = string(name)
             is_fetch = startswith(m, "fetch") && m != "fetchMarkets"
             return (args...; kwargs...) -> begin
-                if is_fetch && !isempty(kwargs)
-                    CcxtGateway.call_exchange(client, ex_id, m; body=Dict("params" => kwargs))
-                else
-                    CcxtGateway.call_exchange(client, ex_id, m; body=kwargs)
+                try
+                    if is_fetch && !isempty(kwargs)
+                        CcxtGateway.call_exchange(client, ex_id, m; body=Dict("params" => kwargs))
+                    else
+                        CcxtGateway.call_exchange(client, ex_id, m; body=kwargs)
+                    end
+                catch e
+                    @warn "Gateway call to $ex_id.$m failed" exception=(e, catch_backtrace())
+                    nothing
                 end
             end
         end

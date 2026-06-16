@@ -44,7 +44,8 @@ $(TYPEDSIGNATURES)
 The function continuously checks if the latest data in each asset's time frame is up-to-date with the `since` parameter.
 It pauses execution using `sleep` for the given `interval` until the condition is met.
 """
-function waitohlcv(s, since; interval=Second(1))
+function waitohlcv(s, since; interval=Second(1), timeout=Minute(5))
+    deadline = now() + timeout
     for ai in s.universe
         for (tf, ov) in ai.data
             while true
@@ -53,6 +54,7 @@ function waitohlcv(s, since; interval=Second(1))
                         break
                     end
                 end
+                now() > deadline && return nothing
                 sleep(interval)
             end
         end

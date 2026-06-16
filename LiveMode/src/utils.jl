@@ -161,7 +161,7 @@ function reset_asset_tasks!(a, tasks)
 end
 
 function _persistent_stop_asset_tasks(s, ai; reset, kwargs...)
-    while true
+    for _ in 1:10
         try
             stop_asset_tasks(s, ai; reset, kwargs...)
             return true
@@ -174,7 +174,8 @@ function _persistent_stop_asset_tasks(s, ai; reset, kwargs...)
             end
         end
     end
-    return false
+    @warn "strat: stop asset tasks failed after 10 retries" ai
+    false
 end
 
 @doc """ Stops all tasks associated with all assets.
@@ -273,7 +274,7 @@ function stop_all_tasks(s::RTStrategy; reset=true)
     end
 
     @debug "strategy: stopping all asset tasks" _module = LogTasks s = nameof(s)
-    while true
+    for _ in 1:10
         try
             @sync begin
                 @async stop_all_asset_tasks(s; reset)

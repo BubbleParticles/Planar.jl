@@ -261,11 +261,11 @@ $(TYPEDSIGNATURES)
 """
 function orders(s::Strategy, ai::AssetInstance)
     buys = orders(s, ai, Buy)
-    if length(buys) == 0
+    if isempty(buys)
         orders(s, ai, Sell)
     else
         sells = orders(s, ai, Sell)
-        if length(sells) == 0
+        if isempty(sells)
             buys
         else
             OrderIterator(buys, sells)

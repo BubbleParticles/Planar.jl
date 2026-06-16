@@ -240,7 +240,7 @@ function agg(sess::OptSession; sort_by::Symbol=:pnl_avg, filter_zero_trades::Boo
     # Group by parameter combinations (excluding repeat column)
     grouped = groupby(sess.results, param_cols)
     
-    if length(grouped) == 0
+    if isempty(grouped)
         @warn "No groups found after grouping by parameters. Returning empty DataFrame."
         return DataFrame()
     end
