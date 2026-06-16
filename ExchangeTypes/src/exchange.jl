@@ -224,7 +224,14 @@ function Base.getproperty(e::CcxtExchange, k::Symbol)
         client = CcxtGateway.default_client()
         ex_id = string(e.id)
         m = string(k)
-        (args...; kwargs...) -> CcxtGateway.call_exchange(client, ex_id, m; body=kwargs)
+        is_fetch = startswith(m, "fetch") && m != "fetchMarkets"
+        (args...; kwargs...) -> begin
+            if is_fetch && !isempty(kwargs)
+                CcxtGateway.call_exchange(client, ex_id, m; body=Dict("params" => kwargs))
+            else
+                CcxtGateway.call_exchange(client, ex_id, m; body=kwargs)
+            end
+        end
     end
 end
 
@@ -277,7 +284,14 @@ function _first(exc::CcxtExchange, args::Vararg{Symbol})
             client = CcxtGateway.default_client()
             ex_id = string(exc.id)
             m = string(name)
-            return (args...; kwargs...) -> CcxtGateway.call_exchange(client, ex_id, m; body=kwargs)
+            is_fetch = startswith(m, "fetch") && m != "fetchMarkets"
+            return (args...; kwargs...) -> begin
+                if is_fetch && !isempty(kwargs)
+                    CcxtGateway.call_exchange(client, ex_id, m; body=Dict("params" => kwargs))
+                else
+                    CcxtGateway.call_exchange(client, ex_id, m; body=kwargs)
+                end
+            end
         end
     end
 end

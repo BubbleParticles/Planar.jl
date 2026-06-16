@@ -151,7 +151,7 @@ function ticker!(
                     tries += 1
                     try
                         name = string(exc.id)
-                        v = call_exchange(default_client(), name, "fetchTicker", query=Dict("symbol" => pair))
+                        v = call_exchange(default_client(), name, "fetchTicker", query=Dict("params" => Dict("symbol" => pair)))
                         break
                     catch e
                         @error "Fetch ticker error: $e" offline = isoffline() func pair

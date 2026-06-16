@@ -59,7 +59,7 @@ function dosetmargin(exc::Exchange{<:ExchangeID{:phemex}}, mode_str, symbol; kwa
         body_dict = merge(Dict("symbol" => symbol), Dict("hedged" => false))
         call_exchange(default_client(), name, "setPositionMode", body=body_dict)
         if lev !== nothing
-            call_exchange(default_client(), name, "setLeverage", query=Dict("symbol" => symbol, "leverage" => string(lev)))
+            call_exchange(default_client(), name, "setLeverage", body=Dict("symbol" => symbol, "leverage" => string(lev)))
         end
         true
     catch e

@@ -116,7 +116,7 @@ function funding_history(
             try
                 q = Dict{Symbol,Any}(:symbol => pair, :since => since, :limit => limit)
                 if !isempty(params)
-                    q[:params] = params
+                    merge!(q, params)
                 end
                 ff_func(; q...)
             catch err
@@ -124,7 +124,7 @@ function funding_history(
                     delta = -Int(timefloat(now() - dt(since)))
                     q2 = Dict{Symbol,Any}(:symbol => pair, :since => delta, :limit => limit)
                     if !isempty(params)
-                        q2[:params] = params
+                        merge!(q2, params)
                     end
                     ff_func(; q2...)
                 else
