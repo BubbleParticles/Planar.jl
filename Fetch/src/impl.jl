@@ -323,7 +323,7 @@ function __handle_fetch(
     @debug "Calling into ccxt to fetch data: $pair since $(dt(since)), max: $limit, tf: $usetimeframe"
     data = fetch_func(pair, since, limit; usetimeframe)
     dpl = data isa AbstractVector
-    if retry && (!dpl || length(data) == 0)
+    if retry && (!dpl || isempty(data))
         if data isa Exception
             @warn "fetch ohlcv: unexpected value (retrying)" data
         else

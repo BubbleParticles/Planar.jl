@@ -1,11 +1,11 @@
 using .Misc: LittleDict
 using .Misc.Lang: @logerror, @debug_backtrace
-using .Instances.Exchanges: Py, pyfetch, has
+using .Instances.Exchanges: has
 using SimMode: trade!
 using .Executors: AnyGTCOrder
 using .OrderTypes: ImmediateOrderType, OrderCanceled
 
-_asdate(py) = parse(DateTime, rstrip(string(py), 'Z'))
+_asdate(d) = parse(DateTime, rstrip(d["datetime"], 'Z'))
 
 @doc """ Updates a limit order in PaperMode.
 
@@ -29,25 +29,18 @@ function paper_limitorder!(s::PaperStrategy, ai, o::GTCOrder; kwargs...)
     task = @async while alive[]
         try
             last_date = DateTime(0)
-            trades = CircularBuffer{Py}(100)
             while alive[] && isopen(ai, o)
-                append!(
-                    trades,
-                    pyfetch(
-                        pyfunc,
-                        sym;
-                        since=ifelse(
-                            last_date == DateTime(0),
-                            nothing,
-                            TimeTicks.timestamp(last_date + Millisecond(1)),
-                        ),
+                trades = pyfunc(
+                    sym;
+                    since=ifelse(
+                        last_date == DateTime(0),
+                        nothing,
+                        TimeTicks.timestamp(last_date + Millisecond(1)),
                     ),
                 )
-                if isempty(trades)
-                    sleep(throttle)
-                    continue
-                end
-                this_date = _asdate(last(trades)["datetime"])::DateTime
+                trades isa AbstractVector || continue
+                isempty(trades) && (sleep(throttle); continue)
+                this_date = _asdate(last(trades))::DateTime
                 if last_date < this_date
                     last_date = this_date
                     for t in trades
@@ -59,7 +52,7 @@ function paper_limitorder!(s::PaperStrategy, ai, o::GTCOrder; kwargs...)
                                 o,
                                 ai;
                                 price,
-                                date=_asdate(t["datetime"]),
+                                date=_asdate(t),
                                 actual_amount,
                                 slippage=false,
                                 kwargs...,
@@ -71,7 +64,6 @@ function paper_limitorder!(s::PaperStrategy, ai, o::GTCOrder; kwargs...)
                             end
                         end
                     end
-                    empty!(trades)
                 end
                 sleep(throttle)
             end

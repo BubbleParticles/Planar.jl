@@ -519,7 +519,7 @@ function isratelimited(exc::Exchange)
     try
         name = string(exc.id)
         enabled = call_exchange(default_client(), name, "enableRateLimit")
-        enabled == true
+        enabled === true
     catch
         false
     end

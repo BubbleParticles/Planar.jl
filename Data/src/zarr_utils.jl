@@ -216,10 +216,10 @@ Zarr.fill_value_decoding(v::Vector, t::Type) = default_value(t)
 $(FIELDS)
 "
 mutable struct ZarrInstance{S<:AbstractStore}
-    path::AbstractString
+    path::String
     store::S
     group::ZGroup
-    ZarrInstance(path, store, g) = new{typeof(store)}(path, store, g)
+    ZarrInstance(path::String, store, g) = new{typeof(store)}(path, store, g)
     function ZarrInstance(data_path=joinpath(DATA_PATH, "store"))
         @lget! zcache data_path begin
             ds = DirectoryStore(data_path)

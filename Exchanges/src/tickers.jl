@@ -36,7 +36,7 @@ function leverage_func(exc, with_leveraged, verbose=true)
         if with_leveraged == :from
             lv_pairs = collect(
                 keys(
-                    filter(m -> m["margin"] == true, exc.markets),
+                    filter(m -> m["margin"] === true, exc.markets),
                 ),
             )
             pair -> has_leverage(pair, lv_pairs)
@@ -328,7 +328,7 @@ end
 function is_pair_active(pair, exc)
     market = market!(pair, exc)
     mkt = market isa AbstractDict ? Dict(pairs(market)) : market
-    something(get(mkt, "active", false), false) == true
+    something(get(mkt, "active", false), false) === true
 end
 
 @doc """Get the maker and taker fee for a given pair from an exchange.
