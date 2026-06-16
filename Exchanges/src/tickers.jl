@@ -328,7 +328,7 @@ end
 function is_pair_active(pair, exc)
     market = market!(pair, exc)
     mkt = market isa AbstractDict ? Dict(pairs(market)) : market
-    get(mkt, "active", false) == true
+    something(get(mkt, "active", false), false) == true
 end
 
 @doc """Get the maker and taker fee for a given pair from an exchange.

@@ -5,14 +5,12 @@ authors = ["zbc"]
 
 [deps]
 BlackBoxOptim = "a134a8b2-14d6-55f6-9291-3336d3ab0209"
-CoverageTools = "c36e975a-824b-4404-a568-ef97ca766997"
 Metrics = "3fcce980-bff0-41b4-8aec-9cac67d74284"
 Optimization = "7f7a1694-90dd-40f0-9382-eb1efda571ba"
 OptimizationBBO = "3e6eede4-6085-4f62-9a71-46d9bc1eb92b"
 OptimizationCMAEvolutionStrategy = "bd407f91-200f-4536-9381-e4ba712f53f8"
 OptimizationEvolutionary = "cb963754-43f6-435e-8d4b-99009ff27753"
 OptimizationManopt = "e57b7fff-7ee7-4550-b4f0-90e9476e9fb6"
-OptimizationMetaheuristics = "3aafef2f-86ae-4776-b337-85a36adf0b55"
 OptimizationOptimJL = "36348300-93cb-4f02-beb5-3c3902f8871e"
 Pbar = "7aed521b-3ea6-427a-8031-5ecc7305f19e"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
@@ -35,12 +33,10 @@ SimMode = {path = "../SimMode"}
 BayesExt = "BayesianOptimization"
 
 [compat]
-CoverageTools = "1.4.1"
 Optimization = "4.5.0"
 OptimizationBBO = "0.4.1"
 OptimizationCMAEvolutionStrategy = "0.3.0"
 OptimizationEvolutionary = "0.4.1"
 OptimizationManopt = "0.0.4"
-OptimizationMetaheuristics = "0.3.0"
 OptimizationOptimJL = "0.4.1"
 Symbolics = "6.54.0"
