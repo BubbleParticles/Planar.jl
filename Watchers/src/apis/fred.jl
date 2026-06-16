@@ -94,7 +94,7 @@ function get(path, query=nothing)
     query["file_type"] = "json"
     
     # Construct the full URL manually
-    full_url = API_URL * path
+    full_url = string(API_URL, path)
     
     resp = try
         HTTP.get(full_url; query, headers=API_HEADERS)

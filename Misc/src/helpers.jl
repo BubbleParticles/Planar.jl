@@ -200,7 +200,7 @@ This function takes a vector `v` and a value `d`, and returns a range that start
 """
 function rangeafter(v::AbstractVector, d; strict=true, kwargs...)
     r = searchsorted(v, d; kwargs...)
-    from = if length(r) > 0
+    from = if !isempty(r)
         ifelse(strict, r.start + length(r), r.start + 1)
     else
         r.start
@@ -220,7 +220,7 @@ after(v::AbstractVector, d; kwargs...) = view(v, rangeafter(v, d; kwargs...))
 @doc "Complement of [`rangeafter`](@ref)."
 function rangebefore(v::AbstractVector, d; strict=true, kwargs...)
     r = searchsorted(v, d; kwargs...)
-    to = if length(r) > 0
+    to = if !isempty(r)
         ifelse(strict, r.stop - length(r), r.stop - 1)
     else
         r.stop

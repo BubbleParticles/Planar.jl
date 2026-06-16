@@ -89,7 +89,7 @@ _fetch!(w::Watcher, ::CcxtOHLCVCandlesVal; sym=nothing) = _tfunc(w)()
     backoff::Int8 = 0
     isprocessed::Bool = false
     processed_time::DateTime = DateTime(0)
-    nextcandle::Any = ()
+    nextcandle::Union{Nothing, Tuple} = nothing
     is_resyncing::Bool = false
 end
 

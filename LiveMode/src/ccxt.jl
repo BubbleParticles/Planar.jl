@@ -183,7 +183,7 @@ function isorder_synced(o, ai, resp, eid::EIDType=exchangeid(ai))
             order_trades = trades(o)
             if ntrades > 0
                 ntrades == length(order_trades)
-            elseif length(order_trades) > 0
+            elseif !isempty(order_trades)
                 amt = sum(t.amount for t in order_trades)
                 isequal(ai, amt, order_filled, Val(:amount))
             else

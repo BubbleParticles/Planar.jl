@@ -212,7 +212,7 @@ function _parse_trades(w, pytrades)
         sleep(w[:backoff])
         return nothing
     end
-    if length(pytrades) > 0
+    if !isempty(pytrades)
         new_trades = [
             fromdict(CcxtTrade, String, py, pyconvert, pyconvert) for py in this_trades
         ]

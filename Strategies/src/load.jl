@@ -256,15 +256,15 @@ function _strategy_type(mod, cfg)
         invokelatest(getfield, mod, :EXCID)
     end
     s_type =
-        if S != nothing &&
+        if S !== nothing &&
             S isa Type{<:Strategy} &&
             exchangeid(S) == exchangeid(cfg.exchange)
             S
         else
             if cfg.exchange == Symbol()
-                if E != nothing && E != Symbol()
+                if E !== nothing && E !== Symbol()
                     cfg.exchange = E
-                elseif S != nothing
+                elseif S !== nothing
                     cfg.exchange = exchangeid(S)
                 else
                     error(
@@ -273,7 +273,7 @@ function _strategy_type(mod, cfg)
                 end
             end
             try
-                if E != nothing && E != cfg.exchange
+                if E !== nothing && E !== cfg.exchange
                     @warn "loading: overriding default exchange with config" E cfg.exchange
                 end
                 invokelatest(getfield, mod, :SC){ExchangeID{cfg.exchange}}

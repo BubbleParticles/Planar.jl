@@ -230,7 +230,7 @@ function gridrenko(data::AbstractDict; as_df=false, kwargs...)
     out = Dict()
     for (_, p) in data
         trials = gridrenko(p.data; kwargs...)
-        length(trials) > 0 && setindex!(out, trials, p.name)
+        !isempty(trials) && setindex!(out, trials, p.name)
     end
     as_df && return DataFrame(vcat(values(out)...))
     out
