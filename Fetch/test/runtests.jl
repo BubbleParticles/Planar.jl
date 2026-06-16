@@ -2,12 +2,13 @@ using Test
 using Fetch
 using Exchanges
 using DataFrames
+using TimeTicks
 
 const ExchangeTypes = Exchanges.ExchangeTypes
-const Dates = ExchangeTypes.Misc.TimeTicks.Dates
+const Dates = TimeTicks.Dates
 const HTTP = ExchangeTypes.CcxtGateway.HTTP
 const JSON3 = ExchangeTypes.JSON3
-const ContiguityException = ExchangeTypes.Ccxt.Misc.ContiguityException
+const ContiguityException = Exchanges.Misc.ContiguityException
 
 # ──────────────────────────────────────────────
 # Default mock HTTP — avoids gateway spawn dependency

@@ -13,16 +13,32 @@ ask_name(name=nothing) = begin
     string(name) |> uppercasefirst
 end
 
-@doc """ Path of `to` relative to `path`. """
+@doc """ Path of `path` relative to `to`, with first `offset` common components stripped. """
 function relative_path(to, path, offset=2)
-    to_dir = dirname(to) |> basename
-    splits = splitpath(path)
-    for (n, c) in enumerate(Iterators.reverse(splits))
-        if c == to_dir
-            return joinpath(splits[(end - n + offset):end]...)
-        end
+    to_parts = splitpath(to)
+    path_parts = splitpath(path)
+
+    # Find common prefix length
+    common_len = 0
+    for (a, b) in zip(to_parts, path_parts)
+        a == b || break
+        common_len += 1
     end
-    path
+
+    # No common ancestor beyond root → return path unchanged
+    common_len <= 1 && return path
+
+    # Common prefix excluding root
+    comm = to_parts[2:common_len]
+
+    # Strip offset components from start of common prefix
+    start_idx = min(offset + 1, length(comm))
+
+    # Remaining common + path-specific parts after common
+    result_parts = comm[start_idx:end]
+    append!(result_parts, path_parts[common_len+1:end])
+
+    joinpath(result_parts...)
 end
 
 _menu(arr) =
