@@ -44,7 +44,7 @@ function trim_to!(df::AbstractDataFrame, to, tf, tail=false)
         stop = @something(findfirst(f, df.timestamp), 1) - 1
         idx = 1:stop
     end
-    if length(idx) > 0
+    if !isempty(idx)
         copysubs!(df) # Necessary to replace subarrays which are read-only
         deleteat!(df, idx)
     end

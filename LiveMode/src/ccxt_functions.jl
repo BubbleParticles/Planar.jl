@@ -14,7 +14,7 @@ isemptish(v) =
     end
 hasels(v) = !isnothing(v) && !isempty(v)
 
-function _ordertrades(resp, exc, isid=(x) -> length(x) > 0)
+function _ordertrades(resp, exc, isid=(x) -> !isempty(x))
     if islist(resp)
         out = []
         eid = typeof(exc.id)

@@ -106,7 +106,7 @@ function _out_as_input(inputs, data; elkey=nothing)
 end
 
 function choosefunc(exchange_id::String, suffix::String, inputs::AbstractVector; elkey=nothing, kwargs...)
-    hasinputs = length(inputs) > 0
+    hasinputs = !isempty(inputs)
     method, kind = _multifunc(exchange_id, suffix, hasinputs)
     client = CcxtGateway.default_client()
     is_fetch = startswith(method, "fetch")

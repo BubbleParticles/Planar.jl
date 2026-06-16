@@ -35,9 +35,9 @@ end
 $(FIELDS)
 """
 mutable struct TimeFrameError <: Exception
-    first::Any
-    last::Any
-    td::Any
+    first::String
+    last::String
+    td::Second
 end
 
 const SaveOHLCVError = Union{MethodError,DivideError,TimeFrameError}

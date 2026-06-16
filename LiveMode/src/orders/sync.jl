@@ -412,7 +412,7 @@ function replay_order!(s::LiveStrategy, o, ai; resp, exec=false, decommit=false)
     end
     # Sanity check between local and exc trades by
     # comparing the amount of the first trade
-    if length(order_trades) > 0 && local_count > 0
+    if !isempty(order_trades) && local_count > 0
         trade = first(order_trades)
         local_amt = abs(first(trades(o)).amount)
         resp_amt = resp_trade_amount(trade, eid)
