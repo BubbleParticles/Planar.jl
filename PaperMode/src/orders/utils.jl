@@ -1,6 +1,6 @@
 using SimMode: create_sim_market_order, marketorder!, AnyFOKOrder, AnyIOCOrder
 using Fetch: orderbook
-using .Instances.Exchanges: ticker!, pyconvert
+using .Instances.Exchanges: ticker!
 using .OrderTypes: ordertype, positionside, NotEnoughLiquidity, isimmediate
 using .Executors: isfilled
 
@@ -16,10 +16,10 @@ function _basevol(ai)
     tkr = ticker!(ai.asset.raw, ai.exchange)
     # Debug - log what we got
     @debug "ticker result" tkr_type=typeof(tkr) tkr_keys=isa(tkr, AbstractDict) ? keys(tkr) : "not-a-dict"
-    # Convert to AbstractDict if needed (e.g., when using PythonCall)
+    # Convert to AbstractDict if needed
     if !isa(tkr, AbstractDict)
         try
-            tkr = pyconvert(Dict{String, Any}, tkr)
+            tkr = Dict{String, Any}(tkr)
         catch e
             @debug "ticker not convertible to dict" typeof=typeof(tkr) error=e
             return 1.0
@@ -36,8 +36,7 @@ function _basevol(ai)
         if vol isa AbstractString
             return parse(Float64, vol)
         end
-        # If vol is a PyObject (should have been converted), let pyconvert handle
-        pyconvert(DFT, vol)
+        Float64(vol)
     catch e
         @debug "basevol conversion error" error=e
         return 1.0
