@@ -1,5 +1,4 @@
 using Exchanges
-using Exchanges.Python
 using Exchanges:
     emptycaches!,
     futures,
@@ -11,8 +10,8 @@ using Exchanges:
     market_limits,
     market_fees
 id = :okx
-getexchange!(id; markets=:force).py
-getexchange!(id; markets=:yes, sandbox=false).py
+getexchange!(id; markets=:force)
+getexchange!(id; markets=:yes, sandbox=false)
 ExchangeTypes._closeall()
 emptycaches!()
 qc = "USDT"

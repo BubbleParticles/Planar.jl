@@ -1,5 +1,4 @@
 using Exchanges.Instruments
-using Exchanges.Python
 using Exchanges:
     Exchanges,
     Exchange,
