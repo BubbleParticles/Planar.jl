@@ -1,4 +1,4 @@
-using Fetch: Fetch, pytofloat
+using Fetch: Fetch
 using SimMode
 using SimMode.Executors
 using Base: with_logger

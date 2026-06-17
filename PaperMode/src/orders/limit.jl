@@ -50,9 +50,9 @@ function paper_limitorder!(s::PaperStrategy, ai, o::GTCOrder; kwargs...)
                 if last_date < this_date
                     last_date = this_date
                     for t in trades
-                        price = pytofloat(t["price"])
+                        price = Float64(t["price"])
                         if _istriggered(o, price)
-                            actual_amount = min(pytofloat(t["amount"]), abs(unfilled(o)))
+                            actual_amount = min(Float64(t["amount"]), abs(unfilled(o)))
                             trade!(
                                 s,
                                 o,

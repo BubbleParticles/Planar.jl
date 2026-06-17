@@ -1,6 +1,5 @@
 using Fetch: Fetch
 using Fetch.Data
-using Fetch.Python
 using Fetch.Misc
 using Ccxt
 using .Data: rangeafter
