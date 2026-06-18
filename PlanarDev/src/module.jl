@@ -3,7 +3,7 @@ using Pkg: Pkg
 @reexport using Planar
 using Planar.Engine: Strategies as st, Engine as egn
 using Planar: @environment!
-using Planar.Exchanges.Python: Python
+using Python
 using Random
 using Stubs
 using Planar.Misc
@@ -134,7 +134,7 @@ Requires strategy to be reloaded.
 resetenv!() = begin
     @eval begin
         @environment!
-        using .Python
+        using Python
     end
     exs.ExchangeTypes._closeall()
     Watchers._closeall()
