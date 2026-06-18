@@ -3,6 +3,7 @@ module WatchersTests
 using Test
 using Watchers
 using Watchers: HasFunction, Interval, Capacity, Beacon, BufferEntry, Exec
+import Rocket
 using Watchers: _check_flush_interval, _notimpl, WATCHERS, logerror, lasterror, errors
 using Watchers.Misc: ConcurrentCollections
 import Watchers: _fetch!, _init!, _load!, _flush!, _process!, _get, _push!, _pop!, _start!, _stop!, _delete!
@@ -266,9 +267,9 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
 
     @testset "Watcher beacon conditions" begin
         w = watcher(Float64, "testbeacon"; start=false, load=false, flush=false, process=false)
-        @test w.beacon.fetch isa Threads.Condition
-        @test w.beacon.process isa Threads.Condition
-        @test w.beacon.flush isa Threads.Condition
+        @test w.beacon.fetch isa Rocket.Subject{Any}
+        @test w.beacon.process isa Rocket.Subject{Any}
+        @test w.beacon.flush isa Rocket.Subject{Any}
         Watchers.close(w; doflush=false)
     end
 

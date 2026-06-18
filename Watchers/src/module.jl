@@ -11,6 +11,8 @@ using .Misc.Lang: Option, safewait, safenotify, @lget!, Lang
 using .Misc: after, truncate_file
 using Base.Threads: @spawn
 using JSON3
+import Rocket
+using .Misc.Lang: waitforcond
 
 @doc """ Attempts to fetch data for a watcher
 
@@ -50,58 +52,36 @@ function _tryfetch(w)::Bool
         false
     end
 end
-const Enabled = Val{true}
-const Disabled = Val{false}
-_fetch_task(w, ::Enabled; kwargs...) = @spawn _tryfetch(w; kwargs...)
-_fetch_task(w, ::Disabled; kwargs...) = @async _tryfetch(w; kwargs...)
-@doc """ Schedules a fetch operation for a watcher
 
-$(TYPEDSIGNATURES)
-
-This function schedules a fetch operation for a given watcher. It checks if the watcher is locked and if not, it creates a task to fetch data. It also handles timeouts and increments the attempt counter in case of failure. The function ensures that the fetch operation is thread-safe and handles any exceptions that might occur during the fetch operation.
-"""
-function _schedule_fetch(w, timeout, threads; kwargs...)
-    # skip fetching if already locked to avoid building up the queue
-    islocked(w) && begin
+function _handle_fetch_result(w, result)
+    if result
+        w.attempts = 0
+        w.has.process && process!(w)
+        w.has.flush && flush!(w; force=false, sync=false)
+    else
         w.attempts += 1
-        return nothing
-    end
-    waiting = Ref(true)
-    try
-        task = _fetch_task(w, Val(w._exec.threads); kwargs...)
-        @async let slept = @lget! w.attrs :fetch_timeout Ref(0.0)
-            while waiting[] && slept[] < timeout
-                slept[] += 0.1
-                sleep(0.1)
-            end
-            slept[] > timeout && safenotify(task.donenotify)
-        end
-        safewait(task.donenotify)
-        if istaskdone(task) && fetch(task)
-            w.attempts = 0
-            w.has.process && process!(w)
-            w.has.flush && flush!(w; force=false, sync=false)
-        else
-            w.attempts += 1
-        end
-    catch e
-        w.attempts += 1
-        logerror(w, e, stacktrace(catch_backtrace()))
-    finally
-        waiting[] = false
-        w[:fetch_timeout][] = Inf
     end
 end
 
-@doc "`_timer` is an optional Timer object used to schedule fetch operations for a watcher."
-function _timer!(w)
-    if !isnothing(w._timer)
-        close(w._timer)
+@doc "Sets up the Rocket.jl reactive fetch pipeline using interval observable."
+function _setup_fetch_pipeline!(w)
+    interval_ms = round(w.interval.fetch, Second, RoundUp).value * 1000
+    obs = Rocket.interval(interval_ms)
+    pipeline = obs |> Rocket.map(_ -> _tryfetch(w))
+    subscription = Rocket.subscribe!(pipeline, Rocket.Actor(
+        on_next = result -> _handle_fetch_result(w, result),
+        on_error = err -> logerror(w, err),
+    ))
+    w[:fetch_subscription] = subscription
+end
+
+@doc "Tears down the Rocket.jl fetch pipeline subscription."
+function _teardown_fetch_pipeline!(w)
+    sub = get(w.attrs, :fetch_subscription, nothing)
+    if !isnothing(sub)
+        Rocket.unsubscribe!(sub)
+        delete!(w.attrs, :fetch_subscription)
     end
-    # NOTE: the callback for the timer requires 1 arg (the timer itself)
-    timer_fetch_callback(_) = _schedule_fetch(w, w.interval.timeout, w._exec.threads)
-    interval = round(w.interval.fetch, Second, RoundUp).value
-    w._timer = Timer(timer_fetch_callback, 0; interval)
 end
 
 @doc """ Checks the appropriateness of the flush interval
@@ -133,7 +113,7 @@ const Exec = NamedTuple{
 @doc "The capacity parameters for the watcher"
 const Capacity = NamedTuple{(:buffer, :view),Tuple{Int,Int}}
 @doc "The flags that control which operations are notified by the watcher"
-const Beacon = NamedTuple{(:fetch, :process, :flush),NTuple{3,Threads.Condition}}
+const Beacon = NamedTuple{(:fetch, :process, :flush),NTuple{3,Rocket.Subject}}
 
 @doc """ Watchers manage data, they pull from somewhere, keep a cache in memory, and optionally flush periodically to persistent storage.
 
@@ -160,7 +140,7 @@ A `Watcher` is a mutable struct that manages data. It pulls data from a source, 
     const _val::Val
     "Flag to stop the watcher"
     _stop = false
-    "A Timer object used to schedule fetch operations for a watcher"
+    "A Timer object used to schedule fetch operations for a watcher (deprecated, use fetch_subscription)"
     _timer::Option{Timer} = nothing
     "Tracks how many consecutive fails have occurred in case of fetching failure"
     attempts::Int = 0
@@ -211,9 +191,9 @@ function _watcher(
         interval=Interval((fetch_timeout, fetch_interval, flush_interval)),
         capacity=Capacity((buffer_capacity, view_capacity)),
         beacon=(;
-            fetch=Threads.Condition(),
-            process=Threads.Condition(),
-            flush=Threads.Condition(),
+            fetch=Rocket.Subject(Any),
+            process=Rocket.Subject(Any),
+            flush=Rocket.Subject(Any),
         ),
         _exec=Exec((
             threads, SafeLock(), SafeLock(), CircularBuffer{Tuple{Any,Vector}}(10)
@@ -235,8 +215,8 @@ function _watcher(
     @debug "_load for $name? $(w.has.load)"
     w.has.load && _load!(w, _val(w))
     w.last_flush = now() # skip flush on start
-    @debug "setting timer for $name"
-    start && _timer!(w)
+    @debug "setting up fetch pipeline for $name"
+    start && _setup_fetch_pipeline!(w)
     @debug "watcher $name initialized!"
     w
 end
