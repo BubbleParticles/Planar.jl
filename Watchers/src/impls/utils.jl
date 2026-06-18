@@ -1,3 +1,4 @@
+import Rocket
 using ..Data: df!, _contiguous_ts, nrow, save_ohlcv, zi, check_all_flag, snakecased
 using ..Data.DFUtils: firstdate, lastdate, copysubs!, addcols!
 using ..Data.DataFramesMeta
@@ -7,7 +8,6 @@ using ..TimeTicks: dt
 using ..Fetch.Exchanges.Ccxt: _multifunc
 using ..Fetch: fetch_candles
 using ..Lang
-using ..Lang: safenotify, safewait
 using ..Misc: rangeafter, rangebetween
 using ..Fetch.Processing: cleanup_ohlcv_data, iscomplete, isincomplete, upsample
 using ..Watchers: logerror
@@ -567,11 +567,9 @@ end
     init_func::Function
     corogen_func::Function
     wrapper_func::Function
-    buffer_notify::Condition
-    buffer::Vector{Any}
+    subject::Rocket.Subject{Any}
     state::Option{StreamHandler} = nothing
-    task::Option{Task} = nothing
-    const process_tasks = Task[]
+    subscription::Union{Nothing, Rocket.SubjectSubscription} = nothing
 end
 
 function maybe_backoff!(errors, v)
@@ -585,19 +583,13 @@ function maybe_backoff!(errors, v)
 end
 
 function new_handler_task(w; init_func, corogen_func, wrapper_func=identity, if_func=!isnothing)
-    interval = w.interval.fetch
-    buffer_size = max(w.capacity.buffer, w.capacity.view)
-    buffer = Vector{Any}()
-    buffer_notify = Condition()
-    sizehint!(buffer, buffer_size)
-    wh = WatcherHandler2(; init_func, corogen_func, wrapper_func, buffer, buffer_notify)
-    tasks = wh.process_tasks
+    subject = Rocket.Subject(Any)
+    wh = WatcherHandler2(; init_func, corogen_func, wrapper_func, subject)
     function process_val!(w, v)
         if !isnothing(v)
             @lock w _dopush!(w, wrapper_func(v); if_func)
         end
-        push!(tasks, errormonitor(@async process!(w)))
-        filter!(!istaskdone, tasks)
+        process!(w)
     end
     function init_watch_func(w)
         let v = @lock w if wh.init
@@ -610,56 +602,33 @@ function new_handler_task(w; init_func, corogen_func, wrapper_func=identity, if_
         wh.init = false
         errors = Ref(0)
         f_push(v) = begin
-            push!(wh.buffer, v)
-            notify(wh.buffer_notify)
+            Rocket.next!(wh.subject, v)
             maybe_backoff!(errors, v)
         end
         wh.state = stream_handler(corogen_func(w), f_push)
         start_handler!(wh.state)
     end
-    function watch_func(w)
-        if wh.init
-            init_watch_func(w)
-        end
-        while isempty(wh.buffer)
-            wait(wh.buffer_notify)
-        end
-        v = popfirst!(wh.buffer)
+    pipeline = wh.subject |> Rocket.map(v -> begin
         if v isa Exception
             @error "watcher: $(w.name)" exception = v
             sleep(1)
-        else
-            process_val!(w, v)
+            return nothing
         end
-        return true
-    end
-    wh.task = @async while isstarted(w)
-        try
-            watch_func(w)
-            safenotify(w.beacon.fetch)
-        catch e
-            if e isa InterruptException
-                break
-            else
-                @debug_backtrace
-            end
-        end
-    end
+        process_val!(w, v)
+        Rocket.next!(w.beacon.fetch, now())
+    end)
+    wh.subscription = Rocket.subscribe!(pipeline)
+    init_watch_func(w)
     return wh
 end
 
 handler_task!(w, sym; kwargs...) = @lget! w.handlers sym new_handler_task(w; kwargs...)
 handler_task!(w; kwargs...) = w[:handler] = new_handler_task(w; kwargs...)
-handler_task(w) = w.handler.task
-handler_task(w, sym) = w.handlers[sym].task
+handler_task(w) = w.handler.subscription
+handler_task(w, sym) = w.handlers[sym].subscription
 function check_handler_task!(wh)
     try
-        if !istaskrunning(wh.task)
-            handler_task!(w; wh.init_func, wh.corogen_func, wh.wrapper_func)
-            istaskrunning(handler_task(w))
-        else
-            true
-        end
+        !isnothing(wh.subscription)
     catch
         @debug_backtrace
         false
@@ -672,6 +641,10 @@ check_task!(w, sym) = check_handler_task!(w.handlers[sym])
 function stop_watcher_handler!(wh)
     if !isnothing(wh)
         stop_handler!(wh.state)
+        if !isnothing(wh.subscription)
+            Rocket.unsubscribe!(wh.subscription)
+            wh.subscription = nothing
+        end
     end
     nothing
 end

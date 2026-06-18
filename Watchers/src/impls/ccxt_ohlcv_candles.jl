@@ -372,7 +372,7 @@ function _update_ohlcv_func_single(w, sym)
                     break
                 end
             end
-            if next_ts + tf < latest_ts && isempty(handlers[sym].buffer)
+            if next_ts + tf < latest_ts
                 @debug "ohlcv (candles): out of sync, resolving" sym next_ts tf latest_ts
                 maybe_schedule_resync!(w, sym, state, snap)
             end
