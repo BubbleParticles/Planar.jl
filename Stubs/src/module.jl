@@ -1,7 +1,7 @@
 using SimMode
 using SimMode: Misc, Strategies, sml
 using .Strategies
-using .Strategies.Exchanges: Exchanges as exs, Instruments as im, Data, Python
+using .Strategies.Exchanges: Exchanges as exs, Instruments as im, Data
 using .Misc
 using .Misc.TimeTicks
 using .Misc.Lang
