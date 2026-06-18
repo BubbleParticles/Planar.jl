@@ -9,13 +9,13 @@
 - [x] 4. Run Watchers/test/runtests.jl to verify core still works
 
 ### Phase 2 — WatchersImpls
-- [ ] 5. Rewrite impls/utils.jl: WatcherHandler2→Subject actor, new_handler_task→Rocket pipeline, remove Condition buffer notify
+- [x] 5. Rewrite impls/utils.jl: WatcherHandler2→Subject actor, new_handler_task→Rocket pipeline, remove Condition buffer notify
 - [ ] 6. Rewrite ccxt_tickers.jl: _reset_tickers_func!→subscribe pipeline, _start!/_stop!→subscribe/unsubscribe
-- [ ] 7. Rewrite ccxt_ohlcv_trades.jl: watch handler→actor, remove @async
+- [x] 7. Rewrite ccxt_ohlcv_trades.jl: watch handler→actor, remove @async
 - [ ] 8. Rewrite ccxt_ohlcv_tickers.jl: same
-- [ ] 9. Rewrite ccxt_ohlcv_candles.jl: same, maybe_schedule_resync!→actor
+- [x] 9. Rewrite ccxt_ohlcv_candles.jl: same, maybe_schedule_resync!→actor
 - [ ] 10. Rewrite ccxt_orderbook.jl: interval→subscribe
-- [ ] 11. Run Watchers/test/runtests.jl
+- [x] 11. Run Watchers/test/runtests.jl
 
 ### Phase 3 — LiveMode Watchers
 - [ ] 12. Rewrite ohlcv.jl: propagate_loop→Subject subscription
