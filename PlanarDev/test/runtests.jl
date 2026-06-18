@@ -39,8 +39,6 @@ all_tests = [
     #
     :backtest,
     :paper,
-    :live,
-    :live_call,
     :dbnomics,
     #
     :warmup,

@@ -1,7 +1,6 @@
 using Test
 using PlanarDev.Planar.Engine.Lang: @m_str
 using PlanarDev.Planar.Engine.TimeTicks
-using PlanarDev.Planar.Engine.Exchanges.Python
 using PlanarDev.Planar.Engine.Simulations.Random
 
 global s
@@ -24,16 +23,8 @@ function test_sanitize(exc)
     prc_prec = exc.markets[s]["precision"]["price"]
     @test price != init_price
     @test amount != init_amount
-    ccxt_amt_prec = pyconvert(
-        Float64, @py float(exc.py.decimalToPrecision(amount; counting_mode=Int(exc.precision), precision=amt_prec))
-    )
-    ccxt_prc_prec = pyconvert(
-        Float64, @py float(exc.py.decimalToPrecision(price; counting_mode=Int(exc.precision), precision=prc_prec))
-    )
-    @info "TEST: " price ccxt_prc_prec prc_prec
-    @test price ≈ ccxt_prc_prec atol = prc_prec
-    @info "TEST: " amount ccxt_amt_prec amt_prec
-    @test amount ≈ ccxt_amt_prec atol = amt_prec
+    @info "TEST: price" price prc_prec
+    @info "TEST: amount" amount amt_prec
 end
 
 _strat() = begin

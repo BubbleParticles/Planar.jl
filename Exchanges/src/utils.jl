@@ -1,3 +1,12 @@
+struct StreamHandler
+    stop::Function
+    push::Function
+end
+StreamHandler(; stop=Base.Returns(nothing), push=Base.Returns(nothing)) = StreamHandler(stop, push)
+
+isdict(x) = x isa Dict
+islist(x) = x isa Union{AbstractVector, Tuple}
+
 @doc "Clears all caches."
 function emptycaches!()
     try empty!(TICKERS_CACHE100) catch end
