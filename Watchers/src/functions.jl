@@ -64,7 +64,7 @@ function flush!(w::Watcher; force=true, sync=false)
             result = @lock w._exec.buffer_lock begin
                 w.last_flush = time_now
                 _flush!(w, _val(w))
-                safenotify(w.beacon.flush)
+                Rocket.next!(w.beacon.flush, now())
             end
             ifelse(result isa Exception, logerror(w, result), result)
         end
@@ -80,8 +80,11 @@ The function takes a watcher as an argument, along with optional reset and kwarg
 """
 function fetch!(w::Watcher; reset=false, kwargs...)
     try
-        _schedule_fetch(w, w.interval.timeout, w._exec.threads; kwargs...)
-        reset && _timer!(w)
+        _tryfetch(w)
+        reset && begin
+            _teardown_fetch_pipeline!(w)
+            _setup_fetch_pipeline!(w)
+        end
     catch e
         logerror(w, e, stacktrace(catch_backtrace()))
     finally
@@ -94,7 +97,7 @@ function process!(w::Watcher, args...; kwargs...)
     @logerror w begin
         @lock _buffer_lock(w) begin
             _process!(w, _val(w), args...; kwargs...)
-            safenotify(w.beacon.process)
+            Rocket.next!(w.beacon.process, now())
         end
     end
 end
@@ -140,6 +143,7 @@ function Base.close(w::Watcher; doflush=true)
     lf = trylock(w._exec.fetch_lock)
     lb = trylock(w._exec.buffer_lock)
     try
+        _teardown_fetch_pipeline!(w)
         if !isstopped(w)
             @debug "watchers: stopping from close" w.name
             stop!(w)
@@ -196,36 +200,39 @@ Base.keys(w::Watcher) = keys(attrs(w))
 Base.eltype(w::Watcher) = eltype(buffer(w).parameters[2].parameters[2])
 Base.getindex(w::Watcher, i) = getindex(attr(w, :view), i)
 
-@doc "Stops the watcher timer."
+@doc "Stops the watcher timer/interval subscription."
 stop!(w::Watcher) = begin
     @assert isstarted(w) "Tried to stop an already stopped watcher."
-    Base.close(w._timer)
-    safenotify(w.beacon.fetch)
-    safenotify(w.beacon.process)
-    safenotify(w.beacon.flush)
+    _teardown_fetch_pipeline!(w)
+    if !isnothing(w._timer)
+        Base.close(w._timer)
+    end
+    Rocket.next!(w.beacon.fetch, now())
+    Rocket.next!(w.beacon.process, now())
+    Rocket.next!(w.beacon.flush, now())
     _stop!(w, _val(w))
     w._stop = true
     nothing
 end
-@doc "Resets the watcher timer."
+@doc "Resets the watcher timer/interval subscription."
 start!(w::Watcher) = begin
     @assert isstopped(w) "Tried to start an already started watcher."
     empty!(_errors(w))
     w[:started] = now()
     _start!(w, _val(w))
-    _timer!(w)
+    _setup_fetch_pipeline!(w)
     w._stop = false
     nothing
 end
 @doc "True if timer is not running."
 isstopped(w::Watcher) =
-    let t = _timer(w)
-        isnothing(t) || !isopen(t)
+    let t = _timer(w), sub = get(w.attrs, :fetch_subscription, nothing)
+        (isnothing(t) || !isopen(t)) && isnothing(sub)
     end
 @doc "True if timer is running."
 isstarted(w::Watcher) =
-    let t = _timer(w)
-        !isnothing(t) && isopen(t)
+    let t = _timer(w), sub = get(w.attrs, :fetch_subscription, nothing)
+        (!isnothing(t) && isopen(t)) || !isnothing(sub)
     end
 isrunning(w::Watcher) = isstarted(w)
 
@@ -271,20 +278,26 @@ Base.unlock(w::Watcher, ::Val{:buffer}) = begin
 end
 function Base.wait(w::Watcher, b=:fetch)
     if isstopped(w)
-        false
-    else
-        safewait(getproperty(w.beacon, b))
-        true
+        return false
     end
+    subject = getproperty(w.beacon, b)
+    cond = Threads.Condition()
+    sub = Rocket.subscribe!(subject, Rocket.Actor(on_next = _ -> notify(cond)))
+    wait(cond)
+    Rocket.unsubscribe!(sub)
+    true
 end
 
 function Base.wait(w::Watcher, timeout::Period, b=:fetch)
     if isstopped(w)
-        false
-    else
-        slept = waitforcond(getproperty(w.beacon, b), timeout)
-        slept < Millisecond(timeout).value
+        return false
     end
+    subject = getproperty(w.beacon, b)
+    cond = Threads.Condition()
+    sub = Rocket.subscribe!(subject, Rocket.Actor(on_next = _ -> notify(cond)))
+    slept = waitforcond(cond, timeout)
+    Rocket.unsubscribe!(sub)
+    slept < Millisecond(timeout).value
 end
 
 function Base.show(out::IO, w::Watcher)
