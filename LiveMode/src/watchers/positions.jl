@@ -4,7 +4,7 @@ using Watchers.WatchersImpls: _tfunc!, _tfunc, _exc!, _exc, _lastpushed!, _lastp
 @watcher_interface!
 using .PaperMode: sleep_pad
 using .Exchanges: check_timeout, current_account
-using .Lang: splitkws, safenotify, safewait
+using .Lang: splitkws
 using .OrderTypes: Long
 
 const CcxtPositionsVal = Val{:ccxt_positions}
@@ -110,56 +110,51 @@ function _w_positions_func(s, w, interval; iswatch, kwargs)
     params, rest = split_params(kwargs)
     timeout = throttle(s)
     @lget! params "settle" guess_settle(s)
-    w[:process_tasks] = tasks = Task[]
+    w[:process_subs] = subs = Rocket.Subscription[]
     w[:errors_count] = errors = Ref(0)
     buffer_size = attr(s, :live_buffer_size, 1000)
     s[:positions_buffer] = w[:buf_process] = buf = Vector{Tuple{Any,Bool}}()
-    s[:positions_notify] = w[:buf_notify] = buf_notify = Condition()
+    s[:positions_buf_subject] = w[:buf_subject] = buf_subject = Rocket.Subject(Any)
+    s[:positions_process_subject] = w[:process_subject] = process_subject = Rocket.Subject(Any)
     sizehint!(buf, buffer_size)
     # delegate per-mode
     @debug "watchers pos process: delegate" _module = LogWatchPos iswatch
     if iswatch
         return _w_positions_watch_mode(
-            s, w, exc, timeout, params, rest, buf, buf_notify, tasks, errors, kwargs
+            s, w, exc, timeout, params, rest, buf, buf_subject, process_subject, subs, errors, kwargs
         )
     else
-        return _w_positions_fetch_mode(s, w, timeout, params, rest, buf, tasks, interval)
+        return _w_positions_fetch_mode(s, w, timeout, params, rest, buf, process_subject, subs, interval)
     end
 end
 
 # Helpers for _w_positions_func
 function _stop_stall_guard_if_any!(w)
-    if haskey(w, :stall_guard_task)
-        stop_task(w[:stall_guard_task])
-        delete!(w, :stall_guard_task)
+    if haskey(w, :stall_guard_sub)
+        Rocket.unsubscribe!(w[:stall_guard_sub])
+        delete!(w, :stall_guard_sub)
     end
 end
 
 function _start_stall_guard!(w, s, kwargs)
-    w[:stall_guard_task] = @start_task IdDict() begin
-        while isstarted(w)
-            try
-                last = _lastprocessed(w)
-                if now() - last > Second(60)
-                    @warn "positions watcher: forcing fetch due to stall" last now() s
-                    for ai in s.universe
-                        try
-                            _force_fetchpos(
-                                s, ai, get_position_side(s, ai); fallback_kwargs=kwargs
-                            )
-                        catch e
-                            @warn "positions watcher: stall guard error (per asset)" exception =
-                                e ai
-                        end
+    w[:stall_guard_sub] = Rocket.interval(10, 10) |>
+        Rocket.map(_ -> begin
+            last = _lastprocessed(w)
+            if now() - last > Second(60)
+                @warn "positions watcher: forcing fetch due to stall" last now() s
+                for ai in s.universe
+                    try
+                        _force_fetchpos(
+                            s, ai, get_position_side(s, ai); fallback_kwargs=kwargs
+                        )
+                    catch e
+                        @warn "positions watcher: stall guard error (per asset)" exception =
+                            e ai
                     end
                 end
-            catch e
-                @warn "positions watcher: stall guard error" exception = e
             end
-            sleep(10)
-        end
-        @debug "positions watcher: stall guard task stopped" _module = LogWatchPosProcess
-    end
+        end) |>
+        Rocket.subscribe!(on_error = e -> @warn("positions watcher: stall guard error", exception = e))
 end
 
 @doc """ Pushes a new value to the watcher's buffer and schedules processing if the value is not nothing. Used internally to handle new position data, either from fetch or watch mode.
@@ -169,29 +164,28 @@ end
 - `v`: The value to push (positions data).
 - `fetched`: Whether the data was fetched (vs. watched).
 """
-function _positions_process_push!(w, tasks, v; fetched=false)
+function _positions_process_push!(w, process_subject, v; fetched=false)
     if !isnothing(v)
         if !isnothing(_dopush!(w, v))
-            push!(tasks, @async process!(w; fetched))
-            filter!(!istaskdone, tasks)
+            Rocket.next!(process_subject, (w, fetched))
         end
     end
 end
 
 function _w_positions_watch_mode(
-    s, w, exc, timeout, params, rest, buf, buf_notify, tasks, errors, kwargs
+    s, w, exc, timeout, params, rest, buf, buf_subject, process_subject, subs, errors, kwargs
 )
     _stop_stall_guard_if_any!(w)
     _start_stall_guard!(w, s, kwargs)
-    init = Ref(true)
+    sub = Rocket.subscribe!(process_subject, (w_arg, fetched) -> process!(w_arg; fetched))
+    push!(subs, sub)
     function init_watch_func(w)
         let v = @lock w fetch_positions(s; timeout, params, rest...)
-            _positions_process_push!(w, tasks, v; fetched=false)
+            _positions_process_push!(w, process_subject, v; fetched=false)
         end
-        init[] = false
         function push_positions_to_buf(v)
             push!(buf, (v, false))
-            notify(buf_notify)
+            Rocket.next!(buf_subject, v)
             maybe_backoff!(errors, v)
         end
         # Stub CCXT mode no longer supported (Python removed)
@@ -206,54 +200,37 @@ function _w_positions_watch_mode(
         # start_handler!(h) — removed in non-Python mode
     end
     function watch_positions_func(w)
-        if init[]
-            init_watch_func(w)
+        init_watch_func(w)
+        function process_buf(v)
+            if v isa Exception
+                @error "positions watcher: unexpected value" exception = v maxlog = 3
+            else
+                _positions_process_push!(w, process_subject, v; fetched=false)
+            end
         end
-        while isempty(buf)
-            !isstarted(w) && return nothing
-            wait(buf_notify)
-        end
-        v, fetched = popfirst!(buf)
-        if v isa Exception
-            @error "positions watcher: unexpected value" exception = v maxlog = 3
-            sleep(1)
-        else
-            @debug "positions watcher: PUSHING" _module = LogWatchPos islocked(
-                _buffer_lock(w)
-            ) w_time = _debug_getup(w) new_time = _debug_getval(w; src=v) n = length(
-                _debug_getup(w, :value)
-            ) _debug_getval(w, "symbol", src=v) length(w[:process_tasks])
-            _positions_process_push!(w, tasks, v; fetched=fetched)
-            @debug "positions watcher: PUSHED" _module = LogWatchPos _debug_getup(w, :time) _debug_getval(
-                w, "contracts", src=v
-            ) _debug_getval(w, "symbol", src=v) _debug_getval(w, "datetime", src=v) length(
-                w[:process_tasks]
-            )
-        end
-        return true
+        Rocket.subscribe!(buf_subject, process_buf)
+        nothing
     end
     return watch_positions_func
 end
 
-function _flush_positions_notify!(w, buf, tasks)
+function _flush_positions_notify!(w, buf, process_subject)
     while !isempty(buf)
         v, fetched = popfirst!(buf)
         _dopush!(w, v)
-        push!(tasks, @async process!(w; fetched))
+        Rocket.next!(process_subject, (w, fetched))
     end
 end
 
-function _w_positions_fetch_mode(s, w, timeout, params, rest, buf, tasks, interval)
+function _w_positions_fetch_mode(s, w, timeout, params, rest, buf, process_subject, subs, interval)
     function fetch_positions_func(w)
         start = now()
         try
-            _flush_positions_notify!(w, buf, tasks)
-            filter!(!istaskdone, tasks)
+            _flush_positions_notify!(w, buf, process_subject)
             v = @lock w fetch_positions(s; timeout, params, rest...)
             _dopush!(w, v)
-            push!(tasks, @async process!(w, fetched=true))
-            _flush_positions_notify!(w, buf, tasks)
-            filter!(!istaskdone, tasks)
+            Rocket.next!(process_subject, (w, true))
+            _flush_positions_notify!(w, buf, process_subject)
         finally
             sleep_pad(start, interval)
         end
@@ -281,7 +258,7 @@ function watch_positions!(s::LiveStrategy; interval=st.throttle(s), wait=false)
     end
     while wait && just_started && _lastprocessed(w) == DateTime(0)
         @debug "live: waiting for initial positions" _module = LogWatchPos
-        safewait(w.beacon.process)
+        Rocket.subscribe!(w.beacon.process |> Rocket.take(1), _ -> nothing)
     end
     w
 end
@@ -316,7 +293,7 @@ function _positions_task!(w)
             @debug "watchers pos: fetching/watching" _module = LogWatchPos
             f(w)
             @debug "watchers pos: fetched/watched" _module = LogWatchPos
-            safenotify(w.beacon.fetch)
+            Rocket.next!(w.beacon.fetch, nothing)
             @debug "watchers pos: notified" _module = LogWatchPos
         catch e
             if e isa InterruptException
@@ -368,9 +345,9 @@ function Watchers._stop!(w::Watcher, ::CcxtPositionsVal)
             kill_task(pt)
         end
     end
-    if haskey(w, :stall_guard_task)
-        stop_task(w[:stall_guard_task])
-        delete!(w, :stall_guard_task)
+    if haskey(w, :stall_guard_sub)
+        Rocket.unsubscribe!(w[:stall_guard_sub])
+        delete!(w, :stall_guard_sub)
     end
     nothing
 end

@@ -85,22 +85,20 @@ function define_trades_loop_funct(s::LiveStrategy, ai, exc; exc_kwargs=(;))
     watch_func = first(exc, :watchMyTrades)
     _, func_kwargs = splitkws(:since; kwargs=exc_kwargs)
     sym = raw(ai)
-    buf_notify = @lget! ai :trades_buf_notify Condition()
+    buf_subject = @lget! ai :trades_buf_subject Rocket.Subject(Any)
     buf = @lget! ai :trades_buf Vector{Any}()
     sizehint!(buf, s[:live_buffer_size])
     if !isnothing(watch_func) && s[:is_watch_mytrades]
         init_handler() = begin
-            task_local_storage(:buf_notify, buf_notify)
+            task_local_storage(:buf_subject, buf_subject)
             task_local_storage(:buf, buf)
-            # NOTE: this is NOT a Threads.Condition because we shouldn't yield inside the push function
-            # (we can't lock (e.g. by using `safenotify`) must use plain `notify`)
             since = dtstamp(attr(s, :is_start, now()))
             h = @lget! task_local_storage() :handler begin
                 coro_func() = watch_func(sym; since, func_kwargs...)
                 errors = Ref(0)
                 f_push(v) = begin
                     push!(buf, v)
-                    notify(buf_notify)
+                    Rocket.next!(buf_subject, v)
                     maybe_backoff!(errors, v)
                 end
                 stream_handler(coro_func, f_push)
@@ -113,12 +111,13 @@ function define_trades_loop_funct(s::LiveStrategy, ai, exc; exc_kwargs=(;))
                 init_handler()
                 sto[:buf]
             end
-            notify = task_local_storage(:buf_notify)
-            while isempty(this_buf)
+            subj = task_local_storage(:buf_subject)
+            result = Ref{Any}()
+            Rocket.subscribe!(subj |> Rocket.take(1), v -> result[] = v)
+            while !isassigned(result)
                 !@istaskrunning() && return
-                wait(notify)
             end
-            popfirst!(this_buf)
+            result[]
         end
         (get_from_buffer, true)
     else
@@ -126,7 +125,7 @@ function define_trades_loop_funct(s::LiveStrategy, ai, exc; exc_kwargs=(;))
         since = Ref(last_date)
         startup = Ref(true)
         eid = exchangeid(ai)
-        function flush_buf_notify()
+        function flush_buf_subject()
             if !isempty(buf)
                 ans = similar(buf)
                 append!(ans, buf)
@@ -138,7 +137,7 @@ function define_trades_loop_funct(s::LiveStrategy, ai, exc; exc_kwargs=(;))
             if !startup[]
                 sleep(1)
             end
-            updates = @something flush_buf_notify() fetch_my_trades(
+            updates = @something flush_buf_subject() fetch_my_trades(
                 s, ai; since=dtstamp(since[]) + 1, func_kwargs...
             ) missing
             if islist(updates) && !isempty(updates)
@@ -205,15 +204,15 @@ function send_trades!(
             date = resp_trade_timestamp(resp, exchangeid(ai), DateTime)
             func = () -> handle_trade!(s, ai, orders_byid, resp)
             sendrequest!(ai, date, func; events)
-            safenotify(asset_cond)
-            safenotify(strategy_cond)
+            Rocket.next!(asset_cond, nothing)
+            Rocket.next!(strategy_cond, nothing)
         end
     else
         date = resp_trade_timestamp(updates, exchangeid(ai), DateTime)
         func = () -> handle_trade!(s, ai, orders_byid, updates)
         sendrequest!(ai, date, func; events)
-        safenotify(asset_cond)
-        safenotify(strategy_cond)
+        Rocket.next!(asset_cond, nothing)
+        Rocket.next!(strategy_cond, nothing)
     end
 end
 
@@ -417,7 +416,7 @@ function handle_trade!(s, ai, orders_byid, resp)
                     end
                 end
             finally
-                asset_trades_task(s, ai).storage[:notify] |> safenotify
+                asset_trades_task(s, ai).storage[:notify] |> Rocket.next!
             end
         end
     catch e
@@ -440,9 +439,9 @@ function stop_watch_trades!(s::LiveStrategy, ai)
         if !istaskdone(t)
             sto = t.storage
             if !isnothing(sto)
-                cond = get(sto, :buf_notify, nothing)
-                if cond isa Condition
-                    notify(cond)
+                subj = get(sto, :buf_subject, nothing)
+                if !isnothing(subj)
+                    Rocket.complete!(subj)
                 end
             end
             @async begin
@@ -484,7 +483,7 @@ function _force_fetchtrades(s, ai, o)
             waitforcond(() -> haskey(task.storage, :buf), Second(1))
             buf = task.storage[:buf]
             append!(buf, trades_resp)
-            notify(task.storage[:buf_notify])
+            Rocket.next!(task.storage[:buf_subject], nothing)
         else
             @error "force fetch trades: invalid response " trades_resp
         end

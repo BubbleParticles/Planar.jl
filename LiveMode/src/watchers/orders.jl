@@ -27,19 +27,17 @@ function define_loop_funct(s::LiveStrategy, ai; exc_kwargs=(;))
     if !isnothing(watch_func) && s[:is_watch_orders]
         init_handler() = begin
             buf = Vector{Any}()
-            # NOTE: this is NOT a Threads.Condition because we shouldn't yield inside the push function
-            # (we can't lock (e.g. by using `safenotify`) must use plain `notify`)
-            buf_notify = Condition()
+            buf_subject = Rocket.Subject(Any)
             sizehint!(buf, s[:live_buffer_size])
             task_local_storage(:buf, buf)
-            task_local_storage(:buf_notify, buf_notify)
+            task_local_storage(:buf_subject, buf_subject)
             since = dtstamp(attr(s, :is_start, now()))
             h = @lget! task_local_storage() :handler begin
                 coro_func() = watch_func(sym; since, func_kwargs...)
                 errors = Ref(0)
                 f_push(v) = begin
                     push!(buf, v)
-                    notify(buf_notify)
+                    Rocket.next!(buf_subject, v)
                     maybe_backoff!(errors, v)
                 end
                 stream_handler(coro_func, f_push)
@@ -55,11 +53,13 @@ function define_loop_funct(s::LiveStrategy, ai; exc_kwargs=(;))
                     b
                 end
             end
-            while isempty(buf)
+            buf_subject = task_local_storage(:buf_subject)
+            result = Ref{Any}()
+            Rocket.subscribe!(buf_subject |> Rocket.take(1), v -> result[] = v)
+            while !isassigned(result)
                 !@istaskrunning() && return
-                wait(task_local_storage(:buf_notify))
             end
-            popfirst!(buf)
+            result[]
         end
         (get_from_buffer, true)
     else
@@ -127,8 +127,8 @@ function send_orders!(s, ai, updates; orders_byid, events, asset_cond, strategy_
             date = resp_order_timestamp(resp, exchangeid(ai))
             func = () -> handle_order!(s, ai, orders_byid, resp)
             sendrequest!(ai, date, func; events)
-            safenotify(asset_cond)
-            safenotify(strategy_cond)
+            Rocket.next!(asset_cond, nothing)
+            Rocket.next!(strategy_cond, nothing)
         end
     end
 end
@@ -155,9 +155,8 @@ function monitor_stop_conditions!(s::LiveStrategy, ai, task, stop_delay, tasks)
     task_local_storage(:sleep, 10)
     task_local_storage(:running, true)
     cond = task.storage[:notify]
-    while @istaskrunning()
-        safewait(cond)
-        @istaskrunning() || break
+    sub = Rocket.subscribe!(cond, _ -> begin
+        @istaskrunning() || return
         sleep(stop_delay[])
         stop_delay[] = Second(0)
         @inlock ai if orderscount(s, ai) == 0 && !isactive(s, ai)
@@ -167,7 +166,6 @@ function monitor_stop_conditions!(s::LiveStrategy, ai, task, stop_delay, tasks)
                     LogWatchOrder current_task()
                 @lock tasks.lock begin
                     stop_watch_orders!(s, ai)
-                    # also stop the trades task if running
                     if hasmytrades(exchange(ai))
                         @debug "Stopping trades watcher for $(raw(ai))@($(nameof(s)))" _module =
                             LogWatchTrade
@@ -175,10 +173,10 @@ function monitor_stop_conditions!(s::LiveStrategy, ai, task, stop_delay, tasks)
                     end
                 end
             finally
-                break
+                Rocket.unsubscribe!(sub)
             end
         end
-    end
+    end)
 end
 
 @doc """ Watches and manages orders for a live strategy with an asset instance.
@@ -268,17 +266,15 @@ function stop_watch_orders!(s::LiveStrategy, ai)
         if !istaskdone(task)
             sto = t.storage
             if !isnothing(sto)
-                cond = get(sto, :buf_notify, nothing)
-                if cond isa Condition
-                    notify(cond)
+                sub = get(sto, :buf_subject, nothing)
+                if !isnothing(sub)
+                    Rocket.complete!(sub)
                 end
             end
-            @async begin
-                this_task = $task
-                waitforcond(() -> !istaskdone(this_task), @timeout_now())
-                if !istaskdone(this_task)
-                    kill_task(this_task)
-                end
+            this_task = task
+            waitforcond(() -> !istaskdone(this_task), @timeout_now())
+            if !istaskdone(this_task)
+                kill_task(this_task)
             end
         end
     end
@@ -415,7 +411,7 @@ function update_order!(s, ai, eid; resp, state)
     @debug "update ord: handled" _module = LogWatchOrder ai id = state.order.id filled = filled_amount(
         state.order
     ) f = @caller(10)
-    asset_orders_task(s, ai).storage[:notify] |> safenotify
+    asset_orders_task(s, ai).storage[:notify] |> Rocket.next!
 end
 
 function _default_ordertype(islong::Bool, bs::BySide, args...)
@@ -564,7 +560,7 @@ function handle_order!(s, ai, orders_byid, resp)
                     end
                 end
             finally
-                asset_orders_task(s, ai).storage[:notify] |> safenotify
+                asset_orders_task(s, ai).storage[:notify] |> Rocket.next!
             end
         end
     catch e
