@@ -13,7 +13,7 @@ using Watchers.WatchersImpls:
     _lastcount
 @watcher_interface!
 using .Exchanges: check_timeout
-using .Lang: splitkws, withoutkws, safenotify, safewait
+using .Lang: splitkws, withoutkws
 
 const CcxtBalanceVal = Val{:ccxt_balance_val}
 
@@ -213,9 +213,10 @@ function _balance_setup_state!(s, w, attrs)
     params, rest = _ccxt_balance_args(s, attrs[:func_kwargs])
     buffer_size = attr(s, :live_buffer_size, 1000)
     s[:balance_buffer] = w[:buf_process] = buf = Vector{Any}()
-    s[:balance_notify] = w[:buf_notify] = buf_notify = Condition()
+    s[:balance_buf_subject] = w[:buf_subject] = buf_subject = Rocket.Subject(Any)
+    s[:balance_process_subject] = w[:process_subject] = process_subject = Rocket.Subject(Any)
     sizehint!(buf, buffer_size)
-    tasks = w[:process_tasks] = Vector{Task}()
+    subs = w[:process_subs] = Vector{Rocket.Subscription}()
     errors = w[:errors_count] = Ref(0)
     (
         s=s,
@@ -227,48 +228,42 @@ function _balance_setup_state!(s, w, attrs)
         params=params,
         rest=rest,
         buf=buf,
-        buf_notify=buf_notify,
-        tasks=tasks,
+        buf_subject=buf_subject,
+        process_subject=process_subject,
+        subs=subs,
         errors=errors,
     )
 end
 
 @doc """
-Starts a background task to force fetch if the watcher stalls for too long.
+Starts a background subscription to force fetch if the watcher stalls for too long.
 """
 function _balance_setup_stall_guard!(state)
     s = state.s
     w = state.w
     attrs = state.attrs
-    if haskey(w, :stall_guard_task)
-        stop_task(w[:stall_guard_task])
-        delete!(w, :stall_guard_task)
+    if haskey(w, :stall_guard_sub)
+        Rocket.unsubscribe!(w[:stall_guard_sub])
+        delete!(w, :stall_guard_sub)
     end
-    w[:stall_guard_task] = @start_task IdDict() begin
-        while isstarted(w)
-            try
-                last = _lastprocessed(w)
-                if now() - last > Second(60)
-                    @warn "balance watcher: forcing fetch due to stall" last now() s
-                    _force_fetchbal(s; fallback_kwargs=attrs[:func_kwargs])
-                end
-            catch e
-                @warn "balance watcher: stall guard error" exception = e
+    w[:stall_guard_sub] = Rocket.interval(10, 10) |>
+        Rocket.map(_ -> begin
+            last = _lastprocessed(w)
+            if now() - last > Second(60)
+                @warn "balance watcher: forcing fetch due to stall" last now() s
+                _force_fetchbal(s; fallback_kwargs=attrs[:func_kwargs])
             end
-            sleep(10)
-        end
-        @debug "balance watcher: stall guard task stopped" _module = LogWatchBalProcess
-    end
+        end) |>
+        Rocket.subscribe!(on_error = e -> @warn("balance watcher: stall guard error", exception = e))
 end
 
 @doc """
-Processes a new balance value, pushing it to the buffer and starting processing tasks.
+Processes a new balance value, pushing it to the buffer and scheduling processing.
 """
 function _balance_process_bal!(state, w, v)
     if !isnothing(v)
         if !isnothing(_dopush!(w, v; if_func=isdict))
-            push!(state.tasks, @async process!(w))
-            filter!(!istaskdone, state.tasks)
+            Rocket.next!(state.process_subject, w)
         end
     end
     nothing
@@ -286,7 +281,7 @@ function _balance_init_watch!(state)
     state_init = Ref(false)
     f_push(v) = begin
         push!(state.buf, v)
-        notify(state.buf_notify)
+        Rocket.next!(state.buf_subject, v)
         maybe_backoff!(state.errors, v)
     end
     h =
@@ -298,35 +293,21 @@ function _balance_init_watch!(state)
 end
 
 @doc """
-Returns a closure that steps the balance watcher, initializing if needed.
+Sets up a reactive subscription for balance watch events.
 """
-function _balance_watch_closure(state)
-    init_ref = Ref(true)
-    function _balance_watch_do_init!()
-        if init_ref[]
-            _ = _balance_init_watch!(state)
-            init_ref[] = false
+function _balance_watch_setup!(state)
+    w = state.w
+    _ = _balance_init_watch!(state)
+    sub = Rocket.subscribe!(state.buf_subject, v -> begin
+        if v isa Exception
+            @error "balance watcher: unexpected value" exception = v
+            maybe_backoff!(state.errors, v)
+        else
+            _balance_process_bal!(state, w, v)
         end
-        nothing
-    end
-    function balance_watch_step(w)
-        _balance_watch_do_init!()
-        while isempty(state.buf) && isstarted(w)
-            wait(state.buf_notify)
-        end
-        if !isempty(state.buf)
-            v = popfirst!(state.buf)
-            if v isa Exception
-                @error "balance watcher: unexpected value" exception = v
-                maybe_backoff!(state.errors, v)
-                sleep(1)
-            else
-                _balance_process_bal!(state, w, v)
-            end
-        end
-        nothing
-    end
-    balance_watch_step
+    end)
+    push!(state.subs, sub)
+    nothing
 end
 
 @doc """
@@ -336,8 +317,7 @@ function _balance_flush_buf_notify!(state, w)
     while !isempty(state.buf)
         v = popfirst!(state.buf)
         _dopush!(w, v)
-        push!(state.tasks, @async process!(w))
-        filter!(!istaskdone, state.tasks)
+        Rocket.next!(state.process_subject, w)
     end
 end
 
@@ -352,9 +332,8 @@ function _balance_fetch_closure(state)
             _balance_flush_buf_notify!(state, w)
             v = @lock w fetch_balance(s; state.timeout, state.params, state.rest...)
             _dopush!(w, v; if_func=isdict)
-            push!(state.tasks, @async process!(w))
+            Rocket.next!(state.process_subject, w)
             _balance_flush_buf_notify!(state, w)
-            filter!(!istaskdone, state.tasks)
         finally
             sleep_pad(start, state.interval)
         end
@@ -364,16 +343,23 @@ function _balance_fetch_closure(state)
 end
 
 @doc """
-Returns the appropriate balance watcher function (watch or fetch) based on attrs.
+Returns the appropriate balance watcher setup (watch or fetch) based on attrs.
 """
 function _w_balance_func(s, w, attrs)
     state = _balance_setup_state!(s, w, attrs)
+    proc_sub = Rocket.subscribe!(state.process_subject, w -> process!(w))
+    push!(state.subs, proc_sub)
     if attrs[:iswatch]
         _balance_setup_stall_guard!(state)
-        return _balance_watch_closure(state)
+        _balance_watch_setup!(state)
+        f = w -> begin
+            # no-op: subscriptions handle everything
+            nothing
+        end
     else
-        return _balance_fetch_closure(state)
+        f = _balance_fetch_closure(state)
     end
+    f
 end
 
 @doc """
@@ -381,16 +367,15 @@ Starts the main balance watcher task for the watcher.
 """
 function _balance_task!(w)
     f = _tfunc(w)
-    errors = w.errors_count
     w[:balance_task] = (@async while isstarted(w)
         try
             f(w)
-            safenotify(w.beacon.fetch)
+            Rocket.next!(w.beacon.fetch, nothing)
         catch e
             if e isa InterruptException
                 break
             else
-                maybe_backoff!(errors, e)
+                maybe_backoff!(w.errors_count, e)
                 @debug_backtrace LogWatchBalance
             end
         end
@@ -399,22 +384,28 @@ end
 
 _balance_task(w) = @lget! attrs(w) :balance_task _balance_task!(w)
 
+function _unsubscribe_subs!(w)
+    subs = attr(w, :process_subs, nothing)
+    if !isnothing(subs)
+        foreach(Rocket.unsubscribe!, subs)
+        empty!(subs)
+    end
+    stall = attr(w, :stall_guard_sub, nothing)
+    if !isnothing(stall)
+        Rocket.unsubscribe!(stall)
+        delete!(w, :stall_guard_sub)
+    end
+end
+
 function Watchers._stop!(w::Watcher, ::CcxtBalanceVal)
     handler = attr(w, :balance_handler, nothing)
     @debug "balance watcher: stopping handler" _module = LogWatchBalance handler
-    # stop_handler!(handler) — removed in non-Python mode
     @debug "balance watcher: stopping task" _module = LogWatchBalance isstarted(w)
     bt = attr(w, :balance_task, nothing)
     if istaskrunning(bt)
         stop_task(bt)
     end
-    @debug "balance watcher: stopping stall guard task" _module = LogWatchBalance
-    if haskey(w, :stall_guard_task)
-        stop_task(w[:stall_guard_task])
-        delete!(w, :stall_guard_task)
-    end
-    @debug "balance watcher: notifying buffer" _module = LogWatchBalance
-    notify(w.buf_notify)
+    _unsubscribe_subs!(w)
     @debug "balance watcher: stopped" _module = LogWatchBalance
     nothing
 end
@@ -515,7 +506,7 @@ function watch_balance!(s::LiveStrategy; interval=st.throttle(s), wait=false)
     end
     while wait && just_started && _lastprocessed(w) == DateTime(0)
         @debug "live: waiting for initial balance" _module = LogWatchBalance
-        safewait(w.beacon.process)
+        Rocket.subscribe!(w.beacon.process |> Rocket.take(1), _ -> nothing)
     end
     @debug "live: balance watcher" _module = LogWatchBalance isstopped(w)
     w

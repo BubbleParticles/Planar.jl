@@ -4,57 +4,45 @@ import Watchers.WatchersImpls: cached_ohlcv!
 using .st: logpath
 using .Data: DataFrame, propagate_ohlcv!
 
-@doc """ Continuously propagates OHLCV data.
+@doc """ Sets up a reactive subscription to propagate OHLCV data.
 
 $(TYPEDSIGNATURES)
 
-This function continuously propagates OHLCV (Open, High, Low, Close, Volume) data for a given watcher `w` and ai `ai`.
-It enters an infinite loop where it safely waits for a process in the watcher, then checks if the watcher is stopped.
-If the watcher is not stopped, it tries to propagate the OHLCV data.
+Subscribes to the watcher's process Subject, propagating OHLCV data to the asset instance on each signal.
 
 """
-propagate_loop(s::RTStrategy, ai, w::Watcher) = begin
+function setup_propagate!(s::RTStrategy, ai, w::Watcher)
     data = ai.data
     met = ohlcvmethod(s)
-    try
-        while true
-            safewait(w.beacon.process)
+    pipeline = getproperty(w.beacon, :process) |> Rocket.map(_ -> begin
+        try
+            propagate_ohlcv!(data)
+            cached_ohlcv!(ai, met)
+        catch exception
+            @debug "watchers: propagate loop" exception
+        end
+    end)
+    Rocket.subscribe!(pipeline)
+end
+
+@doc """ Sets up a reactive subscription to propagate OHLCV data for each asset in the universe.
+
+$(TYPEDSIGNATURES)
+
+Subscribes to the watcher's process Subject, propagating OHLCV data for each asset on each signal.
+
+"""
+function setup_propagate!(s::RTStrategy, w::Watcher)
+    pipeline = getproperty(w.beacon, :process) |> Rocket.map(_ -> begin
+        for ai in s.universe
             try
-                propagate_ohlcv!(data)
-                cached_ohlcv!(ai, met)
+                propagate_ohlcv!(ai.data)
             catch exception
                 @debug "watchers: propagate loop" exception
             end
         end
-    catch
-        @warn "watchers: propagate loop stopped" ai = raw(ai)
-    end
-end
-
-@doc """ Continuously propagates OHLCV data for each asset in the universe.
-
-$(TYPEDSIGNATURES)
-
-This function continuously propagates OHLCV (Open, High, Low, Close, Volume) data for each asset in a strategy's universe.
-It enters an infinite loop where it safely waits for a process in the watcher, then checks if the watcher is stopped.
-If the watcher is not stopped, it tries to propagate the OHLCV data for each asset in the strategy's universe.
-
-"""
-propagate_loop(s::RTStrategy, w::Watcher) = begin
-    try
-        while true
-            safewait(w.beacon.process)
-            for ai in s.universe
-                try
-                    propagate_ohlcv!(ai.data)
-                catch exception
-                    @debug "watchers: propagate loop" exception
-                end
-            end
-        end
-    catch
-        @warn "watchers: propagate loop stopped" s = nameof(s)
-    end
+    end)
+    Rocket.subscribe!(pipeline)
 end
 
 @doc """ Returns the OHLCV method for the strategy.
@@ -128,7 +116,7 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
             end
             w = ccxt_ohlcv_watcher(exc, sym; s.timeframe, default_view)
             Watchers.load!(w)
-            w[:propagate_task] = @async propagate_loop(s, ai, w)
+            w[:propagate_sub] = setup_propagate!(s, ai, w)
             start!(w)
             ow[ai] = w
         end
@@ -352,15 +340,15 @@ end
 
 function addpropagatetask!(w::Watcher, s::RTStrategy, ai::AssetInstance)
     n = 1
-    this_sym = Symbol(:propagate_task, string(n))
-    task::Union{Task,Nothing} = nothing
+    this_sym = Symbol(:propagate_sub, string(n))
+    sub::Union{Rocket.Subscription,Nothing} = nothing
     while true
-        task = attr(w, this_sym)
-        isnothing(task) && break
+        sub = attr(w, this_sym)
+        isnothing(sub) && break
         n += 1
-        this_sym = Symbol(:propagate_task, string(n))
+        this_sym = Symbol(:propagate_sub, string(n))
     end
-    w[this_sym] = @async propagate_loop(s, ai, w)
+    w[this_sym] = setup_propagate!(s, ai, w)
 end
 
 export ohlcvmethod!, ohlcvmethod, sourceohlcv!, ensure_propagate!, addcallback!, stack_propagate_ohlcv_callback, addpropagatetask!

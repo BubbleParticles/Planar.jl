@@ -16,6 +16,7 @@ using .Executors.Instruments: cnum
 import .Executors: call!
 import .Misc: start!, stop!
 using .Misc.DocStringExtensions
+import Rocket
 using .Exchanges.Ccxt: CcxtGateway, default_client, call_exchange, _multifunc, exchange_has
 using Watchers.WatchersImpls: maybe_backoff!
 
