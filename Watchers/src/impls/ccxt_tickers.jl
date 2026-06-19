@@ -157,7 +157,7 @@ function _reset_tickers_func!(w::Watcher)
         _tfunc!(attrs, () -> check_task!(w))
     else
         tickers_func() = begin
-            tasks = @lget! attrs :process_tasks Task[]
+            process_subj = @lget! attrs :tickers_process_subject Rocket.Subject(Any)
             fetched = @lock w begin
                 time = now()
                 resp = fetch_func()
@@ -170,8 +170,7 @@ function _reset_tickers_func!(w::Watcher)
                 end
             end
             if fetched
-                push!(tasks, @async process!(w))
-                filter!(!istaskdone, tasks)
+                Rocket.next!(process_subj, w)
             end
             return fetched
         end
