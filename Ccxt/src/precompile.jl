@@ -1,12 +1,14 @@
 # Ccxt module precompile workload
 using PrecompileTools
-@setup_workload begin
-    @compile_workload begin
-        _init()
+if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
+    @setup_workload begin
+        @compile_workload begin
+            _init()
+        end
     end
-end
 
-# Stop all processes spawned during precompilation
-stop_gateway()
-try rm(Ccxt.GATEWAY_PIDFILE; force=true) catch end
-try rm(Ccxt.GATEWAY_LOCKFILE; force=true) catch end
+    # Stop all processes spawned during precompilation
+    stop_gateway()
+    try rm(Ccxt.GATEWAY_PIDFILE; force=true) catch end
+    try rm(Ccxt.GATEWAY_LOCKFILE; force=true) catch end
+end
