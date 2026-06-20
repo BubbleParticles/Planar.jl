@@ -3,7 +3,6 @@ using Pkg: Pkg
 @reexport using Planar
 using Planar.Engine: Strategies as st, Engine as egn
 using Planar: @environment!
-using Python
 using Random
 using Stubs
 using Planar.Misc
@@ -127,24 +126,9 @@ if isdefined(Main, :Revise)
         end
 end
 
-""" Required when interrupting a function in the repl (CTRL-C) and causes the python event loop to terminate.
-
-Requires strategy to be reloaded.
-"""
 resetenv!() = begin
-    @eval begin
-        @environment!
-        using Python
-    end
     exs.ExchangeTypes._closeall()
     Watchers._closeall()
-    for pull_name in Python.HANDLERS
-        n_str = split(string(pull_name), "handler_pull")[2]
-        n = Meta.tryparse(Int, n_str)
-        if !isnothing(n)
-            Python.gpa.globs[string("handler_flag", n)] = true
-        end
-    end
 end
 
 togglewatch!(s, enable=true) = begin
