@@ -1,114 +1,65 @@
+# LiveMode precompile workloads
+# This file is included conditionally when JULIA_PRECOMP is set
+
 using .Misc.Lang: Lang, @preset, @precomp, @m_str, @ignore
 
 if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
 @preset let
-    # ENV["JULIA_DEBUG"] = "LiveMode" # "LogBalance,LogWatchBalance,LogWatchLocks,TraceWatchLocks"
-    run_funcs(exchange, margin) = begin
-        s = st.strategy(st.BareStrat; mode=Live(), exchange, margin)
-        s[:sync_history_limit] = 0
-        s[:log_to_stdout] = true
-        set_exc_funcs!(s)
-        sml = SimMode.sml
-        @debug "PRECOMP: live mode ohlcv" exchange margin jobs = get(ENV, "JULIA_NUM_THREADS", 1)
-        for ai in s.universe
-            append!(
-                ohlcv_dict(ai)[s.timeframe],
-                sml.Processing.Data.to_ohlcv(sml.synthohlcv());
-                cols=:union,
-            )
-        end
-        sml.Random.seed!(1)
-        ai = first(s.universe)
-        amount = ai.limits.amount.min
-        date = now()
-        price = ai.limits.price.min * 2
-        @debug "PRECOMP: live mode start stop" exchange margin
-        @precomp begin
-            @info "PRECOMP: start" exchange margin
-            try
-                start!(s)
-                while !isrunning(s)
-                    sleep(0.1)
-                end
-            catch e
-                @error "PRECOMP: strategy start failed" exception = (e, catch_backtrace())
-            end
-            @info "PRECOMP: stop" exchange margin
-            stop!(s)
-            # for ai in s.universe
-            #     tasks = asset_tasks(ai)
-            #     reset_asset_tasks!(task)
-            # end
-            @info "PRECOMP: stopped" exchange margin
-        end
-        # ENV["JULIA_DEBUG"]="PaperMode,LogTasks,LogBalance,LogWait,LogWatchBalance,LogEvents"
-        ot = OrderTypes
-        @info "PRECOMP: live mode call" exchange margin islocked(s)
-        try
-            start!(s)
-        catch e
-            @error "PRECOMP: strategy start failed" exception = e
-        end
-        @info "PRECOMP: compile call" exchange margin
-        SimMode.@compile_call
-        try
-            @info "PRECOMP: start sleep" exchange margin
-            start!(s)
-            while !isrunning(s)
-                @info "PRECOMP: sleep" exchange margin
-                sleep(0.1)
-            end
-        catch e
-            @error "PRECOMP: strategy start failed" exception = e
-        end
-        @info "PRECOMP: live mode reset" exchange margin
-        @precomp @ignore begin
-            stop!(s)
+    # Precompile core LiveMode functionality without starting background tasks
+    @info "PRECOMP: LiveMode core"
+    
+    # Import needed modules
+    using .Executors: Strategies as st
+    using .Executors.Instances: Instances, Exchanges, Data, MarginInstance, NoMarginInstance, HedgedInstance
+    using .Instances
+    using .Exchanges
+    using .Exchanges: gettimeout, resptobool
+    using .st: Strategy, MarginStrategy, NoMarginStrategy, LiveStrategy, call!, RTStrategy, throttle, ExchangeAsset, universe, WarmupPeriod
+    using .OrderTypes
+    using .Misc
+    using .Misc.TimeTicks
+    using .Lang: @deassert, @caller, @ifdebug, @debug_backtrace, withoutkws, isowned, isownable
+    using Base: with_logger
+    using .Executors.Instruments: cnum
+    import .Executors: call!
+    import .Misc: start!, stop!
+    using .Misc.DocStringExtensions
+    Rocket = Watchers.Rocket
+    using .Exchanges.Ccxt: CcxtGateway, default_client, call_exchange, _multifunc, exchange_has
+    using Watchers.WatchersImpls: maybe_backoff!
+    
+    # Precompile key functions without starting background tasks
+    @precomp begin
+        # Precompile strategy construction (minimal) - ignore failures
+        @ignore begin
+            s = st.strategy(st.BareStrat; mode=Live(), exchange=:deribit, margin=st.Isolated())
+            s[:sync_history_limit] = 0
+            s[:log_to_stdout] = true
+            
+            # Precompile exchange functions
+            set_exc_funcs!(s)
+            
+            # Precompile order types
+            ot = OrderTypes
+            
+            # Precompile call!
+            SimMode.@compile_call
+            
+            # Precompile watcher functions (just the function signatures)
             for ai in s.universe
-                tasks = asset_tasks(ai)
-                reset_asset_tasks!(s, tasks)
+                asset_tasks(ai)
             end
-            reset!(s)
-        end
-        @debug "PRECOMP: last stop" exchange margin
-        stop!(s)
-        @debug "PRECOMP: run done" exchange margin
-    end
-    try
-        @sync begin
-            @async run_funcs(:deribit, st.Isolated())
-            @async run_funcs(:phemex, st.NoMargin())
-        end
-    catch e
-        @debug "LiveMode precompile workload skipped" exception = (e, catch_backtrace())
-    finally
-        # Remove log files matching patterns in project root
-        root_dir = dirname(dirname(@__DIR__))
-        log_patterns = [
-            r"^misc\.live-error-.*\.log$",
-            r"^misc\.live-info-.*\.log$",
-            r"^misc\.live-warn-.*\.log$",
-        ]
-        try
-            files = readdir(root_dir)
-            for file in files
-                for pattern in log_patterns
-                    if occursin(pattern, file)
-                        filepath = joinpath(root_dir, file)
-                        if isfile(filepath)
-                            rm(filepath; force=true)
-                            @debug "Removed log file" file = filepath
-                        end
-                        break
-                    end
-                end
-            end
-        catch e
-            @warn "Failed to remove log files" exception = e
         end
     end
-    @debug "PRECOMP: live mode closing"
+    
+    # Ensure all watchers are closed and subscriptions cleaned up
     Watchers._closeall()
     st.Instances.Exchanges.ExchangeTypes._closeall()
+    
+    # Force GC to clean up any remaining subscriptions
+    GC.gc()
+    GC.safepoint()
+    
+    @info "PRECOMP: LiveMode done"
 end
 end

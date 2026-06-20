@@ -3,4 +3,8 @@ module Watchers
 
     include("module.jl")
 
+    if get(ENV, "JULIA_PRECOMP", "") == "true"
+        include("precompile.jl")
+    end
+
 end

@@ -4,7 +4,7 @@ using .Executors: Strategies as st
 using .Executors.Instances: Instances, Exchanges, Data, MarginInstance, NoMarginInstance, HedgedInstance, _internal_lock
 using .Instances
 using .Exchanges
-using .Exchanges: gettimeout, resptobool
+using .Exchanges: gettimeout, resptobool, islist, isdict
 using .st: Strategy, MarginStrategy, NoMarginStrategy, LiveStrategy, call!, RTStrategy, throttle, ExchangeAsset, universe, WarmupPeriod
 using PaperMode.OrderTypes
 using PaperMode.Misc
@@ -16,7 +16,8 @@ using .Executors.Instruments: cnum
 import .Executors: call!
 import .Misc: start!, stop!
 using .Misc.DocStringExtensions
-import Rocket
+using Watchers: Watchers
+const Rocket = Watchers.Rocket
 using .Exchanges.Ccxt: CcxtGateway, default_client, call_exchange, _multifunc, exchange_has
 using Watchers.WatchersImpls: maybe_backoff!
 
