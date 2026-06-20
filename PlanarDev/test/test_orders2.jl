@@ -1,7 +1,6 @@
 using Test
 using PlanarDev.Planar.Engine.Lang: @m_str
 using PlanarDev.Planar.Engine.TimeTicks
-using PlanarDev.Planar.Engine.Exchanges.Python
 using PlanarDev.Planar.Engine.Simulations.Random
 using PlanarDev.Planar.Engine.Instances: NoMarginInstance, MarginInstance
 
