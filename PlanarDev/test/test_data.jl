@@ -35,10 +35,10 @@ end
 
 # Preload JSON and Mmap at top-level so JSON binding exists before test function definitions
 try
-    using PlanarDev.Misc.JSON
+    using JSON
     using Mmap
 catch e
-    @warn "Preloading PlanarDev.Misc.JSON or Mmap failed; tests may error." exception=(e,catch_backtrace())
+    @warn "Preloading JSON or Mmap failed; tests may error." exception=(e,catch_backtrace())
 end
 
 function test_save_json(zi=nothing, key="coingecko/markets/all")

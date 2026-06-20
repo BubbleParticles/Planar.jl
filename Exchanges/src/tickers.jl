@@ -265,14 +265,16 @@ function _minmax_pair(mkt, l, prec, default)
     inner = get(mkt, k, nothing)
     inner_dict = inner isa AbstractDict ? inner : nothing
     d = default isa Number ? (; min=0.0, max=Float64(default)) : default
+    inner_min = inner_dict === nothing ? nothing : get(inner_dict, "min", nothing)
+    inner_max = inner_dict === nothing ? nothing : get(inner_dict, "max", nothing)
     Symbol(l) => (;
         min=Float64(something(
-            inner_dict === nothing ? nothing : to_float(get(inner_dict, "min", nothing)),
+            inner_min === nothing ? nothing : to_float(inner_min),
             _min_from_precision(prec),
             d.min,
         )),
         max=Float64(something(
-            inner_dict === nothing ? nothing : to_float(get(inner_dict, "max", nothing)),
+            inner_max === nothing ? nothing : to_float(inner_max),
             d.max,
         )),
     )
