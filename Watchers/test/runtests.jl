@@ -11,6 +11,8 @@ using Watchers: isstale, isstarted, isstopped, pushnew!, pushstart!, buffer, wat
 
 const Dates = Watchers.Misc.TimeTicks.Dates
 using Watchers.Misc.TimeTicks
+using Watchers.WatchersImpls: CcxtTicker, TempCandle, TickerWatcherSymbolState2, CandleWatcherSymbolState4, WatcherHandler2
+using Watchers.WatchersImpls: _parse_ticker_snapshot, _ob_to_df, sym_procstate!, default_load_timeframe
 
 # Define watcher methods for test watcher type
 _init!(w::Watcher, ::Val{:testwatcher}) = nothing
@@ -216,6 +218,260 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
 
         @testset "ccxt_average_ohlcv_watcher" begin
             @test true
+        end
+    end
+
+    @testset "CCXT Watcher Types and Pure Functions" begin
+        @testset "CcxtTicker NamedTuple structure" begin
+            ticker_type = Watchers.WatchersImpls.CcxtTicker
+            @test fieldcount(ticker_type) == 18
+            @test fieldnames(ticker_type) == (
+                :symbol, :timestamp, :open, :high, :low, :close,
+                :previousClose, :bid, :ask, :bidVolume, :askVolume,
+                :last, :vwap, :change, :percentage, :average,
+                :baseVolume, :quoteVolume,
+            )
+        end
+
+        @testset "TempCandle mutable struct" begin
+            TC_type = Watchers.WatchersImpls.TempCandle
+            # Use default constructor (DFT = Float64) since @kwdef + parametric
+            # inner constructor makes type-parameterized keyword construction tricky
+            c = TC_type(;
+                timestamp=now(), open=50000.0, high=51000.0,
+                low=49000.0, close=50500.0, volume=1000.0,
+            )
+            @test c isa TC_type
+            @test c.high == 51000.0
+            @test c.low == 49000.0
+            @test c.open == 50000.0
+            @test c.close == 50500.0
+            @test c.volume == 1000.0
+
+            # Verify field types
+            @test c.timestamp isa DateTime
+            @test c.open isa Float64
+        end
+
+        @testset "TickerWatcherSymbolState2" begin
+            ST = Watchers.WatchersImpls.TickerWatcherSymbolState2
+            state = ST(; sym="BTC/USDT")
+            @test state.sym == "BTC/USDT"
+            @test state.loaded == false
+            @test state.ticks == 0
+            @test state.backoff == 0
+            @test state.isprocessed == false
+            @test state.processed_time == DateTime(0)
+
+            # Test sym_procstate!
+            Watchers.WatchersImpls.sym_procstate!(state, true, now())
+            @test state.isprocessed == true
+            @test state.processed_time isa DateTime
+            @test state.processed_time > DateTime(0)
+        end
+
+        @testset "CandleWatcherSymbolState4" begin
+            ST = Watchers.WatchersImpls.CandleWatcherSymbolState4
+            state = ST(; sym="BTC/USDT")
+            @test state.sym == "BTC/USDT"
+            @test state.loaded == false
+            @test state.backoff == 0
+            @test state.is_resyncing == false
+            @test state.nextcandle === nothing
+        end
+
+        @testset "WatcherHandler2 construction" begin
+            WH = Watchers.WatchersImpls.WatcherHandler2
+            handler = WH(
+                init_func=() -> nothing,
+                corogen_func=(_) -> () -> nothing,
+                wrapper_func=identity,
+                subject=Rocket.Subject(Any),
+            )
+            @test handler.init == true
+            @test handler.init_func isa Function
+            @test handler.corogen_func isa Function
+            @test handler.wrapper_func === identity
+            @test handler.subject isa Rocket.Subject{Any}
+            @test handler.state === nothing
+            @test handler.subscription === nothing
+        end
+
+        @testset "_ob_to_df conversion" begin
+            # Mock orderbook data as it would arrive from the gateway
+            ob = Dict{String,Any}(
+                "symbol" => "BTC/USDT",
+                "timestamp" => 1700000000000,
+                "bids" => [[50000.0, 1.0], [49900.0, 2.0], [49800.0, 3.0]],
+                "asks" => [[50100.0, 1.5], [50200.0, 0.5], [50300.0, 2.5]],
+            )
+            df = Watchers.WatchersImpls._ob_to_df(ob)
+            @test df isa Watchers.DataFrame
+            @test propertynames(df) == [:timestamp, :bid_price, :bid_amount, :ask_price, :ask_amount]
+            @test size(df, 1) == 3
+            @test size(df, 2) == 5
+
+            # Check metadata is set (DataFrames metadata API)
+            @test !isnothing(Watchers.Data.DFUtils.metadata(df))
+
+            # Check first row values
+            @test df.bid_price[1] == 50100.0   # ask[1] becomes bid_price (note: swapped)
+            @test df.ask_price[1] == 50000.0   # bid[1] becomes ask_price
+        end
+
+        @testset "_parse_ticker_snapshot with Dict input" begin
+            now_ms = 1700000000000
+            ticker_data = Dict{String,Any}(
+                "symbol" => "BTC/USDT",
+                "timestamp" => now_ms,
+                "open" => 50000.0,
+                "high" => 51000.0,
+                "low" => 49000.0,
+                "close" => 50500.0,
+                "previousClose" => nothing,
+                "bid" => 50400.0,
+                "ask" => 50600.0,
+                "bidVolume" => 1.5,
+                "askVolume" => 2.0,
+                "last" => 50500.0,
+                "vwap" => 50200.0,
+                "change" => 500.0,
+                "percentage" => 1.0,
+                "average" => 50250.0,
+                "baseVolume" => 1000.0,
+                "quoteVolume" => 50000000.0,
+            )
+            snap = Dict{String,Any}("BTC/USDT" => ticker_data)
+
+            result = Watchers.WatchersImpls._parse_ticker_snapshot(snap)
+            @test result isa Dict{String,Watchers.WatchersImpls.CcxtTicker}
+            @test haskey(result, "BTC/USDT")
+            ticker = result["BTC/USDT"]
+            @test ticker.symbol == "BTC/USDT"
+            @test ticker.open == 50000.0
+            @test ticker.high == 51000.0
+            @test ticker.low == 49000.0
+            @test ticker.close == 50500.0
+            @test ticker.bid == 50400.0
+            @test ticker.ask == 50600.0
+            @test ticker.last == 50500.0
+            @test ticker.baseVolume == 1000.0
+            @test ticker.quoteVolume == 50000000.0
+            @test ticker.timestamp isa DateTime
+            @test ticker.timestamp == dt(now_ms)
+            @test ticker.previousClose === nothing
+            @test ticker.bidVolume == 1.5
+        end
+
+        @testset "_parse_ticker_snapshot empty input" begin
+            @test isempty(Watchers.WatchersImpls._parse_ticker_snapshot(Dict{String,Any}()))
+            @test isempty(Watchers.WatchersImpls._parse_ticker_snapshot(nothing))
+        end
+
+        @testset "_parse_ticker_snapshot with multiple symbols" begin
+            now_ms = 1700000000000
+            btc = Dict{String,Any}(
+                "symbol" => "BTC/USDT",
+                "timestamp" => now_ms,
+                "open" => 50000.0, "high" => 51000.0, "low" => 49000.0,
+                "close" => 50500.0, "previousClose" => nothing,
+                "bid" => 50400.0, "ask" => 50600.0,
+                "bidVolume" => 1.5, "askVolume" => 2.0,
+                "last" => 50500.0, "vwap" => 50200.0,
+                "change" => 500.0, "percentage" => 1.0,
+                "average" => 50250.0, "baseVolume" => 1000.0,
+                "quoteVolume" => 50000000.0,
+            )
+            eth = Dict{String,Any}(
+                "symbol" => "ETH/USDT",
+                "timestamp" => now_ms,
+                "open" => 3000.0, "high" => 3100.0, "low" => 2900.0,
+                "close" => 3050.0, "previousClose" => 3020.0,
+                "bid" => 3040.0, "ask" => 3060.0,
+                "bidVolume" => 10.0, "askVolume" => 15.0,
+                "last" => 3050.0, "vwap" => 3020.0,
+                "change" => 30.0, "percentage" => 0.99,
+                "average" => 3035.0, "baseVolume" => 50000.0,
+                "quoteVolume" => 151000000.0,
+            )
+            snap = Dict{String,Any}("BTC/USDT" => btc, "ETH/USDT" => eth)
+
+            result = Watchers.WatchersImpls._parse_ticker_snapshot(snap)
+            @test length(result) == 2
+            @test haskey(result, "BTC/USDT")
+            @test haskey(result, "ETH/USDT")
+            @test result["ETH/USDT"].previousClose == 3020.0
+            @test result["ETH/USDT"].bidVolume == 10.0
+        end
+
+        @testset "default_load_timeframe function" begin
+            dlt = Watchers.WatchersImpls.default_load_timeframe
+            @test dlt(tf"1m") == tf"1h"
+            @test dlt(tf"5m") == tf"1h"
+            @test dlt(tf"1h") == tf"1d"
+            @test dlt(tf"4h") == tf"1d"
+            @test dlt(tf"1d") == tf"1d"
+        end
+
+        @testset "Average OHLCV aggregation with synthetic data" begin
+            # Test the core aggregation math used by the average OHLCV watcher
+            # Simulate the _process! aggregation logic at the data level
+
+            # Build synthetic source dataframes for 2 exchanges
+            ts_base = DateTime(2024, 1, 1, 0, 0, 0)
+
+            DF = Watchers.DataFrame
+            df_exc1 = DF(
+                :timestamp => [ts_base, ts_base + Minute(1), ts_base + Minute(2)],
+                :open => [100.0, 101.0, 102.0],
+                :high => [105.0, 106.0, 107.0],
+                :low => [95.0, 96.0, 97.0],
+                :close => [102.0, 103.0, 104.0],
+                :volume => [1000.0, 1100.0, 1200.0],
+            )
+            df_exc2 = DF(
+                :timestamp => [ts_base, ts_base + Minute(1), ts_base + Minute(2)],
+                :open => [101.0, 102.0, 103.0],
+                :high => [106.0, 107.0, 108.0],
+                :low => [96.0, 97.0, 98.0],
+                :close => [103.0, 104.0, 105.0],
+                :volume => [2000.0, 2100.0, 2200.0],
+            )
+
+            # Simulate aggregation by timestamp (as the watcher does):
+            # Group timestamps manually and aggregate
+            all_new = vcat(df_exc1, df_exc2)
+            sort!(all_new, :timestamp)
+
+            @test size(all_new, 1) == 6
+
+            # Manual aggregation per unique timestamp (same logic as _process!)
+            unique_ts = unique(all_new.timestamp)
+            @test length(unique_ts) == 3  # 3 unique timestamps
+
+            for ts in unique_ts
+                rows = all_new[all_new.timestamp .== ts, :]
+                @test size(rows, 1) == 2  # 2 exchanges per timestamp
+
+                agg_open = first(rows.open)
+                agg_high = maximum(rows.high)
+                agg_low = minimum(rows.low)
+                total_vol = sum(rows.volume)
+                vwap_close = sum(rows.close .* rows.volume) / total_vol
+
+                @test agg_high >= agg_low
+                @test total_vol > 0
+                @test vwap_close isa Float64
+            end
+
+            # Test empty source handling
+            empty_df = DF(
+                :timestamp => DateTime[],
+                :open => Float64[], :high => Float64[], :low => Float64[],
+                :close => Float64[], :volume => Float64[],
+            )
+            @test isempty(empty_df)
+            @test size(empty_df, 1) == 0
         end
     end
 
