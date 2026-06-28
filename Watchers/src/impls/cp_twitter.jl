@@ -42,4 +42,5 @@ function _fetch!(w::Watcher, ::CpTwitterVal)
 end
 
 _init!(w::Watcher, ::CpTwitterVal) = default_init(w, nothing)
+_process!(::Watcher, ::CpTwitterVal) = nothing
 _get!(w::Watcher, ::CpTwitterVal) = w.buffer

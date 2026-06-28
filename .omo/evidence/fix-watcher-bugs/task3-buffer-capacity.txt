@@ -1,0 +1,8 @@
+TODO 3: PASS
+=========
+File: /Planar.jl/Watchers/src/impls/ccxt_average_ohlcv_watcher.jl line 129
+Change: buffer_capacity=0 → buffer_capacity=1
+Note: CircularBuffer requires capacity ≥ 1. The watcher creation now no
+longer throws ArgumentError. Construction is exercised indirectly via the
+Watchers Pkg.test() which precompiles WatchersImpls.
+Verification: Watchers tests passed (155/155).

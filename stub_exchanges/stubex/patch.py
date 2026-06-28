@@ -164,7 +164,7 @@ async def fetch_tickers(self, *args, **kwargs):
         except Exception:
             syms = []
         if not syms:
-            syms = ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
+            syms = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
         out = {}
         for s in syms:
             ohlcv = utils.generate_ohlcv(s, None, 1, 1)
@@ -2189,13 +2189,13 @@ def patch_exchange(exchange, exch_name: str = None):
                         pass
                 pass
             try:
-                syms = (
-                    list(exchange.symbols)
-                    if hasattr(exchange, "symbols") and exchange.symbols
-                    else ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
-                )
-            except Exception:
-                syms = ["BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
+        syms = (
+                list(self.symbols)
+                if hasattr(self, "symbols") and self.symbols
+                else ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
+            )
+        except Exception:
+            syms = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BTC/USDT:USDT", "ETH/USDT:USDT", "SOL/USDT:USDT"]
             exchange.symbols = []
             for s in syms:
                 try:
