@@ -62,7 +62,12 @@ end
 StreamHandler(; stop=Base.Returns(nothing), push=Base.Returns(nothing)) = StreamHandler(stop, push)
 
 function stream_handler(coro_func, f_push)
-    (; stop=Base.Returns(nothing), push=f_push)
+    # Websocket/Python ccxt stream handler. In the non-Python gateway mode,
+    # there is no real streaming coroutine to manage, so both stop and push
+    # are no-ops. Use `_push` so the closure is invoked in case downstream
+    # code relies on f_push being a real side-effecting function (it does not
+    # run where Rocket subjects are the actual delivery mechanism).
+    StreamHandler(Base.Returns(nothing), f_push)
 end
 start_handler!(h) = nothing
 stop_handler!(h) = nothing
@@ -94,7 +99,7 @@ macro parsedata(tick_type, mkts, key="symbol")
     mkts = esc(mkts)
     quote
         NamedTuple(
-            convert(Symbol, m[$key]) => fromdict($tick_type, String, m) for m in $mkts
+            convert(Symbol, m[$key]) => fromdict($tick_type, String, m, _wkey, _wconvert) for m in $mkts
         )
     end
 end
@@ -608,7 +613,7 @@ function new_handler_task(w; init_func, corogen_func, wrapper_func=identity, if_
         wh.state = stream_handler(corogen_func(w), f_push)
         start_handler!(wh.state)
     end
-    pipeline = wh.subject |> Rocket.map(v -> begin
+    pipeline = wh.subject |> Rocket.map(Nothing, v -> begin
         if v isa Exception
             @error "watcher: $(w.name)" exception = v
             sleep(1)
@@ -617,7 +622,10 @@ function new_handler_task(w; init_func, corogen_func, wrapper_func=identity, if_
         process_val!(w, v)
         Rocket.next!(w.beacon.fetch, now())
     end)
-    wh.subscription = Rocket.subscribe!(pipeline)
+    wh.subscription = Rocket.subscribe!(pipeline, Rocket.lambda(
+        on_next = _ -> nothing,
+        on_error = err -> logerror(w, err),
+    ))
     init_watch_func(w)
     return wh
 end

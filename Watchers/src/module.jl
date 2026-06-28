@@ -12,7 +12,6 @@ using .Misc: after, truncate_file
 using Base.Threads: @spawn
 using JSON3
 import Rocket
-using .Misc.Lang: waitforcond
 
 @doc """ Attempts to fetch data for a watcher
 
@@ -67,8 +66,8 @@ end
 function _setup_fetch_pipeline!(w)
     interval_ms = round(w.interval.fetch, Second, RoundUp).value * 1000
     obs = Rocket.interval(interval_ms)
-    pipeline = obs |> Rocket.map(_ -> _tryfetch(w))
-    subscription = Rocket.subscribe!(pipeline, Rocket.Actor(
+    pipeline = obs |> Rocket.map(Bool, _ -> _tryfetch(w))
+    subscription = Rocket.subscribe!(pipeline, Rocket.lambda(
         on_next = result -> _handle_fetch_result(w, result),
         on_error = err -> logerror(w, err),
     ))

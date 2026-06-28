@@ -14,7 +14,7 @@ Subscribes to the watcher's process Subject, propagating OHLCV data to the asset
 function setup_propagate!(s::RTStrategy, ai, w::Watcher)
     data = ai.data
     met = ohlcvmethod(s)
-    pipeline = getproperty(w.beacon, :process) |> Rocket.map(_ -> begin
+    pipeline = getproperty(w.beacon, :process) |> Rocket.map(Nothing, _ -> begin
         try
             propagate_ohlcv!(data)
             cached_ohlcv!(ai, met)
@@ -22,7 +22,12 @@ function setup_propagate!(s::RTStrategy, ai, w::Watcher)
             @debug "watchers: propagate loop" exception
         end
     end)
-    Rocket.subscribe!(pipeline)
+    Rocket.subscribe!(pipeline, Rocket.lambda(
+        on_next = _ -> nothing,
+        on_error = err -> begin
+            @debug "watchers: propagate loop" exception=err
+        end,
+    ))
 end
 
 @doc """ Sets up a reactive subscription to propagate OHLCV data for each asset in the universe.
@@ -33,7 +38,7 @@ Subscribes to the watcher's process Subject, propagating OHLCV data for each ass
 
 """
 function setup_propagate!(s::RTStrategy, w::Watcher)
-    pipeline = getproperty(w.beacon, :process) |> Rocket.map(_ -> begin
+    pipeline = getproperty(w.beacon, :process) |> Rocket.map(Nothing, _ -> begin
         for ai in s.universe
             try
                 propagate_ohlcv!(ai.data)
@@ -42,7 +47,12 @@ function setup_propagate!(s::RTStrategy, w::Watcher)
             end
         end
     end)
-    Rocket.subscribe!(pipeline)
+    Rocket.subscribe!(pipeline, Rocket.lambda(
+        on_next = _ -> nothing,
+        on_error = err -> begin
+            @debug "watchers: propagate loop" exception=err
+        end,
+    ))
 end
 
 @doc """ Returns the OHLCV method for the strategy.

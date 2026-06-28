@@ -1,4 +1,8 @@
 const CpMarketsVal = Val{:cp_markets}
+
+# Convert a dict (possibly with Symbol keys) to Dict{String, Any} for fromdict
+_stringify_keys(d::Dict) = Dict{String,Any}(string(k) => _stringify_keys(v) for (k, v) in d)
+_stringify_keys(x) = x
 const CpTick = @NamedTuple begin
     base_currency_id::String
     base_currency_name::String
@@ -26,7 +30,9 @@ function _fetch!(w::Watcher, ::CpMarketsVal)
     if length(mkts) > 0
         result = Dict{String,CpTick}()
         for (_, m) in mkts
-            result[SubString(m["pair"])] = fromdict(CpTick, String, m)
+            # Normalize dict keys (Symbol -> String) before fromdict
+            m_str = _stringify_keys(m)
+            result[SubString(m["pair"])] = fromdict(CpTick, String, m_str)
         end
         pushnew!(w, result)
         true

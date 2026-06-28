@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "0bcc0dbc3f3ee747becb1902ca6a17957b721272"
+project_hash = "89b857f76b68614f2a767ed11397ef97eb8fa1e1"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "2d9c9a55f9c93e8887ad391fbae72f8ef55e1177"
@@ -155,6 +155,12 @@ version = "1.6.0"
 git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
 uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
 version = "4.1.1"
+
+[[deps.DaemonMode]]
+deps = ["Crayons", "Sockets"]
+git-tree-sha1 = "8aee56d540665a9386b067cecc65db0982704421"
+uuid = "d749ddd5-2b29-4920-8305-6ff5a704e36e"
+version = "0.1.2"
 
 [[deps.Data]]
 deps = ["CodecZlib", "DataFrames", "DataFramesMeta", "DataStructures", "LMDB", "Misc", "Reexport", "Serialization", "Zarr"]
@@ -843,7 +849,7 @@ uuid = "9602ed7d-8fef-5bc8-8597-8f21381861e8"
 version = "0.1.5"
 
 [[deps.Watchers]]
-deps = ["Ccxt", "Fetch", "HTTP", "JSON3", "Rocket", "Statistics", "URIs"]
+deps = ["Ccxt", "DaemonMode", "Fetch", "HTTP", "JSON3", "Rocket", "Statistics", "URIs"]
 path = "."
 uuid = "4a3f9c16-ec8e-48c6-a58d-938fc30e2b4b"
 version = "0.1.0"

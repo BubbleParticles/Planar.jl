@@ -1,0 +1,13 @@
+TODO 1: PASS
+=========
+File: /Planar.jl/Ccxt/src/exchange_funcs.jl
+Change: Added elseif branches for "L1OrderBook" and "L2OrderBook"
+Verification:
+  - Ccxt project loads cleanly
+  - Ccxt._suffix_to_methods("L1OrderBook") returns the expected 4-tuple
+  - Ccxt._suffix_to_methods("L2OrderBook") returns the expected 4-tuple
+  - Existing tuples for Ticker/OrderBook/Balance still match expectations (regression)
+Command output:
+    ✓ Lang precompiled
+    ✓ Ccxt precompiled
+    TODO 1 PASS:_suffix_to_methods for L1/L2 + regression

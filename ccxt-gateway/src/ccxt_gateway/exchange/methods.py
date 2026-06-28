@@ -2,8 +2,6 @@
 
 from typing import Any, Dict, Optional
 
-import ccxt.async_support as ccxt
-
 
 def get_ccxt_method(exchange: Any, method_name: str) -> Optional[Any]:
     """Get a CCXT method by name."""
@@ -57,7 +55,11 @@ def is_watch_method(method_name: str) -> bool:
 def get_supported_methods(exchange_name: str) -> Dict[str, Any]:
     """Get all supported methods for an exchange."""
     try:
-        exchange_class: Any = getattr(ccxt, exchange_name)
+        import ccxt.async_support as _ccxt_async
+        import ccxt.pro as _ccxt_pro
+
+        ccxt_mod: Any = _ccxt_pro if hasattr(_ccxt_pro, exchange_name) else _ccxt_async
+        exchange_class: Any = getattr(ccxt_mod, exchange_name)
         # Create temporary instance to check has dict
         temp: Any = exchange_class({"enableRateLimit": True})
         return temp.has if hasattr(temp, "has") else {}

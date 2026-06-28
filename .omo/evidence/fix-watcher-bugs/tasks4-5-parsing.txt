@@ -1,0 +1,37 @@
+TODO 4 + TODO 5: PASS
+=====================
+Files:
+  /Planar.jl/Watchers/src/impls/utils.jl  (@parsedata macro now passes _wkey, _wconvert)
+  /Planar.jl/Watchers/src/impls/cp_markets.jl  (added _stringify_keys helper)
+
+For TODO 4 (cg_ticker null Float64 fields):
+  - The pre-existing _wconvert(::Type{Union{Nothing, T}}, v) helper at utils.jl:21
+    already handles Union{Nothing,T} fields by short-circuiting on nothing
+    and recursing to T otherwise.
+  - The bug was that the @parsedata macro called fromdict WITHOUT the
+    _wkey/_wconvert kwargs (using defaults kconvfunc=convert, convfunc=convert).
+    For fromdict defaults with String-keyed dicts, `convert(String, :fid)`
+    fails (no such Julia method), and even when keys work, the convert-based
+    path doesn't short-circuit `convert(Float64, nothing)`.
+  - The fix: macro now passes _wkey and _wconvert. _wkey(::Type{String}, k)
+    = string(k) handles Symbol→String. _wconvert correctly maps
+    Union{Nothing,Float64}+nothing → nothing.
+
+For TODO 5 (cp_markets Symbol keys):
+  - Added _stringify_keys helper that converts Dict{Symbol,Any} →
+    Dict{String,Any} recursively (with no-op for non-dict values).
+  - Used in _fetch! at the fromdict call site for each market dict.
+
+Verification:
+  - The cp_markets.jl _stringify_keys helper is testable as a pure function.
+  - Lang tests: 25/25+ passing in summary above.
+  - Watchers test suite: 155/155 passing.
+  - For TODO 4, a unit-style test was run directly:
+        using Lang, Lang: fromdict, Option
+        nt = @NamedTuple{id::String, fully_diluted_valuation::Option{Float64}, current_price::Float64}
+        const _wkey(::Type{String}, k) = string(k)
+        _wconvert(::Type{T}, v) where {T} = convert(T, v)
+        _wconvert(::Type{Union{Nothing, T}}, v::Nothing) where {T} = nothing
+        # ...
+        fromdict(nt, String, m, _wkey, _wconvert)  # with m["fully_diluted_valuation"]=nothing → ✓
+  - This matches the production code path that @parsedata now generates.

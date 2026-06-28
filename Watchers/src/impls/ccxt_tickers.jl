@@ -142,11 +142,21 @@ function _reset_tickers_func!(w::Watcher)
     @assert ids isa Vector
     args = _func_args(exc, ids)
     watch_func = first(exc, :watchTickersForSymbols, :watchTickers)
-    fetch_func = choosefunc(exc, "Ticker", args...)
-    iswatch = @lget! attrs :iswatch !isnothing(watch_func)
+    fetch_func = choosefunc(string(exc.id), "Ticker", args...)
+    # The CcxtGateway returns a non-nothing closure for every websocket
+    # method on `first(...)`, regardless of whether the exchange actually
+    # supports it. This forces every watcher down the `iswatch=true`
+    # path which runs `check_task!` but never fetches data, leaving the
+    # buffer stale. Force the polling path unless the user explicitly
+    # opted in to websockets via the constructor's `iswatch` argument.
+    iswatch = if haskey(attrs, :iswatch)
+        attrs[:iswatch]::Bool
+    else
+        false
+    end
     if iswatch
         corogen_func(_) = coro_func() = watch_func(args...)
-        init_func() = fetch_func()
+        init_func() = fetch_func
         handler_task!(
             w;
             init_func,
@@ -156,11 +166,29 @@ function _reset_tickers_func!(w::Watcher)
         )
         _tfunc!(attrs, () -> check_task!(w))
     else
+        # Capture exchange id, args, and ids so the closure can re-invoke
+        # `choosefunc` on every fetch. The result of `choosefunc` itself is
+        # a one-shot gateway response; the real fix is to call the gateway
+        # again before each poll, not repeat the snapshot.
+        exc_id = string(exc.id)
+        sym_ids = ids
+        fetch_symbols = _check_ids(exc, ids)
         tickers_func() = begin
             process_subj = @lget! attrs :tickers_process_subject Rocket.Subject(Any)
             fetched = @lock w begin
                 time = now()
-                resp = fetch_func()
+                # Re-evaluate `choosefunc` on every poll so the gateway
+                # returns fresh data instead of repeating the first snapshot.
+                resp = if fetch_func isa Function
+                    try
+                        fetch_func()
+                    catch
+                        choosefunc(exc_id, "Ticker", fetch_symbols)
+                    end
+                else
+                    # CcxtGateway path: re-invoke choosefunc each cycle.
+                    choosefunc(exc_id, "Ticker", fetch_symbols)
+                end
                 result = _parse_ticker_snapshot(resp)
                 if !isempty(result)
                     pushnew!(w, result, time)
@@ -189,5 +217,21 @@ function _init!(w::Watcher, ::CcxtTickerVal)
             "ccxt_", exc.name, issandbox(exc), "_tickers_", join(snakecased.(_ids(w)), "_")
         ),
     )
-    default_init(w, nothing)
+    default_init(w, Dict{String,DataFrame}())
 end
+
+function _ccxt_tickers_process!(dict, buf, maxlen)
+    data = @collect_buffer_data buf String CcxtTicker
+    for (key, nts) in pairs(data)
+        df_row = get!(dict, key) do; DataFrame(); end
+        if nrow(df_row) > 0
+            last_val = last(df_row)
+            new_nts = filter(!=(last_val), nts)
+            isempty(new_nts) || appendmax!(df_row, new_nts, maxlen)
+        else
+            appendmax!(df_row, nts, maxlen)
+        end
+    end
+end
+
+_process!(w::Watcher, ::CcxtTickerVal) = default_process(w, _ccxt_tickers_process!)

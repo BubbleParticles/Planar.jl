@@ -247,7 +247,7 @@ function _balance_setup_stall_guard!(state)
         delete!(w, :stall_guard_sub)
     end
     w[:stall_guard_sub] = Rocket.interval(10, 10) |>
-        Rocket.map(_ -> begin
+        Rocket.map(Nothing, _ -> begin
             last = _lastprocessed(w)
             if now() - last > Second(60)
                 @warn "balance watcher: forcing fetch due to stall" last now() s
