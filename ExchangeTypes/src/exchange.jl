@@ -284,14 +284,9 @@ function _first(exc::CcxtExchange, args::Vararg{Symbol})
             client = CcxtGateway.default_client()
             ex_id = string(exc.id)
             m = string(name)
-            is_fetch = startswith(m, "fetch") && m != "fetchMarkets"
             return (args...; kwargs...) -> begin
                 try
-                    if is_fetch && !isempty(kwargs)
-                        CcxtGateway.call_exchange(client, ex_id, m; body=Dict("params" => kwargs))
-                    else
-                        CcxtGateway.call_exchange(client, ex_id, m; body=kwargs)
-                    end
+                    CcxtGateway.call_exchange(client, ex_id, m; body=kwargs)
                 catch e
                     @warn "Gateway call to $ex_id.$m failed" exception=(e, catch_backtrace())
                     nothing

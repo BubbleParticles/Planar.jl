@@ -138,7 +138,7 @@ end
 
 function _start_stall_guard!(w, s, kwargs)
     w[:stall_guard_sub] = Rocket.interval(10, 10) |>
-        Rocket.map(_ -> begin
+        Rocket.map(Nothing, _ -> begin
             last = _lastprocessed(w)
             if now() - last > Second(60)
                 @warn "positions watcher: forcing fetch due to stall" last now() s

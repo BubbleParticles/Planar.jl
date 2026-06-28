@@ -447,8 +447,10 @@ $(TYPEDSIGNATURES)
 function sandbox!(exc::Exchange; flag=!issandbox(exc), remove_keys=true)
     Base.generating_output() && return exckeys!(exc)
     name = string(exc.id)
+    # ccxt parameter name for set_sandbox_mode varies: binance/okx use "enable", others use "enabled"
+    param_name = name in ("binance", "okx") ? "enable" : "enabled"
     success = try
-        call_exchange(default_client(), name, "setSandboxMode", body=Dict("enabled" => flag))
+        call_exchange(default_client(), name, "setSandboxMode", body=Dict(param_name => flag))
         true
     catch e
         msg = string(e)

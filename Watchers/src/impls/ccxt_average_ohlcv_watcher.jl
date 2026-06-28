@@ -126,7 +126,7 @@ function ccxt_average_ohlcv_watcher(
         attrs=a,
         start=false,
         process=true,
-        buffer_capacity=0,  # Average watcher does not buffer
+        buffer_capacity=1,  # Average watcher does not buffer (CircularBuffer requires cap >= 1)
         view_capacity,
         fetch_interval=Second(5),
         kwargs...,

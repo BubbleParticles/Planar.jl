@@ -3,6 +3,8 @@
 import asyncio
 import json
 import logging
+import sys
+print(f"DEBUG subprocess.py loaded from: {__file__}", file=sys.stderr)
 import os
 import signal
 import sys
@@ -109,12 +111,16 @@ class ExchangeSubprocess:
     async def _init_exchange(self) -> None:
         """Initialize the CCXT exchange instance."""
         try:
-            import ccxt.async_support as ccxt
+            import ccxt.async_support as _ccxt_async
+            import ccxt.pro as _ccxt_pro
 
-            if not hasattr(ccxt, self.exchange_name):
+            # Prefer ccxt.pro for websocket (watch*) support, fall back to async_support
+            ccxt_mod: Any = _ccxt_pro if hasattr(_ccxt_pro, self.exchange_name) else _ccxt_async
+
+            if not hasattr(ccxt_mod, self.exchange_name):
                 raise ValueError(f"Exchange {self.exchange_name} not supported by CCXT")
 
-            exchange_class: Any = getattr(ccxt, self.exchange_name)
+            exchange_class: Any = getattr(ccxt_mod, self.exchange_name)
 
             params: Dict[str, Any] = {
                 "enableRateLimit": self.enable_rate_limit,
@@ -231,6 +237,8 @@ class ExchangeSubprocess:
         params: Dict[str, Any] = msg.get("params", {})
         subscription_id: Optional[str] = msg.get("subscription_id")
 
+        logger.info("DEBUG _handle_request: method=%s params=%s", method, params)
+
         if not request_id or not method:
             logger.error("Invalid request message: missing id or method")
             return
@@ -268,6 +276,28 @@ class ExchangeSubprocess:
 
                 if callable(attr):
                     ccxt_method: Callable[..., Any] = attr
+
+                    # Parameter name normalization: set_sandbox_mode parameter
+                    # varies between exchanges (base class: "enabled", binance/okx: "enable")
+                    if method == "setSandboxMode":
+                        import inspect
+                        # Get unbound method signature to include 'self' parameter
+                        # Bound method signature excludes 'self', so check __func__ for unbound
+                        if hasattr(ccxt_method, '__func__'):
+                            unbound_method = ccxt_method.__func__
+                        else:
+                            unbound_method = getattr(self.exchange.__class__, method)
+                        sig = inspect.signature(unbound_method)
+                        sig_params = list(sig.parameters.keys())
+                        logger.info("DEBUG setSandboxMode: method=%s sig_params=%s params=%s", method, sig_params, params)
+                        if len(sig_params) >= 2:
+                            actual_name: str = sig_params[1]  # skip 'self'
+                            if actual_name != "enabled" and "enabled" in params:
+                                params[actual_name] = params.pop("enabled")
+                                logger.info("DEBUG setSandboxMode: normalized enabled->%s", actual_name)
+                            elif actual_name != "enable" and "enable" in params:
+                                params[actual_name] = params.pop("enable")
+                                logger.info("DEBUG setSandboxMode: normalized enable->%s", actual_name)
 
                     if method.startswith("watch_"):
                         await self._handle_watch_method(method, ccxt_method, params, subscription_id, request_id)

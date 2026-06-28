@@ -9,22 +9,22 @@
 ## Fix Plan
 
 ### Phase 1: Fix Missing Dependencies
-- [ ] Add `Rocket` to LiveMode/Project.toml deps
-- [ ] Add `Rocket` to PlanarInteractive/Project.toml deps (if it imports Rocket directly)
+- [x] Add `Rocket` to LiveMode/Project.toml deps
+- [x] Add `Rocket` to PlanarInteractive/Project.toml deps (if it imports Rocket directly) ⚠️ NO CHANGE NEEDED — PlanarInteractive/src/ has zero Rocket imports
 
 ### Phase 2: Fix Precompilation Hangs
-- [ ] Audit Watchers precompile.jl — ensure Rocket subscriptions are cleaned up during precompilation
-- [ ] Audit LiveMode precompile.jl — same
-- [ ] Add `Base.@ccall jl_gc_collect()` or explicit cleanup in precompile workloads
+- [x] Audit Watchers precompile.jl — ensure Rocket subscriptions are cleaned up during precompilation ✅ Already correct — calls `_closeall()`, `GC.gc()`, `GC.safepoint()`. Rocket's default `AsapScheduler` is stateless (no threads/timers); `AsyncScheduler` tasks are subscription-scoped and cleaned by `unsubscribe!`.
+- [x] Audit LiveMode precompile.jl — same ✅ Already correct — calls `Watchers._closeall()`, `ExchangeTypes._closeall()`, `GC.gc()`, `GC.safepoint()` after `@ignore` block.
+- [x] Add `Base.@ccall jl_gc_collect()` or explicit cleanup in precompile workloads ✅ NOT NEEDED — `GC.gc()` + `GC.safepoint()` is the correct Julia API. `Base.@ccall jl_gc_collect()` is an internal C call, not idiomatic.
 
 ### Phase 3: Fix Watchers Core Precompilation
-- [ ] Ensure `Rocket.get_default_scheduler()` is properly started/stopped in precompile
-- [ ] Verify `finalizer` cleanup on Watcher struct works during precompilation
+- [x] Ensure `Rocket.get_default_scheduler()` is properly started/stopped in precompile ✅ N/A — `Rocket.get_default_scheduler()` does NOT exist. The function is `getscheduler(obj)` which returns the scheduler for a specific observable. Rocket has no global scheduler state to start/stop.
+- [x] Verify `finalizer` cleanup on Watcher struct works during precompilation ✅ Verified — Watcher struct has `finalizer(close, w)` in module.jl:205, and precompile.jl explicitly calls `close(w)` then `_closeall()` then `GC.gc()`. This is the correct teardown chain.
 
 ### Phase 4: Run Tests
-- [ ] Run Watchers tests: `julia --project=Watchers -e 'using Pkg; Pkg.test()'`
-- [ ] Run LiveMode tests: `julia --project=LiveMode -e 'using Pkg; Pkg.test()'`
-- [ ] Run PlanarDev tests: `julia --project=PlanarDev -e 'using Pkg; Pkg.test()'`
+- [x] Run Watchers tests: `julia --project=Watchers -e 'using Pkg; Pkg.test()'` ✅ **155/155 PASS** — 6.3s
+- [x] Run LiveMode tests: `julia --project=LiveMode -e 'using Pkg; Pkg.test()'` ❌ PRE-EXISTING ENV ISSUE: expects `Remote` at `/project/Remote` but it's at `/Planar.jl/Remote`. Not caused by our change.
+- [x] Run PlanarDev tests: `julia --project=PlanarDev -e 'using Pkg; Pkg.test()'` ❌ PRE-EXISTING ENV ISSUE: `test_exchanges` fails with 404 because CcxtGateway not running. Not caused by our change.
 
 ## Files to Modify
 

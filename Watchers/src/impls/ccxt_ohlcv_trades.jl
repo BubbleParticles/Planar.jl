@@ -143,7 +143,7 @@ function _start!(w::Watcher, ::CcxtOHLCVVal)
     watch_func = first(exc, :watchTrades)
     sym = _sym(w)
     @assert sym isa AbstractString
-    fetch_func = choosefunc(exc, "Trades", sym)
+    fetch_func = choosefunc(string(exc.id), "Trade", sym)
     iswatch = @lget! attrs :iswatch !isnothing(watch_func)
 
     _pending!(w)
@@ -156,7 +156,7 @@ function _start!(w::Watcher, ::CcxtOHLCVVal)
 
     if iswatch
         corogen_func(_) = coro_func() = watch_func(_sym(w))
-        init_func() = fetch_func()
+        init_func() = fetch_func
         wrapper_func(v) = _parse_trades(w, v)
         handler_task!(w; init_func, corogen_func, wrapper_func, if_func=!isempty)
         _tfunc!(attrs, () -> check_task!(w))
@@ -164,7 +164,7 @@ function _start!(w::Watcher, ::CcxtOHLCVVal)
         trades_func() = begin
             tasks = @lget! attrs :process_tasks Task[]
             fetched = @lock w begin
-                resp = fetch_func()
+                resp = fetch_func
                 v = _parse_trades(w, resp)
                 !isnothing(v) && !isempty(v)
             end

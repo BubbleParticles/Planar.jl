@@ -295,7 +295,7 @@ function Base.wait(w::Watcher, timeout::Period, b=:fetch)
     subject = getproperty(w.beacon, b)
     cond = Threads.Condition()
     sub = Rocket.subscribe!(subject, Rocket.Actor(on_next = _ -> notify(cond)))
-    slept = waitforcond(cond, timeout)
+    slept = Lang.waitforcond(cond, timeout)
     Rocket.unsubscribe!(sub)
     slept < Millisecond(timeout).value
 end

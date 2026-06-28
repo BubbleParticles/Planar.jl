@@ -1,0 +1,35 @@
+{
+  "schema_version": 2,
+  "active_work_id": "fix-watcher-bugs-498474d4",
+  "works": {
+    "fix-watcher-bugs-498474d4": {
+      "work_id": "fix-watcher-bugs-498474d4",
+      "active_plan": "/Planar.jl/.omo/plans/fix-watcher-bugs.md",
+      "plan_name": "fix-watcher-bugs",
+      "status": "active",
+      "started_at": "2026-06-28T06:27:57.002Z",
+      "updated_at": "2026-06-28T06:27:57.002Z",
+      "session_ids": [
+        "opencode:ses_0f6a1a0acffeFXxHOw8lQctDxi"
+      ],
+      "session_origins": {
+        "opencode:ses_0f6a1a0acffeFXxHOw8lQctDxi": "direct"
+      },
+      "agent": "atlas",
+      "task_sessions": {}
+    }
+  },
+  "active_plan": "/Planar.jl/.omo/plans/fix-watcher-bugs.md",
+  "started_at": "2026-06-28T06:27:57.002Z",
+  "status": "active",
+  "updated_at": "2026-06-28T06:27:57.002Z",
+  "session_ids": [
+    "opencode:ses_0f6a1a0acffeFXxHOw8lQctDxi"
+  ],
+  "session_origins": {
+    "opencode:ses_0f6a1a0acffeFXxHOw8lQctDxi": "direct"
+  },
+  "plan_name": "fix-watcher-bugs",
+  "task_sessions": {},
+  "agent": "atlas"
+}

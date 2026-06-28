@@ -66,6 +66,10 @@ function _suffix_to_methods(suffix::String)
         return ("fetchOHLCVs", "fetchOHLCV", "fetchOHLCVsWs", "fetchOHLCVWs")
     elseif suffix == "Order"
         return ("fetchOrders", "fetchOrder", "fetchOrdersWs", "fetchOrderWs")
+    elseif suffix == "L1OrderBook"
+        return ("fetchL1OrderBooks", "fetchL1OrderBook", "fetchL1OrderBooksWs", "fetchL1OrderBookWs")
+    elseif suffix == "L2OrderBook"
+        return ("fetchL2OrderBooks", "fetchL2OrderBook", "fetchL2OrderBooksWs", "fetchL2OrderBookWs")
     elseif suffix == "Balance"
         return ("fetchBalances", "fetchBalance", "fetchBalancesWs", "fetchBalanceWs")
     else
@@ -100,6 +104,9 @@ function _out_as_input(inputs, data; elkey=nothing)
         end
     elseif data isa Dict
         return Dict(i => data[i] for i in inputs if haskey(data, i))
+    elseif data isa JSON3.Object
+        d = Dict{String, Any}(string(k) => v for (k, v) in pairs(data))
+        return Dict(i => d[i] for i in inputs if haskey(d, i))
     else
         return Dict(i => data for i in inputs)
     end

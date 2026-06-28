@@ -14,12 +14,13 @@
 using Watchers
 using Watchers.WatchersImpls: ccxt_ohlcv_watcher
 using Watchers.Misc.TimeTicks
+using Exchanges
 
 # ── Exchange setup (requires CcxtGateway) ──────────────────────────
 ccxt_available = false
 try
     using Watchers.Fetch.Exchanges: Exchange
-    global exchange = Exchange("binance")
+    global exchange = getexchange!(:binance)
     global ccxt_available = true
     println("✓ Connected to CcxtGateway.")
 catch e
