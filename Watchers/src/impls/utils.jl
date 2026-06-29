@@ -42,7 +42,10 @@ function _convert_fees(v)
     if v isa Union{Dict, JSON3.Object}
         cost = get(v, "cost", nothing)
         currency = get(v, "currency", nothing)
-        (; cost=something(cost, nothing), currency=something(currency, nothing))
+        # `something(cost, nothing)` crashes with ArgumentError when both
+        # arguments are nothing/missing. Use a tiny helper to normalize.
+        _nf(x) = x === nothing || x === missing ? nothing : x
+        (; cost=_nf(cost), currency=_nf(currency))
     elseif isnothing(v)
         nothing
     elseif v isa Number
