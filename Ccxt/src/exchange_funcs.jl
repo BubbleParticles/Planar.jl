@@ -120,12 +120,18 @@ function choosefunc(exchange_id::String, suffix::String, inputs::AbstractVector;
     
     if hasinputs
         if kind == :multi
+            # Build params dict, always using body= to preserve JSON types
+            # (lists stay lists, booleans stay booleans — unlike query= which stringifies)
+            params = Dict{String,Any}(string(k) => v for (k, v) in kwargs)
+            if suffix == "Ticker"
+                # fetchTickers takes `symbols` (optional list of strings)
+                params["symbols"] = [string(i) for i in inputs]
+            else
+                # fetchTrades, fetchOHLCV, fetchOrderBook etc. take `symbol` (single string)
+                params["symbol"] = string(first(inputs))
+            end
             data = try
-                if is_fetch && !isempty(kwargs)
-                    CcxtGateway.call_exchange(client, exchange_id, method; body=Dict("params" => kwargs))
-                else
-                    CcxtGateway.call_exchange(client, exchange_id, method; kwargs...)
-                end
+                CcxtGateway.call_exchange(client, exchange_id, method; body=params)
             catch e
                 @warn "choosefunc: gateway call to $exchange_id.$method failed" exception=(e, catch_backtrace())
                 return nothing
