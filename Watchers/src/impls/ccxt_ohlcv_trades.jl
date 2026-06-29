@@ -196,8 +196,6 @@ function _parse_trades(w, pytrades)
         new_trades = [
             fromdict(CcxtTrade, String, py, _wkey, _wconvert) for py in this_trades
         ]
-        Main.tr = new_trades
-        Main.wtr = _trades(w)
         append!(_trades(w), new_trades)
         last_date = last(new_trades).timestamp
         _lastpushed!(w, last_date)
