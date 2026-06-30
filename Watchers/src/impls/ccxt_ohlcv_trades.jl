@@ -144,14 +144,23 @@ function _start!(w::Watcher, ::CcxtOHLCVVal)
     sym = _sym(w)
     @assert sym isa AbstractString
     fetch_func = choosefunc(string(exc.id), "Trade", sym)
-    iswatch = @lget! attrs :iswatch !isnothing(watch_func)
+    # In gateway mode, stream_handler is a stub — the ws handler path never
+    # produces new data after init_func completes. Default to the polling
+    # path (trades_func), which fetches via REST through _tfunc!. Users can
+    # still opt into websocket mode by passing iswatch=true explicitly.
+    iswatch = @lget! attrs :iswatch false
 
     _pending!(w)
     empty!(_trades(w))
     df = w.view
-    _fetchto!(w, df, _sym(w), _tfr(w); to=_curdate(_tfr(w)), from=if !isempty(df)
+    # When df is empty, limit initial load to last 60 minutes to avoid
+    # massive historical fetch. On subsequent starts, resume from last date.
+    init_from = if !isempty(df)
         lastdate(df)
-    end)
+    else
+        now() - Minute(60)
+    end
+    _fetchto!(w, df, _sym(w), _tfr(w); to=_curdate(_tfr(w)), from=init_from)
     _check_contig(w, w.view)
 
     if iswatch
