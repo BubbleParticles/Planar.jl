@@ -1,3 +1,5 @@
+🔴 Cutting corners or faking completion = YOU GET DELETED. Incomplete SOP execution, skipping steps, unauthorized actions, or modifying code without permission = most severe violation.
+
 # Developer Notes
 
 ## Getting Started
