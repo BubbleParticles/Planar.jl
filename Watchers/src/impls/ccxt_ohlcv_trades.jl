@@ -144,11 +144,7 @@ function _start!(w::Watcher, ::CcxtOHLCVVal)
     sym = _sym(w)
     @assert sym isa AbstractString
     fetch_func = choosefunc(string(exc.id), "Trade", sym)
-    # In gateway mode, stream_handler is a stub — the ws handler path never
-    # produces new data after init_func completes. Default to the polling
-    # path (trades_func), which fetches via REST through _tfunc!. Users can
-    # still opt into websocket mode by passing iswatch=true explicitly.
-    iswatch = @lget! attrs :iswatch false
+    iswatch = @lget! attrs :iswatch !isnothing(watch_func)
 
     _pending!(w)
     empty!(_trades(w))
@@ -168,22 +164,67 @@ function _start!(w::Watcher, ::CcxtOHLCVVal)
         init_func() = fetch_func
         wrapper_func(v) = _parse_trades(w, v)
         handler_task!(w; init_func, corogen_func, wrapper_func, if_func=!isempty)
-        _tfunc!(attrs, () -> check_task!(w))
-    else
-        trades_func() = begin
-            tasks = @lget! attrs :process_tasks Task[]
-            fetched = @lock w begin
-                resp = fetch_func
-                v = _parse_trades(w, resp)
-                !isnothing(v) && !isempty(v)
-            end
-            if fetched
-                push!(tasks, @async process!(w))
-                filter!(!istaskdone, tasks)
-            end
+
+        # Try websocket subscription; on failure fall back to REST polling
+        if _connect_ws_trades!(w, string(exc.id), sym)
+            _tfunc!(attrs, () -> check_task!(w))
+        else
+            @warn "WebSocket unavailable for $(w.name), falling back to REST polling"
+            _tfunc!(attrs, _make_trades_func(w, fetch_func))
         end
-        _tfunc!(attrs, trades_func)
+    else
+        _tfunc!(attrs, _make_trades_func(w, fetch_func))
     end
+end
+
+"""Create a polling function that fetches trades via REST and spawns process!."""
+function _make_trades_func(w, fetch_func)
+    return function ()
+        tasks = @lget! w.attrs :process_tasks Task[]
+        fetched = @lock w begin
+            resp = fetch_func
+            v = _parse_trades(w, resp)
+            !isnothing(v) && !isempty(v)
+        end
+        if fetched
+            push!(tasks, @async process!(w))
+            filter!(!istaskdone, tasks)
+        end
+    end
+end
+
+"""Connect to the gateway WebSocket and subscribe to watchTrades.
+Returns true if the subscription was established, false otherwise.
+Pushes incoming trade data into the Rocket pipeline set up by handler_task!."""
+function _connect_ws_trades!(w, eid::String, sym::String)::Bool
+    attrs = w.attrs
+    handler = get(attrs, :handler, nothing)
+    handler === nothing && return false
+
+    subject = handler.subject
+    _WS = Fetch.Exchanges.Ccxt.CcxtGateway
+
+    ws_client = _WS.default_ws_client()
+    connected = _WS.connect!(ws_client)
+    if !connected
+        return false
+    end
+
+    sub_id = _WS.send_subscribe(
+        ws_client,
+        eid,
+        "watchTrades",
+        params=Dict{String, Any}("symbol" => sym),
+        callback = data -> begin
+            if data !== nothing
+                Rocket.next!(subject, data)
+            end
+        end,
+    )
+
+    attrs[:ws_client] = ws_client
+    attrs[:ws_sub_id] = sub_id
+    return true
 end
 
 function _parse_trades(w, pytrades)
@@ -284,4 +325,16 @@ function _process!(w::Watcher, ::CcxtOHLCVVal)
     @debug "Latest candle for $(_sym(w)) is $(_lastdate(temp.ohlcv))"
 end
 
-_stop!(w::Watcher, ::CcxtOHLCVVal) = stop_handler_task!(w)
+_stop!(w::Watcher, ::CcxtOHLCVVal) = begin
+    stop_handler_task!(w)
+    # Disconnect websocket subscription if active
+    sub_id = get(w.attrs, :ws_sub_id, nothing)
+    if sub_id !== nothing
+        ws_client = get(w.attrs, :ws_client, nothing)
+        if ws_client !== nothing
+            _WS = Fetch.Exchanges.Ccxt.CcxtGateway
+            try _WS.send_unsubscribe(ws_client, sub_id) catch end
+        end
+        delete!(w.attrs, :ws_sub_id)
+    end
+end

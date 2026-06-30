@@ -21,9 +21,6 @@ using ..Data.DFUtils: appendmax!, prependmax!, pushmax!
 using ..Data.DataFrames
 using ..Fetch.Processing
 using Base: Semaphore
-macro py(expr)
-    esc(expr)
-end
 using ..CoinGecko: CoinGecko as cg
 using ..CoinPaprika: CoinPaprika as cp
 

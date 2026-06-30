@@ -81,7 +81,7 @@ Your next move: **Approve** this plan. Full execution detail follows below.
   QA scenarios: (happy) Load WatchersImpls module. (regression) Run existing Watchers test suite. Evidence: `.omo/evidence/fix-watcher-bugs/task2-py-macro.txt`
   Commit: Y | `fix(Watchers): Fix @py stub macro hygiene with esc()`
 
-- [ ] 3. Fix `buffer_capacity=0` in ccxt_average_ohlcv_watcher
+- [x] 3. Fix `buffer_capacity=0` in ccxt_average_ohlcv_watcher
   What to do / Must NOT do: Change `buffer_capacity=0` to `buffer_capacity=1` on line 129 of `ccxt_average_ohlcv_watcher.jl`. Must NOT change any other line. The comment "Average watcher does not buffer" is correct but capacity=1 is the minimum valid value for CircularBuffer.
   Parallelization: Wave 1 | Blocked by: none | Blocks: 6, 7
   References: `/Planar.jl/Watchers/src/impls/ccxt_average_ohlcv_watcher.jl:129`
@@ -89,7 +89,7 @@ Your next move: **Approve** this plan. Full execution detail follows below.
   QA scenarios: (happy) Create watcher successfully. (regression) Verify watcher creation with other watchers still works. Evidence: `.omo/evidence/fix-watcher-bugs/task3-buffer-capacity.txt`
   Commit: Y | `fix(Watchers): Fix buffer_capacity=0 → 1 in ccxt_average_ohlcv_watcher`
 
-- [ ] 4. Fix CoinGecko ticker parsing for null Float64 fields
+- [x] 4. Fix CoinGecko ticker parsing for null Float64 fields
   What to do / Must NOT do: Fix the `fromdict` generated function in `Lang/src/module.jl` to handle `Union{Nothing, T}` fields by using `get(di, key, nothing)` instead of direct indexing, or alternatively pre-process the CoinGecko API response in `cg_ticker.jl` to replace `nothing` with `0.0` for numeric fields. The fix must handle the case where the CoinGecko API returns `null` for fields like `fully_diluted_valuation` that are declared as `Option{Float64}` (= `Union{Nothing, Float64}`) in the `CgTick` NamedTuple.
   
   **Approach (recommended)**: Modify `fromdict` to use `get(di, key, nothing)` with fallback to `nothing` for missing keys, and skip `convert` for `Union{Nothing, T}` fields where the value is `nothing`. This is the generic fix that handles all `Option{T}` fields across the codebase.
@@ -104,7 +104,7 @@ Your next move: **Approve** this plan. Full execution detail follows below.
   QA scenarios: (happy) Fetch CoinGecko ticker data without error. (failure) If CoinGecko API is unavailable, handle gracefully. Evidence: `.omo/evidence/fix-watcher-bugs/task4-cg-ticker.txt`
   Commit: Y | `fix(Watchers): Handle null Float64 fields in CoinGecko ticker parsing`
 
-- [ ] 5. Fix CoinPaprika markets parsing for Symbol keys
+- [x] 5. Fix CoinPaprika markets parsing for Symbol keys
   What to do / Must NOT do: In `cp_markets.jl` `_fetch!`, convert Symbol keys in the CoinPaprika API response dict to String keys before calling `fromdict`. Add a helper `_stringify_keys(dict)` that converts all keys to strings.
   
   Alternative: Modify `fromdict` to handle Symbol keys generically in the `kconvfunc` path.
@@ -117,7 +117,7 @@ Your next move: **Approve** this plan. Full execution detail follows below.
   QA scenarios: (happy) Fetch CoinPaprika markets data without error. (failure) If CoinPaprika API is unavailable, handle gracefully. Evidence: `.omo/evidence/fix-watcher-bugs/task5-cp-markets.txt`
   Commit: Y | `fix(Watchers): Handle Symbol dict keys in CoinPaprika markets parsing`
 
-- [ ] 6. Run unit tests after all fixes
+- [x] 6. Run unit tests after all fixes
   What to do: Run the complete test suites for Watchers, Ccxt, and Lang packages to ensure no regressions from the 5 fixes.
   Parallelization: Wave 2 | Blocked by: 1, 2, 3, 4, 5 | Blocks: 7
   References: `/Planar.jl/Watchers/test/runtests.jl`, `/Planar.jl/Ccxt/test/runtests.jl`
@@ -125,7 +125,7 @@ Your next move: **Approve** this plan. Full execution detail follows below.
   QA scenarios: Run `julia --project=Watchers -e 'using Pkg; Pkg.test()'`, `julia --project=Ccxt -e 'using Pkg; Pkg.test()'`. Evidence: `.omo/evidence/fix-watcher-bugs/task6-unit-tests.txt`
   Commit: N (part of commit strategy grouping)
 
-- [ ] 7. End-to-end validation of all fixed watchers
+- [x] 7. End-to-end validation of all fixed watchers
   What to do / Must NOT do: Run each example file against real CcxtGateway (Binance) or live API (CoinGecko, CoinPaprika). Verify for each watcher: (a) buffer populates, (b) no errors in `w._exec.errors`, (c) view populates correctly. Must NOT require human intervention.
   
   Watchers to validate:
@@ -148,10 +148,10 @@ Your next move: **Approve** this plan. Full execution detail follows below.
 
 ## Final verification wave
 > Runs in parallel after ALL todos. ALL must APPROVE. Surface results and wait for the user's explicit okay before declaring complete.
-- [ ] F1. Plan compliance audit — verify only planned files were changed, no scope creep
-- [ ] F2. Code quality review — verify changes are minimal and correct
-- [ ] F3. Real manual QA — verify the watchers work end-to-end by running example files
-- [ ] F4. Scope fidelity — verify Must NOT have items were respected
+- [x] F1. Plan compliance audit — verify only planned files were changed, no scope creep
+- [x] F2. Code quality review — verify changes are minimal and correct
+- [x] F3. Real manual QA — verify the watchers work end-to-end by running example files
+- [x] F4. Scope fidelity — verify Must NOT have items were respected
 
 ## Commit strategy
 - **Commit 1**: `fix(Ccxt): Add L1OrderBook/L2OrderBook to _suffix_to_methods` (todo 1)

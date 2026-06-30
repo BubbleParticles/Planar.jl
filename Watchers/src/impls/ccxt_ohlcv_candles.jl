@@ -209,7 +209,7 @@ function _reset_candles_func!(w)
     if has(exc, :watchOHLCVForSymbols)
         watch_func = exc.watchOHLCVForSymbols
         wrapper_func = _update_ohlcv_func(w)
-        syms = [@py([sym, tf_str]) for sym in ids]
+        syms = [[sym, tf_str] for sym in ids]
         corogen_func = (_) -> coro_func() = watch_func(syms)
         handler_task!(w; init_func, corogen_func, wrapper_func, if_func=!isemptish)
         _tfunc!(attrs, () -> check_task!(w))
