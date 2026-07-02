@@ -1,17 +1,37 @@
 import Rocket
-using ..Data: df!, _contiguous_ts, nrow, save_ohlcv, zi, check_all_flag, snakecased
+using ..Data: df!, _contiguous_ts, nrow, save_ohlcv, zi, check_all_flag, snakecased, empty_ohlcv
 using ..Data.DFUtils: firstdate, lastdate, copysubs!, addcols!
 using ..Data.DataFramesMeta
 
+using ..Fetch
 using ..Fetch.Exchanges: Exchange, account, getexchange!, FeesType, DFT, TradeSide, TradeRole
 using ..TimeTicks: dt
 using ..Fetch.Exchanges.Ccxt: _multifunc
 using ..Fetch: fetch_candles
 using ..Lang
-using ..Misc: rangeafter, rangebetween
+using ..Misc: rangeafter, rangebetween, rangebefore
 using ..Fetch.Processing: cleanup_ohlcv_data, iscomplete, isincomplete, upsample
 using ..Watchers: logerror
 using ..Watchers: JSON3
+
+"""Start the gateway exchange subprocess if not already started, and wait for it to be ready."""
+function _start_gateway_exchange(eid::String)
+    client = Fetch.Exchanges.Ccxt.CcxtGateway.default_client()
+    try
+        Fetch.Exchanges.Ccxt.CcxtGateway.Rest.start_exchange(client, eid)
+    catch e
+        @debug "start_exchange for $eid" exception=(e, catch_backtrace())
+    end
+    # Wait for exchange to be ready (has dict populated)
+    for _ in 1:30
+        try
+            Fetch.Exchanges.Ccxt.CcxtGateway.Rest.exchange_ready(client, eid) && return
+        catch
+        end
+        sleep(0.5)
+    end
+    @warn "Exchange $eid may not be fully ready; has dict could be incomplete"
+end
 
 # JSON3-aware converters for fromdict (gateway data)
 _wconvert(::Type{DateTime}, v) = dt(Int(v))
@@ -331,6 +351,12 @@ function _fastforward(w, sym=_sym(w))
 end
 
 function _fetch_candles(w, from, to="", sym=_sym(w); tf=_tfr(w))
+    diff_str = if to isa DateTime && from isa DateTime
+        "$(to - from) vs prd=$(period(tf)) (diff>prd=$(to - from > period(tf)))"
+    else
+        "non-DateTime args"
+    end
+    @debug "_fetch_candles called" sym tf from to diff=diff_str maxlog=10
     fetch_candles(_exc(w), tf, sym; from, to)
 end
 
@@ -418,16 +444,42 @@ function _fetchto!(w, df, sym, tf, op=Val(:append); to, from=nothing, allow_upsa
     end
     from = @something from _from(df, to, tf, w.capacity.view, op)
     diff = (to - from)
+    @debug "fetchto! decision" diff prd from to diff_gt_prd=diff > prd diff_eq_prd=diff == prd to_lt_curdate=to < _curdate(tf) maxlog=10
     if diff > prd || (diff == prd && to < _curdate(tf))
+        # GUARD: if diff is somehow still < prd (defense in depth), bail out
+        if diff < prd
+            @debug "fetchto!: GUARD CAUGHT sub-period fetch (diff=$diff < prd=$prd, from=$from, to=$to, tf=$tf)" maxlog=10
+            return true
+        end
         load_tf = attr(w, k"load_timeframe", tf)
         use_upsample = allow_upsample && (load_tf != tf) && (timefloat(load_tf.period) % timefloat(tf.period) == 0)
         candles = if use_upsample
             raw_candles = _fetch_candles(w, from, to, sym; tf=load_tf)
-            upsample(raw_candles, load_tf, tf)
+            # Last-mile strategy: only upsample COMPLETE load_tf periods.
+            # The current incomplete period (e.g. current hour for 1h) is
+            # fetched directly at native tf — no fake data from upsampling
+            # a partial candle.
+            _last_mile_boundary = apply(load_tf, now())
+            _complete = isempty(raw_candles) ? empty_ohlcv() :
+                let cr = rangebefore(raw_candles.timestamp, _last_mile_boundary)
+                    isempty(cr) ? empty_ohlcv() :
+                        upsample(view(raw_candles, cr, :), load_tf, tf)
+                end
+            result = if _last_mile_boundary < to
+                _lm = _fetch_candles(w, max(from, _last_mile_boundary), to, sym; tf=tf)
+                isempty(_lm) ? _complete : vcat(_complete, _lm)
+            else
+                _complete
+            end
+            result
         else
             _fetch_candles(w, from, to, sym; tf=nrow(df) < 2 ? tf : timeframe!(df))
         end
         from_to_range = rangebetween(candles.timestamp, from, to)
+        if isempty(from_to_range) && !isempty(candles)
+            @debug "watchers fetchto!: all fetched data ≤ from, already caught up" tf from to nrows=nrow(candles)
+            return true
+        end
         isempty(from_to_range) && _fetch_error(w, from, to, sym)
         @debug "watchers fetchto!: " to _lastdate(candles) from _firstdate(candles) length(
             from_to_range
@@ -446,6 +498,10 @@ function _fetchto!(w, df, sym, tf, op=Val(:append); to, from=nothing, allow_upsa
             @view(cleaned[rangebetween(cleaned.timestamp, from, to), :]); copycols=false
         )
         if isempty(cleaned)
+            if diff < prd
+                @debug "watchers fetchto!: empty result due to sub-period range, treating as success" tf from to diff prd
+                return true
+            end
             return false
         end
         @debug "watchers fetchto!: " firstdate(cleaned) lastdate(cleaned)
@@ -481,8 +537,8 @@ The waiting period increases with each failed attempt.
 """
 function _sticky_fetchto!(args...; kwargs...)
     backoff = 0.5
-    max_backoff = 60.0
-    for _ in 1:120
+    max_backoff = 30.0
+    for _ in 1:20
         _fetchto!(args...; kwargs...) && return true
         sleep(backoff)
         backoff = min(backoff + 0.5, max_backoff)

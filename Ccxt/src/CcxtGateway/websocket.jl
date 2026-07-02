@@ -48,15 +48,15 @@ Base.show(io::IO, client::GatewayWSClient) = print(io, "GatewayWSClient($(client
 
 """Run the read loop for an established WebSocket connection."""
 function _run_read_loop(client::GatewayWSClient, ws)
-    while isopen(ws)
+    while !HTTP.WebSockets.isclosed(ws)
         try
-            msg = read(ws)
-            data = JSON3.read(String(msg))
+            msg = HTTP.WebSockets.receive(ws)
+            data = JSON3.read(msg)
             _dispatch_message(client, data)
         catch e
             if e isa EOFError
                 break  # clean close
-            elseif isopen(ws)
+            elseif !HTTP.WebSockets.isclosed(ws)
                 @error "WebSocket read error" exception = (e, catch_backtrace())
             else
                 break
@@ -98,7 +98,7 @@ function connect!(client::GatewayWSClient)
     if is_connected(client)
         return true
     end
-    if client.task !== nothing && istaskrunning(client.task)
+    if client.task !== nothing && istaskstarted(client.task) && !istaskdone(client.task)
         return true
     end
 
@@ -157,7 +157,7 @@ Check whether the WebSocket connection is active.
 """
 function is_connected(client::GatewayWSClient)
     ws = get(client.subscriptions, "_ws_conn", nothing)
-    ws !== nothing && isopen(ws)
+    ws !== nothing && !HTTP.WebSockets.isclosed(ws)
 end
 
 """
@@ -170,7 +170,7 @@ function send_message(client::GatewayWSClient, message::Dict{String, Any})
     if ws === nothing
         error("WebSocket not connected")
     end
-    write(ws, JSON3.write(message))
+    HTTP.WebSockets.send(ws, JSON3.write(message))
 end
 
 """
