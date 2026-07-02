@@ -32,6 +32,7 @@ function ccxt_ohlcv_candles_watcher(
     callback=Returns(nothing),
     load_timeframe=default_load_timeframe(timeframe),
     load_path=nothing,
+    iswatch=false,
     kwargs...,
 )
     a = Dict{Symbol,Any}()
@@ -40,6 +41,7 @@ function ccxt_ohlcv_candles_watcher(
     a[k"excparams"] = Dict{String,Any}()
     a[k"excaccount"] = account(exc)
     a[k"ohlcv_method"] = :candles
+    a[:iswatch] = iswatch
     @setkey! a exc
     @setkey! a default_view
     @setkey! a timeframe
@@ -206,28 +208,24 @@ function _reset_candles_func!(w)
             )
         end
     end
-    if has(exc, :watchOHLCVForSymbols)
-        watch_func = exc.watchOHLCVForSymbols
+    # Check if user explicitly requested WebSocket mode
+    iswatch = get(attrs, :iswatch, false)
+    watch_func = first(exc, :watchOHLCVForSymbols)
+    if iswatch && watch_func !== nothing
         wrapper_func = _update_ohlcv_func(w)
         syms = [[sym, tf_str] for sym in ids]
         corogen_func = (_) -> coro_func() = watch_func(syms)
         handler_task!(w; init_func, corogen_func, wrapper_func, if_func=!isemptish)
-        _tfunc!(attrs, () -> check_task!(w))
-    elseif has(exc, :watchOHLCV)
-        w[:handlers] = Dict{String,WatcherHandler2}()
-        watch_func = exc.watchOHLCV
-        syms = [(sym, tf) for sym in ids]
-        for sym in ids
-            wrapper_func = _update_ohlcv_func_single(w, sym)
-            corogen_func = (_) -> coro_func() = watch_func(sym; timeframe=tf_str)
-            handler_task!(w, sym; init_func, corogen_func, wrapper_func, if_func=!isemptish)
+
+        # Try websocket subscription; on failure fall back to REST polling
+        if _connect_ws_ohlcv!(w, string(exc.id), syms)
+            _tfunc!(attrs, () -> check_task!(w))
+        else
+            @warn "WebSocket unavailable for $(w.name), falling back to REST polling"
+            _tfunc!(attrs, _make_candles_func(w))
         end
-        check_all_handlers() = all(check_task!(w, sym) for sym in ids)
-        _tfunc!(attrs, check_all_handlers)
     else
-        error(
-            "ohlcv (candles) watcher only works with exchanges that support `watchOHLCVforSymbols` functions",
-        )
+        _tfunc!(attrs, _make_candles_func(w))
     end
 end
 
@@ -381,4 +379,63 @@ function _update_ohlcv_func_single(w, sym)
             snap
         end
     end
+end
+
+"""Create a polling function that fetches candles via REST and spawns process!."""
+function _make_candles_func(w)
+    return function ()
+        tasks = @lget! w.attrs :process_tasks Task[]
+        fetched = @lock w begin
+            for sym in _ids(w)
+                state = w.symstates[sym]
+                @lock state.lock begin
+                    df = w.view[sym]
+                    if !isempty(df)
+                        to = _curdate(_tfr(w))
+                        from = lastdate(df) + _tfr(w)
+                        _sticky_fetchto!(w, df, sym, _tfr(w); to=to, from=from)
+                    end
+                end
+            end
+            true
+        end
+        if fetched
+            push!(tasks, @async process!(w))
+            filter!(!istaskdone, tasks)
+        end
+    end
+end
+
+"""Connect to the gateway WebSocket and subscribe to watchOHLCVForSymbols.
+Returns true if the subscription was established, false otherwise.
+Pushes incoming OHLCV data into the Rocket pipeline set up by handler_task!."""
+function _connect_ws_ohlcv!(w, eid::String, syms::Vector)::Bool
+    attrs = w.attrs
+    handler = get(attrs, :handler, nothing)
+    handler === nothing && return false
+
+    subject = handler.subject
+    _WS = Fetch.Exchanges.Ccxt.CcxtGateway
+
+    ws_client = _WS.default_ws_client()
+    connected = _WS.connect!(ws_client)
+    if !connected
+        return false
+    end
+
+    sub_id = _WS.send_subscribe(
+        ws_client,
+        eid,
+        "watchOHLCVForSymbols",
+        params=Dict{String, Any}("symbols" => [s[1] for s in syms], "timeframe" => string(_tfr(w))),
+        callback = data -> begin
+            if data !== nothing
+                Rocket.next!(subject, data)
+            end
+        end,
+    )
+
+    attrs[:ws_client] = ws_client
+    attrs[:ws_sub_id] = sub_id
+    return true
 end

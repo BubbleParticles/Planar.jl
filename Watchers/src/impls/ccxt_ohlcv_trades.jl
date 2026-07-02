@@ -53,9 +53,7 @@ function ccxt_ohlcv_watcher(
     attrs[:default_view] = default_view
     attrs[:quiet] = quiet
     attrs[k"ohlcv_method"] = :trades
-    if !isnothing(iswatch)
-        attrs[:iswatch] = iswatch
-    end
+    attrs[:iswatch] = something(iswatch, false)
     attrs[:issandbox] = issandbox(exc)
     attrs[:excparams] = Dict{String,Any}()
     attrs[:excaccount] = account(exc)
@@ -119,7 +117,18 @@ function _init!(w::Watcher, ::CcxtOHLCVVal)
     _lastflushed!(w, DateTime(0))
 end
 
-_load!(w::Watcher, ::CcxtOHLCVVal) = _fastforward(w)
+_load!(w::Watcher, ::CcxtOHLCVVal) = begin
+    # Spawn initial fast-forward as async task to avoid blocking watcher startup.
+    # The _start! function will also fetch recent data (last 60 min) synchronously.
+    @async begin
+        try
+            _fastforward(w)
+        catch e
+            @error "Initial fast-forward failed for $(w.name)" exception=(e, catch_backtrace())
+        end
+    end
+    nothing
+end
 
 @doc """ Starts the watcher and fetches data
 
@@ -139,22 +148,45 @@ function _start!(w::Watcher, ::CcxtOHLCVVal)
     )
     _exc!(attrs, exc)
 
+    # Ensure the gateway exchange subprocess is started so its `has` dict is populated.
+    # Without this, `issupported` checks in `choosefunc` will fail (empty has dict).
+    _start_gateway_exchange(string(exc.id))
+
     # TODO: Make watcher multi symbol compatible
     watch_func = first(exc, :watchTrades)
     sym = _sym(w)
     @assert sym isa AbstractString
-    fetch_func = choosefunc(string(exc.id), "Trade", sym)
-    iswatch = @lget! attrs :iswatch !isnothing(watch_func)
+    iswatch = get(attrs, :iswatch, false)
+
+    # Bypass choosefunc for REST trades — it may select a WebSocket method (Gotcha #36).
+    # Direct call_exchange with known REST method fetchTrades avoids 30s blocking.
+    _GW = Fetch.Exchanges.Ccxt.CcxtGateway
+    fetch_func = function ()
+        c = _GW.default_client()
+        r = _GW.call_exchange(c, string(exc.id), "fetchTrades"; body=Dict("symbol" => sym))
+        return Dict(sym => r)
+    end
 
     _pending!(w)
     empty!(_trades(w))
     df = w.view
-    # When df is empty, limit initial load to last 60 minutes to avoid
-    # massive historical fetch. On subsequent starts, resume from last date.
+    # When df is empty, fetch sensible history based on timeframe:
+    # 1m+ → 1 day, 1h+ → 1 week, 1d+ → 1 month, longer → 6 months
     init_from = if !isempty(df)
         lastdate(df)
     else
-        now() - Minute(60)
+        p = period(_tfr(w))
+        if isa(p, Minute) && p.value <= 5
+            now() - Day(1)      # ≤5min timeframe → 1 day
+        elseif isa(p, Minute)
+            now() - Day(7)      # >5min, ≤60min → 1 week
+        elseif isa(p, Hour)
+            now() - Day(7)      # hourly timeframe → 1 week
+        elseif isa(p, Day)
+            now() - Month(1)    # daily timeframe → 1 month
+        else
+            now() - Month(6)    # weekly+ → 6 months
+        end
     end
     _fetchto!(w, df, _sym(w), _tfr(w); to=_curdate(_tfr(w)), from=init_from)
     _check_contig(w, w.view)
@@ -170,19 +202,29 @@ function _start!(w::Watcher, ::CcxtOHLCVVal)
             _tfunc!(attrs, () -> check_task!(w))
         else
             @warn "WebSocket unavailable for $(w.name), falling back to REST polling"
-            _tfunc!(attrs, _make_trades_func(w, fetch_func))
+            _tfunc!(attrs, _make_trades_func(w, string(exc.id), _sym(w)))
         end
     else
-        _tfunc!(attrs, _make_trades_func(w, fetch_func))
+        _tfunc!(attrs, _make_trades_func(w, string(exc.id), _sym(w)))
     end
 end
 
-"""Create a polling function that fetches trades via REST and spawns process!."""
-function _make_trades_func(w, fetch_func)
+"""Create a polling function that fetches trades via REST and spawns process!.
+Uses explicit call_exchange with fetchTrades (REST) instead of choosefunc,
+which may select a WebSocket method that blocks (Gotcha #36, #37)."""
+function _make_trades_func(w, exc_id::String, sym::String)
+    _GW = Fetch.Exchanges.Ccxt.CcxtGateway
+    _client = _GW.default_client()
     return function ()
         tasks = @lget! w.attrs :process_tasks Task[]
         fetched = @lock w begin
-            resp = fetch_func
+            resp = try
+                data = _GW.call_exchange(_client, exc_id, "fetchTrades"; body=Dict("symbol" => sym))
+                Dict(sym => data)
+            catch e
+                @debug "fetchTrades poll failed" exception=(e,)
+                nothing
+            end
             v = _parse_trades(w, resp)
             !isnothing(v) && !isempty(v)
         end
@@ -249,7 +291,7 @@ function _parse_trades(w, pytrades)
         append!(_trades(w), new_trades)
         last_date = last(new_trades).timestamp
         _lastpushed!(w, last_date)
-        if !w[:iswatch]
+        if !get(w, :iswatch, false)
             @lock w pushnew!(w, _trades(w))
         end
         return new_trades

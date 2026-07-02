@@ -53,12 +53,16 @@ function _tryfetch(w)::Bool
 end
 
 function _handle_fetch_result(w, result)
-    if result
-        w.attempts = 0
-        w.has.process && process!(w)
-        w.has.flush && flush!(w; force=false, sync=false)
-    else
-        w.attempts += 1
+    try
+        if result
+            w.attempts = 0
+            w.has.process && process!(w)
+            w.has.flush && flush!(w; force=false, sync=false)
+        else
+            w.attempts += 1
+        end
+    catch err
+        logerror(w, err)
     end
 end
 
