@@ -56,9 +56,7 @@ function ccxt_tickers_watcher(
 )
     check_timeout(exc, interval)
     attrs = Dict{Symbol,Any}()
-    if !isnothing(iswatch)
-        attrs[:iswatch] = iswatch::Bool
-    end
+    attrs[:iswatch] = something(iswatch, false)::Bool
     attrs[:issandbox] = issandbox(exc)
     attrs[:excparams] = Dict{String,Any}()
     attrs[:excaccount] = account(exc)
@@ -137,6 +135,10 @@ function _reset_tickers_func!(w::Watcher)
         eid, attrs[:excparams]; sandbox=attrs[:issandbox], account=attrs[:excaccount]
     )
     _exc!(attrs, exc)
+
+    # Ensure the gateway exchange subprocess is started so its `has` dict is populated.
+    _start_gateway_exchange(string(exc.id))
+
     # don't pass empty args to imply all symbols
     ids = _ids(w)
     @assert ids isa Vector

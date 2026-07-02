@@ -96,6 +96,17 @@ function _fetch_ohlcv_from_to(
     ohlcv_kind=:default,
 )
     (from, to) = _check_from_to(from, to)
+    # Defensive guard: skip fetch when the range is inverted/empty or from ≈ now()
+    if from isa Number && to isa Number
+        if from >= to
+            @warn "fetch_ohlcv_from_to: skipping fetch — inverted/empty range" pair timeframe from to maxlog=10
+            return empty_ohlcv()
+        end
+        if abs(from - timefloat(now())) < 1000.0
+            @warn "fetch_ohlcv_from_to: skipping fetch — from ≈ now()" pair timeframe from to maxlog=10
+            return empty_ohlcv()
+        end
+    end
     @debug "Fetching $ohlcv_kind ohlcv for $pair from $(exc.name) at $timeframe - from: $(from |> dt) - to: $(to |> dt)."
     gateway_func = ohlcv_func_bykind(exc, ohlcv_kind)
     fetch_func = function (pair, since, limit; usetimeframe=true)
