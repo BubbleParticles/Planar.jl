@@ -19,10 +19,11 @@ async def _send_via_broker(
     process_manager: Any,
     exchange_id: str,
     request_msg: bytes,
+    timeout: float = 30.0,
 ) -> Dict[str, Any]:
     """Send a request via the broker, restarting the subprocess if needed."""
     for attempt in range(2):
-        response_bytes: Optional[bytes] = await broker.send_request(exchange_id, request_msg)
+        response_bytes: Optional[bytes] = await broker.send_request(exchange_id, request_msg, timeout=timeout)
         if not response_bytes:
             raise HTTPException(status_code=504, detail="No response from exchange subprocess")
         response: Dict[str, Any] = parse_message(response_bytes)
@@ -223,7 +224,11 @@ async def call_exchange_method(
         exchange_id=exchange_id,
     )
 
-    response = await _send_via_broker(broker, process_manager, exchange_id, request_msg)
+    # WS methods (ending in "Ws" or starting with "watch") need longer timeout
+    # because ccxt.pro opens a WebSocket connection internally for the request.
+    broker_timeout: float = 300.0 if method.endswith("Ws") or method.startswith("watch") else 30.0
+
+    response = await _send_via_broker(broker, process_manager, exchange_id, request_msg, timeout=broker_timeout)
 
     if response.get("error"):
         raise HTTPException(

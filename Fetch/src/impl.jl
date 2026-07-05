@@ -410,6 +410,10 @@ $(TYPEDSIGNATURES)
 The `ohlcv_func_bykind` function determines and returns the appropriate OHLCV fetching function for the given exchange `exc` and `kind`.
 """
 function ohlcv_func_bykind(exc, kind)
+    # WS-first for speed: fetchXxxWs uses ccxt.pro's internal WS connection for
+    # lower latency (single request-response via WS). Falls back to REST if the
+    # exchange doesn't support the WS variant. The gateway properly handles WS
+    # methods as one-shot calls (not long-lived subscriptions).
     args = if kind == :mark
         (:fetchMarkOHLCVWs, :fetchMarkOHLCV)
     elseif kind == :index

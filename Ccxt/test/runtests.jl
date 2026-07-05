@@ -41,6 +41,10 @@ println("=== Running Ccxt Unit Tests ===")
         @testset "Integration Tests" begin
             include("test_integration.jl")
         end
+
+        @testset "WS Integration Tests" begin
+            include("test_ws_integration.jl")
+        end
     end
 end
 

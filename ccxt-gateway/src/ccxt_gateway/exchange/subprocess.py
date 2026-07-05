@@ -299,7 +299,12 @@ class ExchangeSubprocess:
                                 params[actual_name] = params.pop("enable")
                                 logger.info("DEBUG setSandboxMode: normalized enable->%s", actual_name)
 
-                    if method.startswith("watch_"):
+                    # Julia sends camelCase (watchOHLCVForSymbols), ccxt uses snake_case (watch_ohlcv_for_symbols).
+                    # Both must route through _handle_watch_method for streaming dispatch.
+                    _is_watch: bool = method.startswith("watch") and (
+                        len(method) == 5 or method[5] == "_" or (len(method) > 5 and method[5].isupper())
+                    )
+                    if _is_watch:
                         await self._handle_watch_method(method, ccxt_method, params, subscription_id, request_id)
                         return
 
@@ -412,11 +417,21 @@ class ExchangeSubprocess:
             await self.socket.send_multipart([b"", response])
 
     async def _call_method(self, method: Callable[..., Any], params: Dict[str, Any]) -> Any:
-        """Call a CCXT method with given params."""
+        """Call a CCXT method with given params.
+
+        Positional args from the Julia client arrive under the "_args" key
+        (set by ExchangeTypes._first). Pop and forward them positionally
+        so callers can use the same positional signatures as ccxt.
+        """
+        positional: List[Any] = params.pop("_args", [])
         if asyncio.iscoroutinefunction(method):
+            if positional:
+                return await method(*positional, **params) if params else await method(*positional)
             if params:
                 return await method(**params)
             return await method()
+        if positional:
+            return method(*positional, **params) if params else method(*positional)
         if params:
             return method(**params)
         return method()

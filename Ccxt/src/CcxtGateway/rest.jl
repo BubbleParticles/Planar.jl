@@ -59,18 +59,18 @@ function build_url(client::GatewayClient, path::String)
 end
 
 function make_request(client::GatewayClient, method::String, path::String; 
-    query=nothing, body=nothing, kwargs...)
-    url = build_url(client, path)
-    
-    headers = Pair{String, String}[]
-    push!(headers, "Content-Type" => "application/json")
-    push!(headers, "Accept" => "application/json")
-    
-    kw = Dict{Symbol, Any}()
-    t = Int(round(get(kwargs, :timeout, client.timeout)))
-    kw[:timeout] = t
-    kw[:readtimeout] = t
-    kw[:connect_timeout] = t
+ query=nothing, body=nothing, timeout=nothing, kwargs...)
+ url = build_url(client, path)
+
+ headers = Pair{String, String}[]
+ push!(headers, "Content-Type" => "application/json")
+ push!(headers, "Accept" => "application/json")
+
+ kw = Dict{Symbol, Any}()
+ t = Int(round(get(kwargs, :timeout, timeout !== nothing ? timeout : client.timeout)))
+ kw[:timeout] = t
+ kw[:readtimeout] = t
+ kw[:connect_timeout] = t
     if client.use_ssl
         kw[:ssl] = true
         kw[:require_ssl_verification] = false
@@ -102,9 +102,9 @@ function make_request(client::GatewayClient, method::String, path::String;
 end
 
 function make_request(client::GatewayClient, method::String, path::String, exchange_id::String; 
-    query=nothing, body=nothing)
-    full_path = replace(path, "{exchange_id}" => exchange_id)
-    make_request(client, method, full_path; query, body)
+ query=nothing, body=nothing, timeout=nothing)
+ full_path = replace(path, "{exchange_id}" => exchange_id)
+ make_request(client, method, full_path; query, body, timeout=timeout)
 end
 
 function check_response(resp::HTTP.Response)::GatewayResponse
@@ -122,24 +122,24 @@ function get_data(resp::HTTP.Response)
 end
 
 function api_call(client::GatewayClient, method::String, path::String, exchange_id::String; 
-    query=nothing, body=nothing)
-    _ensure_gateway_running()
-    resp = make_request(client, method, path, exchange_id; query, body)
-    get_data(resp)
+ query=nothing, body=nothing, timeout=nothing)
+ _ensure_gateway_running()
+ resp = make_request(client, method, path, exchange_id; query, body, timeout=timeout)
+ get_data(resp)
 end
 
 function api_call(client::GatewayClient, method::String, path::String; 
-    query=nothing, body=nothing)
-    _ensure_gateway_running()
-    resp = make_request(client, method, path; query, body)
-    get_data(resp)
+ query=nothing, body=nothing, timeout=nothing)
+ _ensure_gateway_running()
+ resp = make_request(client, method, path; query, body, timeout=timeout)
+ get_data(resp)
 end
 
 function call_exchange(client::GatewayClient, exchange_id::String, ccxt_method::String; 
-    query=nothing, body=nothing)
-    path = "/exchanges/$exchange_id/$ccxt_method"
-    req_method = body !== nothing ? "POST" : (ccxt_method ∈ ("createOrder", "cancelOrder", "withdraw", "setLeverage", "setMarginMode", "setPositionMode", "setSandboxMode", "set_api_key", "enableRateLimit", "timeout", "rateLimit")) ? "POST" : "GET"
-    api_call(client, req_method, path; query, body)
+ query=nothing, body=nothing, timeout::Union{Nothing,Float64}=nothing)
+ path = "/exchanges/$exchange_id/$ccxt_method"
+ req_method = body !== nothing ? "POST" : (ccxt_method ∈ ("createOrder", "cancelOrder", "withdraw", "setLeverage", "setMarginMode", "setPositionMode", "setSandboxMode", "set_api_key", "enableRateLimit", "timeout", "rateLimit")) ? "POST" : "GET"
+ api_call(client, req_method, path; query, body, timeout=timeout)
 end
 
 const _started_exchanges = Dict{String, Float64}()
@@ -298,10 +298,16 @@ const _gateway_initialized = Ref(false)
 const _gateway_init_lock = ReentrantLock()
 
 function _check_gateway_up()
+    # Check if tracked PID is alive AND responds to HTTPS
     if isassigned(_gateway_pid) && _gateway_pid[] !== nothing
+        pid = _gateway_pid[]
         try
-            run(pipeline(`kill -0 $(_gateway_pid[])`; stderr=devnull))
-            return true
+            run(pipeline(`kill -0 $pid`; stderr=devnull))
+            if ping(GatewayClient(; use_ssl=true, timeout=2.0))
+                return true
+            end
+            @debug "Tracked PID $pid is alive but not HTTPS — treating as stale"
+            _gateway_pid[] = nothing
         catch
             _gateway_pid[] = nothing
         end
@@ -315,14 +321,18 @@ function _check_gateway_up()
         if pid !== nothing
             try
                 run(pipeline(`kill -0 $pid`; stderr=devnull))
-                _gateway_pid[] = pid
-                return true
+                if ping(GatewayClient(; use_ssl=true, timeout=2.0))
+                    _gateway_pid[] = pid
+                    return true
+                end
+                @debug "Pidfile PID $pid is alive but not HTTPS — treating as stale"
             catch
             end
         end
     end
+    # HTTPS ping only — the gateway must match the client's use_ssl=true default.
     try
-        return ping(GatewayClient(; timeout=2.0))
+        return ping(GatewayClient(; use_ssl=true, timeout=2.0))
     catch
         return false
     end
@@ -530,15 +540,33 @@ function _find_system_python()
     return nothing
 end
 
+function _kill_process_on_port(port::Int)
+    try
+        pid_str = readchomp(pipeline(`lsof -ti :$port`; stderr=devnull))
+        if !isempty(strip(pid_str))
+            stale_pid = parse(Int, strip(pid_str))
+            @debug "Killing process $stale_pid on port $port"
+            run(pipeline(`kill $stale_pid`; stderr=devnull))
+            sleep(1)
+        end
+    catch
+        @debug "No process found on port $port or lsof unavailable"
+    end
+end
+
 function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
     @debug "spawn_gateway: starting"
-    # Check if gateway is already running
+    # Check if gateway is already running (must respond to HTTPS ping)
     if isassigned(_gateway_pid) && _gateway_pid[] !== nothing && _gateway_pid[] > 1
         pid = _gateway_pid[]
         try
             run(pipeline(`kill -0 $pid`; stderr=devnull))
-            @debug "spawn_gateway: gateway already running with PID $pid"
-            return pid
+            # Verify the gateway responds to HTTPS (not an old HTTP-only gateway)
+            if ping(GatewayClient(; use_ssl=true, timeout=2.0))
+                @debug "spawn_gateway: gateway already running with PID $pid (HTTPS)"
+                return pid
+            end
+            @debug "spawn_gateway: tracked PID $pid is alive but not HTTPS — treating as stale"
         catch
             @debug "spawn_gateway: tracked PID $pid is stale"
         end
@@ -560,6 +588,9 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
         end
         try rm(pidfile; force=true) catch end
     end
+    
+    # Kill whatever is on the gateway port (pre-existing HTTP gateway without pidfile)
+    _kill_process_on_port(DEFAULT_PORT)
     
     # Find the daemon script
     @debug "spawn_gateway: locating daemon_gateway.py..."
@@ -599,8 +630,8 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
             pid = parse(Int, pid_str)
             _gateway_pid[] = pid
             @debug "spawn: attempt $attempt, pidfile found (PID $pid)"
-            # Use a lightweight non-SSL ping to avoid SSL handshake issues
-            if ping(GatewayClient(; timeout=2.0))
+            # HTTPS ping only — new gateway starts with SSL
+            if ping(GatewayClient(; use_ssl=true, timeout=2.0))
                 return pid
             end
             @debug "spawn: PID $pid exists but gateway not responding yet"

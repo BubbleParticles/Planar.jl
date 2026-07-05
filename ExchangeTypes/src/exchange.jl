@@ -226,11 +226,17 @@ function Base.getproperty(e::CcxtExchange, k::Symbol)
         m = string(k)
         is_fetch = startswith(m, "fetch") && m != "fetchMarkets"
         (args...; kwargs...) -> begin
-            if is_fetch && !isempty(kwargs)
-                CcxtGateway.call_exchange(client, ex_id, m; body=Dict("params" => kwargs))
+            # Build the body: kwargs go directly (or wrapped in "params" for fetch methods),
+            # positional args go under "_args" at the TOP level (parsed by subprocess _call_method)
+            body = if is_fetch && !isempty(kwargs)
+                Dict{Symbol,Any}("params" => Dict{Symbol,Any}(kwargs))
             else
-                CcxtGateway.call_exchange(client, ex_id, m; body=kwargs)
+                Dict{Symbol,Any}(kwargs)
             end
+            if !isempty(args)
+                body[:_args] = [a for a in args]
+            end
+            CcxtGateway.call_exchange(client, ex_id, m; body=body)
         end
     end
 end
@@ -254,6 +260,18 @@ _has(exc::Exchange, s::Symbol) = begin
     h = getfield(exc, :has)
     something(get(h, s, false), false)
 end
+
+# Per-exchange _has overrides via Julia dispatch.
+# ccxt's has dict is accurate for most exchanges, but some may have stale or
+# incorrect values. Override by adding a more specific method:
+#
+#   _has(exc::CcxtExchange{ExchangeID{:some_exchange}}, s::Symbol) = begin
+#       h = getfield(exc, :has)
+#       base = something(get(h, s, false), false)
+#       # Example correction: exchange supports watchOHLCV despite ccxt metadata
+#       s == :watchOHLCV && return true
+#       base
+#   end
 
 @doc """Checks which exchanges support a given feature via the gateway."""
 function _has(feat::Symbol; full=true)
@@ -279,21 +297,33 @@ has(exc, what::Tuple{Vararg{Symbol}}; kwargs...) = _has_all(exc, what; kwargs...
 account(exc::Exchange) = getfield(exc, :account)
 
 function _first(exc::CcxtExchange, args::Vararg{Symbol})
-    for name in args
-        if has(exc, name)
-            client = CcxtGateway.default_client()
-            ex_id = string(exc.id)
-            m = string(name)
-            return (args...; kwargs...) -> begin
-                try
-                    CcxtGateway.call_exchange(client, ex_id, m; body=kwargs)
-                catch e
-                    @warn "Gateway call to $ex_id.$m failed" exception=(e, catch_backtrace())
-                    nothing
-                end
-            end
-        end
-    end
+ for name in args
+ if has(exc, name)
+ client = CcxtGateway.default_client()
+ ex_id = string(exc.id)
+ m = string(name)
+ # WebSocket methods (ending in "Ws" or starting with "watch") need longer timeout
+ # as they are long-lived subscriptions. 300s = 5 minutes, a multiple of typical timeframes.
+ is_ws = endswith(m, "Ws") || startswith(m, "watch")
+ timeout_val = is_ws ? 300.0 : nothing
+ return (args...; kwargs...) -> begin
+ try
+  # The subprocess dispatches via method(**params), so positional args
+  # must be converted. Send them under "_args" for the subprocess to
+  # unpack via method(*positional, **params).
+ body = if isempty(args)
+ Dict{Symbol,Any}(kwargs)
+ else
+ merge(Dict{Symbol,Any}(kwargs), Dict{Symbol,Any}(:_args => [a for a in args]))
+ end
+ CcxtGateway.call_exchange(client, ex_id, m; body=body, timeout=timeout_val)
+ catch e
+ @warn "Gateway call to $ex_id.$m failed" exception=(e, catch_backtrace())
+ nothing
+ end
+ end
+ end
+ end
 end
 
 Base.first(exc::Exchange, args::Vararg{Symbol}) = _first(exc, args...)
