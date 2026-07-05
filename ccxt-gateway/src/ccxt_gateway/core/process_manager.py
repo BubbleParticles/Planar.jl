@@ -82,6 +82,7 @@ class ProcessManager:
         auto_restart: bool = True,
         max_restarts_per_hour: int = 5,
         startup_timeout: int = 30,
+        broker: Optional[Any] = None,
     ) -> None:
         self.broker_address: str = broker_address
         self.max_rss_mb: int = max_rss_mb
@@ -91,6 +92,7 @@ class ProcessManager:
         self.startup_timeout: int = startup_timeout
 
         self.processes: Dict[str, ExchangeProcess] = {}
+        self.broker: Optional[Any] = broker
         self.running: bool = False
         self._tasks: List[asyncio.Task[None]] = []
 
@@ -206,10 +208,28 @@ class ProcessManager:
             return False
 
     async def _wait_for_ready(self, exchange_id: str) -> None:
-        """Wait for exchange subprocess to be ready."""
-        # This is simplified - in reality we'd get a ZMQ ready message
-        # For now, just wait a bit
-        await asyncio.sleep(2)
+        """Wait for exchange subprocess to be ready (subprocess_ready ZMQ message)."""
+        # Poll the subprocess's returncode and broker registration status.
+        # The subprocess sends subprocess_ready via ZMQ after _init_exchange completes
+        # (including load_markets, which can take 5-10s for large exchanges like binance).
+        # The ZMQ broker receives this and registers the subprocess identity.
+        # We poll up to startup_timeout seconds, checking every 500ms.
+        max_wait: int = self.startup_timeout
+        poll_interval: float = 0.5
+        waited: float = 0.0
+        while waited < max_wait:
+            proc = self.processes.get(exchange_id)
+            if proc is None:
+                return  # Already cleaned up
+            if proc.process.returncode is not None:
+                logger.warning("Exchange %s subprocess exited during startup (rc=%s)", exchange_id, proc.process.returncode)
+                return  # Process died — caller will handle
+            # Check if broker has registered this subprocess via ZMQ ready message
+            if self.broker is not None and exchange_id in getattr(self.broker, 'exchange_identities', {}):
+                logger.info("Exchange %s subprocess ready via broker registration", exchange_id)
+                return
+            await asyncio.sleep(poll_interval)
+            waited += poll_interval
 
     async def _read_stdout(self, exchange_id: str) -> None:
         """Read stdout from subprocess."""

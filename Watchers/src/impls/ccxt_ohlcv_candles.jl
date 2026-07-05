@@ -14,6 +14,7 @@ using .Watchers: logerror, JSON3
 using Base: Semaphore, acquire, release, ReentrantLock, current_task
 using .Data: DataFrame
 using .Misc: period
+using ..Fetch.Exchanges.ExchangeTypes: has
 
 const PRICE_SOURCES = (:last, :vwap, :bid, :ask)
 const CcxtOHLCVCandlesVal = Val{:ccxt_ohlcv_candles}
@@ -32,7 +33,7 @@ function ccxt_ohlcv_candles_watcher(
     callback=Returns(nothing),
     load_timeframe=default_load_timeframe(timeframe),
     load_path=nothing,
-    iswatch=false,
+    iswatch=nothing,
     kwargs...,
 )
     a = Dict{Symbol,Any}()
@@ -41,7 +42,11 @@ function ccxt_ohlcv_candles_watcher(
     a[k"excparams"] = Dict{String,Any}()
     a[k"excaccount"] = account(exc)
     a[k"ohlcv_method"] = :candles
-    a[:iswatch] = iswatch
+    a[:iswatch] = if iswatch !== nothing
+        iswatch
+    else
+        has(exc, :watchOHLCVForSymbols) || has(exc, :watchOHLCV)
+    end
     @setkey! a exc
     @setkey! a default_view
     @setkey! a timeframe
@@ -191,12 +196,16 @@ function _reset_candles_func!(w)
         eid, attrs[k"excparams"]; sandbox=attrs[k"issandbox"], account=attrs[k"excaccount"]
     )
     _exc!(attrs, exc)
+    # Ensure the gateway exchange subprocess is started so its `has` dict is populated.
+    # Without this, `choosefunc`/`first` will have an empty has dict and may pick
+    # wrong methods. The trades watcher does the same at ccxt_ohlcv_trades.jl:153.
+    _start_gateway_exchange(string(exc.id))
     # don't pass empty args to imply all symbols
     ids = _check_ids(exc, _ids(w))
     @assert ids isa Vector && !isempty(ids) "ohlcv (candles)  no symbols to watch given"
     tf = _tfr(w)
     tf_str = string(tf)
-    init_tasks = @lget! attrs k"process_tasks" Set{Task}()
+    init_tasks = @lget! attrs k"init_tasks" Set{Task}()
     function init_func()
         for sym in ids
             push!(
@@ -208,8 +217,9 @@ function _reset_candles_func!(w)
             )
         end
     end
-    # Check if user explicitly requested WebSocket mode
-    iswatch = get(attrs, :iswatch, false)
+    # iswatch was already auto-detected in the constructor;
+    # this is the authoritative value for runtime branching.
+    iswatch = attrs[:iswatch]
     watch_func = first(exc, :watchOHLCVForSymbols)
     if iswatch && watch_func !== nothing
         wrapper_func = _update_ohlcv_func(w)
@@ -381,7 +391,9 @@ function _update_ohlcv_func_single(w, sym)
     end
 end
 
-"""Create a polling function that fetches candles via REST and spawns process!."""
+"""Create a polling function that fetches candles via REST and spawns process!.
+Handles the first poll where view entries aren't yet initialized (empty Dict).
+Uses `get!` to lazily populate the view entry and does an initial historical fetch."""
 function _make_candles_func(w)
     return function ()
         tasks = @lget! w.attrs :process_tasks Task[]
@@ -389,8 +401,15 @@ function _make_candles_func(w)
             for sym in _ids(w)
                 state = w.symstates[sym]
                 @lock state.lock begin
-                    df = w.view[sym]
-                    if !isempty(df)
+                    df = get!(w.view, sym) do
+                        empty_ohlcv()
+                    end
+                    if isempty(df)
+                        tf = _tfr(w)
+                        to = _nextdate(tf)
+                        from = _curdate(tf) - period(tf) * w.capacity.view
+                        _sticky_fetchto!(w, df, sym, tf; from, to)
+                    else
                         to = _curdate(_tfr(w))
                         from = lastdate(df) + _tfr(w)
                         _sticky_fetchto!(w, df, sym, _tfr(w); to=to, from=from)
@@ -403,6 +422,7 @@ function _make_candles_func(w)
             push!(tasks, @async process!(w))
             filter!(!istaskdone, tasks)
         end
+        return fetched
     end
 end
 
@@ -427,7 +447,9 @@ function _connect_ws_ohlcv!(w, eid::String, syms::Vector)::Bool
         ws_client,
         eid,
         "watchOHLCVForSymbols",
-        params=Dict{String, Any}("symbols" => [s[1] for s in syms], "timeframe" => string(_tfr(w))),
+        # ccxt's watch_ohlcv_for_symbols expects symbolsAndTimeframes as a
+        # list of [symbol, timeframe] pairs — syms is already in that format.
+        params=Dict{String, Any}("symbolsAndTimeframes" => syms),
         callback = data -> begin
             if data !== nothing
                 Rocket.next!(subject, data)

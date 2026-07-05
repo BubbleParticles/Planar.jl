@@ -37,6 +37,7 @@ using ..CoinPaprika: CoinPaprika as cp
     last_processed
     issandbox
     process_tasks
+    init_tasks
     excparams
     excaccount
     load_timeframe

@@ -254,6 +254,9 @@ end
 end
 
 @testset "Admin endpoint tests" begin
+    # Pre-initialize gateway to skip /ping call in _check_gateway_up
+    Rest._gateway_initialized[] = true
+    
     @testset "server_info calls /admin/info" begin
         client = GatewayClient()
         mock_calls = String[]
@@ -322,6 +325,7 @@ end
 
 @testset "Gateway lifecycle" begin
     @testset "initial state" begin
+        Rest._gateway_pid[] = nothing
         @test !isassigned(Rest._gateway_pid) || Rest._gateway_pid[] === nothing
     end
 
