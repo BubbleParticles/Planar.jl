@@ -22,7 +22,7 @@ implemented in downstream packages that depend on Ccxt, not in this package.
 ```julia
 using Ccxt.CcxtGateway
 
-client = GatewayClient(; use_ssl=true)
+client = GatewayClient()
 ping(client)  # returns true if gateway is running
 
 start_exchange(client, "binance")

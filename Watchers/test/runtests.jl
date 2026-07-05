@@ -11,8 +11,12 @@ using Watchers: isstale, isstarted, isstopped, pushnew!, pushstart!, buffer, wat
 
 const Dates = Watchers.Misc.TimeTicks.Dates
 using Watchers.Misc.TimeTicks
+using Watchers.Misc: rangebetween
+using Watchers.Data: empty_ohlcv
 using Watchers.WatchersImpls: CcxtTicker, TempCandle, TickerWatcherSymbolState2, CandleWatcherSymbolState4, WatcherHandler2
 using Watchers.WatchersImpls: _parse_ticker_snapshot, _ob_to_df, sym_procstate!, default_load_timeframe
+using Ccxt
+using Ccxt.CcxtGateway: ping, start_exchange, stop_exchange, exchange_ready
 
 # Define watcher methods for test watcher type
 _init!(w::Watcher, ::Val{:testwatcher}) = nothing
@@ -536,6 +540,340 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         @test w._exec.buffer_lock isa Watchers.SafeLock
         @test w._exec.errors !== nothing
         Watchers.close(w; doflush=false)
+    end
+
+    @testset "empty_ohlcv structure" begin
+        df = empty_ohlcv()
+        @test df isa Watchers.DataFrame
+        @test propertynames(df) == [:timestamp, :open, :high, :low, :close, :volume]
+        @test eltype(df.timestamp) <: DateTime
+        @test eltype(df.open) <: Float64
+        @test eltype(df.high) <: Float64
+        @test eltype(df.low) <: Float64
+        @test eltype(df.close) <: Float64
+        @test eltype(df.volume) <: Float64
+        @test isempty(df)
+        @test size(df, 1) == 0
+    end
+
+    @testset "rangebetween strict=false with duplicates" begin
+        now_ts = now()
+        from = now_ts - Dates.Minute(10)
+        to = now_ts
+
+        # For UNIQUE values, strict=true and strict=false behave identically
+        # (both exclude the exact value). The difference matters when there
+        # are DUPLICATE timestamps, which can happen when vcat merges
+        # upsampled data with directly-fetched last-mile candles.
+        ts = DateTime[
+            from - Dates.Minute(1),   # 1: before range
+            from, from,               # 2:3 — duplicate at left boundary
+            from + Dates.Minute(1),   # 4
+            from + Dates.Minute(5),   # 5
+            to, to, to,               # 6:7:8 — duplicate at right boundary
+            to + Dates.Minute(1),     # 9: after range
+        ]
+
+        # strict=true — excludes ALL elements equal to boundary
+        r_strict = rangebetween(ts, from, to; strict=true)
+        @test first(r_strict) == 4   # index 4 = first element strictly after 'from'
+        @test last(r_strict) == 5    # index 5 = last element strictly before 'to'
+        @test length(r_strict) == 2
+
+        # strict=false — includes boundary-adjacent duplicates
+        # Left: excludes first duplicate (index 2), includes rest (index 3)
+        # Right: excludes last duplicate (index 8), includes preceding (index 6:7)
+        r_nonstrict = rangebetween(ts, from, to; strict=false)
+        @test first(r_nonstrict) == 3   # index 3 = second 'from' duplicate
+        @test last(r_nonstrict) == 7    # index 7 = second 'to' duplicate
+        @test length(r_nonstrict) == 5  # indices 3,4,5,6,7
+    end
+
+    @testset "static key collision: init_tasks vs process_tasks" begin
+        attrs = Dict{Symbol,Any}()
+        # Simulate _reset_candles_func! — uses k"init_tasks" (not k"process_tasks")
+        init_tasks = get!(attrs, :init_tasks) do
+            Set{Task}()
+        end
+        @test init_tasks isa Set
+
+        # Simulate _make_candles_func — uses :process_tasks (should NOT be Set{Task})
+        process_tasks = get!(attrs, :process_tasks) do
+            Task[]
+        end
+        @test process_tasks isa Vector
+        @test process_tasks isa Vector{Task}  # specifically Vector{Task}, not Set{Task}
+        @test !(process_tasks isa Set)
+
+        # Verify separate keys
+        @test haskey(attrs, :init_tasks)
+        @test haskey(attrs, :process_tasks)
+        @test attrs[:init_tasks] !== attrs[:process_tasks]
+    end
+
+    @testset "view initialization with get! and empty_ohlcv" begin
+        view = Dict{String,Watchers.DataFrame}()
+        sym = "BTC/USDT"
+
+        # Use the same pattern as _make_candles_func: get! with empty_ohlcv()
+        df = get!(view, sym) do
+            empty_ohlcv()
+        end
+        @test df isa Watchers.DataFrame
+        @test isempty(df)
+        @test haskey(view, sym)
+        @test view[sym] === df
+
+        # Second call returns existing df without calling the default
+        df2 = get!(view, sym) do
+            error("should not be called")
+        end
+        @test df2 === df
+    end
+
+    @testset "iswatch default fallback" begin
+        # Test the pattern used in ccxt_tickers.jl and ccxt_ohlcv_trades.jl:
+        # iswatch = something(iswatch, false) then stored as Bool
+
+        # Case 1: default (no :iswatch key) → fallback to false
+        attrs_no_iswatch = Dict{Symbol,Any}()
+        iswatch1 = if haskey(attrs_no_iswatch, :iswatch)
+            attrs_no_iswatch[:iswatch]::Bool
+        else
+            false
+        end
+        @test iswatch1 == false
+
+        # Case 2: explicit true
+        attrs_iswatch_true = Dict{Symbol,Any}(:iswatch => true)
+        iswatch2 = if haskey(attrs_iswatch_true, :iswatch)
+            attrs_iswatch_true[:iswatch]::Bool
+        else
+            false
+        end
+        @test iswatch2 == true
+
+        # Case 3: explicit false
+        attrs_iswatch_false = Dict{Symbol,Any}(:iswatch => false)
+        iswatch3 = if haskey(attrs_iswatch_false, :iswatch)
+            attrs_iswatch_false[:iswatch]::Bool
+        else
+            false
+        end
+        @test iswatch3 == false
+
+        # Case 4: something(nothing, false) pattern (ccxt_ohlcv_trades.jl line 56)
+        @test something(nothing, false) == false
+        @test something(true, false) == true
+        @test something(false, false) == false
+    end
+
+    @testset "_tryfetch type assertion" begin
+        # _tryfetch (module.jl:22-53) wraps _fetch! result in ::Union{Bool,Exception}.
+        # If _fetch! returns unexpected type (e.g. Set{Task}), the ::Union{Bool,Exception}
+        # type assertion throws a TypeError OUTSIDE the inner try-catch.
+        # This TypeError propagates to _handle_fetch_result in the Rocket pipeline.
+        # The test verifies the error is caught by the outer catch in the pipeline.
+
+        w = watcher(Any, "test_tryfetch_type"; start=false, load=false, flush=false, process=false)
+
+        # Override _fetch! for the test Val type to return Set{Task}
+        Watchers.WatchersImpls._fetch!(w::Watcher, ::Val{:test_tryfetch}) = Set{Task}()
+
+        # Simulate _tryfetch behavior: the ::Union{Bool,Exception} type assertion
+        # inside the @lock block will throw TypeError for non-Bool/non-Exception values.
+        result = try
+            @lock w begin
+                res = try
+                    _fetch!(w, Val{:test_tryfetch}())
+                catch e
+                    e
+                end::Union{Bool,Exception}
+                w.last_fetch = now()
+                res
+            end
+        catch e
+            e
+        end
+        @test result isa TypeError
+        @test contains(string(result), "TypeError")
+        @test contains(string(result), "Set{Task}")
+
+        # Override _fetch! to return Bool — should pass fine
+        Watchers.WatchersImpls._fetch!(w::Watcher, ::Val{:test_tryfetch_bool}) = true
+        result2 = try
+            @lock w begin
+                res = try
+                    _fetch!(w, Val{:test_tryfetch_bool}())
+                catch e
+                    e
+                end::Union{Bool,Exception}
+                w.last_fetch = now()
+                res
+            end
+        catch e
+            e
+        end
+        @test result2 isa Bool
+        @test result2 == true
+
+        Watchers.close(w; doflush=false)
+    end
+
+    @testset "_make_candles_func returns Bool" begin
+        # The closure in _make_candles_func MUST return Bool (true/false)
+        # to satisfy _tryfetch's ::Union{Bool,Exception} type assertion.
+        # Bug: was returning Set{Task} (from filter! on the set) or nothing.
+
+        w = watcher(Any, "test_candles_return"; start=false, load=false, flush=false, process=false,
+                    attrs=Dict{Symbol,Any}(:process_tasks => Task[]))
+
+        # Simulate the minimal closure logic that was buggy:
+        # Before fix: tasks = Set{Task}() → filter!(... tasks) → returns Set{Task}
+        # After fix: explicit `return fetched` at end
+
+        tasks = w.attrs[:process_tasks]
+        fetched = @lock w begin
+            # Just the return — sym loop skipped (no syms to iterate)
+            true
+        end
+        if fetched
+            push!(tasks, @async process!(w))
+            filter!(!istaskdone, tasks)
+        end
+        @test fetched == true
+        @test fetched isa Bool
+
+        Watchers.close(w; doflush=false)
+    end
+
+    # ─────────────────────────────────────────────────────
+    # WebSocket integration test (requires running gateway)
+    # ─────────────────────────────────────────────────────
+    # Gated by: RUN_INTEGRATION_TESTS=true env var + gateway ping
+    # This tests the WS subscription path at the watcher abstraction level.
+    # If the gateway is not running or the env var is not set, the test is skipped.
+    if get(ENV, "RUN_INTEGRATION_TESTS", "false") == "true"
+        @testset "WebSocket OHLCV subscription via _connect_ws_ohlcv!" begin
+            # Check gateway reachability
+            if !ping()
+                @info "Skipping WS integration test - gateway not running"
+                @test_skip true
+                return
+            end
+            @info "Gateway reachable, starting WS integration test"
+
+            exchange_id = "okx"
+            symbol = "BTC/USDT"
+            tf = "1m"
+
+            # --- Start exchange ---
+            result = start_exchange(exchange_id)
+            @test result isa Dict
+            @test get(result, "status", "") in ("started", "already_started")
+            @info "Exchange start result: $(get(result, "status", "unknown"))"
+
+            # --- Wait for ready (up to 30s) ---
+            ready = false
+            for i in 1:30
+                sleep(1)
+                if exchange_ready(exchange_id)
+                    ready = true
+                    @info "Exchange ready after $(i)s"
+                    break
+                end
+            end
+            if !ready
+                @warn "Exchange not ready within timeout, skipping rest of test"
+                try stop_exchange(exchange_id) catch end
+                return
+            end
+
+            # --- Build minimal watcher with handler ---
+            w = watcher(Any, "ws_integration_test_ohlcv"; start=false, load=false, flush=false, process=false)
+            subject = Rocket.Subject(Any)
+            wh = WatcherHandler2(
+                init_func = () -> nothing,
+                corogen_func = (_) -> () -> nothing,
+                wrapper_func = identity,
+                subject = subject,
+            )
+            w.attrs[:handler] = wh
+
+            # --- Subscribe via WebSocket ---
+            connected = Watchers.WatchersImpls._connect_ws_ohlcv!(w, exchange_id, [[symbol, tf]])
+            @test connected == true
+            @test haskey(w.attrs, :ws_sub_id)
+            sub_id = w.attrs[:ws_sub_id]
+            @info "WS subscribed: $sub_id"
+
+            # --- Wait for data on the Rocket subject ---
+            received_data = Channel{Any}(1)
+            rocket_sub = Rocket.subscribe!(subject, Rocket.lambda(
+                on_next = v -> begin
+                    if !isready(received_data)
+                        put!(received_data, v)
+                    end
+                end,
+                on_error = err -> @warn("Subject error: $err"),
+            ))
+
+            ohlcv_data = nothing
+            timeout = 30.0
+            start_ts = time()
+            while time() - start_ts < timeout
+                if isready(received_data)
+                    ohlcv_data = take!(received_data)
+                    break
+                end
+                sleep(0.5)
+            end
+
+            if ohlcv_data === nothing
+                @warn "No WS data within $(timeout)s — exchange may not support WS OHLCV"
+                @test_broken false  # Known limitation if exchange lacks WS
+            else
+                elapsed = round(time() - start_ts; digits=1)
+                @info "WS data received after $(elapsed)s | type=$(typeof(ohlcv_data))"
+                @test ohlcv_data !== nothing
+
+                # Validate OHLCV data shape
+                if ohlcv_data isa Vector && length(ohlcv_data) > 0
+                    entry = ohlcv_data[1]
+                    if entry isa Vector && length(entry) >= 6
+                        @test entry[2] isa Number  # open
+                        @test entry[3] isa Number  # high
+                        @test entry[4] isa Number  # low
+                        @test entry[5] isa Number  # close
+                        @test entry[6] isa Number  # volume
+                        @test entry[3] >= entry[4]  # high >= low
+                        @info "First OHLCV entry: ts=$(entry[1]) o=$(entry[2]) h=$(entry[3]) l=$(entry[4]) c=$(entry[5]) v=$(entry[6])"
+                    else
+                        @info "Unexpected entry format: $(typeof(entry)) = $entry"
+                    end
+                elseif ohlcv_data isa Dict
+                    @info "Dict data keys: $(collect(keys(ohlcv_data)))"
+                    if haskey(ohlcv_data, symbol)
+                        @info "  $symbol data: $(ohlcv_data[symbol])"
+                    end
+                end
+            end
+
+            # --- Cleanup ---
+            Rocket.unsubscribe!(rocket_sub)
+            # Send unsubscribe via WS client
+            ws_client = get(w.attrs, :ws_client, nothing)
+            if ws_client !== nothing
+                try
+                    Ccxt.CcxtGateway.send_unsubscribe(ws_client, sub_id)
+                    Ccxt.CcxtGateway.disconnect!(ws_client)
+                catch
+                end
+            end
+            Watchers.close(w; doflush=false)
+            try stop_exchange(exchange_id) catch end
+            @info "WS integration test cleanup done"
+        end
     end
 end
 

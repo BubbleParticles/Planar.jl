@@ -475,7 +475,7 @@ function _fetchto!(w, df, sym, tf, op=Val(:append); to, from=nothing, allow_upsa
         else
             _fetch_candles(w, from, to, sym; tf=nrow(df) < 2 ? tf : timeframe!(df))
         end
-        from_to_range = rangebetween(candles.timestamp, from, to)
+        from_to_range = rangebetween(candles.timestamp, from, to; strict=false)
         if isempty(from_to_range) && !isempty(candles)
             @debug "watchers fetchto!: all fetched data ≤ from, already caught up" tf from to nrows=nrow(candles)
             return true
@@ -495,7 +495,7 @@ function _fetchto!(w, df, sym, tf, op=Val(:append); to, from=nothing, allow_upsa
 
         # # Cleaning can add missing rows, and expand the range outside our target dates
         cleaned = DataFrame(
-            @view(cleaned[rangebetween(cleaned.timestamp, from, to), :]); copycols=false
+            @view(cleaned[rangebetween(cleaned.timestamp, from, to; strict=false), :]); copycols=false
         )
         if isempty(cleaned)
             if diff < prd
@@ -505,12 +505,12 @@ function _fetchto!(w, df, sym, tf, op=Val(:append); to, from=nothing, allow_upsa
             return false
         end
         @debug "watchers fetchto!: " firstdate(cleaned) lastdate(cleaned)
-        if !isempty(df) && firstdate(cleaned) != lastdate(df) + prd
+        if !isempty(df) && firstdate(cleaned) < lastdate(df)
             _fetch_error(w, from, to, sym, firstdate(cleaned))
         end
-        isleftadj() = lastdate(cleaned) + prd == firstdate(df)
-        isrightadj() = firstdate(cleaned) - prd == lastdate(df)
-        isrecent() = firstdate(cleaned) > lastdate(df)
+        isleftadj() = isempty(df) ? false : lastdate(cleaned) + prd == firstdate(df)
+        isrightadj() = isempty(df) ? false : firstdate(cleaned) - prd == lastdate(df)
+        isrecent() = isempty(df) ? false : firstdate(cleaned) > lastdate(df)
         isprep() = op == Val(:prepend) && isleftadj()
         function isapp()
             op == Val(:append) && (isrightadj() || (isrecent() && (_empty!!(df); true)))

@@ -87,6 +87,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         auto_restart=settings.process_manager.auto_restart,
         max_restarts_per_hour=settings.process_manager.max_restarts_per_hour,
         startup_timeout=settings.process_manager.startup_timeout,
+        broker=broker,
     )
     await process_manager.start()
 

@@ -12,9 +12,9 @@ server:
 
 zmq:
   # Main broker address (for main process to communicate with subprocesses)
-  broker_address: "tcp://127.0.0.1:5555"
+  broker_address: "tcp://127.0.0.1:5557"
   # Subprocess connect to this address
-  subprocess_connect: "tcp://127.0.0.1:5555"
+  subprocess_connect: "tcp://127.0.0.1:5557"
   # High water mark for ZMQ (prevent memory issues)
   high_water_mark: 1000
   # Timeout for request-reply (ms)
