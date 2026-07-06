@@ -491,17 +491,26 @@ class ExchangeSubprocess:
         so callers can use the same positional signatures as ccxt.
         """
         positional: List[Any] = params.pop("_args", [])
-        if asyncio.iscoroutinefunction(method):
+        caller_timeout: Optional[float] = params.pop("_timeout", None)
+        orig_timeout: Optional[int] = None
+        if caller_timeout is not None and self.exchange is not None:
+            orig_timeout = getattr(self.exchange, 'timeout', None)
+            self.exchange.timeout = int(caller_timeout * 1000)
+        try:
+            if asyncio.iscoroutinefunction(method):
+                if positional:
+                    return await method(*positional, **params) if params else await method(*positional)
+                if params:
+                    return await method(**params)
+                return await method()
             if positional:
-                return await method(*positional, **params) if params else await method(*positional)
+                return method(*positional, **params) if params else method(*positional)
             if params:
-                return await method(**params)
-            return await method()
-        if positional:
-            return method(*positional, **params) if params else method(*positional)
-        if params:
-            return method(**params)
-        return method()
+                return method(**params)
+            return method()
+        finally:
+            if orig_timeout is not None:
+                self.exchange.timeout = orig_timeout
 
     def _make_serializable(self, result: Any) -> Any:
         """Convert result to JSON-serializable format."""

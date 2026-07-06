@@ -10,22 +10,22 @@ const CcxtTickerVal = Val{:ccxt_ticker}
 const CcxtTicker = @NamedTuple begin
     symbol::String
     timestamp::Option{DateTime}
-    open::Float64
-    high::Float64
-    low::Float64
-    close::Float64
+    open::Option{Float64}
+    high::Option{Float64}
+    low::Option{Float64}
+    close::Option{Float64}
     previousClose::Option{Float64}
-    bid::Float64
-    ask::Float64
+    bid::Option{Float64}
+    ask::Option{Float64}
     bidVolume::Option{Float64}
     askVolume::Option{Float64}
-    last::Float64
-    vwap::Float64
-    change::Float64
-    percentage::Float64
-    average::Float64
-    baseVolume::Float64
-    quoteVolume::Float64
+    last::Option{Float64}
+    vwap::Option{Float64}
+    change::Option{Float64}
+    percentage::Option{Float64}
+    average::Option{Float64}
+    baseVolume::Option{Float64}
+    quoteVolume::Option{Float64}
 end
 
 _ids!(attrs, ids) = attrs[:ids] = string.(ids)
@@ -56,7 +56,7 @@ function ccxt_tickers_watcher(
 )
     check_timeout(exc, interval)
     attrs = Dict{Symbol,Any}()
-    attrs[:iswatch] = something(iswatch, false)::Bool
+    attrs[:iswatch] = something(iswatch, has(exc, :watchTickers) || has(exc, :watchTicker))::Bool
     attrs[:issandbox] = issandbox(exc)
     attrs[:excparams] = Dict{String,Any}()
     attrs[:excaccount] = account(exc)
@@ -166,46 +166,82 @@ function _reset_tickers_func!(w::Watcher)
             wrapper_func=_parse_ticker_snapshot,
             if_func=!isempty,
         )
-        _tfunc!(attrs, () -> check_task!(w))
-    else
-        # Capture exchange id, args, and ids so the closure can re-invoke
-        # `choosefunc` on every fetch. The result of `choosefunc` itself is
-        # a one-shot gateway response; the real fix is to call the gateway
-        # again before each poll, not repeat the snapshot.
-        exc_id = string(exc.id)
-        sym_ids = ids
-        fetch_symbols = _check_ids(exc, ids)
-        tickers_func() = begin
-            process_subj = @lget! attrs :tickers_process_subject Rocket.Subject(Any)
-            fetched = @lock w begin
-                time = now()
-                # Re-evaluate `choosefunc` on every poll so the gateway
-                # returns fresh data instead of repeating the first snapshot.
-                resp = if fetch_func isa Function
-                    try
-                        fetch_func()
-                    catch
-                        choosefunc(exc_id, "Ticker", fetch_symbols)
-                    end
-                else
-                    # CcxtGateway path: re-invoke choosefunc each cycle.
-                    choosefunc(exc_id, "Ticker", fetch_symbols)
-                end
-                result = _parse_ticker_snapshot(resp)
-                if !isempty(result)
-                    pushnew!(w, result, time)
-                    true
-                else
-                    false
-                end
-            end
-            if fetched
-                Rocket.next!(process_subj, w)
-            end
-            return fetched
+
+        # Try websocket subscription; on failure fall back to REST polling
+        exc_id_str = string(exc.id)
+        if _connect_ws_tickers!(w, exc_id_str, ids)
+            _tfunc!(attrs, () -> check_task!(w))
+        else
+            @warn "WebSocket unavailable for $(w.name), falling back to REST polling"
+            _tfunc!(attrs, _make_tickers_func(w, exc_id_str, attrs, ids))
         end
-        _tfunc!(attrs, tickers_func)
+    else
+        _tfunc!(attrs, _make_tickers_func(w, string(exc.id), attrs, ids))
     end
+end
+
+"""Create a polling function that fetches tickers via REST each cycle."""
+function _make_tickers_func(w, exc_id::String, attrs, ids)
+    fetch_symbols = _check_ids(_exc(w), ids)
+    return function ()
+        process_subj = @lget! attrs :tickers_process_subject Rocket.Subject(Any)
+        fetched = @lock w begin
+            time = now()
+            # Re-invoke choosefunc on every poll so the gateway
+            # returns fresh data instead of repeating the first snapshot.
+            resp = try
+                choosefunc(exc_id, "Ticker", fetch_symbols)
+            catch e
+                @debug "tickers poll failed" exception=(e,)
+                nothing
+            end
+            result = _parse_ticker_snapshot(resp)
+            if !isempty(result)
+                pushnew!(w, result, time)
+                true
+            else
+                false
+            end
+        end
+        if fetched
+            Rocket.next!(process_subj, w)
+        end
+        return fetched
+    end
+end
+
+"""Connect to the gateway WebSocket and subscribe to watchTickers.
+Returns true if the subscription was established, false otherwise.
+Pushes incoming ticker data into the Rocket pipeline set up by handler_task!."""
+function _connect_ws_tickers!(w, eid::String, ids::Vector)::Bool
+    attrs = w.attrs
+    handler = get(attrs, :handler, nothing)
+    handler === nothing && return false
+
+    subject = handler.subject
+    _WS = Fetch.Exchanges.Ccxt.CcxtGateway
+
+    ws_client = _WS.default_ws_client()
+    connected = _WS.connect!(ws_client)
+    if !connected
+        return false
+    end
+
+    sub_id = _WS.send_subscribe(
+        ws_client,
+        eid,
+        "watchTickers",
+        params=Dict{String, Any}("symbols" => ids),
+        callback = data -> begin
+            if data !== nothing
+                Rocket.next!(subject, data)
+            end
+        end,
+    )
+
+    attrs[:ws_client] = ws_client
+    attrs[:ws_sub_id] = sub_id
+    return true
 end
 
 _start!(w::Watcher, ::CcxtTickerVal) = _reset_tickers_func!(w)
