@@ -112,7 +112,7 @@ function _out_as_input(inputs, data; elkey=nothing)
     end
 end
 
-function choosefunc(exchange_id::String, suffix::String, inputs::AbstractVector; elkey=nothing, kwargs...)
+function choosefunc(exchange_id::String, suffix::String, inputs::AbstractVector; elkey=nothing, timeout=120.0, kwargs...)
     hasinputs = !isempty(inputs)
     method, kind = _multifunc(exchange_id, suffix, hasinputs)
     client = CcxtGateway.default_client()
@@ -131,7 +131,7 @@ function choosefunc(exchange_id::String, suffix::String, inputs::AbstractVector;
                 params["symbol"] = string(first(inputs))
             end
             data = try
-                CcxtGateway.call_exchange(client, exchange_id, method; body=params)
+                CcxtGateway.call_exchange(client, exchange_id, method; body=params, timeout=timeout)
             catch e
                 @warn "choosefunc: gateway call to $exchange_id.$method failed" exception=(e, catch_backtrace())
                 return nothing
@@ -143,9 +143,9 @@ function choosefunc(exchange_id::String, suffix::String, inputs::AbstractVector;
                 kw = merge(kwargs, Dict(:symbol => string(i)))
                 out[i] = try
                     if is_fetch && !isempty(kw)
-                        CcxtGateway.call_exchange(client, exchange_id, method; body=Dict("params" => kw))
+                        CcxtGateway.call_exchange(client, exchange_id, method; body=Dict("params" => kw), timeout=timeout)
                     else
-                        CcxtGateway.call_exchange(client, exchange_id, method; kw...)
+                        CcxtGateway.call_exchange(client, exchange_id, method; kw..., timeout=timeout)
                     end
                 catch e
                     @warn "choosefunc: gateway call to $exchange_id.$method failed" exception=(e, catch_backtrace())
@@ -157,9 +157,9 @@ function choosefunc(exchange_id::String, suffix::String, inputs::AbstractVector;
     else
         return try
             if is_fetch && !isempty(kwargs)
-                CcxtGateway.call_exchange(client, exchange_id, method; body=Dict("params" => kwargs))
+                CcxtGateway.call_exchange(client, exchange_id, method; body=Dict("params" => kwargs), timeout=timeout)
             else
-                CcxtGateway.call_exchange(client, exchange_id, method; kwargs...)
+                CcxtGateway.call_exchange(client, exchange_id, method; kwargs..., timeout=timeout)
             end
         catch e
             @warn "choosefunc: gateway call to $exchange_id.$method failed" exception=(e, catch_backtrace())

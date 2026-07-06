@@ -375,6 +375,12 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 
 54. **Python venv `pyvenv.cfg` version mismatch silently breaks site-packages loading**: If `.venv/pyvenv.cfg` has `version_info = 3.14` but the host Python is 3.11, the interpreter ignores the venv config entirely and never reads `.pth` files — `uv pip install -e .` succeeds but `python3 -m ccxt_gateway.daemon_gateway` fails with "No module found". Fix: recreate the venv matching the exact host version with `rm -rf .venv && uv venv --python $(python3 --version | cut -d' ' -f2)`.
 
+55. **State struct fields storing deserialized external data must not have narrow type constraints**: `CandleWatcherSymbolState4.nextcandle` was typed `Union{Nothing, Tuple}`, but WS data arrives as JSON3.Object (or Dict{Symbol} after JSON3 parse). The narrow annotation causes `TypeError` on assignment. Use untyped fields (`= nothing` without type annotation) or widen the Union to include `Dict` and `JSON3.Object` for fields that hold deserialized API/WS responses.
+
+56. **`choosefunc` calls `call_exchange` without a timeout, relying on the 30s GatewayClient default**: Exchange API calls like `fetchTickers` with many symbols can take longer than 30s, causing `TimeoutError: Connection closed after 30 seconds`. Always pass a `timeout` parameter (e.g. `timeout=120.0`) to `call_exchange` from `choosefunc`, matching the pattern used by `_first` in `ExchangeTypes/src/exchange.jl` which already sets timeouts per-method.
+
+57. **The gateway has THREE independent timeout layers — all must be increased for slow exchange API calls**: (1) Julia HTTP timeout (`GatewayClient` default 30s, increased via `call_exchange(; timeout=...)`), (2) ZMQ broker timeout in gateway `rest.py` (hardcoded 30s for REST methods), and (3) ccxt exchange timeout in the subprocess (30000ms). Fixing only one layer still fails. The Julia `call_exchange` now injects `_timeout` into the POST body, which the gateway extracts for its broker timeout and forwards to the subprocess's `_call_method` which sets `self.exchange.timeout` dynamically for the call, then restores it.
+
 ---
 
 ## CCXT Migration Review Checklist

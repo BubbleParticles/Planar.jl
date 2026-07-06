@@ -849,7 +849,7 @@ uuid = "9602ed7d-8fef-5bc8-8597-8f21381861e8"
 version = "0.1.5"
 
 [[deps.Watchers]]
-deps = ["Ccxt", "DaemonMode", "Fetch", "HTTP", "JSON3", "Rocket", "Statistics", "URIs"]
+deps = ["DaemonMode", "Fetch", "HTTP", "JSON3", "Rocket", "Statistics", "URIs"]
 path = "."
 uuid = "4a3f9c16-ec8e-48c6-a58d-938fc30e2b4b"
 version = "0.1.0"
