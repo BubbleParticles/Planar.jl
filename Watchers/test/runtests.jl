@@ -15,8 +15,8 @@ using Watchers.Misc: rangebetween
 using Watchers.Data: empty_ohlcv
 using Watchers.WatchersImpls: CcxtTicker, TempCandle, TickerWatcherSymbolState2, CandleWatcherSymbolState4, WatcherHandler2
 using Watchers.WatchersImpls: _parse_ticker_snapshot, _ob_to_df, sym_procstate!, default_load_timeframe
-using Ccxt
-using Ccxt.CcxtGateway: ping, start_exchange, stop_exchange, exchange_ready
+using Watchers.Ccxt
+using .Ccxt.CcxtGateway: ping, start_exchange, stop_exchange, exchange_ready
 
 # Define watcher methods for test watcher type
 _init!(w::Watcher, ::Val{:testwatcher}) = nothing

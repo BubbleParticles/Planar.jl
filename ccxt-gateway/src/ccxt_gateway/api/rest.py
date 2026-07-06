@@ -226,7 +226,8 @@ async def call_exchange_method(
 
     # WS methods (ending in "Ws" or starting with "watch") need longer timeout
     # because ccxt.pro opens a WebSocket connection internally for the request.
-    broker_timeout: float = 300.0 if method.endswith("Ws") or method.startswith("watch") else 30.0
+    caller_timeout: Optional[float] = params.get("_timeout", None)
+    broker_timeout: float = caller_timeout or (300.0 if method.endswith("Ws") or method.startswith("watch") else 30.0)
 
     response = await _send_via_broker(broker, process_manager, exchange_id, request_msg, timeout=broker_timeout)
 

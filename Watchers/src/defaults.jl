@@ -84,7 +84,11 @@ function default_loader(w::Watcher, key)
         w.has.process && process!(w)
         setattr!(w, true, :loaded)
     catch e
-        @error "$(w.name): failed to load $key" exception = e
+        if e isa EOFError
+            @debug "$(w.name): no persisted data for $key (first run)"
+        else
+            @error "$(w.name): failed to load $key" exception = e
+        end
     end
 end
 default_loader(w::Watcher) = default_loader(w, w.name)
