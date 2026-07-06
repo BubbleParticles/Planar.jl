@@ -141,7 +141,7 @@ function call_exchange(client::GatewayClient, exchange_id::String, ccxt_method::
  req_method = body !== nothing ? "POST" : (ccxt_method ∈ ("createOrder", "cancelOrder", "withdraw", "setLeverage", "setMarginMode", "setPositionMode", "setSandboxMode", "set_api_key", "enableRateLimit", "timeout", "rateLimit")) ? "POST" : "GET"
  if timeout !== nothing && body !== nothing
      body = copy(body)
-     body["_timeout"] = Float64(timeout)
+     body[:_timeout] = Float64(timeout)
  end
  api_call(client, req_method, path; query, body, timeout=timeout)
 end
