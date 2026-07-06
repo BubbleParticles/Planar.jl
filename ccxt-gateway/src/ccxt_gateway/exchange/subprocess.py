@@ -81,7 +81,7 @@ class ExchangeSubprocess:
 
         self.exchange: Any = None
         self.running: bool = False
-
+        
         # Setup signal handlers
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -375,6 +375,28 @@ class ExchangeSubprocess:
         # Send response
         await self.socket.send_multipart([b"", response])
 
+    def _ohlcv_max_ts(self, data: Any) -> Optional[int]:
+        """Extract max timestamp from OHLCV data."""
+        if isinstance(data, dict):
+            max_ts: Optional[int] = None
+            for tf_dict in data.values():
+                if not isinstance(tf_dict, dict):
+                    continue
+                for candles in tf_dict.values():
+                    ts = self._ohlcv_max_ts(candles)
+                    if ts is not None and (max_ts is None or ts > max_ts):
+                        max_ts = ts
+            return max_ts
+        if isinstance(data, list):
+            max_ts = None
+            for row in data:
+                if isinstance(row, list) and row:
+                    ts = row[0]
+                    if isinstance(ts, (int, float)) and (max_ts is None or int(ts) > max_ts):
+                        max_ts = int(ts)
+            return max_ts
+        return None
+
     async def _handle_watch_method(
         self,
         method: str,
@@ -383,29 +405,36 @@ class ExchangeSubprocess:
         subscription_id: Optional[str],
         request_id: str,
     ) -> None:
-        """Handle a watch* method (WebSocket streaming)."""
+        """Handle a watch* method (WebSocket streaming).
+
+        ccxt.pro watch methods work in two modes:
+        1. Async iterator mode: ``async for update in exchange.watch_*(...)``
+        2. One-shot mode: ``await exchange.watch_*(...)`` called repeatedly
+
+        Both are handled by sending a "subscribed" confirmation first, then
+        spawning a background task that streams updates as ``watch_update``
+        ZMQ messages — so the main message loop stays responsive.
+        """
         try:
-            # Call the watch method - it returns an async iterator
-            iterator_or_value: Any = await self._call_method(ccxt_method, params)
+            first_batch: Any = await self._call_method(ccxt_method, params)
 
-            # Check if it's an async iterator
-            if hasattr(iterator_or_value, "__aiter__"):
-                # Send initial response (subscription confirmed)
-                response: bytes = create_response(request_id, result={"status": "subscribed", "method": method})
-                await self.socket.send_multipart([b"", response])
+            response: bytes = create_response(
+                request_id, result={"status": "subscribed", "method": method}
+            )
+            await self.socket.send_multipart([b"", response])
 
-                # Iterate over watch updates
-                async for update in iterator_or_value:
-                    # Send each update as a watch_update message
-                    update_msg: bytes = create_watch_update(
-                        subscription_id or request_id, update
+            if hasattr(first_batch, "__aiter__"):
+                asyncio.create_task(
+                    self._watch_iterator_loop(
+                        first_batch, subscription_id or request_id
                     )
-                    await self.socket.send_multipart([b"", update_msg])
+                )
             else:
-                # Not an iterator, just send result
-                serializable_result: Any = self._make_serializable(iterator_or_value)
-                response = create_response(request_id, result=serializable_result)
-                await self.socket.send_multipart([b"", response])
+                asyncio.create_task(
+                    self._watch_poll_loop(
+                        ccxt_method, dict(params), subscription_id or request_id
+                    )
+                )
 
         except Exception as e:
             logger.error("Error in watch method %s: %s", method, e)
@@ -415,6 +444,44 @@ class ExchangeSubprocess:
                 error_code=type(e).__name__,
             )
             await self.socket.send_multipart([b"", response])
+
+    async def _watch_iterator_loop(
+        self,
+        iterator: Any,
+        subscription_id: str,
+    ) -> None:
+        try:
+            async for update in iterator:
+                update_msg: bytes = create_watch_update(subscription_id, update)
+                await self.socket.send_multipart([b"", update_msg])
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error("Error in watch iterator loop: %s", e)
+
+    async def _watch_poll_loop(
+        self,
+        method: Callable[..., Any],
+        params: Dict[str, Any],
+        subscription_id: str,
+    ) -> None:
+        """Background task: poll a one-shot watch method and stream updates.
+
+        ccxt.pro one-shot watch methods behave like:
+        ``while True: data = await exchange.watch_*(...)``
+        Each consecutive ``await`` returns the current cached state
+        (``newUpdates=true`` default), so this loop effectively
+        streams the latest data without busy-waiting.
+        """
+        try:
+            while self.running:
+                result: Any = await self._call_method(method, params)
+                update_msg: bytes = create_watch_update(subscription_id, result)
+                await self.socket.send_multipart([b"", update_msg])
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error("Error in watch poll loop: %s", e)
 
     async def _call_method(self, method: Callable[..., Any], params: Dict[str, Any]) -> Any:
         """Call a CCXT method with given params.
