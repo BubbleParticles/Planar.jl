@@ -548,6 +548,10 @@ function _sticky_fetchto!(args...; kwargs...)
 end
 
 function _resolve(w, ohlcv_dst, ohlcv_src::DataFrame, sym=_sym(w))
+    if isempty(ohlcv_src)
+        @debug "_resolve: ohlcv_src DataFrame is empty for $sym, nothing to resolve"
+        return
+    end
     _resolve(w, ohlcv_dst, _firstdate(ohlcv_src), sym)
     _append_ohlcv!(
         w, ohlcv_dst, ohlcv_src, _lastdate(ohlcv_dst), _nextdate(ohlcv_dst, _tfr(w))
@@ -566,6 +570,13 @@ If the starting point is not equal to the current timestamp, it fetches new data
 """
 function _resolve(w, ohlcv_dst, date_candidate::DateTime, sym=_sym(w))
     tf = _tfr(w)
+    if isempty(ohlcv_dst)
+        @debug "_resolve: empty DataFrame for $sym, fetching initial data"
+        right = date_candidate
+        from = right - w.capacity.view * period(tf)
+        _sticky_fetchto!(w, ohlcv_dst, sym, tf; to=right, from=from)
+        return
+    end
     left = _lastdate(ohlcv_dst)
     right = date_candidate
     next = _nextdate(ohlcv_dst, tf)

@@ -96,7 +96,7 @@ _fetch!(w::Watcher, ::CcxtOHLCVCandlesVal; sym=nothing) = _tfunc(w)()
     backoff::Int8 = 0
     isprocessed::Bool = false
     processed_time::DateTime = DateTime(0)
-    nextcandle::Union{Nothing, Tuple} = nothing
+    nextcandle = nothing
     is_resyncing::Bool = false
 end
 
@@ -300,10 +300,13 @@ function _update_ohlcv_func(w)
             return nothing
         end
         latest_ts = apply(tf, now())
-        for (sym, tf_candles) in snap
+        for (sym_raw, tf_candles) in snap
+            sym = String(sym_raw)
             state = symstates[sym]::CandleWatcherSymbolState4
-            @lock state.lock begin
-                this_df = view[sym]
+                @lock state.lock begin
+                this_df = get!(view, sym) do
+                    empty_ohlcv()
+                end
                 if isempty(this_df)
                     @debug "ohlcv (candles): waiting for startup fetch" _module =
                         LogOHLCVWatcher sym
@@ -317,8 +320,8 @@ function _update_ohlcv_func(w)
                     state.nextcandle = tf_candles
                     continue
                 end
-                for (this_tf_str, candles) in state.nextcandle
-                    if this_tf_str == tf_str
+                for (this_tf_raw, candles) in state.nextcandle
+                    if String(this_tf_raw) == tf_str
                         for cdl in candles
                             cdl_ts = apply(tf, first(cdl) |> dt)
                             if cdl_ts == next_ts
