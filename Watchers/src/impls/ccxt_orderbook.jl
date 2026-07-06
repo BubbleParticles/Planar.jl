@@ -42,7 +42,7 @@ The watcher is then started and returned for use.
 The function checks for timeout, sets up the attributes, and assigns the appropriate order book function based on the level.
 
 """
-function ccxt_orderbook_watcher(exc::Exchange, sym; level=L1, interval=Second(1))
+function ccxt_orderbook_watcher(exc::Exchange, sym; level=L1, interval=Second(1), iswatch=nothing)
     check_timeout(exc, interval)
     attrs = Dict{Symbol,Any}()
     _sym!(attrs, sym)
@@ -52,6 +52,7 @@ function ccxt_orderbook_watcher(exc::Exchange, sym; level=L1, interval=Second(1)
     attrs[:issandbox] = issandbox(exc)
     attrs[:excparams] = Dict{String,Any}()
     attrs[:excaccount] = account(exc)
+    attrs[:iswatch] = something(iswatch, has(exc, :watchOrderBook) || has(exc, :watchOrderBookForSymbols))
     _ob_func(attrs, OrderBookLevel(level))
     watcher_type = DataFrame
     wid = string(
@@ -129,24 +130,12 @@ end
 
 $(TYPEDSIGNATURES)
 
-This function fetches the order book data using the appropriate function and symbol.
-If the fetched order book has data, it is converted to a DataFrame and pushed to the watcher.
-The function returns `true` if data was fetched and pushed, and `false` otherwise.
+This function delegates to the tfunc callable set by `_start!`, which is either
+a REST polling closure or `check_task!` for WebSocket streaming.
 
 """
 function _fetch!(w::Watcher, ::CcxtOrderBookVal)
-    client = default_client()
-    exc = _exc(w)
-    method = _tfunc(w)
-    sym = _sym(w)
-    ob = call_exchange(client, exc.id, method; query=Dict("symbol" => sym))
-    if !isnothing(ob) && !isempty(ob)
-        result = _ob_to_df(ob)
-        pushnew!(w, result, _obtimestamp(result))
-        true
-    else
-        false
-    end
+    _tfunc(w)()
 end
 
 @doc """ Processes the watcher data.
@@ -188,7 +177,111 @@ function _start!(w::Watcher, ::CcxtOrderBookVal)
         eid, attrs[:excparams]; sandbox=attrs[:issandbox], account=attrs[:excaccount]
     )
     _exc!(attrs, exc)
+
+    # Ensure the gateway exchange subprocess is started so its `has` dict is populated.
+    _start_gateway_exchange(string(exc.id))
+
     _ob_func(attrs, OrderBookLevel(attrs[:oblevel]))
+    ob_method = _tfunc(w)  # save method name (e.g. "fetchOrderBook") for REST fallback
+
+    iswatch = get(attrs, :iswatch, false)
+    if iswatch
+        watch_func = first(exc, :watchOrderBookForSymbols, :watchOrderBook)
+        sym = _sym(w)
+        _GW = Fetch.Exchanges.Ccxt.CcxtGateway
+
+        # Initial REST fetch for handler_task! init
+        init_fetch = function ()
+            c = _GW.default_client()
+            r = _GW.call_exchange(c, string(exc.id), ob_method; query=Dict("symbol" => sym))
+            return r
+        end
+
+        corogen_func(_) = coro_func() = watch_func(sym)
+        init_func() = init_fetch()
+        wrapper_func(v) = _ob_to_df(v)
+        handler_task!(w; init_func, corogen_func, wrapper_func, if_func=!isempty)
+
+        if _connect_ws_orderbook!(w, string(exc.id), sym)
+            _tfunc!(attrs, () -> check_task!(w))
+        else
+            @warn "WebSocket unavailable for $(w.name), falling back to REST polling"
+            _tfunc!(attrs, _make_orderbook_func(w, string(exc.id), ob_method))
+        end
+    else
+        _tfunc!(attrs, _make_orderbook_func(w, string(eid), ob_method))
+    end
+end
+
+"""Create a polling function that fetches order book via REST each cycle."""
+function _make_orderbook_func(w, exc_id::String, method::String)
+    _GW = Fetch.Exchanges.Ccxt.CcxtGateway
+    _client = _GW.default_client()
+    return function ()
+        @lock w begin
+            sym = _sym(w)
+            ob = try
+                _GW.call_exchange(_client, exc_id, method; query=Dict("symbol" => sym))
+            catch e
+                @debug "orderbook poll failed" exception=(e,)
+                nothing
+            end
+            if !isnothing(ob) && !isempty(ob)
+                result = _ob_to_df(ob)
+                pushnew!(w, result, _obtimestamp(result))
+                true
+            else
+                false
+            end
+        end
+    end
+end
+
+"""Connect to the gateway WebSocket and subscribe to watchOrderBook.
+Returns true if the subscription was established, false otherwise.
+Pushes incoming order book data into the Rocket pipeline set up by handler_task!."""
+function _connect_ws_orderbook!(w, eid::String, sym::String)::Bool
+    attrs = w.attrs
+    handler = get(attrs, :handler, nothing)
+    handler === nothing && return false
+
+    subject = handler.subject
+    _WS = Fetch.Exchanges.Ccxt.CcxtGateway
+
+    ws_client = _WS.default_ws_client()
+    connected = _WS.connect!(ws_client)
+    if !connected
+        return false
+    end
+
+    sub_id = _WS.send_subscribe(
+        ws_client,
+        eid,
+        "watchOrderBook",
+        params=Dict{String, Any}("symbol" => sym),
+        callback = data -> begin
+            if data !== nothing
+                Rocket.next!(subject, data)
+            end
+        end,
+    )
+
+    attrs[:ws_client] = ws_client
+    attrs[:ws_sub_id] = sub_id
+    return true
+end
+
+function _stop!(w::Watcher, ::CcxtOrderBookVal)
+    stop_handler_task!(w)
+    sub_id = get(w.attrs, :ws_sub_id, nothing)
+    if sub_id !== nothing
+        ws_client = get(w.attrs, :ws_client, nothing)
+        if ws_client !== nothing
+            _WS = Fetch.Exchanges.Ccxt.CcxtGateway
+            try _WS.send_unsubscribe(ws_client, sub_id) catch end
+        end
+        delete!(w.attrs, :ws_sub_id)
+    end
 end
 
 const OBCHUNKS = (100, 5) # chunks of the z array
