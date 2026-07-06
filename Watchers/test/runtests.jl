@@ -747,6 +747,195 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         Watchers.close(w; doflush=false)
     end
 
+    # ═════════════════════════════════════════════════════════
+    # General regression tests for bugs found in watchers 01–03
+    # ═════════════════════════════════════════════════════════
+    #
+    # These test general patterns that caused bugs across multiple
+    # watchers: (1) JSON3 Symbol→String key mismatch, (2) empty
+    # DataFrame access in _lastdate/_firstdate, (3) narrow type
+    # constraints on state struct fields, (4) WS data arriving
+    # before view initialization. Any watcher processing external
+    # data can hit these — not just the ones we fixed.
+    #
+    @testset "JSON3 key semantics: Symbol vs String" begin
+        # JSON3.parse produces objects with Symbol keys, not String keys.
+        # Accessing with a String key silently fails (no KeyError in
+        # haskey, throws KeyError on index). This caused KeyError in
+        # _update_ohlcv_func when looking up symstates[sym] with a
+        # String key from the WS data loop.
+        #
+        # Simulate JSON3.Object behavior with Dict{Symbol}
+        json3style = Dict{Symbol,Any}(Symbol("BTC/USDT") => [1, 2, 3])
+
+        # String-keyed lookup FAILS on Symbol-keyed dict
+        @test !haskey(json3style, "BTC/USDT")
+        @test_throws KeyError json3style["BTC/USDT"]
+
+        # Symbol-keyed lookup works
+        @test haskey(json3style, Symbol("BTC/USDT"))
+        @test json3style[Symbol("BTC/USDT")] == [1, 2, 3]
+
+        # The conversion pattern from _update_ohlcv_func:
+        # for (sym_raw, tf_candles) in snap   # sym_raw is Symbol
+        #     sym = String(sym_raw)            # convert to String
+        #     state = symstates[sym]           # String-keyed lookup
+        for (k_raw, v) in json3style
+            k = String(k_raw)
+            @test k == "BTC/USDT"
+            @test v == [1, 2, 3]
+        end
+
+        # The _stringify_keys pattern (from cp_markets.jl) for full
+        # conversion of nested Symbol-keyed data
+        stringified = Dict{String,Any}(string(k) => v for (k, v) in json3style)
+        @test haskey(stringified, "BTC/USDT")
+        @test stringified["BTC/USDT"] == [1, 2, 3]
+    end
+
+    @testset "empty DataFrame safety: _lastdate/_firstdate guards" begin
+        # _lastdate(df::DataFrame) = df[end, :timestamp] and
+        # _firstdate(df::DataFrame) = df[begin, :timestamp] throw
+        # BoundsError on 0-row DataFrames. Any processing code that
+        # calls these without an isempty guard crashes. This was the
+        # root cause of the _resolve crash in the candles watcher
+        # (empty view from WS data arriving before _ensure_ohlcv!).
+        df = empty_ohlcv()
+        @test isempty(df)
+        @test size(df, 1) == 0
+
+        # Direct access to last/first row throws BoundsError
+        @test_throws BoundsError df[end, :timestamp]
+        @test_throws BoundsError df[begin, :timestamp]
+        @test_throws BoundsError df[end, :open]
+        @test_throws BoundsError df[begin, :open]
+
+        # Proper guard pattern: isempty check first (used in the fix)
+        safe_last = isempty(df) ? nothing : df[end, :timestamp]
+        @test safe_last === nothing
+
+        safe_first = isempty(df) ? nothing : df[begin, :timestamp]
+        @test safe_first === nothing
+
+        # With data, the same code works
+        ts = now()
+        push!(df, (ts, 100.0, 105.0, 95.0, 102.0, 1000.0))
+        @test !isempty(df)
+        @test df[end, :timestamp] == ts
+        @test df[begin, :timestamp] == ts
+    end
+
+    @testset "CandleWatcherSymbolState4 nextcandle type flexibility" begin
+        # The nextcandle field was typed Union{Nothing, Tuple}, but
+        # WS data arrives as JSON3.Object (simulated as Dict{Symbol}
+        # here). Narrow type constraints on state fields that store
+        # external data cause TypeError on assignment. Fixed by
+        # removing the type annotation.
+        ST = Watchers.WatchersImpls.CandleWatcherSymbolState4
+
+        # Default is nothing
+        state = ST(; sym="BTC/USDT")
+        @test state.nextcandle === nothing
+
+        # Can hold Dict{String} (REST-style response)
+        rest_data = Dict(
+            "1m" => [[1700000000000, 50000.0, 51000.0, 49000.0, 50500.0, 1000.0]],
+        )
+        state.nextcandle = rest_data
+        @test state.nextcandle isa Dict
+        @test haskey(state.nextcandle, "1m")
+
+        # Can hold Dict{Symbol} (JSON3-style WS data)
+        ws_data = Dict{Symbol,Any}(
+            Symbol("1m") => [[1700000000000, 50000.0, 51000.0, 49000.0, 50500.0, 1000.0]],
+        )
+        state.nextcandle = ws_data
+        @test state.nextcandle isa Dict{Symbol}
+
+        # The iteration+conversion pattern from _update_ohlcv_func
+        for (tf_raw, candles) in state.nextcandle
+            tf_str = String(tf_raw)
+            @test tf_str == "1m"
+            @test length(candles) == 1
+            cdl = first(candles)
+            @test length(cdl) >= 6
+        end
+    end
+
+    @testset "WS snapshot processing pattern: Symbol keys + empty view" begin
+        # Simulates the full _update_ohlcv_func pattern:
+        #   1. Incoming WS data has Symbol keys (JSON3)
+        #   2. Need String(sym) for internal dict lookups
+        #   3. View may not have the symbol yet (lazy init via get!)
+        #   4. Empty DataFrame must be handled safely (no _lastdate)
+        #   5. nextcandle stores Symbol-keyed data safely
+        #
+        # Any watcher that processes WS data before the async init
+        # completes hits this pattern — not just OHLCV candles.
+
+        view = Dict{String, Watchers.DataFrame}()
+        symstates = Dict{String, CandleWatcherSymbolState4}(
+            "BTC/USDT" => CandleWatcherSymbolState4(; sym="BTC/USDT"),
+        )
+
+        # Simulate WS data with Symbol keys (as JSON3 produces)
+        snap = Dict{Symbol,Any}(
+            Symbol("BTC/USDT") => Dict{Symbol,Any}(
+                Symbol("1m") => [
+                    [1700000000000, 50000.0, 51000.0, 49000.0, 50500.0, 1000.0],
+                ],
+            ),
+        )
+
+        # Process each symbol (mirrors the fix: String conversion + get!)
+        for (sym_raw, tf_candles) in snap
+            sym = String(sym_raw)
+
+            # Must exist in symstates (fixed pre-existing)
+            @test haskey(symstates, sym)
+            state = symstates[sym]
+
+            # Lazy view init via get! (the fix for KeyError)
+            df = get!(view, sym) do
+                empty_ohlcv()
+            end
+            @test haskey(view, sym)
+            @test isempty(df)  # Not yet populated by _ensure_ohlcv!
+
+            # Cache the WS data for later processing (no TypeError)
+            state.nextcandle = tf_candles
+
+            # Iterate the cached data with Symbol→String conversion
+            for (tf_raw, candles) in state.nextcandle
+                tf_str = String(tf_raw)
+                @test tf_str == "1m"
+                @test length(candles) == 1
+                cdl = first(candles)
+                @test cdl[2] == 50000.0  # open
+                @test cdl[3] == 51000.0  # high
+                @test cdl[4] == 49000.0  # low
+                @test cdl[5] == 50500.0  # close
+                @test cdl[6] == 1000.0   # volume
+            end
+        end
+
+        # View entry exists but is empty (waiting for resync)
+        @test haskey(view, "BTC/USDT")
+        @test isempty(view["BTC/USDT"])
+
+        # Simulate the resync populating the view
+        ts = now()
+        push!(view["BTC/USDT"], (ts, 100.0, 105.0, 95.0, 102.0, 1000.0))
+        @test !isempty(view["BTC/USDT"])
+
+        # Now _nextdate and _lastdate work safely
+        tf = tf"1m"
+        last_ts = view["BTC/USDT"][end, :timestamp]
+        @test last_ts == ts
+        next_ts = last_ts + period(tf)
+        @test next_ts == ts + Minute(1)
+    end
+
     # ─────────────────────────────────────────────────────
     # WebSocket integration test (requires running gateway)
     # ─────────────────────────────────────────────────────
