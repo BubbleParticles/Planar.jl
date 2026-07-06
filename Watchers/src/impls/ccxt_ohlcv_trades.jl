@@ -53,7 +53,7 @@ function ccxt_ohlcv_watcher(
     attrs[:default_view] = default_view
     attrs[:quiet] = quiet
     attrs[k"ohlcv_method"] = :trades
-    attrs[:iswatch] = something(iswatch, false)
+    attrs[:iswatch] = something(iswatch, has(exc, :watchTrades) || has(exc, :watchTradesForSymbols))
     attrs[:issandbox] = issandbox(exc)
     attrs[:excparams] = Dict{String,Any}()
     attrs[:excaccount] = account(exc)
