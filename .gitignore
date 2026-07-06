@@ -56,6 +56,7 @@ PlanarDev/test/stubs/trades_stub_*.jls
 node_modules
 .omo/
 .omo/run-continuation/
+.venv/
 
 # Ignore symlinked top-level ignore files (moved originals live in .dev/)
 /.dev/.kiro/specs
