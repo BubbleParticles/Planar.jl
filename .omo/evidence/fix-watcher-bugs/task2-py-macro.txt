@@ -1,9 +1,0 @@
-TODO 2: PASS
-=========
-File: /Planar.jl/Watchers/src/impls/impls.jl line 24-25
-Change: macro py(expr); expr; end → macro py(expr); esc(expr); end
-Verification: Watchers test suite ran with all 155 tests passing; module
-WatchersImpls loaded as part of the test precompile.
-Command output:
-    Test Summary: | Pass  Total  Time
-    Watchers      |  155    155

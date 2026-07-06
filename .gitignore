@@ -54,6 +54,7 @@ PlanarDev/test/stubs/trades_stub_*.jls
 !docs/Project.toml
 !docs/Manifest.toml
 node_modules
+.omo/
 .omo/run-continuation/
 
 # Ignore symlinked top-level ignore files (moved originals live in .dev/)
