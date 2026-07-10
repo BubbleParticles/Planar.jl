@@ -403,6 +403,23 @@ function _start!(w::Watcher, ::CcxtOHLCVTickerVal)
     a = attrs(w)
     a[k"sem"] = Base.Semaphore(a[k"n_jobs"])
     a[k"symstates"] = Dict(sym => TickerWatcherSymbolState2(; sym) for sym in _ids(w))
+    # Ensure the exchange has markets loaded before pre-loading history.
+    # The Exchange(sym) constructor doesn't load markets — they're populated
+    # by getexchange! → setexchange! → loadmarkets!. Without this, _ensure_ohlcv!
+    # → _fetch_loop would fail with "Pair not in exchange markets".
+    eid = exchangeid(_exc(w))
+    exc = getexchange!(
+        eid, a[k"excparams"]; sandbox=a[k"issandbox"], account=a[k"excaccount"]
+    )
+    _exc!(a, exc)
+    # Pre-load historical OHLCV data for each symbol, matching the behavior of
+    # ccxt_ohlcv_trades (which calls _fetchto! directly in _start!) and
+    # ccxt_ohlcv_candles (which does the same via handler_task init_func).
+    for sym in _ids(w)
+        @async begin
+            @acquire a[k"sem"] _ensure_ohlcv!(w, sym)
+        end
+    end
     _reset_tickers_func!(w)
 end
 

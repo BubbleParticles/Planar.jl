@@ -290,7 +290,7 @@ end
 
 # --- End shared WebSocket helpers ---
 
-_tfunc!(attrs, suffix) = attrs[:tfunc] = _multifunc(_exc(attrs), suffix, true)[1]
+_tfunc!(attrs, suffix) = attrs[:tfunc] = _multifunc(string(_exc(attrs).id), suffix, true)[1]
 _tfunc!(attrs, f::Function) = attrs[:tfunc] = f
 _tfunc(w::Watcher) = attr(w, :tfunc)
 _sym(w::Watcher) = attr(w, :sym)

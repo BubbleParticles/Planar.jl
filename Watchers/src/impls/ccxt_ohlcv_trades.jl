@@ -158,14 +158,9 @@ function _start!(w::Watcher, ::CcxtOHLCVVal)
     @assert sym isa AbstractString
     iswatch = get(attrs, :iswatch, false)
 
-    # Bypass choosefunc for REST trades — it may select a WebSocket method (Gotcha #36).
-    # Direct call_exchange with known REST method fetchTrades avoids 30s blocking.
-    _GW = Fetch.Exchanges.Ccxt.CcxtGateway
-    fetch_func = function ()
-        c = _GW.default_client()
-        r = _GW.call_exchange(c, string(exc.id), "fetchTrades"; body=Dict("symbol" => sym))
-        return Dict(sym => r)
-    end
+    # Use _first for WS-capable REST polling — tries fetchTradesWs with
+    # automatic fallback to fetchTrades on gateway failure.
+    fetch_func = first(exc, :fetchTradesWs, :fetchTrades)
 
     _pending!(w)
     empty!(_trades(w))
@@ -193,7 +188,10 @@ function _start!(w::Watcher, ::CcxtOHLCVVal)
 
     if iswatch
         corogen_func(_) = coro_func() = watch_func(_sym(w))
-        init_func() = fetch_func
+        init_func() = begin
+            r = fetch_func(; symbol=sym)
+            r !== nothing ? Dict(sym => r) : nothing
+        end
         wrapper_func(v) = _parse_trades(w, v)
         handler_task!(w; init_func, corogen_func, wrapper_func, if_func=!isempty)
 
@@ -202,28 +200,32 @@ function _start!(w::Watcher, ::CcxtOHLCVVal)
         # and REST fallback on disconnect.
         _eid = string(exc.id)
         _sym_str = _sym(w)
-        _rest_fallback = _make_trades_func(w, _eid, _sym_str)
+        _rest_fallback = _make_trades_func(w, _eid, _sym_str, exc)
         if _setup_ws_watcher!(w, _eid, "watchTrades", Dict{String,Any}("symbol" => sym), _rest_fallback)
             # WS connected — _tfunc is set up with reconnect logic
         else
             @warn "WebSocket unavailable for $(w.name), falling back to REST polling"
-            _tfunc!(attrs, _make_trades_func(w, string(exc.id), _sym_str))
+            _tfunc!(attrs, _make_trades_func(w, string(exc.id), _sym_str, exc))
         end
     else
-        _tfunc!(attrs, _make_trades_func(w, string(exc.id), _sym(w)))
+        _tfunc!(attrs, _make_trades_func(w, string(exc.id), _sym(w), exc))
     end
+
 end
 
-"""Create a polling function that fetches trades via REST each cycle."""
-function _make_trades_func(w, exc_id::String, sym::String)
-    _GW = Fetch.Exchanges.Ccxt.CcxtGateway
-    _client = _GW.default_client()
+"""Create a polling function that fetches trades via REST (with WS fallback) each cycle."""
+function _make_trades_func(w, exc_id::String, sym::String, exc)
+    fetch_func = first(exc, :fetchTradesWs, :fetchTrades)
     return function ()
         tasks = @lget! w.attrs :process_tasks Task[]
         fetched = @lock w begin
             resp = try
-                data = _GW.call_exchange(_client, exc_id, "fetchTrades"; body=Dict("symbol" => sym))
-                Dict(sym => data)
+                if fetch_func !== nothing
+                    data = fetch_func(; symbol=sym)
+                    Dict(sym => data)
+                else
+                    nothing
+                end
             catch e
                 @debug "fetchTrades poll failed" exception=(e,)
                 nothing
@@ -336,7 +338,7 @@ function _process!(w::Watcher, ::CcxtOHLCVVal)
     @debug "Latest candle for $(_sym(w)) is $(_lastdate(temp.ohlcv))"
 end
 
-_stop!(w::Watcher, ::CcxtOHLCVVal) = begin
+function _stop!(w::Watcher, ::CcxtOHLCVVal)
     stop_handler_task!(w)
     # Disconnect websocket subscription if active
     sub_id = get(w.attrs, :ws_sub_id, nothing)

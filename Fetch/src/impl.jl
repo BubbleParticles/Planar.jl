@@ -405,21 +405,20 @@ end
 
 @doc """Returns the appropriate OHLCV fetching function based on the specified kind.
 
-Uses only REST methods — WS one-shot calls (fetchXxxWs) are unreliable for
-REST-polling fallback because they don't reliably support the `since` parameter,
-returning empty data when queried for historical ranges. The watcher's own WS
-subscription (watchOHLCVForSymbols) handles the real-time path; REST methods
-are exclusively for initial backfill and polling fallback.
+Attempts WS one-shot methods first (fetchXxxWs) for lower latency; falls back
+to REST on gateway failure. `_first`'s try/catch loop handles the fallback
+automatically — WS methods that don't support `since` will fail and fall through
+to the REST variant.
 """
 function ohlcv_func_bykind(exc, kind)
     args = if kind == :mark
-        (:fetchMarkOHLCV,)
+        (:fetchMarkOHLCVWs, :fetchMarkOHLCV)
     elseif kind == :index
-        (:fetchIndexOHLCV,)
+        (:fetchIndexOHLCVWs, :fetchIndexOHLCV)
     elseif kind == :premium
-        (:fetchPremiumIndexOHLCV,)
+        (:fetchPremiumIndexOHLCVWs, :fetchPremiumIndexOHLCV)
     else
-        (:fetchOHLCV,)
+        (:fetchOHLCVWs, :fetchOHLCV)
     end
     first(exc, args...)
 end
