@@ -16,11 +16,7 @@ _errors(w) = getfield(_exec(w), :errors)
 _val(w) = getfield(w, :_val)
 watcher_tasks(w) = begin
     a = w.attrs
-    if get(a, :iswatch, false) && haskey(a, :handler)
-        w.handler.process_tasks
-    else
-        @lget! a :process_tasks Task[]
-    end
+    @lget! a :process_tasks Task[]
 end
 
 @doc "Get the exchange associated with the watcher."
