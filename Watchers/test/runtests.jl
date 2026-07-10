@@ -580,13 +580,11 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         @test last(r_strict) == 5    # index 5 = last element strictly before 'to'
         @test length(r_strict) == 2
 
-        # strict=false — includes boundary-adjacent duplicates
-        # Left: excludes first duplicate (index 2), includes rest (index 3)
-        # Right: excludes last duplicate (index 8), includes preceding (index 6:7)
+        # strict=false — includes ALL boundary duplicates (fully inclusive)
         r_nonstrict = rangebetween(ts, from, to; strict=false)
-        @test first(r_nonstrict) == 3   # index 3 = second 'from' duplicate
-        @test last(r_nonstrict) == 7    # index 7 = second 'to' duplicate
-        @test length(r_nonstrict) == 5  # indices 3,4,5,6,7
+        @test first(r_nonstrict) == 2   # index 2 = first 'from' duplicate
+        @test last(r_nonstrict) == 8    # index 8 = last 'to' duplicate
+        @test length(r_nonstrict) == 7  # indices 2,3,4,5,6,7,8
     end
 
     @testset "static key collision: init_tasks vs process_tasks" begin

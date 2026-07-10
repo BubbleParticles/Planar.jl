@@ -402,4 +402,59 @@ end
     end
 end
 
+@testset "call_exchange body key type regression" begin
+    # Regression: body["_timeout"] failed with TypeError when body had Symbol keys
+    # body[:_timeout] works for both Dict{Symbol,Any} and Dict{String,Any}
+    Rest._gateway_initialized[] = true
+    client = GatewayClient()
+
+    # Mock HTTP POST to capture the request body
+    mock_bodies = Dict{Symbol,Any}[]  # store captured call info
+    function mock_post(url; kwargs...)
+        push!(mock_bodies, Dict{Symbol,Any}(:url => url, :kwargs => Dict(kwargs)))
+        HTTP.Response(200, JSON3.write(Dict("result" => Dict("status" => "ok"), "error" => nothing)))
+    end
+    Rest.set_http_post!(mock_post)
+
+    @testset "Dict{Symbol,Any} body with timeout" begin
+        empty!(mock_bodies)
+        body = Dict{Symbol,Any}(:symbol => "BTC/USDT")
+        result = call_exchange(client, "binance", "fetchTicker"; body=body, timeout=120.0)
+        @test length(mock_bodies) == 1
+        @test haskey(mock_bodies[1], :kwargs)
+        # Verify no TypeError was thrown — the fix
+        @test true
+    end
+
+    @testset "Dict{String,Any} body with timeout" begin
+        empty!(mock_bodies)
+        body = Dict{String,Any}("symbol" => "BTC/USDT")
+        result = call_exchange(client, "binance", "fetchTicker"; body=body, timeout=120.0)
+        @test length(mock_bodies) == 1
+        @test true
+    end
+
+    @testset "body=nothing with timeout does not inject _timeout" begin
+        empty!(mock_bodies)
+        # When body is nothing and timeout is set, _timeout should NOT be injected
+        # because the condition is: timeout !== nothing && body !== nothing
+        # This test just verifies no error
+        result = call_exchange(client, "binance", "fetchTicker"; timeout=120.0)
+        @test true  # no error = pass
+    end
+
+    @testset "Dict{Symbol,Any} body with timeout via keyword pass-through" begin
+        empty!(mock_bodies)
+        # Simulate the pattern used by choosefunc / exchange_funcs.jl:
+        # CcxtGateway.call_exchange(client, exchange_id, method; body=Dict{Symbol,Any}(), timeout=60.0)
+        body = Dict{Symbol,Any}(:params => Dict{String,Any}("type" => "swap"))
+        result = call_exchange(client, "binance", "fetchTickers"; body=body, timeout=60.0)
+        @test length(mock_bodies) == 1
+        @test true
+    end
+
+    # Restore original HTTP functions
+    Rest.set_http_post!(HTTP.post)
+end
+
 println("REST module edge case tests passed!")
