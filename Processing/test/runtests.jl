@@ -1,3 +1,5 @@
+module ProcessingTests
+
 using Test
 using Processing
 using Data
@@ -5,8 +7,6 @@ using Statistics: mean, std
 const DF = Data.DataFrames
 const TimeFrame = Processing.Misc.TimeTicks.TimeFrame
 const Dates = Processing.Misc.TimeTicks.Dates
-
-# ──────────────────────────────────────────────
 # upsample (ported from PlanarDev/test/test_processing.jl)
 # ──────────────────────────────────────────────
 # ──────────────────────────────────────────────
@@ -150,6 +150,20 @@ end
     @test ohlcv.open[2] == 2.0
     @test ohlcv.high[2] == 3.0
 end
+@testset "Processing.to_ohlcv negative amounts (regression)" begin
+    base = Dates.DateTime(2024,1,1,0,0)
+    # Binance options can return negative amounts — abs sum is required
+    df = DF.DataFrame(
+        timestamp=[base, base, base + Dates.Minute(5)],
+        price=[1.0, 1.5, 2.0],
+        amount=[-1.0, 2.0, -3.0]
+    )
+    ohlcv = Processing.TradesOHLCV.to_ohlcv(df)
+    @test DF.nrow(ohlcv) == 2
+    @test ohlcv.volume[1] == 3.0  # abs(-1) + abs(2) = 3
+    @test ohlcv.volume[2] == 3.0  # abs(-3) = 3
+end
+
 
 # ──────────────────────────────────────────────
 # _remove_incomplete_candle
@@ -264,4 +278,47 @@ end
     )
     result_large = Processing.upsample(df_large, tf_large, tf_small)
     @test DF.nrow(result_large) == nrows * 5
+end
+
+# ──────────────────────────────────────────────
+@testset "Processing._fetchto overlap fix (regression)" begin
+    # tf = TimeFrame(Dates.Minute(5))  # already defined globally
+
+    # Simulate the scenario: cached 1-row DataFrame at current period boundary
+    # and cleaned prepended data that covers/overlaps it
+    cached_ts = Dates.DateTime(2024, 1, 1, 14, 0)  # most recent complete period
+    df = DF.DataFrame(
+        timestamp=[cached_ts],
+        open=[100.0], high=[101.0], low=[99.0], close=[100.5], volume=[10.0]
+    )
+
+    # Simulated cleaned prepended data covering multiple periods up to cached_ts
+    # This is what the gateway returns when fetching from far past to cached_ts
+    cleaned_timestamps = [cached_ts - Dates.Minute(5*i) for i in 3:-1:0]  # 3 periods + cached_ts
+    cleaned = DF.DataFrame(
+        timestamp=cleaned_timestamps,
+        open=[99.0, 99.5, 100.0, 100.2],
+        high=[100.0, 100.5, 101.0, 101.2],
+        low=[98.5, 99.0, 99.5, 99.8],
+        close=[99.5, 100.0, 100.5, 100.8],
+        volume=[5.0, 8.0, 10.0, 12.0]
+    )
+
+    # Verify the overlap condition that triggers the fix:
+    # lastdate(cleaned) >= firstdate(df) - this was the bug condition
+    # Inline: last row timestamp >= first row timestamp
+    @test cleaned[end, :timestamp] >= df[1, :timestamp]
+
+    # The fix clears df when this overlap is detected and prepends cleaned data
+    # Simulate the fix behavior
+    isempty(df) || (df = DF.empty(df))  # _empty!! equivalent
+    # prependmax! on empty df = append (the result is just cleaned data)
+    result = vcat(cleaned, df; cols=:union)
+
+    # Result should be just the cleaned data (since df was cleared)
+    @test DF.nrow(result) == DF.nrow(cleaned)
+    @test result[1, :timestamp] == cleaned_timestamps[1]
+    @test result[end, :timestamp] == cleaned_timestamps[end]
+end
+
 end

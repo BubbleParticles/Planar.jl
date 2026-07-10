@@ -170,12 +170,15 @@ end
 # ──────────────────────────────────────────────
 @testset "rangeafter / before / between" begin
     v = [1, 2, 3, 3, 3, 4, 5]
+    # strict=true: skip ALL duplicates of d (fully exclusive)
     @test rangeafter(v, 3) == 6:7
-    @test rangeafter(v, 3; strict=false) == 4:7
     @test rangebefore(v, 3) == 1:2
-    @test rangebefore(v, 3; strict=false) == 1:4
+    # strict=false: include d and all its duplicates (fully inclusive)
+    @test rangeafter(v, 3; strict=false) == 3:7
+    @test rangebefore(v, 3; strict=false) == 1:5
+    # rangebetween: strict=true ≡ exclusive, strict=false ≡ inclusive
     @test rangebetween(v, 2, 4; strict=true) == 3:5
-    @test rangebetween(v, 2, 4; strict=false) == 3:5
+    @test rangebetween(v, 2, 4; strict=false) == 2:6
     r = rangeafter(v, 99)
     @test isempty(v[r])
 end

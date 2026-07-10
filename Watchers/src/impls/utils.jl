@@ -193,6 +193,103 @@ _exc(attrs) = attrs[:exc]
 _exc(w::Watcher) = _exc(attrs(w))
 _exc!(attrs, exc) = attrs[:exc] = exc
 _exc!(w::Watcher, exc) = _exc!(attrs(w), exc)
+# --- Shared WebSocket subscription helpers ---
+
+"""
+    _connect_ws_subscribe!(w, eid, method, params) -> Bool
+
+Connect to the gateway WebSocket and subscribe to `method` with `params`.
+Wires incoming data into the watcher's Rocket handler subject.
+Stores the WS client and subscription ID in `attrs[:ws_client]` and `attrs[:ws_sub_id]`.
+
+On reconnection, cleans up the old subscription callback from `client.subscriptions`
+to prevent unbounded growth of stale callback entries.
+"""
+function _connect_ws_subscribe!(w::Watcher, eid::String, method::String, params::Dict{String,Any})::Bool
+    attrs = w.attrs
+    handler = get(attrs, :handler, nothing)
+    handler === nothing && return false
+
+    subject = handler.subject
+    _WS = Fetch.Exchanges.Ccxt.CcxtGateway
+
+    ws_client = _WS.default_ws_client()
+
+    # Clean up old subscription callback before reconnecting to prevent
+    # client.subscriptions from accumulating stale callbacks on each reconnect.
+    old_sub_id = get(attrs, :ws_sub_id, nothing)
+    if old_sub_id !== nothing
+        _WS.send_unsubscribe(ws_client, old_sub_id)
+    end
+
+    connected = _WS.connect!(ws_client)
+    if !connected
+        return false
+    end
+
+    sub_id = try
+        _WS.send_subscribe(
+            ws_client, eid, method,
+            params=params,
+            callback = data -> begin
+                @debug "WS callback received" data_type=typeof(data) data_summary=summary(data)
+                if data !== nothing
+                    Rocket.next!(subject, data)
+                end
+            end,
+        )
+    catch e
+        @error "WebSocket subscribe failed" exception = (e, catch_backtrace())
+        return false
+    end
+
+    attrs[:ws_client] = ws_client
+    attrs[:ws_sub_id] = sub_id
+    return true
+end
+
+"""
+    _setup_ws_watcher!(w, eid, method, params, rest_fallback) -> Bool
+
+Combined helper: tries initial WS connection+subscribe, then sets up the watcher's
+`_tfunc` with automatic reconnection on WS disconnect. Returns `true` if WS was
+established, `false` if the caller should fall back to REST polling.
+"""
+function _setup_ws_watcher!(w::Watcher, eid::String, method::String, params::Dict{String,Any}, rest_fallback::Function)::Bool
+    attrs = w.attrs
+    _WS = Fetch.Exchanges.Ccxt.CcxtGateway
+
+    # Initial connection
+    if !_connect_ws_subscribe!(w, eid, method, params)
+        return false
+    end
+
+    # Reconnect-aware tfunc: always run REST polling as a heartbeat/fallback so the
+    # periodic fetch pipeline is never a no-op. WS delivers real-time updates via the
+    # handler subject; REST keeps the view fresh and recovers automatically if WS
+    # stalls or drops. (Previously this only called check_task! while connected,
+    # leaving the view stale whenever WS was up but not streaming.)
+    _tfunc!(attrs, function ()
+        ws_client = get(attrs, :ws_client, nothing)
+        if ws_client !== nothing && _WS.is_connected(ws_client)
+            rest_fallback()
+        else
+            @warn "WebSocket disconnected for $(w.name), attempting reconnect..."
+            if _connect_ws_subscribe!(w, eid, method, params)
+                @info "WebSocket reconnected for $(w.name)"
+                rest_fallback()
+            else
+                @debug "WebSocket reconnect failed for $(w.name), using REST fallback"
+                rest_fallback()
+            end
+        end
+    end)
+
+    return true
+end
+
+# --- End shared WebSocket helpers ---
+
 _tfunc!(attrs, suffix) = attrs[:tfunc] = _multifunc(_exc(attrs), suffix, true)[1]
 _tfunc!(attrs, f::Function) = attrs[:tfunc] = f
 _tfunc(w::Watcher) = attr(w, :tfunc)
@@ -476,11 +573,14 @@ function _fetchto!(w, df, sym, tf, op=Val(:append); to, from=nothing, allow_upsa
             _fetch_candles(w, from, to, sym; tf=nrow(df) < 2 ? tf : timeframe!(df))
         end
         from_to_range = rangebetween(candles.timestamp, from, to; strict=false)
-        if isempty(from_to_range) && !isempty(candles)
-            @debug "watchers fetchto!: all fetched data ≤ from, already caught up" tf from to nrows=nrow(candles)
+        if isempty(from_to_range)
+            if isempty(candles)
+                @debug "watchers fetchto!: no data returned for range" tf from to maxlog=10
+                return true
+            end
+            @debug "watchers fetchto!: all fetched data outside range, already caught up" tf from to nrows=nrow(candles)
             return true
         end
-        isempty(from_to_range) && _fetch_error(w, from, to, sym)
         @debug "watchers fetchto!: " to _lastdate(candles) from _firstdate(candles) length(
             from_to_range
         ) nrow(candles)
@@ -505,15 +605,29 @@ function _fetchto!(w, df, sym, tf, op=Val(:append); to, from=nothing, allow_upsa
             return false
         end
         @debug "watchers fetchto!: " firstdate(cleaned) lastdate(cleaned)
-        if !isempty(df) && firstdate(cleaned) < lastdate(df)
+        if op == Val(:append) && !isempty(df) && firstdate(cleaned) < lastdate(df)
             _fetch_error(w, from, to, sym, firstdate(cleaned))
         end
         isleftadj() = isempty(df) ? false : lastdate(cleaned) + prd == firstdate(df)
         isrightadj() = isempty(df) ? false : firstdate(cleaned) - prd == lastdate(df)
         isrecent() = isempty(df) ? false : firstdate(cleaned) > lastdate(df)
-        isprep() = op == Val(:prepend) && isleftadj()
+        isprep() = if op == Val(:prepend)
+            if isleftadj()
+                true
+            elseif !isempty(df) && lastdate(cleaned) >= firstdate(df)
+                # Prepended data covers/overlaps existing data (e.g., cached
+                # 1-row from startup_task with the same timestamp).
+                # Clear existing data — the cleaned data contains everything.
+                _empty!!(df)
+                true
+            else
+                false
+            end
+        else
+            false
+        end
         function isapp()
-            op == Val(:append) && (isrightadj() || (isrecent() && (_empty!!(df); true)))
+            op == Val(:append) && (isrightadj() || isrecent())
         end
         @debug "watchers fetchto!: " isprep() isapp() isleftadj() isrightadj()
         if isempty(df) || isprep() || isapp()
@@ -539,7 +653,11 @@ function _sticky_fetchto!(args...; kwargs...)
     backoff = 0.5
     max_backoff = 30.0
     for _ in 1:20
-        _fetchto!(args...; kwargs...) && return true
+        try
+            _fetchto!(args...; kwargs...) && return true
+        catch e
+            @warn "_sticky_fetchto! fetch failed, retrying" exception=(e, catch_backtrace())
+        end
         sleep(backoff)
         backoff = min(backoff + 0.5, max_backoff)
     end

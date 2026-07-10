@@ -56,6 +56,8 @@ function _run_read_loop(client::GatewayWSClient, ws)
         catch e
             if e isa EOFError
                 break  # clean close
+            elseif e isa HTTP.WebSockets.WebSocketError
+                break  # close frame of any code — connection is done
             elseif !HTTP.WebSockets.isclosed(ws)
                 @error "WebSocket read error" exception = (e, catch_backtrace())
             else
@@ -98,8 +100,12 @@ function connect!(client::GatewayWSClient)
     if is_connected(client)
         return true
     end
+    # If a stale task is still cleaning up (e.g. in its finally block after
+    # a WS disconnect), wait for it before reconnecting. Otherwise we race
+    # with its `client.task = nothing` assignment in the finally block,
+    # causing the stale task check below to return true without connecting.
     if client.task !== nothing && istaskstarted(client.task) && !istaskdone(client.task)
-        return true
+        wait(client.task)
     end
 
     barrier = Condition()

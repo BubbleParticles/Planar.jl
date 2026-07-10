@@ -405,23 +405,21 @@ end
 
 @doc """Returns the appropriate OHLCV fetching function based on the specified kind.
 
-$(TYPEDSIGNATURES)
-
-The `ohlcv_func_bykind` function determines and returns the appropriate OHLCV fetching function for the given exchange `exc` and `kind`.
+Uses only REST methods — WS one-shot calls (fetchXxxWs) are unreliable for
+REST-polling fallback because they don't reliably support the `since` parameter,
+returning empty data when queried for historical ranges. The watcher's own WS
+subscription (watchOHLCVForSymbols) handles the real-time path; REST methods
+are exclusively for initial backfill and polling fallback.
 """
 function ohlcv_func_bykind(exc, kind)
-    # WS-first for speed: fetchXxxWs uses ccxt.pro's internal WS connection for
-    # lower latency (single request-response via WS). Falls back to REST if the
-    # exchange doesn't support the WS variant. The gateway properly handles WS
-    # methods as one-shot calls (not long-lived subscriptions).
     args = if kind == :mark
-        (:fetchMarkOHLCVWs, :fetchMarkOHLCV)
+        (:fetchMarkOHLCV,)
     elseif kind == :index
-        (:fetchIndexOHLCVWs, :fetchIndexOHLCV)
+        (:fetchIndexOHLCV,)
     elseif kind == :premium
-        (:fetchPremiumIndexOHLCVWs, :fetchPremiumIndexOHLCV)
+        (:fetchPremiumIndexOHLCV,)
     else
-        (:fetchOHLCVWs, :fetchOHLCV)
+        (:fetchOHLCV,)
     end
     first(exc, args...)
 end

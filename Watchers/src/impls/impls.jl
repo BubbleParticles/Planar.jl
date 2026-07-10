@@ -42,6 +42,7 @@ using ..CoinPaprika: CoinPaprika as cp
     excaccount
     load_timeframe
     ohlcv_method
+    callback
 end
 
 # Add default_load_timeframe function

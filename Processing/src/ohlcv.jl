@@ -156,7 +156,8 @@ function cleanup_ohlcv_data(data, tf::TimeFrame; col=1, fill_missing=:close)
 
     # remove incomplete candle before timestamp normalization
     df = _remove_incomplete_candle(df, tf)
-    # normalize dates
+    size(df, 1) == 0 && return empty_ohlcv()
+
     @eachrow! df begin
         :timestamp = apply(tf, :timestamp)
     end

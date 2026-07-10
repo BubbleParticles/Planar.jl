@@ -68,8 +68,9 @@ function make_request(client::GatewayClient, method::String, path::String;
 
  kw = Dict{Symbol, Any}()
  t = Int(round(get(kwargs, :timeout, timeout !== nothing ? timeout : client.timeout)))
- kw[:timeout] = t
- kw[:readtimeout] = t
+kw[:timeout] = t
+kw[:closeimmediately] = true
+kw[:readtimeout] = t
  kw[:connect_timeout] = t
     if client.use_ssl
         kw[:ssl] = true
@@ -141,7 +142,8 @@ function call_exchange(client::GatewayClient, exchange_id::String, ccxt_method::
  req_method = body !== nothing ? "POST" : (ccxt_method ∈ ("createOrder", "cancelOrder", "withdraw", "setLeverage", "setMarginMode", "setPositionMode", "setSandboxMode", "set_api_key", "enableRateLimit", "timeout", "rateLimit")) ? "POST" : "GET"
  if timeout !== nothing && body !== nothing
      body = copy(body)
-     body[:_timeout] = Float64(timeout)
+     K = keytype(body)
+     body[K(:_timeout)] = Float64(timeout)
  end
  api_call(client, req_method, path; query, body, timeout=timeout)
 end

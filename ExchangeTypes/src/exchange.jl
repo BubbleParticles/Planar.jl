@@ -297,33 +297,45 @@ has(exc, what::Tuple{Vararg{Symbol}}; kwargs...) = _has_all(exc, what; kwargs...
 account(exc::Exchange) = getfield(exc, :account)
 
 function _first(exc::CcxtExchange, args::Vararg{Symbol})
- for name in args
- if has(exc, name)
- client = CcxtGateway.default_client()
- ex_id = string(exc.id)
- m = string(name)
- # WebSocket methods (ending in "Ws" or starting with "watch") need longer timeout
- # as they are long-lived subscriptions. 300s = 5 minutes, a multiple of typical timeframes.
- is_ws = endswith(m, "Ws") || startswith(m, "watch")
- timeout_val = is_ws ? 300.0 : nothing
- return (args...; kwargs...) -> begin
- try
-  # The subprocess dispatches via method(**params), so positional args
-  # must be converted. Send them under "_args" for the subprocess to
-  # unpack via method(*positional, **params).
- body = if isempty(args)
- Dict{Symbol,Any}(kwargs)
- else
- merge(Dict{Symbol,Any}(kwargs), Dict{Symbol,Any}(:_args => [a for a in args]))
- end
- CcxtGateway.call_exchange(client, ex_id, m; body=body, timeout=timeout_val)
- catch e
- @warn "Gateway call to $ex_id.$m failed" exception=(e, catch_backtrace())
- nothing
- end
- end
- end
- end
+    # Collect all exchange methods that are supported via `has`
+    available = filter(name -> has(exc, name), args)
+    isempty(available) && return nothing
+
+    client = CcxtGateway.default_client()
+    ex_id = string(exc.id)
+
+    return (args...; kwargs...) -> begin
+        for (idx, name) in enumerate(available)
+            m = string(name)
+            has_more = idx < length(available)
+            # WS one-shot calls & OHLCV bulk fetches need longer timeouts.
+            # WS: 300s (typical WS heartbeat periods). OHLCV: 120s (20000 candles).
+            # Otherwise use the GatewayClient default (30s).
+            is_ws = endswith(m, "Ws") || startswith(m, "watch")
+            is_ohlcv = occursin("OHLCV", m)
+            timeout_val = is_ws ? 300.0 : is_ohlcv ? 120.0 : nothing
+            try
+                # The subprocess dispatches via method(**params), so positional args
+                # must be converted. Send them under "_args" for the subprocess to
+                # unpack via method(*positional, **params).
+                body = if isempty(args)
+                    Dict{Symbol,Any}(kwargs)
+                else
+                    merge(Dict{Symbol,Any}(kwargs), Dict{Symbol,Any}(:_args => [a for a in args]))
+                end
+                @debug "_first: calling exchange" ex_id m body_keys=collect(keys(body)) body_since=get(body, :since, "MISSING") body_limit=get(body, :limit, "MISSING")
+                result = CcxtGateway.call_exchange(client, ex_id, m; body=body, timeout=timeout_val)
+                result !== nothing && return result
+            catch e
+                if has_more
+                    @warn "Gateway call to $ex_id.$m failed, trying fallback" exception=(e,)
+                else
+                    @debug "Gateway call to $ex_id.$m failed, no fallback available" exception=(e,)
+                end
+            end
+        end
+        return nothing
+    end
 end
 
 Base.first(exc::Exchange, args::Vararg{Symbol}) = _first(exc, args...)
