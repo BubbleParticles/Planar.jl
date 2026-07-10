@@ -90,7 +90,7 @@ end
 
 _totimestamp(v) = dt(Int(v))
 _timestamp!(d, v) = metadata!(d, "timestamp", v)
-_symbol!(d, ob) = metadata!(d, "symbol", string(ob["symbol"]))
+_symbol!(d, ob) = metadata!(d, "symbol", string(get(ob, "symbol", "unknown")))
 _obtimestamp(d::DataFrame) = metadata(d, "timestamp")
 
 @doc """ Converts order book data to a DataFrame.
@@ -110,10 +110,13 @@ function _ob_to_df(ob)
         ask_price=Float64[],
         ask_amount=Float64[],
     )
-    ts = _totimestamp(ob["timestamp"])
-    # NOTE: zipping makes sure that even if bids and asks are uneven
-    # the dataframe will be to the lower count
-    for (bid, ask) in zip(ob["bids"], ob["asks"])
+    # Guard against null/missing timestamp (same pattern as Fetch/src/orderbook.jl:77)
+    ts_raw = get(ob, "timestamp", nothing)
+    ts = ts_raw === nothing ? now() : _totimestamp(ts_raw)
+    # Guard against null/missing bids/asks — return empty DataFrame gracefully
+    bids = something(get(ob, "bids", []), [])
+    asks = something(get(ob, "asks", []), [])
+    for (bid, ask) in zip(bids, asks)
         push!(out.timestamp, ts)
         push!(out.bid_price, Float64(ask[1]))
         push!(out.bid_amount, Float64(ask[2]))
