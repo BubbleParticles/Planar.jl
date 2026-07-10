@@ -492,6 +492,12 @@ class ExchangeSubprocess:
         """
         positional: List[Any] = params.pop("_args", [])
         caller_timeout: Optional[float] = params.pop("_timeout", None)
+        # ccxt.pro watch methods (watchOHLCVForSymbols, watchTickersForSymbols, etc.)
+        # expect the symbols/timeframes list as the first positional argument.
+        # Julia sends it under "symbolsAndTimeframes" (a list of [sym, tf] pairs).
+        # Move it from kwargs to positional so it maps to the first parameter.
+        if "symbolsAndTimeframes" in params:
+            positional = [params.pop("symbolsAndTimeframes")] + positional
         orig_timeout: Optional[int] = None
         if caller_timeout is not None and self.exchange is not None:
             orig_timeout = getattr(self.exchange, 'timeout', None)

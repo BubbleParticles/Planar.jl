@@ -50,7 +50,7 @@ function to_ohlcv(df)
         :price => maximum => :high,
         :price => minimum => :low,
         :price => last => :close,
-        :amount => sum => :volume,
+        :amount => (x -> sum(abs, x)) => :volume,
     )
 end
 

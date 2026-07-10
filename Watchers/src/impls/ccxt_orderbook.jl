@@ -202,8 +202,8 @@ function _start!(w::Watcher, ::CcxtOrderBookVal)
         wrapper_func(v) = _ob_to_df(v)
         handler_task!(w; init_func, corogen_func, wrapper_func, if_func=!isempty)
 
-        if _connect_ws_orderbook!(w, string(exc.id), sym)
-            _tfunc!(attrs, () -> check_task!(w))
+        if _setup_ws_watcher!(w, string(exc.id), "watchOrderBook", Dict{String,Any}("symbol" => sym), _make_orderbook_func(w, string(exc.id), ob_method))
+            # WS connected — _tfunc is set up with reconnect logic
         else
             @warn "WebSocket unavailable for $(w.name), falling back to REST polling"
             _tfunc!(attrs, _make_orderbook_func(w, string(exc.id), ob_method))
@@ -235,40 +235,6 @@ function _make_orderbook_func(w, exc_id::String, method::String)
             end
         end
     end
-end
-
-"""Connect to the gateway WebSocket and subscribe to watchOrderBook.
-Returns true if the subscription was established, false otherwise.
-Pushes incoming order book data into the Rocket pipeline set up by handler_task!."""
-function _connect_ws_orderbook!(w, eid::String, sym::String)::Bool
-    attrs = w.attrs
-    handler = get(attrs, :handler, nothing)
-    handler === nothing && return false
-
-    subject = handler.subject
-    _WS = Fetch.Exchanges.Ccxt.CcxtGateway
-
-    ws_client = _WS.default_ws_client()
-    connected = _WS.connect!(ws_client)
-    if !connected
-        return false
-    end
-
-    sub_id = _WS.send_subscribe(
-        ws_client,
-        eid,
-        "watchOrderBook",
-        params=Dict{String, Any}("symbol" => sym),
-        callback = data -> begin
-            if data !== nothing
-                Rocket.next!(subject, data)
-            end
-        end,
-    )
-
-    attrs[:ws_client] = ws_client
-    attrs[:ws_sub_id] = sub_id
-    return true
 end
 
 function _stop!(w::Watcher, ::CcxtOrderBookVal)

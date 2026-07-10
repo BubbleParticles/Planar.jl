@@ -197,21 +197,24 @@ function _start!(w::Watcher, ::CcxtOHLCVVal)
         wrapper_func(v) = _parse_trades(w, v)
         handler_task!(w; init_func, corogen_func, wrapper_func, if_func=!isempty)
 
-        # Try websocket subscription; on failure fall back to REST polling
-        if _connect_ws_trades!(w, string(exc.id), sym)
-            _tfunc!(attrs, () -> check_task!(w))
+        # Try websocket subscription; on failure fall back to REST polling.
+        # _setup_ws_watcher! handles initial connect, reconnect-aware tfunc,
+        # and REST fallback on disconnect.
+        _eid = string(exc.id)
+        _sym_str = _sym(w)
+        _rest_fallback = _make_trades_func(w, _eid, _sym_str)
+        if _setup_ws_watcher!(w, _eid, "watchTrades", Dict{String,Any}("symbol" => sym), _rest_fallback)
+            # WS connected — _tfunc is set up with reconnect logic
         else
             @warn "WebSocket unavailable for $(w.name), falling back to REST polling"
-            _tfunc!(attrs, _make_trades_func(w, string(exc.id), _sym(w)))
+            _tfunc!(attrs, _make_trades_func(w, string(exc.id), _sym_str))
         end
     else
         _tfunc!(attrs, _make_trades_func(w, string(exc.id), _sym(w)))
     end
 end
 
-"""Create a polling function that fetches trades via REST and spawns process!.
-Uses explicit call_exchange with fetchTrades (REST) instead of choosefunc,
-which may select a WebSocket method that blocks (Gotcha #36, #37)."""
+"""Create a polling function that fetches trades via REST each cycle."""
 function _make_trades_func(w, exc_id::String, sym::String)
     _GW = Fetch.Exchanges.Ccxt.CcxtGateway
     _client = _GW.default_client()
@@ -233,40 +236,6 @@ function _make_trades_func(w, exc_id::String, sym::String)
             filter!(!istaskdone, tasks)
         end
     end
-end
-
-"""Connect to the gateway WebSocket and subscribe to watchTrades.
-Returns true if the subscription was established, false otherwise.
-Pushes incoming trade data into the Rocket pipeline set up by handler_task!."""
-function _connect_ws_trades!(w, eid::String, sym::String)::Bool
-    attrs = w.attrs
-    handler = get(attrs, :handler, nothing)
-    handler === nothing && return false
-
-    subject = handler.subject
-    _WS = Fetch.Exchanges.Ccxt.CcxtGateway
-
-    ws_client = _WS.default_ws_client()
-    connected = _WS.connect!(ws_client)
-    if !connected
-        return false
-    end
-
-    sub_id = _WS.send_subscribe(
-        ws_client,
-        eid,
-        "watchTrades",
-        params=Dict{String, Any}("symbol" => sym),
-        callback = data -> begin
-            if data !== nothing
-                Rocket.next!(subject, data)
-            end
-        end,
-    )
-
-    attrs[:ws_client] = ws_client
-    attrs[:ws_sub_id] = sub_id
-    return true
 end
 
 function _parse_trades(w, pytrades)

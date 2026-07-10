@@ -81,7 +81,7 @@ function ccxt_ohlcv_candles_watcher(
         process=false,
         buffer_capacity,
         view_capacity,
-        fetch_interval=Second(1),
+        fetch_interval=max(Second(5), period(timeframe) ÷ 2),
         attrs=a,
     )
     w
@@ -105,7 +105,18 @@ function _init!(w::Watcher, ::CcxtOHLCVCandlesVal)
     _checkson!(w)
 end
 
-_process!(::Watcher, ::CcxtOHLCVCandlesVal) = nothing
+function _process!(w::Watcher, ::CcxtOHLCVCandlesVal)
+    cb = get(w.attrs, k"callback", nothing)
+    cb === nothing && return nothing
+    for (sym, df) in w.view
+        if applicable(cb, df, sym)
+            invokelatest(cb, df, sym)
+        else
+            @warn "callback not applicable with (DataFrame, String) signature" cb_type=typeof(cb) sym
+        end
+    end
+    nothing
+end
 
 function _start!(w::Watcher, ::CcxtOHLCVCandlesVal)
     a = w.attrs
@@ -224,12 +235,14 @@ function _reset_candles_func!(w)
     if iswatch && watch_func !== nothing
         wrapper_func = _update_ohlcv_func(w)
         syms = [[sym, tf_str] for sym in ids]
+        params = Dict{String,Any}("symbolsAndTimeframes" => syms)
         corogen_func = (_) -> coro_func() = watch_func(syms)
         handler_task!(w; init_func, corogen_func, wrapper_func, if_func=!isemptish)
 
-        # Try websocket subscription; on failure fall back to REST polling
-        if _connect_ws_ohlcv!(w, string(exc.id), syms)
-            _tfunc!(attrs, () -> check_task!(w))
+        # Try websocket subscription via _setup_ws_watcher! which handles both
+        # initial connect and reconnection, with REST polling as heartbeat.
+        if _connect_ws_subscribe!(w, string(exc.id), "watchOHLCVForSymbols", params)
+            _tfunc!(attrs, _make_candles_func(w))
         else
             @warn "WebSocket unavailable for $(w.name), falling back to REST polling"
             _tfunc!(attrs, _make_candles_func(w))
@@ -320,19 +333,21 @@ function _update_ohlcv_func(w)
                     state.nextcandle = tf_candles
                     continue
                 end
-                for (this_tf_raw, candles) in state.nextcandle
-                    if String(this_tf_raw) == tf_str
-                        for cdl in candles
-                            cdl_ts = apply(tf, first(cdl) |> dt)
-                            if cdl_ts == next_ts
-                                tup = (cdl_ts, (Float64(cdl[idx]) for idx in 2:6)...)
-                                push!(this_df, tup)
-                                next_ts += tf
+                if state.nextcandle !== nothing
+                    for (this_tf_raw, candles) in state.nextcandle
+                        if String(this_tf_raw) == tf_str
+                            for cdl in candles
+                                cdl_ts = apply(tf, first(cdl) |> dt)
+                                if cdl_ts == next_ts
+                                    tup = (cdl_ts, (Float64(cdl[idx]) for idx in 2:6)...)
+                                    push!(this_df, tup)
+                                    next_ts += tf
+                                end
                             end
-                        end
-                        if next_ts + tf < latest_ts
-                            @debug "ohlcv (candles): out of sync, resolving" sym next_ts tf latest_ts
-                            maybe_schedule_resync!(w, sym, state)
+                            if next_ts + tf < latest_ts
+                                @debug "ohlcv (candles): out of sync, resolving" sym next_ts tf latest_ts
+                                maybe_schedule_resync!(w, sym, state)
+                            end
                         end
                     end
                 end
@@ -374,13 +389,15 @@ function _update_ohlcv_func_single(w, sym)
                 # df is already updated
                 return nothing
             end
-            for cdl in state.nextcandle
-                cdl_ts = apply(tf, first(cdl) |> dt)
-                if cdl_ts == next_ts
-                    tup = (cdl_ts, (Float64(cdl[idx]) for idx in 2:6)...)
-                    push!(df, tup)
-                    next_ts = cdl_ts
-                    break
+            if state.nextcandle !== nothing
+                for cdl in state.nextcandle
+                    cdl_ts = apply(tf, first(cdl) |> dt)
+                    if cdl_ts == next_ts
+                        tup = (cdl_ts, (Float64(cdl[idx]) for idx in 2:6)...)
+                        push!(df, tup)
+                        next_ts = cdl_ts
+                        break
+                    end
                 end
             end
             if next_ts + tf < latest_ts
@@ -407,6 +424,7 @@ function _make_candles_func(w)
                     df = get!(w.view, sym) do
                         empty_ohlcv()
                     end
+                    prev_nrows = nrow(df)
                     if isempty(df)
                         tf = _tfr(w)
                         to = _nextdate(tf)
@@ -416,6 +434,12 @@ function _make_candles_func(w)
                         to = _curdate(_tfr(w))
                         from = lastdate(df) + _tfr(w)
                         _sticky_fetchto!(w, df, sym, _tfr(w); to=to, from=from)
+                    end
+                    # Push newly-added rows into the buffer for user inspection
+                    new_nrows = nrow(df) - prev_nrows
+                    if new_nrows > 0
+                        new_rows = df[(end - new_nrows + 1):end, :]
+                        pushnew!(w, (sym, copy(new_rows)))
                     end
                 end
             end

@@ -413,33 +413,37 @@ function _ensure_ohlcv!(w, sym)
     tf = _tfr(w)
     min_rows = w.capacity.view - w.capacity.buffer
     df = @lget! w.view sym begin
-        cached_ohlcv(w; sym)
+        cached_ohlcv!(w, :candles; sym)
     end
-    if isempty(df)
-        local this, from, to
-        this = now()
-        from = this - (w.capacity.view + 1) * tf
-        to = _nextdate(tf)
-        _fetchto!(w, df, sym, tf, Val(:append); from, to, allow_upsample=true)
-    else
-        (from, to) = (lastdate(df), _nextdate(tf))
-        if length(from:(period(tf)):to) > min_rows
-            from = to - period(tf) * w.capacity.view
-        end
-        _fetchto!(w, df, sym, tf, Val(:append); from, to, allow_upsample=false)
-        _do_check_contig(w, df, _checks(w))
-        if nrow(df) < min_rows
-            to = _firstdate(df) + period(tf)
-            _fetchto!(w, df, sym, tf, Val(:prepend); to, allow_upsample=true)
+    try
+        if isempty(df)
+            local this, from, to
+            this = now()
+            from = this - (w.capacity.view + 1) * tf
+            to = _nextdate(tf)
+            _fetchto!(w, df, sym, tf, Val(:append); from, to, allow_upsample=true)
+        else
+            (from, to) = (lastdate(df), _nextdate(tf))
+            if length(from:(period(tf)):to) > min_rows
+                from = to - period(tf) * w.capacity.view
+            end
+            _fetchto!(w, df, sym, tf, Val(:append); from, to, allow_upsample=false)
             _do_check_contig(w, df, _checks(w))
+            if nrow(df) < min_rows
+                to = _firstdate(df) + period(tf)
+                _fetchto!(w, df, sym, tf, Val(:prepend); to, allow_upsample=true)
+                _do_check_contig(w, df, _checks(w))
+            end
         end
+    catch e
+        @warn "_ensure_ohlcv! fetch failed for $sym" exception=(e, catch_backtrace())
     end
     if nrow(df) < min_rows && !w[k"minrows_warned"]
         @warn "ohlcv tickers watcher: can't fill view with enough data" sym nrow(df) min_rows
         w[k"minrows_warned"] = true
     end
     cb = get(w.attrs, k"callback", nothing)
-    if applicable(cb, (df, sym))
+    if applicable(cb, df, sym)
         invokelatest(cb, df, sym)
     end
 end

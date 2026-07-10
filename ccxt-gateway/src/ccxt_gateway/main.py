@@ -195,6 +195,10 @@ def main() -> None:
         "port": settings.server.port,
         "log_level": "info",
         "loop": "uvloop" if "uvloop" in sys.modules else "auto",
+        # Prevent idle WS disconnects — OHLCV subscriptions may be quiet
+        # between candle closes. 120s gives enough headroom for 1m candles.
+        "ws_ping_interval": 120,
+        "ws_ping_timeout": 60,
     }
 
     # Add SSL if configured

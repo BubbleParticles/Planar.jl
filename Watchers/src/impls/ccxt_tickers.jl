@@ -167,13 +167,16 @@ function _reset_tickers_func!(w::Watcher)
             if_func=!isempty,
         )
 
-        # Try websocket subscription; on failure fall back to REST polling
+        # Try websocket subscription; on failure fall back to REST polling.
+        # _setup_ws_watcher! handles initial connect, reconnect-aware tfunc,
+        # and REST fallback on disconnect.
         exc_id_str = string(exc.id)
-        if _connect_ws_tickers!(w, exc_id_str, ids)
-            _tfunc!(attrs, () -> check_task!(w))
+        _rest_fallback = _make_tickers_func(w, exc_id_str, attrs, ids)
+        if _setup_ws_watcher!(w, exc_id_str, "watchTickers", Dict{String,Any}("symbols" => ids), _rest_fallback)
+            # WS connected — _tfunc is set up with reconnect logic
         else
             @warn "WebSocket unavailable for $(w.name), falling back to REST polling"
-            _tfunc!(attrs, _make_tickers_func(w, exc_id_str, attrs, ids))
+            _tfunc!(attrs, _rest_fallback)
         end
     else
         _tfunc!(attrs, _make_tickers_func(w, string(exc.id), attrs, ids))
@@ -210,42 +213,20 @@ function _make_tickers_func(w, exc_id::String, attrs, ids)
     end
 end
 
-"""Connect to the gateway WebSocket and subscribe to watchTickers.
-Returns true if the subscription was established, false otherwise.
-Pushes incoming ticker data into the Rocket pipeline set up by handler_task!."""
-function _connect_ws_tickers!(w, eid::String, ids::Vector)::Bool
-    attrs = w.attrs
-    handler = get(attrs, :handler, nothing)
-    handler === nothing && return false
-
-    subject = handler.subject
-    _WS = Fetch.Exchanges.Ccxt.CcxtGateway
-
-    ws_client = _WS.default_ws_client()
-    connected = _WS.connect!(ws_client)
-    if !connected
-        return false
-    end
-
-    sub_id = _WS.send_subscribe(
-        ws_client,
-        eid,
-        "watchTickers",
-        params=Dict{String, Any}("symbols" => ids),
-        callback = data -> begin
-            if data !== nothing
-                Rocket.next!(subject, data)
-            end
-        end,
-    )
-
-    attrs[:ws_client] = ws_client
-    attrs[:ws_sub_id] = sub_id
-    return true
-end
-
 _start!(w::Watcher, ::CcxtTickerVal) = _reset_tickers_func!(w)
-_stop!(w::Watcher, ::CcxtTickerVal) = stop_handler_task!(w)
+
+function _stop!(w::Watcher, ::CcxtTickerVal)
+    stop_handler_task!(w)
+    sub_id = get(w.attrs, :ws_sub_id, nothing)
+    if sub_id !== nothing
+        ws_client = get(w.attrs, :ws_client, nothing)
+        if ws_client !== nothing
+            _WS = Fetch.Exchanges.Ccxt.CcxtGateway
+            try _WS.send_unsubscribe(ws_client, sub_id) catch end
+        end
+        delete!(w.attrs, :ws_sub_id)
+    end
+end
 
 function _init!(w::Watcher, ::CcxtTickerVal)
     exc = _exc(w)

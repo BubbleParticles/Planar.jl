@@ -61,3 +61,23 @@ end
     @test exchanges isa Dict
     @test sb_exchanges isa Dict
 end
+
+@testset "_first" begin
+    exc = Exchange(:test_first)
+
+    # No methods in has → _first returns nothing
+    @test first(exc, :fetchOHLCVWs, :fetchOHLCV) === nothing
+
+    # Inject methods into has dict (const protects reference, not dict contents)
+    exc.has[:fetchOHLCVWs] = true
+    exc.has[:fetchOHLCV] = true
+
+    # With methods in has, _first should return a closure
+    func = first(exc, :fetchOHLCVWs, :fetchOHLCV)
+    @test func isa Function
+
+    # Calling the closure without a running gateway should try the first method
+    # (fetchOHLCVWs), fail gracefully, fall through to fetchOHLCV, also fail,
+    # and return nothing. No error or crash.
+    @test func(; symbol="BTC/USDT", limit=100) === nothing
+end

@@ -35,6 +35,18 @@ if ccxt_available
 else
     w = nothing
 end
+if ccxt_available
+    # Start: spawns the fetch pipeline (REST polling) and, when supported,
+    # a supplementary websocket handler. The view is populated on the first
+    # tick (history) and kept up to date on subsequent ticks.
+    start!(w)
+    println("✓ ohlcv_candles_watcher started: history will be fetched shortly")
+    # Give the first ticks time to fetch (binance rate-limits 3 symbols).
+    sleep(10)
+    for (sym, df) in w.view
+        println("  $sym: $(isempty(df) ? "no data yet" : size(df, 1)) rows")
+    end
+end
 
 println(raw"""
 ccxt_ohlcv_candles_watcher(exc::Exchange, syms;
@@ -43,7 +55,7 @@ ccxt_ohlcv_candles_watcher(exc::Exchange, syms;
     buffer_capacity = 100,
     view_capacity   = …,
     n_jobs          = ratelimit_njobs(exc),
-    callback        = Returns(nothing),
+    callback        = (df, sym) -> println("$sym updated: $(nrow(df)) rows"),
     load_timeframe  = default_load_timeframe(timeframe),
     load_path       = nothing)
 
