@@ -144,13 +144,18 @@ function _reset_tickers_func!(w::Watcher)
     @assert ids isa Vector
     args = _func_args(exc, ids)
     watch_func = first(exc, :watchTickersForSymbols, :watchTickers)
-    fetch_func = choosefunc(string(exc.id), "Ticker", args...)
-    # The CcxtGateway returns a non-nothing closure for every websocket
-    # method on `first(...)`, regardless of whether the exchange actually
-    # supports it. This forces every watcher down the `iswatch=true`
-    # path which runs `check_task!` but never fetches data, leaving the
-    # buffer stale. Force the polling path unless the user explicitly
-    # opted in to websockets via the constructor's `iswatch` argument.
+    # Use _first for WS-capable REST polling too — tries fetchTickersWs with
+    # automatic fallback to fetchTickers on gateway failure.
+    fetch_one_shot = first(exc, :fetchTickersWs, :fetchTickers)
+    fetch_func = if fetch_one_shot !== nothing
+        if isempty(ids)
+            fetch_one_shot()
+        else
+            fetch_one_shot(; symbols=_check_ids(exc, ids))
+        end
+    else
+        nothing
+    end
     iswatch = if haskey(attrs, :iswatch)
         attrs[:iswatch]::Bool
     else
@@ -168,8 +173,6 @@ function _reset_tickers_func!(w::Watcher)
         )
 
         # Try websocket subscription; on failure fall back to REST polling.
-        # _setup_ws_watcher! handles initial connect, reconnect-aware tfunc,
-        # and REST fallback on disconnect.
         exc_id_str = string(exc.id)
         _rest_fallback = _make_tickers_func(w, exc_id_str, attrs, ids)
         if _setup_ws_watcher!(w, exc_id_str, "watchTickers", Dict{String,Any}("symbols" => ids), _rest_fallback)
@@ -183,17 +186,21 @@ function _reset_tickers_func!(w::Watcher)
     end
 end
 
-"""Create a polling function that fetches tickers via REST each cycle."""
+"""Create a polling function that fetches tickers via REST (with WS fallback) each cycle."""
 function _make_tickers_func(w, exc_id::String, attrs, ids)
     fetch_symbols = _check_ids(_exc(w), ids)
+    exc = _exc(w)
+    fetch_func = first(exc, :fetchTickersWs, :fetchTickers)
     return function ()
         process_subj = @lget! attrs :tickers_process_subject Rocket.Subject(Any)
         fetched = @lock w begin
             time = now()
-            # Re-invoke choosefunc on every poll so the gateway
-            # returns fresh data instead of repeating the first snapshot.
             resp = try
-                choosefunc(exc_id, "Ticker", fetch_symbols)
+                if fetch_func !== nothing
+                    fetch_func(; symbols=fetch_symbols)
+                else
+                    nothing
+                end
             catch e
                 @debug "tickers poll failed" exception=(e,)
                 nothing
