@@ -182,19 +182,22 @@ function _start!(w::Watcher, ::CcxtOrderBookVal)
     _start_gateway_exchange(string(exc.id))
 
     _ob_func(attrs, OrderBookLevel(attrs[:oblevel]))
-    ob_method = _tfunc(w)  # save method name (e.g. "fetchOrderBook") for REST fallback
+
+    # Use _first for WS-capable REST polling — tries fetchOrderBookWs with
+    # automatic fallback to fetchOrderBook on gateway failure.
+    fetch_func = first(exc, :fetchOrderBookWs, :fetchOrderBook)
 
     iswatch = get(attrs, :iswatch, false)
     if iswatch
         watch_func = first(exc, :watchOrderBookForSymbols, :watchOrderBook)
         sym = _sym(w)
-        _GW = Fetch.Exchanges.Ccxt.CcxtGateway
 
         # Initial REST fetch for handler_task! init
         init_fetch = function ()
-            c = _GW.default_client()
-            r = _GW.call_exchange(c, string(exc.id), ob_method; query=Dict("symbol" => sym))
-            return r
+            if fetch_func !== nothing
+                return fetch_func(; symbol=sym)
+            end
+            return nothing
         end
 
         corogen_func(_) = coro_func() = watch_func(sym)
@@ -202,26 +205,29 @@ function _start!(w::Watcher, ::CcxtOrderBookVal)
         wrapper_func(v) = _ob_to_df(v)
         handler_task!(w; init_func, corogen_func, wrapper_func, if_func=!isempty)
 
-        if _setup_ws_watcher!(w, string(exc.id), "watchOrderBook", Dict{String,Any}("symbol" => sym), _make_orderbook_func(w, string(exc.id), ob_method))
+        if _setup_ws_watcher!(w, string(exc.id), "watchOrderBook", Dict{String,Any}("symbol" => sym), _make_orderbook_func(w, string(exc.id), exc))
             # WS connected — _tfunc is set up with reconnect logic
         else
             @warn "WebSocket unavailable for $(w.name), falling back to REST polling"
-            _tfunc!(attrs, _make_orderbook_func(w, string(exc.id), ob_method))
+            _tfunc!(attrs, _make_orderbook_func(w, string(exc.id), exc))
         end
     else
-        _tfunc!(attrs, _make_orderbook_func(w, string(eid), ob_method))
+        _tfunc!(attrs, _make_orderbook_func(w, string(eid), exc))
     end
 end
 
-"""Create a polling function that fetches order book via REST each cycle."""
-function _make_orderbook_func(w, exc_id::String, method::String)
-    _GW = Fetch.Exchanges.Ccxt.CcxtGateway
-    _client = _GW.default_client()
+"""Create a polling function that fetches order book via REST (with WS fallback) each cycle."""
+function _make_orderbook_func(w, exc_id::String, exc)
+    fetch_func = first(exc, :fetchOrderBookWs, :fetchOrderBook)
     return function ()
         @lock w begin
             sym = _sym(w)
             ob = try
-                _GW.call_exchange(_client, exc_id, method; query=Dict("symbol" => sym))
+                if fetch_func !== nothing
+                    fetch_func(; symbol=sym)
+                else
+                    nothing
+                end
             catch e
                 @debug "orderbook poll failed" exception=(e,)
                 nothing
