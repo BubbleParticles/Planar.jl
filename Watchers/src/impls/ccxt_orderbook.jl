@@ -1,5 +1,6 @@
 using ..Fetch: OrderBookLevel, L1, L2, L3
 using ..Ccxt: CcxtGateway, default_client, call_exchange
+using ..Fetch.Exchanges.ExchangeTypes: _supports_ws_method
 
 const CcxtOrderBookVal = Val{:ccxt_order_book}
 
@@ -185,10 +186,15 @@ function _start!(w::Watcher, ::CcxtOrderBookVal)
     _start_gateway_exchange(string(exc.id))
 
     _ob_func(attrs, OrderBookLevel(attrs[:oblevel]))
-
-    # Use _first for WS-capable REST polling — tries fetchOrderBookWs with
-    # automatic fallback to fetchOrderBook on gateway failure.
-    fetch_func = first(exc, :fetchOrderBookWs, :fetchOrderBook)
+    # Conditionally include fetchOrderBookWs — some exchanges (e.g., Binance) only
+    # support it for certain market types (e.g., swap). The helper checks this.
+    sym = _sym(w)
+    ws_methods = if _supports_ws_method(exc, sym, "OrderBook")
+        (:fetchOrderBookWs, :fetchOrderBook)
+    else
+        (:fetchOrderBook,)
+    end
+    fetch_func = first(exc, ws_methods...)
 
     iswatch = get(attrs, :iswatch, false)
     if iswatch
@@ -221,7 +227,13 @@ end
 
 """Create a polling function that fetches order book via REST (with WS fallback) each cycle."""
 function _make_orderbook_func(w, exc_id::String, exc)
-    fetch_func = first(exc, :fetchOrderBookWs, :fetchOrderBook)
+    sym = _sym(w)
+    ws_methods = if _supports_ws_method(exc, sym, "OrderBook")
+        (:fetchOrderBookWs, :fetchOrderBook)
+    else
+        (:fetchOrderBook,)
+    end
+    fetch_func = first(exc, ws_methods...)
     return function ()
         @lock w begin
             sym = _sym(w)

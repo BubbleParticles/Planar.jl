@@ -10,7 +10,7 @@ using ..Fetch.Exchanges.Ccxt: _multifunc
 using ..Fetch: fetch_candles
 using ..Lang
 using ..Misc: rangeafter, rangebetween, rangebefore
-using ..Fetch.Processing: cleanup_ohlcv_data, iscomplete, isincomplete, upsample
+using ..Fetch.Processing: cleanup_ohlcv_data, fill_missing_candles!, iscomplete, isincomplete, upsample
 using ..Watchers: logerror
 using ..Watchers: JSON3
 
@@ -187,6 +187,12 @@ function _do_check_contig(w, df, ::Val{:on})
     isempty(df) || _contiguous_ts(df.timestamp, timefloat(_tfr(w)))
 end
 _do_check_contig(_, _, ::Val{:off}) = nothing
+_do_check_contig(_, _, ::Nothing) = nothing
+function _do_check_contig(w, df::AbstractDict, ::Val{:on})
+    for v in values(df)
+        _do_check_contig(w, v, Val(:on))
+    end
+end
 _check_contig(w, df) = !isempty(df) && _do_check_contig(w, df, _checks(w))
 
 _exc(attrs) = attrs[:exc]
@@ -632,6 +638,13 @@ function _fetchto!(w, df, sym, tf, op=Val(:append); to, from=nothing, allow_upsa
         @debug "watchers fetchto!: " isprep() isapp() isleftadj() isrightadj()
         if isempty(df) || isprep() || isapp()
             _op(op, df, cleaned, w.capacity.view)
+            # Fill gaps between the existing view and freshly fetched candles
+            # (e.g. minutes with no trades when deriving OHLCV from trades/tickers).
+            # Without this the post-fetch contiguity check flags benign gaps.
+            fill_missing_candles!(df, prd)
+            if nrow(df) > w.capacity.view
+                deleteat!(df, 1:(nrow(df) - w.capacity.view))
+            end
         end
         @debug "watchers fetchto!: returning " lastdate(cleaned) lastdate(df)
         @ifdebug @assert nrow(df) <= w.capacity.view
@@ -725,6 +738,12 @@ function _append_ohlcv!(w, ohlcv_dst, ohlcv_src, left, next)
         if src_view.timestamp[begin] == next
             @debug "Appending trades from $(_firstdate(ohlcv_src, from_range)) to $(_lastdate(ohlcv_src))"
             appendmax!(ohlcv_dst, src_view, w.capacity.view)
+            # Fill gaps in the freshly appended slice (e.g. minutes with no trades
+            # when deriving OHLCV from trades) so the contiguity check passes.
+            fill_missing_candles!(ohlcv_dst, period(_tfr(w)))
+            if nrow(ohlcv_dst) > w.capacity.view
+                deleteat!(ohlcv_dst, 1:(nrow(ohlcv_dst) - w.capacity.view))
+            end
             _check_contig(w, w.view)
         end
     end

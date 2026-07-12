@@ -20,6 +20,7 @@ export Exchange,
     sb_exchanges,
     has,
     account,
+    _supports_ws_method,
     eids
 
 function _doinit()
