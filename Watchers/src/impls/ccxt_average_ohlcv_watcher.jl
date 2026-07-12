@@ -299,7 +299,13 @@ function _fetch!(w::Watcher, ::CcxtAverageOHLCVVal; syms=nothing)
         try
             @debug "Calling fetch! on source watcher: $(source_w.name)" _module = LogAverageOHLCV
             Watchers.fetch!(source_w)
-            @debug "fetch! called for source: $(key)" _module = LogAverageOHLCV
+            # Immediately process the fetched data so the source watcher's view is
+            # populated before we check it for new rows. Without this, the source
+            # view stays empty until its own independent periodic pipeline fires
+            # (on a separate interval), which may not have run yet — the average
+            # watcher would then see no new data and never run its own _process!.
+            Watchers.process!(source_w)
+            @debug "fetch! and process! called for source: $(key)" _module = LogAverageOHLCV
         catch e
             @error "CcxtAverageOHLCVWatcher - Error fetching from source watcher" watcher_id =
                 w.name source_key = key exception = e _module = LogAverageOHLCV

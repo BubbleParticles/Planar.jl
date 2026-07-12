@@ -196,24 +196,36 @@ function _reset_tickers_func!(w::Watcher)
     end
 end
 
-"""Create a polling function that fetches tickers via REST (with WS fallback) each cycle."""
+"""Create a polling function that fetches tickers via REST each cycle.
+Tries the one-shot WS method (`fetchTickersWs`) first; on failure falls back to
+REST (`fetchTickers`). Without this fallback, a failed WS call returns `nothing`,
+the buffer stays empty, and `_process!` sees `isempty(w)` → returns immediately."""
 function _make_tickers_func(w, exc_id::String, attrs, ids)
     fetch_symbols = _check_ids(_exc(w), ids)
     exc = _exc(w)
-    fetch_func = first(exc, :fetchTickersWs, :fetchTickers)
+    fetch_func_ws = first(exc, :fetchTickersWs)
+    fetch_func_rest = first(exc, :fetchTickers)
     return function ()
         process_subj = @lget! attrs :tickers_process_subject Rocket.Subject(Any)
         fetched = @lock w begin
             time = now()
             resp = try
-                if fetch_func !== nothing
-                    fetch_func(; symbols=fetch_symbols)
+                if fetch_func_ws !== nothing
+                    fetch_func_ws(; symbols=fetch_symbols)
+                elseif fetch_func_rest !== nothing
+                    fetch_func_rest(; symbols=fetch_symbols)
                 else
                     nothing
                 end
             catch e
-                @debug "tickers poll failed" exception=(e,)
-                nothing
+                # WS one-shot failed — try REST as fallback
+                @warn "tickers WS poll failed, trying REST" exception=(e,)
+                try
+                    fetch_func_rest !== nothing && fetch_func_rest(; symbols=fetch_symbols)
+                catch e2
+                    @warn "tickers REST poll failed too" exception=(e2,)
+                    nothing
+                end
             end
             result = _parse_ticker_snapshot(resp)
             if !isempty(result)

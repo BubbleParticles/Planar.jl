@@ -213,24 +213,35 @@ function _start!(w::Watcher, ::CcxtOHLCVVal)
 
 end
 
-"""Create a polling function that fetches trades via REST (with WS fallback) each cycle."""
+"""Create a polling function that fetches trades via REST each cycle.
+Tries the one-shot WS method (`fetchTradesWs`) first; on failure falls back to
+REST (`fetchTrades`). Without this fallback, a failed WS call returns `nothing`,
+the buffer stays empty, and `_process!` never runs on fresh data."""
 function _make_trades_func(w, exc_id::String, sym::String, exc)
-    fetch_func = first(exc, :fetchTradesWs, :fetchTrades)
+    fetch_func_ws = first(exc, :fetchTradesWs)
+    fetch_func_rest = first(exc, :fetchTrades)
     return function ()
         tasks = @lget! w.attrs :process_tasks Task[]
         fetched = @lock w begin
             resp = try
-                if fetch_func !== nothing
-                    data = fetch_func(; symbol=sym)
-                    Dict(sym => data)
+                if fetch_func_ws !== nothing
+                    fetch_func_ws(; symbol=sym)
+                elseif fetch_func_rest !== nothing
+                    fetch_func_rest(; symbol=sym)
                 else
                     nothing
                 end
             catch e
-                @debug "fetchTrades poll failed" exception=(e,)
-                nothing
+                # WS one-shot failed — try REST as fallback
+                @warn "fetchTrades WS poll failed, trying REST" exception=(e,)
+                try
+                    fetch_func_rest !== nothing && fetch_func_rest(; symbol=sym)
+                catch e2
+                    @warn "fetchTrades REST poll failed too" exception=(e2,)
+                    nothing
+                end
             end
-            v = _parse_trades(w, resp)
+            v = _parse_trades(w, resp !== nothing ? Dict{String,Any}(sym => resp) : nothing)
             !isnothing(v) && !isempty(v)
         end
         if fetched

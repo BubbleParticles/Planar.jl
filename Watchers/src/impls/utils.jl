@@ -595,7 +595,7 @@ function _fetchto!(w, df, sym, tf, op=Val(:append); to, from=nothing, allow_upsa
         else
             view(candles, from_to_range, :)
         end
-        cleaned = cleanup_ohlcv_data(sliced, tf)
+        cleaned = cleanup_ohlcv_data(sliced, tf; fill_missing=false)
         @debug "watchers fetchto!: " last_date =
             isempty(sliced) ? nothing : lastdate(sliced)
 
@@ -616,7 +616,7 @@ function _fetchto!(w, df, sym, tf, op=Val(:append); to, from=nothing, allow_upsa
         end
         isleftadj() = isempty(df) ? false : lastdate(cleaned) + prd == firstdate(df)
         isrightadj() = isempty(df) ? false : firstdate(cleaned) - prd == lastdate(df)
-        isrecent() = isempty(df) ? false : firstdate(cleaned) > lastdate(df)
+        isrecent() = isempty(df) ? false : lastdate(cleaned) > lastdate(df)
         isprep() = if op == Val(:prepend)
             if isleftadj()
                 true
@@ -637,11 +637,18 @@ function _fetchto!(w, df, sym, tf, op=Val(:append); to, from=nothing, allow_upsa
         end
         @debug "watchers fetchto!: " isprep() isapp() isleftadj() isrightadj()
         if isempty(df) || isprep() || isapp()
-            _op(op, df, cleaned, w.capacity.view)
-            # Fill gaps between the existing view and freshly fetched candles
-            # (e.g. minutes with no trades when deriving OHLCV from trades/tickers).
-            # Without this the post-fetch contiguity check flags benign gaps.
-            fill_missing_candles!(df, prd)
+            # When appending and cleaned starts at or before df's last timestamp,
+            # skip the overlapping row(s) to avoid duplicate timestamps.
+            if op == Val(:append) && !isempty(df) && !isempty(cleaned) && firstdate(cleaned) <= lastdate(df)
+                trimmed = @view cleaned[rangeafter(cleaned.timestamp, lastdate(df); strict=true), :]
+                if !isempty(trimmed)
+                    _op(op, df, DataFrame(trimmed, copycols=false), w.capacity.view)
+                end
+            else
+                _op(op, df, cleaned, w.capacity.view)
+            end
+            # Not filling gaps — fill_missing_candles! creates synthetic rows with
+            # volume=0 and stale OHLCV. Gaps from no-trade periods are honest.
             if nrow(df) > w.capacity.view
                 deleteat!(df, 1:(nrow(df) - w.capacity.view))
             end
