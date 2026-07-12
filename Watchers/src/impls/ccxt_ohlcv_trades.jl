@@ -67,7 +67,7 @@ function ccxt_ohlcv_watcher(
         CcxtOHLCVVal();
         start=false,
         flush=true,
-        process=false,
+        process=true,
         buffer_capacity=1,
         fetch_interval=interval,
         fetch_timeout=2interval,
