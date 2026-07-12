@@ -28,7 +28,7 @@ if ccxt_available
     global w = ccxt_ohlcv_tickers_watcher(
         exchange;
         syms         = ["BTC/USDT", "ETH/USDT"],
-        timeframe    = tf"5m",
+        timeframe    = tf"1m",
         price_source = :last,
         n_jobs       = 4,
         start        = false,

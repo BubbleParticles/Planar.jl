@@ -148,7 +148,7 @@ It also initializes the symbols and checks for the watcher.
 function _init!(w::Watcher, ::CcxtOHLCVTickerVal)
     _view!(w, default_view(w, Dict{String,DataFrame}))
     a = attrs(w)
-    a[k"last_processed"] = typemax(DateTime)
+    a[:last_processed] = typemax(DateTime)
     _checkson!(w)
 end
 
@@ -184,8 +184,12 @@ function _maybe_resolve(w, df, sym, this_ts, tf)
             df
         ) this_ts
         @acquire w[k"sem"] _ensure_ohlcv!(w, sym)
-        @ifdebug @assert isrightadj(this_ts, _lastdate(df), tf)
-        k"stale_df"
+        # If the fetch updated df successfully, the temp candle should now be
+        # right-adjacent and the caller handles it via the normal isnothing path.
+        if isrightadj(this_ts, _lastdate(df), tf)
+            return nothing
+        end
+        return k"stale_df"
     end
 end
 @doc """ Adjusts the volume of the temporary candlestick chart.
@@ -216,12 +220,13 @@ function _ensure_contig!(w, df, temp_candle::TempCandle, tf, sym)
             pushmax!(df, fromstruct(temp_candle), w.capacity.view)
             invokelatest(w[k"callback"], df, sym)
         end
-    elseif res == k"stale_df" && isempty(df)
-        # History preload failed (gateway/markets unavailable), so the view is
-        # still empty. Seed the series with this finished candle instead of
-        # dropping it forever — otherwise the buffer keeps filling while the view
-        # stays empty (the matching `_lastdate` call would also throw on the empty
-        # df, and that exception is swallowed by errormonitor).
+    elseif res == k"stale_df" && (isempty(df) || _lastdate(df) < temp_candle.timestamp)
+        # Fallback: _maybe_resolve couldn't fetch current data from the exchange
+        # (network issue, exchange API trouble). Push the ticker-derived temp
+        # candle anyway — real ticker data is better than nothing. Gaps in the
+        # OHLCV view from missing exchange data are honest; don't fill with
+        # synthetic rows (volume=0, stale OHLCV) that are indistinguishable from
+        # real candles.
         pushmax!(df, fromstruct(temp_candle), w.capacity.view)
         invokelatest(w[k"callback"], df, sym)
     end
@@ -232,7 +237,7 @@ function diff_volume!(w, df, state, latest_timestamp)
     # this is set on each ticker should be equal to the previous ticker baseVolume
     prev_candle_daily = state.daily_volume
     state.daily_volume = temp_candle.volume
-    if iszero(prev_candle_daily) && !iszero(temp_candle.volume)
+    if iszero(prev_candle_daily) && !iszero(temp_candle.volume) && !state.loaded
         @warn "ohlcv tickers watcher: zero prev daily volume" latest_timestamp sym temp_candle.volume
         @acquire w[k"sem"] _ensure_ohlcv!(w, sym)
         return false
@@ -247,7 +252,6 @@ function diff_volume!(w, df, state, latest_timestamp)
             @debug "ohlcv tickers watcher: stale candle" _module = LogOHLCVTickers sym _lastdate(
                 df
             ) latest_timestamp
-            temp_candle.volume = 0.0
             return false
         else
             if state.backoff < 3
@@ -258,7 +262,6 @@ function diff_volume!(w, df, state, latest_timestamp)
             if idx < 1
                 @debug "ohlcv tickers watcher: failed to resolve candles history" _module =
                     LogOHLCVTickers sym n = nrow(df) dropped_candle_date
-                temp_candle.volume = 0.0
                 return false
             end
         end
@@ -353,7 +356,7 @@ function _process!(w::Watcher, ::CcxtOHLCVTickerVal)
             for (sym, ticker) in data
                 this_state = get(states, sym, nothing)
                 if this_state isa TickerWatcherSymbolState2
-                    this_state.daily_volume = ticker.baseVolume
+                    this_state.daily_volume = something(ticker.baseVolume, 0.0)
                 end
             end
         end
@@ -371,7 +374,7 @@ function _process!(w::Watcher, ::CcxtOHLCVTickerVal)
         for (sym, ticker) in data
             state = get(symstates, sym, nothing)
             if !isnothing(state)
-                latest_timestamp = apply(this_tf, @something ticker.timestamp data_date)
+                latest_timestamp = apply(this_tf, data_date)
                 t = @async @lock state.lock _update_sym_ohlcv(w, ticker, latest_timestamp)
                 push!(tasks, errormonitor(t))
                 sym_procstate!(state, true, latest_timestamp)
@@ -454,15 +457,12 @@ function _ensure_ohlcv!(w, sym)
                 from = to - period(tf) * w.capacity.view
             end
             _fetchto!(w, df, sym, tf, Val(:append); from, to, allow_upsample=false)
-            # Fill gaps between the existing view and freshly fetched candles
-            # (e.g. minutes with no trades when deriving OHLCV from tickers)
-            # so the post-fetch contiguity check does not flag benign gaps.
-            fill_missing_candles!(df, period(tf))
+            # Skipping fill_missing_candles! — it creates synthetic rows with
+            # volume=0 and stale OHLCV that are indistinguishable from real data.
             _do_check_contig(w, df, _checks(w))
             if nrow(df) < min_rows
                 to = _firstdate(df) + period(tf)
                 _fetchto!(w, df, sym, tf, Val(:prepend); to, allow_upsample=true)
-                fill_missing_candles!(df, period(tf))
                 _do_check_contig(w, df, _checks(w))
             end
         end
@@ -477,8 +477,14 @@ function _ensure_ohlcv!(w, sym)
     if applicable(cb, df, sym)
         invokelatest(cb, df, sym)
     end
+    # Mark the symbol as loaded so diff_volume! (and other callers) know the
+    # initial fetch was attempted — avoids repeated _ensure_ohlcv! calls that
+    # would each fail with the same overlap/contiguity error.
+    state = get(w[k"symstates"], sym, nothing)
+    if state isa TickerWatcherSymbolState2
+        state.loaded = true
+    end
 end
-
 function _load_ohlcv!(w, sym)
     state = attr(w, k"symstates", nothing)
     if isnothing(state)
@@ -551,7 +557,9 @@ function _update_sym_ohlcv(w, ::Nothing, latest_timestamp, sym)
                 _meanvolume!(w, state)
             end
         end
-        # `_fetch_candles`
+        # Fix high/low after potential resetcandle! at line 543 (sets -Inf/Inf)
+        ifproperty!(isless, temp_candle, :high, price)
+        ifproperty!(>, temp_candle, :low, price)
         _ensure_contig!(w, df, temp_candle, _tfr(w), sym)
         resetcandle!(w, temp_candle, latest_timestamp, price)
         state.ticks = 0
