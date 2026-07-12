@@ -78,7 +78,7 @@ function ccxt_ohlcv_candles_watcher(
         start=false,
         load=false,
         flush=false,
-        process=false,
+        process=true,
         buffer_capacity,
         view_capacity,
         fetch_interval=max(Second(5), period(timeframe) ÷ 2),
