@@ -364,6 +364,28 @@ _closeall() = begin
     end
 end
 
+"""
+    _supports_ws_method(exc::Exchange, sym::AbstractString, suffix::String) -> Bool
+
+Check whether the WebSocket-based fetch method should be used for the given exchange,
+symbol, and method suffix.
+
+Some exchanges advertise WS methods in their `has` dict but restrict them to specific
+market types (e.g., Binance `fetchOrderBookWs` only works for swap markets).
+This function encodes those exchange-specific restrictions.
+
+Returns `true` by default (respects the `has` dict).
+"""
+function _supports_ws_method(exc::Exchange, sym::AbstractString, suffix::String)
+    id = Symbol(getfield(exc, :id))
+    if id == :binance && suffix == "OrderBook"
+        mkt = get(getfield(exc, :markets), sym, nothing)
+        return mkt !== nothing && something(get(mkt, "type", nothing), "") == "swap"
+    end
+    # Add exchange-specific rules here as needed.
+    return true
+end
+
 Base.nameof(e::CcxtExchange) = Symbol(getfield(e, :id))
 
 exchange(e::Exchange, args...; kwargs...) = e

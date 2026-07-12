@@ -3,6 +3,7 @@ module WatchersTests
 using Test
 using Watchers
 using Watchers: HasFunction, Interval, Capacity, Beacon, BufferEntry, Exec
+using Watchers.Fetch.Exchanges: Exchange
 import Rocket
 using Watchers: _check_flush_interval, _notimpl, WATCHERS, logerror, lasterror, errors
 using Watchers.Misc: ConcurrentCollections
@@ -14,7 +15,7 @@ using Watchers.Misc.TimeTicks
 using Watchers.Misc: rangebetween
 using Watchers.Data: empty_ohlcv
 using Watchers.WatchersImpls: CcxtTicker, TempCandle, TickerWatcherSymbolState2, CandleWatcherSymbolState4, WatcherHandler2
-using Watchers.WatchersImpls: _parse_ticker_snapshot, _ob_to_df, sym_procstate!, default_load_timeframe
+using Watchers.WatchersImpls: _parse_ticker_snapshot, _ob_to_df, sym_procstate!, default_load_timeframe, _update_sym_ohlcv, ccxt_ohlcv_tickers_watcher, Warmed
 using Watchers.Ccxt
 using .Ccxt.CcxtGateway: ping, start_exchange, stop_exchange, exchange_ready
 
@@ -1061,6 +1062,128 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
             try stop_exchange(exchange_id) catch end
             @info "WS integration test cleanup done"
         end
+    end
+    @testset "ccxt ohlcv tickers null price guard (regression #40)" begin
+        # A `watchTickers` WS payload can carry null/`NaN` `last` (or other OHLCV
+        # fields). Previously `_update_sym_ohlcv` assigned that `nothing` to a
+        # `Float64` candle field inside an async task, throwing an exception that
+        # was swallowed by errormonitor — so WS data was received but no candle
+        # was ever appended. The guards must make a null price a no-op.
+        tf = tf"1m"
+        exc = Exchange("binance")
+        syms = ["BTC/USDT"]
+        w = ccxt_ohlcv_tickers_watcher(exc; syms, timeframe=tf, price_source=:last, start=false, n_jobs=1)
+        w[:status] = Warmed()
+        w[:warmup_target] = TimeTicks.apply(tf, TimeTicks.now()) - tf
+        w[Symbol("symstates")] = Dict(sym => TickerWatcherSymbolState2(; sym) for sym in syms)
+        w[Symbol("sem")] = Base.Semaphore(1)
+        view = w.view
+        M = TimeTicks.apply(tf, TimeTicks.now()) - Dates.Minute(2)
+        df0 = empty_ohlcv()
+        for i in 2:-1:1
+            push!(df0, (timestamp = M - Dates.Minute(i), open=Float64(100+i), high=Float64(101+i), low=Float64(99+i), close=Float64(100+i), volume=Float64(10)))
+        end
+        view["BTC/USDT"] = df0
+        state = w[Symbol("symstates")]["BTC/USDT"]
+
+        mk_ticker(ts_dt, price, vol) = begin
+            ts_ms = Int(floor(Dates.datetime2unix(ts_dt) * 1000))
+            d = Dict{String,Any}(
+                "symbol" => "BTC/USDT", "timestamp" => ts_ms,
+                "open" => price, "high" => price, "low" => price, "close" => price,
+                "previousClose" => price, "bid" => price, "ask" => price,
+                "bidVolume" => vol, "askVolume" => vol,
+                "last" => price, "vwap" => price, "change" => 0.0,
+                "percentage" => 0.0, "average" => price,
+                "baseVolume" => vol, "quoteVolume" => vol,
+            )
+            _parse_ticker_snapshot(Dict("BTC/USDT" => d))["BTC/USDT"]
+        end
+
+        # Fresh state: temp candle timestamp is the epoch sentinel.
+        @test state.temp.timestamp == Dates.DateTime(0)
+
+        # A ticker with a null `last` must NOT throw and must NOT mutate state/view.
+        _update_sym_ohlcv(w, mk_ticker(M, nothing, 100.0), M)
+        @test state.temp.timestamp == Dates.DateTime(0)
+        @test size(view["BTC/USDT"], 1) == 2
+
+        # A valid ticker initializes the temp candle without throwing.
+        _update_sym_ohlcv(w, mk_ticker(M, 110.0, 100.0), M)
+        @test state.temp.timestamp == M
+        @test state.temp.close == 110.0
+        @test size(view["BTC/USDT"], 1) == 2
+
+        # A null `last` arriving at a later timestamp must also be skipped safely.
+        _update_sym_ohlcv(w, mk_ticker(M + Dates.Minute(1), nothing, 100.0), M + Dates.Minute(1))
+        @test state.temp.timestamp == M
+        @test size(view["BTC/USDT"], 1) == 2
+    end
+
+    @testset "ccxt ohlcv tickers seeds view from empty (history unavailable)" begin
+        # When history preload fails (no gateway / zero markets), the view starts
+        # empty. `_ensure_contig!` must seed the series with the first finalized
+        # candle instead of dropping it — otherwise the buffer fills but the view
+        # stays empty forever (the reported regression).
+        tf = tf"1m"
+        exc = Exchange("binance")
+        syms = ["BTC/USDT"]
+        w = ccxt_ohlcv_tickers_watcher(exc; syms, timeframe=tf, price_source=:last, start=false, n_jobs=1)
+        w[:status] = Warmed()
+        w[:warmup_target] = TimeTicks.apply(tf, TimeTicks.now()) - tf
+        w[Symbol("symstates")] = Dict(sym => TickerWatcherSymbolState2(; sym) for sym in syms)
+        w[Symbol("sem")] = Base.Semaphore(1)
+        # Intentionally do NOT preload w.view — simulates history preload failing.
+        M = TimeTicks.apply(tf, TimeTicks.now()) - Dates.Minute(2)
+        mk_ticker(ts_dt, price, vol) = begin
+            ts_ms = Int(floor(Dates.datetime2unix(ts_dt) * 1000))
+            d = Dict{String,Any}(
+                "symbol" => "BTC/USDT", "timestamp" => ts_ms,
+                "open" => price, "high" => price, "low" => price, "close" => price,
+                "previousClose" => price, "bid" => price, "ask" => price,
+                "bidVolume" => vol, "askVolume" => vol,
+                "last" => price, "vwap" => price, "change" => 0.0,
+                "percentage" => 0.0, "average" => price,
+                "baseVolume" => vol, "quoteVolume" => vol,
+            )
+            _parse_ticker_snapshot(Dict("BTC/USDT" => d))["BTC/USDT"]
+        end
+        # Two sequential timestamps: the 2nd finalizes the 1st candle. With an
+        # empty view this must seed (not drop) the candle.
+        _update_sym_ohlcv(w, mk_ticker(M, 110.0, 100.0), M)
+        @test !haskey(w.view, "BTC/USDT") || isempty(w.view["BTC/USDT"])
+        _update_sym_ohlcv(w, mk_ticker(M + Dates.Minute(1), 111.0, 110.0), M + Dates.Minute(1))
+        @test haskey(w.view, "BTC/USDT")
+        @test size(w.view["BTC/USDT"], 1) == 1
+        @test w.view["BTC/USDT"][1, :timestamp] == M
+        @test w.view["BTC/USDT"][1, :close] == 110.0
+    end
+
+    @testset "parse ticker snapshot skips malformed tickers" begin
+        # A single malformed ticker (e.g. null or missing `symbol`, a required
+        # `String` field) must not abort parsing of the whole WS snapshot.
+        raw_ticker(sym, price, vol; with_symbol=true, null_symbol=false) = begin
+            d = Dict{String,Any}(
+                "timestamp" => 1000, "open" => price, "high" => price, "low" => price,
+                "close" => price, "previousClose" => price, "bid" => price, "ask" => price,
+                "bidVolume" => vol, "askVolume" => vol, "last" => price, "vwap" => price,
+                "change" => 0.0, "percentage" => 0.0, "average" => price,
+                "baseVolume" => vol, "quoteVolume" => vol,
+            )
+            if with_symbol
+                d["symbol"] = null_symbol ? nothing : sym
+            end
+            d
+        end
+        snap = Dict{String,Any}(
+            "GOOD" => raw_ticker("GOOD", 110.0, 100.0),
+            "NULLSYM" => raw_ticker("NULLSYM", 110.0, 100.0; null_symbol=true),
+            "NOSYM" => raw_ticker("NOSYM", 110.0, 100.0; with_symbol=false),
+        )
+        result = _parse_ticker_snapshot(snap)
+        @test haskey(result, "GOOD")
+        @test !haskey(result, "NULLSYM")
+        @test !haskey(result, "NOSYM")
     end
 end
 

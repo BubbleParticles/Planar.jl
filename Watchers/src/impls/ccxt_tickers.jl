@@ -90,8 +90,18 @@ function _parse_ticker_snapshot(snap)
     end
     if !isempty(raw)
         for (_, py_ticker) in pairs(raw)
-            ticker = fromdict(CcxtTicker, String, py_ticker, _wkey, _wconvert)
-            result[ticker.symbol] = ticker
+            # A single malformed ticker (e.g. null `symbol`, which is a required
+            # `String` field, or a transient null in a numeric field) must not
+            # throw here — an unhandled exception would abort parsing of the whole
+            # WS snapshot and drop *every* ticker in the message.
+            try
+                ticker = fromdict(CcxtTicker, String, py_ticker, _wkey, _wconvert)
+                symkey = something(ticker.symbol, "")
+                isempty(symkey) && continue
+                result[symkey] = ticker
+            catch e
+                @debug "watcher: failed to parse ticker, skipping" exception=(e, catch_backtrace())
+            end
         end
     end
     result
