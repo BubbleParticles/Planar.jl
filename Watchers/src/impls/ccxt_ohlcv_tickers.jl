@@ -131,6 +131,10 @@ end
     const lock::ReentrantLock = ReentrantLock()
     loaded::Bool = false
     daily_volume::DFT = 0.0
+    max_base::DFT = 0.0
+    prev_quote_volume::DFT = 0.0
+    curr_quote_volume::DFT = 0.0
+    last_diff_ts::DateTime = DateTime(0)
     ticks::Int16 = 0
     backoff::Int8 = 0
     isprocessed::Bool = false
@@ -163,8 +167,8 @@ It also resets the high and low prices to their extreme values and the volume to
 resetcandle!(w, cdl::TempCandle, ts, price) = begin
     cdl.timestamp = ts
     cdl.open = price
-    cdl.high = typemin(Float64)
-    cdl.low = typemax(Float64)
+    cdl.high = price
+    cdl.low = price
     cdl.close = price
     cdl.volume = ifelse(_isvwap(w), NaN, 0.0)
 end
@@ -179,11 +183,22 @@ function _maybe_resolve(w, df, sym, this_ts, tf)
     end
     if this_ts == _lastdate(df)
         k"stale_candle"
+    elseif this_ts < _lastdate(df)
+        # _ensure_ohlcv! fetched data past this_ts in a previous gap-fill call,
+        # overshooting because its to=bound is _nextdate(tf) not this_ts.
+        # The exchange data already covers this minute — the ticker-derived
+        # candle is redundant/outdated.
+        k"stale_candle"
     elseif !isrightadj(this_ts, _lastdate(df), tf)
         @debug "ohlcv tickers: resolving stale df" _module = LogOHLCVTickers sym _lastdate(
             df
         ) this_ts
         @acquire w[k"sem"] _ensure_ohlcv!(w, sym)
+        # If the fetch brought data past this_ts, the exchange data already
+        # covers this candle — temp_candle is redundant/outdated.
+        if _lastdate(df) >= this_ts
+            return k"stale_candle"
+        end
         # If the fetch updated df successfully, the temp candle should now be
         # right-adjacent and the caller handles it via the normal isnothing path.
         if isrightadj(this_ts, _lastdate(df), tf)
@@ -212,63 +227,145 @@ If the temporary candle is not right adjacent to the last date in the DataFrame,
 
 """
 function _ensure_contig!(w, df, temp_candle::TempCandle, tf, sym)
+    # Guard: ensure all OHLC values are finite — the old resetcandle! used
+    # typemin/typemax sentinel values that could leak when a candle was pushed
+    # without a real ticker update (stale-check path). With the fix to use price
+    # directly this shouldn't happen, but belted suspenders.
+    if !isfinite(temp_candle.high)
+        temp_candle.high = temp_candle.close
+    end
+    if !isfinite(temp_candle.low)
+        temp_candle.low = temp_candle.close
+    end
+    if !isfinite(temp_candle.open)
+        temp_candle.open = temp_candle.close
+    end
     res = _maybe_resolve(w, df, sym, temp_candle.timestamp, tf)
     if isnothing(res)
         ## append complete candle (check again adjaciency)
         if isrightadj(temp_candle.timestamp, _lastdate(df), tf)
-            @debug "ohlcv tickers watcher: pushing" _module = LogOHLCVTickers sym temp_candle.timestamp
-            pushmax!(df, fromstruct(temp_candle), w.capacity.view)
-            invokelatest(w[k"callback"], df, sym)
+            # Exchange OHLCV volume fallback: if the exchange data already
+            # has a candle at this timestamp with non-zero volume but the
+            # ticker-computed volume is zero, preserve the exchange volume.
+            # This handles the case where the exchange's 24h rolling baseVolume
+            # doesn't change between boundary ticker snapshots (no diff for
+            # diff_volume!), but the exchange's own OHLCV candle has accurate
+            # per-minute volume from trade-level data.
+            if iszero(temp_candle.volume) && !isempty(df)
+                idx = dateindex(df, temp_candle.timestamp)
+                if idx > 0 && idx <= nrow(df) && df[idx, :timestamp] == temp_candle.timestamp
+                    exvol = df[idx, :volume]
+                    if !iszero(exvol)
+                        @debug "ohlcv tickers: using exchange volume" _module = LogOHLCVTickers sym temp_candle.timestamp volume = exvol
+                        temp_candle.volume = exvol
+                    end
+                end
+            end
+            _maybe_push!(w, df, temp_candle, sym)
         end
     elseif res == k"stale_df" && (isempty(df) || _lastdate(df) < temp_candle.timestamp)
-        # Fallback: _maybe_resolve couldn't fetch current data from the exchange
-        # (network issue, exchange API trouble). Push the ticker-derived temp
-        # candle anyway — real ticker data is better than nothing. Gaps in the
-        # OHLCV view from missing exchange data are honest; don't fill with
-        # synthetic rows (volume=0, stale OHLCV) that are indistinguishable from
-        # real candles.
-        pushmax!(df, fromstruct(temp_candle), w.capacity.view)
-        invokelatest(w[k"callback"], df, sym)
+        # _maybe_resolve couldn't fetch current data from the exchange (network
+        # issue, exchange API trouble, gap in the WS stream). _maybe_push! skips
+        # the candle when it is a flat resetcandle! artifact (open==high==low==
+        # close) carrying a stale price, keeping an honest gap. The first-seed
+        # case (empty df) is always pushed.
+        _maybe_push!(w, df, temp_candle, sym)
     end
+end
+@doc """ Appends a candle row, guaranteeing the view never contains two rows with the same timestamp.
+
+$(TYPEDSIGNATURES)
+
+`pushmax!` simply appends, so two callers racing on `df` (the ticker processing task and the
+concurrent stale-check task) — or a gap-fill fetch followed by a ticker push — can otherwise
+produce a duplicate timestamp. If a row for `row.timestamp` already exists, the push is skipped
+(the existing row is authoritative: it came from an exchange fetch or an earlier, identical push).
+"""
+function _push_unique!(df, row, cap)
+    ts = row.timestamp
+    if !isempty(df) && lastdate(df) == ts
+        # Latest candle being re-pushed (race / redundant push) — already present.
+        return
+    elseif !isempty(df)
+        idx = dateindex(df, ts)
+        if idx > 0 && idx <= nrow(df) && df[idx, :timestamp] == ts
+            # Timestamp exists elsewhere in the view — skip to keep timestamps unique.
+            return
+        end
+    end
+    pushmax!(df, row, cap)
+end
+function _maybe_push!(w, df, temp_candle, sym)
+    # Skip fully-flat candles (open==high==low==close): these are resetcandle!
+    # artifacts carrying a stale price after a gap / WS drop, not real candles.
+    # Pushing them paints a misleading flat candle and, racing the concurrent
+    # stale-check task, can duplicate a timestamp. An honest gap is preferable.
+    # The first-seed case (empty df) is always pushed.
+    if !isempty(df) && temp_candle.open == temp_candle.high == temp_candle.low == temp_candle.close
+        @debug "ohlcv tickers watcher: skipping flat stale candle" _module = LogOHLCVTickers sym temp_candle.timestamp
+        return
+    end
+    _push_unique!(df, fromstruct(temp_candle), w.capacity.view)
+    invokelatest(w[k"callback"], df, sym)
 end
 function diff_volume!(w, df, state, latest_timestamp)
     temp_candle = state.temp
     sym = state.sym
-    # this is set on each ticker should be equal to the previous ticker baseVolume
-    prev_candle_daily = state.daily_volume
-    state.daily_volume = temp_candle.volume
-    if iszero(prev_candle_daily) && !iszero(temp_candle.volume) && !state.loaded
-        @warn "ohlcv tickers watcher: zero prev daily volume" latest_timestamp sym temp_candle.volume
+
+    # curr_max = max baseVolume observed during the just-ended minute
+    # (from all tickers within the minute, tracked by state.max_base).
+    # prev_base = max baseVolume from the previous complete minute.
+    curr_max = state.max_base
+    prev_base = state.daily_volume
+
+    # Update baseline for next diff and reset per-minute tracking.
+    state.daily_volume = curr_max
+    state.max_base = 0.0
+
+    # Init guard — trigger baseline fetch when no prev_base exists.
+    if iszero(prev_base) && !iszero(curr_max) && !state.loaded
+        @warn "ohlcv tickers watcher: zero prev max base volume" latest_timestamp sym curr_max
         @acquire w[k"sem"] _ensure_ohlcv!(w, sym)
+        temp_candle.volume = 0.0
         return false
     end
-    # the index of the first candle which volume
-    # should be dropped from the rolling 1d ticker volume
-    dropped_candle_date = latest_timestamp - Day(1) - _tfr(w)
-    idx = dateindex(df, dropped_candle_date)
-    if idx < 1
-        resolution = _maybe_resolve(w, df, sym, latest_timestamp, _tfr(w))
-        if k"stale_candle" == resolution
-            @debug "ohlcv tickers watcher: stale candle" _module = LogOHLCVTickers sym _lastdate(
-                df
-            ) latest_timestamp
-            return false
-        else
-            if state.backoff < 3
-                @acquire w[k"sem"] _ensure_ohlcv!(w, sym)
-                state.backoff += 1
-            end
-            idx = dateindex(df, dropped_candle_date)
-            if idx < 1
-                @debug "ohlcv tickers watcher: failed to resolve candles history" _module =
-                    LogOHLCVTickers sym n = nrow(df) dropped_candle_date
-                return false
-            end
+
+    # First diff after watcher start (prev_base=0) — baseline unknown,
+    # zero this candle's volume.
+    if iszero(prev_base)
+        temp_candle.volume = 0.0
+        state.last_diff_ts = temp_candle.timestamp
+        return true
+    end
+
+    # Gap detection: if the candle being pushed is more than one period
+    # after the last diff, prev_base is stale. Zero this candle — the
+    # next ticker's max_base tracking will rebuild a fresh baseline.
+    tf = _tfr(w)
+    prd = period(tf)
+    if state.last_diff_ts != DateTime(0) && temp_candle.timestamp - state.last_diff_ts > prd
+        state.last_diff_ts = temp_candle.timestamp
+        temp_candle.volume = 0.0
+        return true
+    end
+    state.last_diff_ts = temp_candle.timestamp
+
+    # Volume = increase in max baseVolume from previous minute to this minute.
+    # Uses state.max_base which captures baseVolume from ALL tickers within the
+    # minute (not just the boundary trigger), so mid-minute exchange updates
+    # are attributed to the correct minute.
+    volume = max(0.0, curr_max - prev_base)
+
+    # Fallback: when baseVolume is cached between boundaries (exchange doesn't
+    # update 24h rolling volume every few seconds), try quoteVolume.
+    if iszero(volume)
+        quote_diff = state.curr_quote_volume - state.prev_quote_volume
+        if quote_diff > 0 && temp_candle.close > 0
+            volume = quote_diff / temp_candle.close
         end
     end
-    first_tf_candle_volume = df.volume[idx]
-    volume_diff = temp_candle.volume - prev_candle_daily + first_tf_candle_volume
-    temp_candle.volume = max(volume_diff, 0.0)
+
+    temp_candle.volume = volume
     true
 end
 @doc """ Updates the OHLCV for a specific symbol.
@@ -299,6 +396,18 @@ function _update_sym_ohlcv(w, ticker, latest_timestamp, sym=ticker.symbol)
         resetcandle!(w, temp_candle, latest_timestamp, price)
     elseif temp_candle.timestamp < latest_timestamp
         if isdiff
+            # Save current ticker's quoteVolume for diff_volume! fallback
+            quote_vol = something(get(ticker, :quoteVolume, nothing), 0.0)
+            state.prev_quote_volume, state.curr_quote_volume = state.curr_quote_volume, quote_vol
+            # Initialize max_base for the just-ended minute with the trigger
+            # ticker's baseVolume BEFORE diff_volume! reads it. Use `=` not
+            # `max(...,)` — the boundary ticker is the FIRST ticker of the
+            # new minute, so its volume is the correct starting point; any
+            # stale value left over from a skipped (gap) diff_volume! must
+            # NOT be carried forward (would inflate volume if baseVolume
+            # dropped below the stale max during the gap).
+            temp_candle.volume = something(ticker.baseVolume, 0.0)
+            state.max_base = temp_candle.volume
             diff_volume!(w, df, state, latest_timestamp)
         elseif !_isvwap(w)
             _meanvolume!(w, state)
@@ -310,10 +419,22 @@ function _update_sym_ohlcv(w, ticker, latest_timestamp, sym=ticker.symbol)
     ifproperty!(isless, temp_candle, :high, price)
     ifproperty!(>, temp_candle, :low, price)
     if isdiff
-        temp_candle.volume = something(ticker.baseVolume, 0.0)
+        vol = something(ticker.baseVolume, 0.0)
+        temp_candle.volume = vol
+        # Track max baseVolume from ALL tickers in this minute for the next
+        # diff_volume! call. Mid-minute exchange updates to baseVolume are
+        # captured here, preventing volume=0 when the boundary-trigger ticker
+        # happens before the exchange pushes an update.
+        state.max_base = max(state.max_base, vol)
     elseif !_isvwap(w)
         temp_candle.volume += something(ticker.baseVolume, 0.0)
     end
+    # Note: state.max_base tracks the maximum baseVolume observed from any
+    # ticker within the current minute (reset by diff_volume! at the start of
+    # each new minute). state.daily_volume carries the previous minute's max
+    # as the baseline for the next diff. This max-to-max computation captures
+    # baseVolume increases from mid-minute exchange updates that the old
+    # trigger-to-trigger diff approach lost.
     temp_candle.close = price
     state.ticks += 1
 end
@@ -350,16 +471,6 @@ function _process!(w::Watcher, ::CcxtOHLCVTickerVal)
     if isempty(w)
         return nothing
     elseif @ispending(w)
-        if w[k"diff_volume"] && !isempty(buffer(w))
-            data_date, data = last(buffer(w))
-            states = w[k"symstates"]
-            for (sym, ticker) in data
-                this_state = get(states, sym, nothing)
-                if this_state isa TickerWatcherSymbolState2
-                    this_state.daily_volume = something(ticker.baseVolume, 0.0)
-                end
-            end
-        end
         return nothing
     end
     symstates = w[k"symstates"]
@@ -556,11 +667,18 @@ function _update_sym_ohlcv(w, ::Nothing, latest_timestamp, sym)
                 # process adjusted volume
                 _meanvolume!(w, state)
             end
+            # Set high/low from the available price (resetcandle! uses price directly,
+            # so sentinel -Inf/Inf values no longer appear; this is belt-and-suspenders
+            # for any path that pushes the candle without a real ticker update)
+            ifproperty!(isless, temp_candle, :high, price)
+            ifproperty!(>, temp_candle, :low, price)
+            _ensure_contig!(w, df, temp_candle, _tfr(w), sym)
         end
-        # Fix high/low after potential resetcandle! at line 543 (sets -Inf/Inf)
-        ifproperty!(isless, temp_candle, :high, price)
-        ifproperty!(>, temp_candle, :low, price)
-        _ensure_contig!(w, df, temp_candle, _tfr(w), sym)
+        # Always advance the candle to latest_timestamp, even when no real ticker data
+        # arrived (state.ticks == 0). The candle has no meaningful OHLCV — it was
+        # seeded by resetcandle! with stale price data — so we skip _ensure_contig!
+        # to avoid pushing a misleading flat candle. The next real ticker's _ensure_contig!
+        # will call _maybe_resolve → _ensure_ohlcv! → _fetchto! to fill the gap properly.
         resetcandle!(w, temp_candle, latest_timestamp, price)
         state.ticks = 0
     end

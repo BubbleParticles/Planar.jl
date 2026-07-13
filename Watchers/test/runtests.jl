@@ -15,7 +15,7 @@ using Watchers.Misc.TimeTicks
 using Watchers.Misc: rangebetween
 using Watchers.Data: empty_ohlcv
 using Watchers.WatchersImpls: CcxtTicker, TempCandle, TickerWatcherSymbolState2, CandleWatcherSymbolState4, WatcherHandler2
-using Watchers.WatchersImpls: _parse_ticker_snapshot, _ob_to_df, sym_procstate!, default_load_timeframe, _update_sym_ohlcv, ccxt_ohlcv_tickers_watcher, Warmed
+using Watchers.WatchersImpls: _parse_ticker_snapshot, sym_procstate!, default_load_timeframe, _update_sym_ohlcv, ccxt_ohlcv_tickers_watcher, Warmed, TempCandle, TickerWatcherSymbolState2, CandleWatcherSymbolState4, WatcherHandler2
 using Watchers.Ccxt
 using .Ccxt.CcxtGateway: ping, start_exchange, stop_exchange, exchange_ready
 
@@ -1157,6 +1157,84 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         @test size(w.view["BTC/USDT"], 1) == 1
         @test w.view["BTC/USDT"][1, :timestamp] == M
         @test w.view["BTC/USDT"][1, :close] == 110.0
+    end
+
+    @testset "ccxt ohlcv tickers skips flat stale candles after a gap (no dup timestamps)" begin
+        # After a WS gap with a failed gap-fill fetch, the resume tickers carry a
+        # stale price (e.g. the exchange 24h-high) that produces fully-flat candles
+        # (open==high==low==close). These are resetcandle! artifacts, not real
+        # candles — pushing them paints a misleading flat candle and (racing the
+        # stale-check task) can duplicate a timestamp. They must be skipped and the
+        # gap left honest.
+        tf = tf"1m"
+        exc = Exchange("binance")
+        syms = ["BTC/USDT"]
+        w = ccxt_ohlcv_tickers_watcher(exc; syms, timeframe=tf, price_source=:last, start=false, n_jobs=1)
+        w[:status] = Warmed()
+        w[:warmup_target] = TimeTicks.apply(tf, TimeTicks.now()) - tf
+        w[Symbol("symstates")] = Dict(sym => TickerWatcherSymbolState2(; sym) for sym in syms)
+        w[Symbol("sem")] = Base.Semaphore(1)
+        state = w[Symbol("symstates")]["BTC/USDT"]
+        state.loaded = true  # skip init-guard fetch
+
+        # Seed pre-gap data ending at Mlast.
+        M = TimeTicks.apply(tf, TimeTicks.now()) - Dates.Hour(2) - Dates.Minute(2)
+        df0 = empty_ohlcv()
+        for i in 18:-1:1
+            ts = M - Dates.Minute(i)
+            push!(df0, (timestamp = ts, open=Float64(62000+i), high=Float64(62100+i),
+                        low=Float64(61900+i), close=Float64(62000+i), volume=1.0))
+        end
+        Mlast = lastdate(df0)
+        w.view["BTC/USDT"] = df0
+        @test size(df0, 1) == 18
+        @test Mlast == M - Dates.Minute(1)
+
+        mk_ticker(ts_dt, price, vol) = begin
+            ts_ms = Int(floor(Dates.datetime2unix(ts_dt) * 1000))
+            d = Dict{String,Any}(
+                "symbol" => "BTC/USDT", "timestamp" => ts_ms,
+                "open" => price, "high" => price, "low" => price, "close" => price,
+                "previousClose" => price, "bid" => price, "ask" => price,
+                "bidVolume" => vol, "askVolume" => vol,
+                "last" => price, "vwap" => price, "change" => 0.0,
+                "percentage" => 0.0, "average" => price,
+                "baseVolume" => vol, "quoteVolume" => vol,
+            )
+            _parse_ticker_snapshot(Dict("BTC/USDT" => d))["BTC/USDT"]
+        end
+
+        # Simulate the 2h gap: the stale-check (::Nothing) overload advances
+        # temp_candle without real tickers (ticks=0).
+        gap_end = Mlast + Dates.Hour(2)
+        gap_times = [Mlast + Dates.Minute(5) * i for i in 1:24]
+        for gt in gap_times
+            _update_sym_ohlcv(w, nothing, gt, "BTC/USDT")
+        end
+        @test state.ticks == 0
+
+        # Resume: WS reconnects. First tickers are stale/flat (last = 63133.2).
+        r41 = gap_end
+        r42 = r41 + Dates.Minute(1)
+        r43 = r42 + Dates.Minute(1)
+        _update_sym_ohlcv(w, mk_ticker(r41, 63133.2, 1.0), r41)
+        _update_sym_ohlcv(w, mk_ticker(r42, 63133.2, 1.1), r42)
+        _update_sym_ohlcv(w, mk_ticker(r43, 62600.0, 2.0), r43)
+
+        df = w.view["BTC/USDT"]
+        ts = df[!, :timestamp]
+        # No duplicate timestamps (race / redundant push invariant).
+        @test all(count(==(t), ts) == 1 for t in ts)
+        # No fully-flat stale candle (open==high==low==close==63133.2) was pushed.
+        flat = map(r -> r.open == r.high == r.low == r.close == 63133.2, eachrow(df))
+        @test !any(flat)
+        # Gap is honest: first post-gap candle is well after Mlast.
+        post = ts[findall(>(Mlast), ts)]
+        @test !isempty(post)
+        @test minimum(post) - Mlast > Dates.Minute(1)
+        # Only the non-flat resume candle is pushed (18 seed + 1); the two flat
+        # stale candles are skipped.
+        @test size(df, 1) == 19
     end
 
     @testset "parse ticker snapshot skips malformed tickers" begin
