@@ -540,7 +540,12 @@ function _start!(w::Watcher, ::CcxtOHLCVTickerVal)
     # ccxt_ohlcv_candles (which does the same via handler_task init_func).
     for sym in _ids(w)
         @async begin
-            @acquire a[k"sem"] _ensure_ohlcv!(w, sym)
+            # Hold state.lock so the history preload cannot race the live ticker
+            # path (_checkforstale → _update_sym_ohlcv, which also holds state.lock)
+            # on the same w.view[sym] df. Both push via non-deduping _fetchto! /
+            # _push_unique!, so a concurrent run would duplicate a timestamp.
+            state = w.symstates[sym]
+            @lock state.lock @acquire a[k"sem"] _ensure_ohlcv!(w, sym)
         end
     end
     _reset_tickers_func!(w)
@@ -577,6 +582,10 @@ function _ensure_ohlcv!(w, sym)
                 _ensure_ohlcv_check_contig!(w, df, sym)
             end
         end
+        # Defense-in-depth: guarantee the unique-timestamp invariant even if a race
+        # slipped past the state.lock serialization above (or a future caller pushes
+        # without it). df.timestamp is ascending, so duplicates are adjacent.
+        _dedup_view!(df)
     catch e
         @warn "_ensure_ohlcv! fetch failed for $sym" exception=(e, catch_backtrace())
     end
@@ -607,6 +616,20 @@ function _ensure_ohlcv_check_contig!(w, df, sym)
     catch e
         @debug "ohlcv tickers watcher: preloaded history not contiguous (gap tolerated)" _module = LogOHLCVTickers sym exception = (e, catch_backtrace())
     end
+end
+function _dedup_view!(df)
+    # Guarantee the view's unique-timestamp invariant (Lesson 17): if a race
+    # between the history preload (_fetchto! → appendmax!/prependmax!, no dedup)
+    # and the live ticker path produced two rows with the same timestamp, drop the
+    # duplicate. df.timestamp is ascending, so duplicates are strictly adjacent.
+    n = nrow(df)
+    n <= 1 && return
+    dup = falses(n)
+    ts = df[:, :timestamp]
+    for i in 2:n
+        ts[i] == ts[i - 1] && (dup[i] = true)
+    end
+    any(dup) && deleteat!(df, findall(dup))
 end
 function _load_ohlcv!(w, sym)
     state = attr(w, k"symstates", nothing)
