@@ -15,7 +15,7 @@ using Watchers.Misc.TimeTicks
 using Watchers.Misc: rangebetween
 using Watchers.Data: empty_ohlcv
 using Watchers.WatchersImpls: CcxtTicker, TempCandle, TickerWatcherSymbolState2, CandleWatcherSymbolState4, WatcherHandler2
-using Watchers.WatchersImpls: _parse_ticker_snapshot, sym_procstate!, default_load_timeframe, _update_sym_ohlcv, ccxt_ohlcv_tickers_watcher, Warmed, TempCandle, TickerWatcherSymbolState2, CandleWatcherSymbolState4, WatcherHandler2
+using Watchers.WatchersImpls: _parse_ticker_snapshot, sym_procstate!, default_load_timeframe, _update_sym_ohlcv, ccxt_ohlcv_tickers_watcher, Warmed, TempCandle, TickerWatcherSymbolState2, CandleWatcherSymbolState4, WatcherHandler2, _do_check_contig, _ensure_ohlcv_check_contig!
 using Watchers.Ccxt
 using .Ccxt.CcxtGateway: ping, start_exchange, stop_exchange, exchange_ready
 
@@ -1235,6 +1235,40 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         # Only the non-flat resume candle is pushed (18 seed + 1); the two flat
         # stale candles are skipped.
         @test size(df, 1) == 19
+    end
+    @testset "ccxt ohlcv tickers preload tolerates history gaps (no fatal throw)" begin
+        # Real exchange history can contain gaps (a minute with no trades has no
+        # candle). `_ensure_ohlcv!` previously called `_do_check_contig` directly,
+        # which THREW on any gap and aborted the entire history preload — spamming
+        # "fetch failed" / "Time series is not contiguous" and leaving the view short.
+        # The preload must tolerate gaps: the check is logged, not fatal.
+        tf = tf"1m"
+        exc = Exchange("binance")
+        syms = ["BTC/USDT"]
+        w = ccxt_ohlcv_tickers_watcher(exc; syms, timeframe=tf, price_source=:last, start=false, n_jobs=1)
+        w[:status] = Warmed()
+        w[:warmup_target] = TimeTicks.apply(tf, TimeTicks.now()) - tf
+        w[Symbol("symstates")] = Dict(sym => TickerWatcherSymbolState2(; sym) for sym in syms)
+        w[Symbol("sem")] = Base.Semaphore(1)
+        w[:checks] = Val(:on)  # enforce contiguity so a gap would otherwise throw
+
+        # History with a 2-minute gap (missing the 16:01 candle).
+        t0 = TimeTicks.apply(tf, TimeTicks.now()) - Dates.Hour(2)
+        df = empty_ohlcv()
+        push!(df, (timestamp=t0, open=100.0, high=101.0, low=99.0, close=100.0, volume=10.0))
+        push!(df, (timestamp=t0 + Dates.Minute(2), open=100.0, high=101.0, low=99.0, close=100.0, volume=10.0))
+        w.view["BTC/USDT"] = df
+
+        # The strict check DOES throw on this gap — that was the old (broken) behavior.
+        @test_throws String _do_check_contig(w, df, Val(:on))
+        # The tolerant wrapper must NOT throw — the preload continues with the gap.
+        threw = false
+        try
+            _ensure_ohlcv_check_contig!(w, df, "BTC/USDT")
+        catch e
+            threw = true
+        end
+        @test !threw
     end
 
     @testset "parse ticker snapshot skips malformed tickers" begin
