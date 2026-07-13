@@ -582,13 +582,13 @@ function _ensure_ohlcv!(w, sym)
                 _ensure_ohlcv_check_contig!(w, df, sym)
             end
         end
-        # Defense-in-depth: guarantee the unique-timestamp invariant even if a race
-        # slipped past the state.lock serialization above (or a future caller pushes
-        # without it). df.timestamp is ascending, so duplicates are adjacent.
-        _dedup_view!(df)
     catch e
         @warn "_ensure_ohlcv! fetch failed for $sym" exception=(e, catch_backtrace())
     end
+    # Dedup is placed OUTSIDE try/catch so it runs even when a fetch error (e.g.
+    # _fetch_error in _fetchto!) partially completes and leaves the view with
+    # duplicate timestamps. df.timestamp is ascending, so duplicates are adjacent.
+    _dedup_view!(df)
     if nrow(df) < min_rows && !w[k"minrows_warned"]
         @warn "ohlcv tickers watcher: can't fill view with enough data" sym nrow(df) min_rows
         w[k"minrows_warned"] = true
