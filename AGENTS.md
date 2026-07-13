@@ -721,3 +721,24 @@ package, so it sees them). To iterate on a scratch repro: either run via
 local path in the test env, or delete `~/.julia/compiled/<ver>/Watchers/` so the edited
 source recompiles. Debug `@info` lines inside a hot function may be swallowed by logging
 filters — use a plain `println` or grep the full captured output.
+
+### 20. History preload must tolerate gaps in exchange data — don't fatally throw
+
+`_ensure_ohlcv!` (ccxt_ohlcv_tickers.jl) loads the view from the exchange's
+historical OHLCV. Real exchange history can contain gaps — a minute with no
+trades has no candle, so `16:00 → 16:02` (missing 16:01) is legitimate. The
+watcher's contiguity check (`_do_check_contig(w, df, ::Val{:on})` →
+`_contiguous_ts(..., raise=true)`) **throws** on any gap. When called directly
+inside `_ensure_ohlcv!`, that throw aborts the whole preload, surfaces as
+`_ensure_ohlcv! fetch failed ... Time series is not contiguous`, and (because the
+prepend loop keeps retrying) spams the warning for every symbol on every
+`start!(w)`.
+
+`_fetchto!` already performs a non-fatal contiguity check (utils.jl wraps
+`_check_contig` in try/catch and logs it). The `_do_check_contig` call in
+`_ensure_ohlcv!` is therefore **redundant and fatal** — it must be made
+tolerant. Wrap it so a gap is logged at `@debug` (not thrown): the preload
+continues with an honest gap instead of aborting. An honest gap is preferable to
+a failed load (see Lessons 17-18: fake-fill / flat-stale candles are worse than a
+real hole). This applies to any history-preload / gap-fill path that re-checks
+contiguity after `_fetchto!` has already appended the (possibly gappy) data.
