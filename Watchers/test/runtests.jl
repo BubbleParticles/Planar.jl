@@ -15,7 +15,7 @@ using Watchers.Misc.TimeTicks
 using Watchers.Misc: rangebetween
 using Watchers.Data: empty_ohlcv
 using Watchers.WatchersImpls: CcxtTicker, TempCandle, TickerWatcherSymbolState2, CandleWatcherSymbolState4, WatcherHandler2
-using Watchers.WatchersImpls: _parse_ticker_snapshot, sym_procstate!, default_load_timeframe, _update_sym_ohlcv, ccxt_ohlcv_tickers_watcher, Warmed, TempCandle, TickerWatcherSymbolState2, CandleWatcherSymbolState4, WatcherHandler2, _do_check_contig, _ensure_ohlcv_check_contig!
+using Watchers.WatchersImpls: _parse_ticker_snapshot, sym_procstate!, default_load_timeframe, _update_sym_ohlcv, ccxt_ohlcv_tickers_watcher, Warmed, TempCandle, TickerWatcherSymbolState2, CandleWatcherSymbolState4, WatcherHandler2, _do_check_contig, _ensure_ohlcv_check_contig!, _dedup_view!
 using Watchers.Ccxt
 using .Ccxt.CcxtGateway: ping, start_exchange, stop_exchange, exchange_ready
 
@@ -1269,6 +1269,30 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
             threw = true
         end
         @test !threw
+    end
+
+    @testset "ccxt ohlcv tickers _dedup_view! removes duplicate timestamps" begin
+        # A concurrent history preload and live ticker push can (before the
+        # state.lock serialization) produce two rows with the same timestamp.
+        # _dedup_view! must drop the duplicate so the view keeps the unique-timestamp
+        # invariant (Lesson 17) — downstream processing breaks on dup timestamps.
+        df = empty_ohlcv()
+        t0 = TimeTicks.apply(tf"1m", TimeTicks.now()) - Dates.Hour(1)
+        push!(df, (timestamp=t0, open=100.0, high=101.0, low=99.0, close=100.0, volume=1.0))
+        push!(df, (timestamp=t0 + Dates.Minute(1), open=101.0, high=102.0, low=100.0, close=101.0, volume=1.0))
+        push!(df, (timestamp=t0 + Dates.Minute(1), open=200.0, high=201.0, low=199.0, close=200.0, volume=2.0))  # dup ts with row above
+        push!(df, (timestamp=t0 + Dates.Minute(2), open=102.0, high=103.0, low=101.0, close=102.0, volume=1.0))
+        @test size(df, 1) == 4
+        ts_before = df[:, :timestamp]
+        @test count(==(t0 + Dates.Minute(1)), ts_before) == 2
+        _dedup_view!(df)
+        @test size(df, 1) == 3
+        ts_after = df[:, :timestamp]
+        @test all(count(==(t), ts_after) == 1 for t in ts_after)
+        # order preserved, dup row removed
+        @test ts_after == [t0, t0 + Dates.Minute(1), t0 + Dates.Minute(2)]
+        # no dup timestamps anywhere
+        @test length(unique(ts_after)) == length(ts_after)
     end
 
     @testset "parse ticker snapshot skips malformed tickers" begin

@@ -742,3 +742,23 @@ continues with an honest gap instead of aborting. An honest gap is preferable to
 a failed load (see Lessons 17-18: fake-fill / flat-stale candles are worse than a
 real hole). This applies to any history-preload / gap-fill path that re-checks
 contiguity after `_fetchto!` has already appended the (possibly gappy) data.
+
+### 21. Serialize `_ensure_ohlcv!` with `state.lock` — preload races the live path
+
+`_ensure_ohlcv!` (history preload / gap-fill) mutates `w.view[sym]` via
+`_fetchto!` → `appendmax!`/`prependmax!`, which do **not** dedupe by timestamp.
+The live ticker path (`_checkforstale` → `_update_sym_ohlcv` → `_ensure_contig!` →
+`_maybe_push!` → `_push_unique!`) holds `state.lock` and pushes to the same df.
+If `_ensure_ohlcv!` runs **without** `state.lock` (the `_start!` preload loop called
+it bare, `@acquire w.sem` only), the two run concurrently on the same df and
+produce **one duplicate timestamp** in the view — exactly the symptom reported
+after the duplicate-timestamp fix. `_load_ohlcv!` and the `_maybe_resolve` gap-fill
+already wrap `_ensure_ohlcv!` in `@lock state.lock`; the `_start!` preload loop did
+not, so it raced.
+
+Fix: every `_ensure_ohlcv!` call site must hold `state.lock` (per-symbol), and as
+defense-in-depth `_ensure_ohlcv!` ends with `_dedup_view!(df)` (drops adjacent
+duplicate timestamps, view is timestamp-ascending). Keep the lock on all call
+sites — a future caller that pushes without it reopens the race, and `_dedup_view!`
+is the backstop. When adding a new `_ensure_ohlcv!` caller, wrap it in
+`@lock state.lock @acquire w.sem`.
