@@ -568,5 +568,156 @@ if !isdefined(ParentModule, :TheModule)
 end
 isdefined(ParentModule, :TheModule) || return
 ```
+### 11. Cumulative counter deltas require clean window-boundary reference points
 
-> For detailed audit findings, bug post-mortems, and historical refactoring notes, see `REFACTOR.md`.
+When computing incremental volume from an exchange's cumulative `baseVolume` (or `quoteVolume`), the reference point (`prev_base`) must be sampled **before** any trades in the target window. A common mistake is using the first ticker of minute N+1 as the "start of minute N" baseline — but that ticker already includes trades that settled in the last seconds of minute N (after the previous minute's last ticker). This causes both `prev_base` and `temp_candle.volume` to include the same late trades, cancelling them to zero.
+
+**Symptoms:** Candle has OHLC movement (trades happened) but `volume=0.0` because the volume settled between the last ticker of the minute and the boundary.
+
+**Fix:** Save `prev_base` from `diff_volume!`'s own output (`state.daily_volume = temp_candle.volume` after computing the previous minute's volume, which is the last ticker's baseVolume from that minute). Do NOT overwrite it with the first ticker of the next minute. Late trades are then captured as part of the next minute's volume — a 1-minute misattribution instead of complete loss.
+
+**Audit technique:** For any code that computes `delta = snapshot_B - snapshot_A`, verify by tracing a concrete timeline that `snapshot_A` was taken **before** the event you're trying to measure. If the two snapshots overlap (both contain the same event), the delta will be biased low or zero. Draw a timeline with "ticker arrives" markers and "trade settles" markers, then check which markers each snapshot includes.
+
+### 12. Trace the FIRST cycle through any guard change — initial-state edge cases are invisible in steady-state reasoning
+
+When modifying or removing a guard condition, the steady-state behavior (second call, third call, ...) is easy to verify. The **first call** often has distinct dynamics because state fields hold their initial values (zeros, `nothing`, sentinel defaults). A guard that seemed redundant in the hot path may have been the **only** initialization path for a field.
+
+**Example from the diff_volume! bug:** The `state.ticks == 0` guard saved the first ticker's `baseVolume` into `state.daily_volume`. It was removed because it caused late-trade cancellation in later cycles. But it was also the **only code path that ever initialized `state.daily_volume`** from its default of `0.0`. After removal, the first `diff_volume!` call found `prev_base=0.0`, entered the init guard, and returned `true` — but crucially, line 256 (`state.daily_volume = temp_candle.volume`) had already set `state.daily_volume` to the cumulative baseVolume before the init guard returned. Then `_ensure_contig!` pushed the candle with `temp_candle.volume` still holding that cumulative value (millions of BTC), because the init guard returned without zeroing it.
+
+**Checklist before removing/adding any guard or fallback:**
+1. What is the initial value of EVERY state field the code touches? Trace the first call with a concrete example.
+2. If adding a fallback (e.g., `quoteVolume`), what happens when its baseline is `0.0` on the first invocation? Is the fallback guarded by another check, or does it produce a massive spurious value?
+3. Does removing a guard create a new latent responsibility — is some other code path now responsible for initialization that didn't need to be before?
+4. If a line runs "before the guard" (like line 256 running before the init guard returns), does it produce correct values when the guard fires? Or does it write garbage that another call will read?
+
+
+### 13. Stale-check gap-fill overshoot silently drops candles — trace gap boundaries explicitly
+
+The `_checkforstale` path in OHLCV ticker watchers calls `_ensure_contig!` unconditionally (even when `state.ticks == 0`), which pushes a candle seeded by `resetcandle!` with stale price data and `volume=0.0`. When a gap exists (e.g., 2 hours of missing data), the `_maybe_resolve` → `_ensure_ohlcv!` fetch uses `to = _nextdate(tf)` (= now + 1 period) as its upper bound, which overshoots the temp_candle's timestamp (`this_ts`). After the fetch, `_lastdate(df) > this_ts`, the adjacency check `isrightadj(this_ts, _lastdate(df), tf)` is always FALSE (direction is wrong — `this_ts` is *before* `_lastdate`), and the fallback `_lastdate(df) < temp_candle.timestamp` is also FALSE. **The candle is silently dropped.**
+
+**Example from the stale-check push bug:** After a 2-hour gap (12:05→14:05):
+1. `_checkforstale` at 14:05 finds the 12:05 candle ready to push (`state.ticks > 0`).
+2. `_maybe_resolve` → `_ensure_ohlcv!` fetches from `lastdate(df)` (≈12:03) to `_nextdate(tf)` (≈14:06).
+3. After fetch, `_lastdate(df) = 14:06`. The temp_candle timestamp is `12:05`.
+4. `12:05 < 14:06` → the gap was filled but overshot. `isrightadj(12:05, 14:06, tf)` → FALSE (12:05 is before 14:06, not one period after). `_lastdate(df) < temp_candle.timestamp` → `14:06 < 12:05` → FALSE. **The 12:05 candle is never pushed.**
+5. `resetcandle!` advances temp_candle to `14:05` — but the 12:05 candle is permanently gone from the view.
+6. The 14:05 candle (flat OHLC, volume=0.0 from resetcandle!) gets pushed by the stale check or the next ticker path, creating a misleading row.
+
+**The dual fix:**
+- Guard `_ensure_contig!` with `state.ticks > 0` in the stale-check (`nothing` overload) path. A candle with no real ticker data should never be pushed — `resetcandle!` still advances the timestamp (avoiding a spin loop), but the empty candle is dropped. The next real ticker's `_ensure_contig!` → `_maybe_resolve` → `_ensure_ohlcv!` → `_fetchto!` fills the gap properly.
+- In `_maybe_resolve`, after `_ensure_ohlcv!` fetches gap data, check if `_lastdate(df) > this_ts`. If so, the exchange data already covers this timestamp → return `k"stale_candle"` (don't push a redundant ticker-derived candle).
+
+**Checklist for gap-related fixes:**
+1. The `_ensure_ohlcv!` fetch bound is `_nextdate(tf)`, NOT `this_ts`. Any candle whose timestamp predates the newly fetched data will fail adjacency checks. Add an explicit `_lastdate(df) > this_ts` guard in `_maybe_resolve`.
+2. A stale-check-created candle (`resetcandle!` with `price = temp_candle.close`) has `state.ticks == 0` — it was never populated by a real ticker. Never push such candles via `_ensure_contig!`.
+3. When tracing gap behavior, start with a concrete timeline: "if last ticker at T and next ticker at T+Δ, which candles get pushed and which get dropped?" Don't assume the gap-fill works for all boundary cases.
+4. After a gap-fill, `_lastdate(df)` may jump past the temp_candle timestamp. Check both `==` and `<` (not just `==`) when determining whether the temp_candle is redundant.
+
+### 14. Gap volume baseline poisoning — guard `state.daily_volume` updates against stale-check candles
+
+When a gap in ticker data exists (e.g., 2 hours with no tickers), the stale-check path creates candles via `resetcandle!` which sets `temp_candle.volume = 0.0`. The real ticker that arrives after the gap triggers `diff_volume!` for the stale-check-created candle. At that point, `state.daily_volume` is the cumulative `baseVolume` from the pre-gap diff (correct), but `temp_candle.volume` is `0.0` (from `resetcandle!`). Line 271 (`state.daily_volume = temp_candle.volume`) **poisons the baseline to `0.0`**, causing the NEXT diff_volume! call (for the first real post-gap candle) to enter the init guard (`prev_base=0`) and zero its volume.
+
+**Example trace with the gap at 12:21→14:21:**
+1. 12:21 diff: `state.daily_volume = baseVolume_12:21` (correct, set by the pre-gap diff).
+2. Stale check at 14:05 creates a candle via `resetcandle!` → `temp_candle.volume = 0.0`, `state.ticks = 0`.
+3. Ticker at 14:21:03 triggers new minute. `diff_volume!` for the 14:05 stale-check candle:
+   - `prev_base = baseVolume_12:21` (correct).
+   - Line 271: `state.daily_volume = temp_candle.volume = 0.0` ← **poisoned!**
+   - `volume_diff = 0.0 - baseVolume_12:21 = negative → 0.0`. Volume is 0 for 14:05 — acceptable (stale data).
+4. Ticker at 14:22:03 triggers new minute. `diff_volume!` for 14:21:
+   - `prev_base = 0.0` ← **stale baseline!**
+   - Init guard fires: `temp_candle.volume = 0.0`. Volume is 0 for 14:21 — **wrong** (OHLC shows price movement, trades occurred).
+
+**The fix has two parts:**
+- `state.ticks > 0` guard on line 271: only update `state.daily_volume` when the candle being pushed had real ticker data. A stale-check candle (`state.ticks == 0`) with `temp_candle.volume = 0.0` must not overwrite the valid pre-gap baseline.
+- Gap detection with `state.last_diff_ts`: if `temp_candle.timestamp - last_diff_ts > period(tf)`, the baseline (`prev_base`) is stale. Zero the volume and reset the baseline.
+
+**CORRECTION (2026-07-12):** The `state.ticks > 0` guard on `last_diff_ts` advance inside gap detection was WRONG. It caused `last_diff_ts` to remain at the pre-gap timestamp for the first post-gap candle (since `state.ticks == 0` from stale-check reset). The NEXT minute's `diff_volume!` then saw `last_diff_ts` still at the pre-gap value, entered gap detection a SECOND time, and zeroed volume for TWO candles instead of one. Additionally, the `state.ticks > 0` guard on `state.daily_volume = temp_candle.volume` was also wrong for the first post-gap ticker — it prevented the baseline from ever being updated from the stale pre-gap value. Combined with `temp_candle.volume = 0.0` from `resetcandle!` at that point, the baseline couldn't be safely updated anyway.
+
+**The full fix (with both guards removed):**
+1. Set `temp_candle.volume = ticker.baseVolume` BEFORE `diff_volume!` in the ticker path (line 359). This ensures the cumulative baseVolume is available when `diff_volume!` runs, even for the first ticker after stale-check reset (where `temp_candle.volume` was 0.0 from `resetcandle!`).
+2. Remove `state.ticks > 0` guard from `state.daily_volume = temp_candle.volume` in `diff_volume!`. Now always updates the baseline because the caller sets `temp_candle.volume` to the current cumulative before calling.
+3. Remove `state.ticks > 0` guard from `last_diff_ts` advance inside gap detection. Now always advances `last_diff_ts`, closing the gap after the first boundary candle.
+
+**Result:** After the gap, only the boundary candle (e.g., 14:32) gets volume=0 from gap detection. The next candle (e.g., 14:33) computes `volume_diff = cum_14:34 - cum_14:33` normally. One zeroed candle replaces two.
+
+**Checklist for gap-volume bugs (revised):**
+1. Ensure `temp_candle.volume` is set to `ticker.baseVolume` BEFORE `diff_volume!` in the ticker path — `diff_volume!` needs the cumulative value for gap baseline recovery and `volume_diff` computation.
+2. Never guard `state.daily_volume = temp_candle.volume` with `state.ticks > 0` — removing this guard requires condition (1) above so that `temp_candle.volume` carries the cumulative (not 0.0 from `resetcandle!`).
+3. Never guard `state.last_diff_ts` advance with `state.ticks > 0` inside gap detection — the gap must be closed after the first boundary candle regardless of whether ticker data arrived. Only one candle should be zeroed for each gap.
+4. Only the VERY first diff_volume! after watcher start (`prev_base == 0.0` from initialization) should enter the init guard — all subsequent zero-volume candles should be gap-boundary-only.
+5. Verify: `state.daily_volume` transitions through the gap correctly: `pre_gap_cumulative → gap_boundary_cumulative (zeroed candle) → next_candle_cumulative`. If it skips the gap boundary, the next candle gets a delta spanning the full gap.
+
+
+### 15. max_base tracking — capture baseVolume from ALL in-minute tickers, not just boundary triggers
+
+The `diff_volume!` approach for ticker-derived OHLCV candles computes per-minute volume from the increase in the exchange's 24h rolling `baseVolume`. The original implementation used `volume_diff = trigger_N+1.baseVolume - trigger_N.baseVolume` (the boundary trigger ticker's baseVolume from consecutive minutes). This silently loses mid-minute baseVolume updates:
+
+- **Problem:** When the exchange updates `baseVolume` between the trigger ticker of minute N and a later ticker of the same minute, the increase is never attributed because `diff_volume!` line 274 overwrites `state.daily_volume` with the TRIGGER's value at the next boundary, discarding the mid-minute high-water mark.
+- **Result:** Minutes where the exchange updates baseVolume mid-minute still show volume=0 in the ticker-derived candle, even though the exchange DID report volume changes — they were just between boundaries.
+- **Fix:** Track `state.max_base` — the maximum `baseVolume` observed from ANY ticker within the current minute. At each ticker update do `state.max_base = max(state.max_base, ticker.baseVolume)`. At `diff_volume!` time, use `curr_max = state.max_base` instead of `temp_candle.volume` (the trigger's snapshot). Reset `state.max_base = 0.0` after the diff.
+- **Edge case — first boundary:** Before the first `diff_volume!`, tickers might not have fired yet. Initialize `state.max_base` in the boundary block (before `diff_volume!`) via `state.max_base = max(state.max_base, temp_candle.volume)`. This ensures `curr_max` is non-zero even for the very first boundary.
+
+### 16. Exchange OHLCV volume fallback — preserve non-zero exchange candle volume
+
+When the exchange's 24h rolling `baseVolume` genuinely doesn't change between two consecutive minutes (low-volume market, cached snapshots), the ticker-derived volume is 0 even though real trades happened (visible as OHLC price movement). The exchange's own OHLCV API returns accurate per-minute volume from trade-level data.
+
+- **Problem:** `_ensure_contig!` unconditionally pushes the ticker-derived candle via `pushmax!`, even when the view already has an exchange candle at the same timestamp with non-zero volume. `pushmax!` appends a duplicate row, and the last (ticker) row wins in downstream processing.
+- **Fix:** In `_ensure_contig!`, before pushing the ticker candle, check if exchange data at `temp_candle.timestamp` already has non-zero volume:
+  ```julia
+  idx = dateindex(df, temp_candle.timestamp)
+  if idx > 0 && df[idx, :timestamp] == temp_candle.timestamp && df[idx, :volume] > 0
+      temp_candle.volume = df[idx, :volume]
+  end
+  ```
+  This overwrites the ticker-computed volume (which may be 0) with the exchange's accurate volume. The exchange row is then replaced by `pushmax!` (same timestamp), but now the pushed row carries the correct volume.
+- **Limitation:** This only works when exchange OHLCV data EXISTS at the given timestamp (startup fetch or gap-fill has populated it). When `_ensure_ohlcv!` fails (stub exchange, no API support), the exchange volume fallback is a no-op and the view shows ticker-derived volume (which may be 0 for minutes with no baseVolume change).
+
+**Checklist for volume-zero fixes:**
+1. Verify `state.max_base` is updated at EVERY ticker (`state.max_base = max(state.max_base, ticker.baseVolume)` in the ticker path), not just at boundaries.
+2. Verify `state.max_base` is initialized in the boundary block BEFORE `diff_volume!` — the first boundary needs a non-zero `curr_max`.
+3. Verify `diff_volume!` reads `prev_base = state.daily_volume` and `curr_max = state.max_base`, then saves `state.daily_volume = curr_max` and resets `state.max_base = 0.0`.
+4. Verify the init guard uses `curr_max` (not `temp_candle.volume`) for its `!iszero()` check.
+5. Verify the gap-detection code still works: after `state.max_base = 0.0` reset, the next ticker rebuilds the max. A gap produces volume=0 for the boundary candle, then the next candle has volume from the rebuilt max.
+6. If exchange OHLCV data is available for a timestamp but ticker-derived volume is 0, the exchange volume fallback in `_ensure_contig!` should rescue it. Test with a stub exchange that returns OHLCV data with non-zero volume.
+
+## Lessons Learned (2026-07-13 — ccxt_ohlcv_tickers duplicate timestamp & flat stale candles)
+
+### 17. Guard the OHLCV view's unique-timestamp invariant at the push site
+
+The ccxt ohlcv tickers watcher can push two rows with the same timestamp when the
+concurrent stale-check task (`_update_sym_ohlcv(w, nothing, ...)`, runs from
+`_checkforstale`) and the ticker-processing task both finalize the same minute.
+`resetcandle!` + `pushmax!` does not dedupe — `_push_unique!` must. But `dateindex`
+in this codebase is `searchsortedlast`-style: for any `ts >= first(df.timestamp)`
+it returns the index of the last row `<= ts` (so `dateindex(df, future_ts) > 0`
+is ALWAYS true). **Confirming a timestamp already exists requires
+`idx = dateindex(df, ts); idx > 0 && idx <= nrow(df) && df[idx, :timestamp] == ts`**
+— never `dateindex(df, ts) > 0` alone (that blocks every legitimate new push).
+
+### 18. Skip fully-flat candles (open==high==low==close) after a gap — in BOTH push branches
+
+After a WS gap whose gap-fill fetch fails (stub exchange, no markets), the resume
+tickers replay a stale price (often the exchange 24h-high) and produce fully-flat
+candles (`63133.2 × 4`, volume 0/0.0007...). These are `resetcandle!` artifacts,
+not real candles — pushing them paints a misleading flat row and (racing the
+stale-check task) duplicates a timestamp. Skip them; an honest empty gap is better.
+
+**The skip must live in `_maybe_push!` (called by both branches of `_ensure_contig!`),
+NOT only inside the `res == k"stale_df"` branch.** `_maybe_resolve` falls through to
+`return nothing` whenever `this_ts` is right-adjacent to `_lastdate(df)` (the normal
+append case). So after the first gap candle is pushed, subsequent flat candles go
+through the `isnothing(res) → isrightadj` branch, which had no guard — they were
+being pushed. Centralize the degenerate-skip in `_maybe_push!` so it applies to every
+push path. Keep the first-seed case (empty df) pushing.
+
+### 19. Test-env source loading — validate edits against local source
+
+`julia --project=Watchers/test script.jl` loads `Watchers` from the **depot/installed**
+copy if the test `Project.toml`/`Manifest.toml` references it by UUID without a `path`.
+A stale `.ji` then hides local source edits (the canonical `Pkg.test()` devs the local
+package, so it sees them). To iterate on a scratch repro: either run via
+`julia --project=Watchers -e 'using Pkg; Pkg.test()'`, `Pkg.develop` the package to its
+local path in the test env, or delete `~/.julia/compiled/<ver>/Watchers/` so the edited
+source recompiles. Debug `@info` lines inside a hot function may be swallowed by logging
+filters — use a plain `println` or grep the full captured output.
