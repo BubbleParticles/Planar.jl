@@ -570,11 +570,11 @@ function _ensure_ohlcv!(w, sym)
             _fetchto!(w, df, sym, tf, Val(:append); from, to, allow_upsample=false)
             # Skipping fill_missing_candles! — it creates synthetic rows with
             # volume=0 and stale OHLCV that are indistinguishable from real data.
-            _do_check_contig(w, df, _checks(w))
+            _ensure_ohlcv_check_contig!(w, df, sym)
             if nrow(df) < min_rows
                 to = _firstdate(df) + period(tf)
                 _fetchto!(w, df, sym, tf, Val(:prepend); to, allow_upsample=true)
-                _do_check_contig(w, df, _checks(w))
+                _ensure_ohlcv_check_contig!(w, df, sym)
             end
         end
     catch e
@@ -594,6 +594,18 @@ function _ensure_ohlcv!(w, sym)
     state = get(w[k"symstates"], sym, nothing)
     if state isa TickerWatcherSymbolState2
         state.loaded = true
+    end
+end
+function _ensure_ohlcv_check_contig!(w, df, sym)
+    # _fetchto! already performs a non-fatal contiguity check and logs any gap in
+    # the fetched exchange history. Re-raising here would abort the whole history
+    # preload on a *legitimate* exchange gap (e.g. a minute with no trades has no
+    # candle), leaving the view short and spamming "fetch failed" errors. Tolerate
+    # it — an honest gap is preferable to dropping the entire history load.
+    try
+        _do_check_contig(w, df, _checks(w))
+    catch e
+        @debug "ohlcv tickers watcher: preloaded history not contiguous (gap tolerated)" _module = LogOHLCVTickers sym exception = (e, catch_backtrace())
     end
 end
 function _load_ohlcv!(w, sym)
