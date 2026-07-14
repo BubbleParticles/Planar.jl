@@ -353,18 +353,19 @@ function diff_volume!(w, df, state, latest_timestamp)
     end
     state.last_diff_ts = temp_candle.timestamp
 
-    # Volume = increase in max baseVolume from previous minute to this minute.
-    # Uses state.max_base which captures baseVolume from ALL tickers within the
-    # minute (not just the boundary trigger), so mid-minute exchange updates
-    # are attributed to the correct minute.
+    # Volume = increase in max baseVolume + volume of candle dropping off the 24h
+    # rolling window. The dropped-candle term compensates for the exchange's cached
+    # 24h rolling baseVolume: when baseVolume doesn't change between minutes,
+    # curr_max - prev_base == 0, but there WAS trading activity — its volume is
+    # reflected in the candle that just exited the 24h window. Without this term,
+    # candles with no baseVolume increase get volume = 0 even when OHLC values differ.
     volume = max(0.0, curr_max - prev_base)
-
-    # Fallback: when baseVolume is cached between boundaries (exchange doesn't
-    # update 24h rolling volume every few seconds), try quoteVolume.
-    if iszero(volume)
-        quote_diff = state.curr_quote_volume - state.prev_quote_volume
-        if quote_diff > 0 && temp_candle.close > 0
-            volume = quote_diff / temp_candle.close
+    dropped_candle_date = latest_timestamp - Day(1) - tf
+    didx = dateindex(df, dropped_candle_date)
+    if didx > 0 && didx <= nrow(df) && df[didx, :timestamp] == dropped_candle_date
+        dropped_vol = df[didx, :volume]
+        if !iszero(dropped_vol)
+            volume += dropped_vol
         end
     end
 
@@ -474,6 +475,19 @@ function _process!(w::Watcher, ::CcxtOHLCVTickerVal)
     if isempty(w)
         return nothing
     elseif @ispending(w)
+        # Initialize state.daily_volume from the first ticker's baseVolume to provide
+        # a baseline for diff_volume!. Without this, the first candle's volume diff
+        # always zeroes out (prev_base == 0 → volume = 0) — only subsequent candles
+        # with a non-zero prev_base produce meaningful volume.
+        if w[k"diff_volume"] && !isempty(buffer(w))
+            _, data = last(buffer(w))
+            for (sym, ticker) in data
+                state = get(w[k"symstates"], sym, nothing)
+                if state isa TickerWatcherSymbolState2
+                    state.daily_volume = something(ticker.baseVolume, 0.0)
+                end
+            end
+        end
         return nothing
     end
     symstates = w[k"symstates"]
