@@ -416,7 +416,7 @@ function handle_trade!(s, ai, orders_byid, resp)
                     end
                 end
             finally
-                asset_trades_task(s, ai).storage[:notify] |> Rocket.next!
+                Rocket.next!(asset_trades_task(s, ai).storage[:notify], nothing)
             end
         end
     catch e
