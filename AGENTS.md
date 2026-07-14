@@ -830,3 +830,36 @@ binding, or use `TimeTicks.now()` qualified calls in critical paths.
 (buffer pushes, fetch ranges, stale checks, gap detection), confirm the import chain
 resolves to `TimeTicks.now()`. Running `JULIA_DEBUG=LogOHLCVTickers` and checking the
 timestamps in the output against exchange timestamps is the quickest smoke test.
+### 24. `using ...Dates: now` in any included file shadows `TimeTicks.now` for the entire module
+
+When a file is `include`-d into a module, its `using` statements execute at the point of
+inclusion and can **overwrite** existing bindings in the module's namespace. This is especially
+dangerous for `now`:
+
+```julia
+# File A included early — sets up UTC now for the module:
+using ..TimeTicks: now   # now = TimeTicks.now = UTC
+
+# File B included later — silently shadows now to local:
+using Fetch.Dates: DateTime, now   # now = Dates.now = LOCAL TIME
+```
+
+After File B is included, **every subsequent `now()` call in the module** resolves to local time,
+including code in other already-included files when called at runtime. The overwrite takes effect
+from the include point forward.
+
+**Fix**: Never import `now` from a `Dates` path. Import `DateTime` (and other needed types) from
+`TimeTicks` (which re-exports `Dates` correctly):
+
+```julia
+# BAD — shadows now for the whole module:
+using Fetch.Dates: DateTime, now
+
+# GOOD — safe, no now import:
+using Fetch.TimeTicks: DateTime
+```
+
+**Audit finding (2026-07-14)**: All 12 production packages with bare `now()` calls resolve to
+`TimeTicks.now()` (UTC). The only exception was `Watchers/src/impls/ccxt_average_ohlcv_watcher.jl`
+which imported unused `now` from `Fetch.Dates` — fixed. The submodule `Misc/src/ttl.jl` (`TimeToLive`)
+uses `Dates.now` locally but the containment boundary prevents leakage.
