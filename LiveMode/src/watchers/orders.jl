@@ -411,7 +411,7 @@ function update_order!(s, ai, eid; resp, state)
     @debug "update ord: handled" _module = LogWatchOrder ai id = state.order.id filled = filled_amount(
         state.order
     ) f = @caller(10)
-    asset_orders_task(s, ai).storage[:notify] |> Rocket.next!
+    Rocket.next!(asset_orders_task(s, ai).storage[:notify], nothing)
 end
 
 function _default_ordertype(islong::Bool, bs::BySide, args...)
@@ -560,7 +560,7 @@ function handle_order!(s, ai, orders_byid, resp)
                     end
                 end
             finally
-                asset_orders_task(s, ai).storage[:notify] |> Rocket.next!
+                Rocket.next!(asset_orders_task(s, ai).storage[:notify], nothing)
             end
         end
     catch e

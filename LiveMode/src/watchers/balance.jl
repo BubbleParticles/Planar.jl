@@ -246,15 +246,18 @@ function _balance_setup_stall_guard!(state)
         Rocket.unsubscribe!(w[:stall_guard_sub])
         delete!(w, :stall_guard_sub)
     end
-    w[:stall_guard_sub] = Rocket.interval(10, 10) |>
+    pipeline = Rocket.interval(10, 10) |>
         Rocket.map(Nothing, _ -> begin
             last = _lastprocessed(w)
             if now() - last > Second(60)
                 @warn "balance watcher: forcing fetch due to stall" last now() s
                 _force_fetchbal(s; fallback_kwargs=attrs[:func_kwargs])
             end
-        end) |>
-        Rocket.subscribe!(on_error = e -> @warn("balance watcher: stall guard error", exception = e))
+        end)
+    w[:stall_guard_sub] = Rocket.subscribe!(
+        pipeline,
+        Rocket.lambda(on_error = e -> @warn("balance watcher: stall guard error", exception = e)),
+    )
 end
 
 @doc """

@@ -137,7 +137,7 @@ function _stop_stall_guard_if_any!(w)
 end
 
 function _start_stall_guard!(w, s, kwargs)
-    w[:stall_guard_sub] = Rocket.interval(10, 10) |>
+    pipeline = Rocket.interval(10, 10) |>
         Rocket.map(Nothing, _ -> begin
             last = _lastprocessed(w)
             if now() - last > Second(60)
@@ -153,8 +153,11 @@ function _start_stall_guard!(w, s, kwargs)
                     end
                 end
             end
-        end) |>
-        Rocket.subscribe!(on_error = e -> @warn("positions watcher: stall guard error", exception = e))
+        end)
+    w[:stall_guard_sub] = Rocket.subscribe!(
+        pipeline,
+        Rocket.lambda(on_error = e -> @warn("positions watcher: stall guard error", exception = e)),
+    )
 end
 
 @doc """ Pushes a new value to the watcher's buffer and schedules processing if the value is not nothing. Used internally to handle new position data, either from fetch or watch mode.
