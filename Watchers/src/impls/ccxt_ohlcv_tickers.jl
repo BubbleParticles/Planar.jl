@@ -153,10 +153,7 @@ function _init!(w::Watcher, ::CcxtOHLCVTickerVal)
     _view!(w, default_view(w, Dict{String,DataFrame}))
     a = attrs(w)
     a[:last_processed] = typemax(DateTime)
-# Ticker-derived OHLCV can have legitimate gaps (no trades, WS hiccup).
-# Don't enforce strict contiguity on it — _fetchto! would error on the
-# gappy view during gap-fill and pollute the error buffer.
-# _ensure_ohlcv_check_contig! provides a non-fatal safety net instead.
+    _checkson!(w)
 end
 
 @doc """ Resets the temporary candlestick chart with a new timestamp and price.
@@ -299,13 +296,16 @@ function _push_unique!(df, row, cap)
     pushmax!(df, row, cap)
 end
 function _maybe_push!(w, df, temp_candle, sym)
-    # Skip fully-flat candles (open==high==low==close): these are resetcandle!
-    # artifacts carrying a stale price after a gap / WS drop, not real candles.
-    # Pushing them paints a misleading flat candle and, racing the concurrent
-    # stale-check task, can duplicate a timestamp. An honest gap is preferable.
-    # The first-seed case (empty df) is always pushed.
-    if !isempty(df) && temp_candle.open == temp_candle.high == temp_candle.low == temp_candle.close
-        @debug "ohlcv tickers watcher: skipping flat stale candle" _module = LogOHLCVTickers sym temp_candle.timestamp
+    # Skip candles that had zero real ticker contributions (stale artifacts from
+    # resetcandle! after a gap / WS drop). These have state.ticks == 0 because
+    # _update_sym_ohlcv was never called with a valid price for this minute.
+    # Check state.ticks rather than open==high==low==close because a market with
+    # no price movement in a minute produces a legitimate one-ticker candle where
+    # all four fields equal the same price — such candles SHOULD be pushed; they
+    # represent real data and prevent unfillable gaps in the view.
+    state = get(w[k"symstates"], sym, nothing)
+    if state isa TickerWatcherSymbolState2 && state.ticks == 0
+        @debug "ohlcv tickers watcher: skipping stale candle (state.ticks == 0)" _module = LogOHLCVTickers sym temp_candle.timestamp
         return
     end
     _push_unique!(df, fromstruct(temp_candle), w.capacity.view)
@@ -610,12 +610,13 @@ function _ensure_ohlcv!(w, sym)
 end
 
 function _ensure_ohlcv_check_contig!(w, df, sym)
-    # Always check contiguity of fetched exchange data, regardless of the
-    # global _checks setting (which is Val(:off) for ticker watchers since
-    # ticker-derived OHLCV can have legitimate gaps). The try/catch makes
-    # this non-fatal — gaps are tolerated, not fatal.
+    # _fetchto! already performs a non-fatal contiguity check and logs any gap in
+    # the fetched exchange history. Re-raising here would abort the whole history
+    # preload on a *legitimate* exchange gap (e.g. a minute with no trades has no
+    # candle), leaving the view short and spamming "fetch failed" errors. Tolerate
+    # it — an honest gap is preferable to dropping the entire history load.
     try
-        _do_check_contig(w, df, Val(:on))
+        _do_check_contig(w, df, _checks(w))
     catch e
         @debug "ohlcv tickers watcher: preloaded history not contiguous (gap tolerated)" _module = LogOHLCVTickers sym exception = (e, catch_backtrace())
     end

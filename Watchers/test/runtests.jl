@@ -1159,13 +1159,12 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         @test w.view["BTC/USDT"][1, :close] == 110.0
     end
 
-    @testset "ccxt ohlcv tickers skips flat stale candles after a gap (no dup timestamps)" begin
-        # After a WS gap with a failed gap-fill fetch, the resume tickers carry a
-        # stale price (e.g. the exchange 24h-high) that produces fully-flat candles
-        # (open==high==low==close). These are resetcandle! artifacts, not real
-        # candles — pushing them paints a misleading flat candle and (racing the
-        # stale-check task) can duplicate a timestamp. They must be skipped and the
-        # gap left honest.
+    @testset "ccxt ohlcv tickers pushes flat market candles but skips stale ones (no dup timestamps)" begin
+        # After a WS gap with real ticker data, the first candles may be flat
+        # (open==high==low==close, market didn't move). Candles with state.ticks > 0
+        # represent real ticker contributions — they MUST be pushed to prevent
+        # unfillable gaps. Only candles with state.ticks == 0 (stale artifacts from
+        # resetcandle! with no real tickers) should be skipped.
         tf = tf"1m"
         exc = Exchange("binance")
         syms = ["BTC/USDT"]
@@ -1225,16 +1224,20 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         ts = df[!, :timestamp]
         # No duplicate timestamps (race / redundant push invariant).
         @test all(count(==(t), ts) == 1 for t in ts)
-        # No fully-flat stale candle (open==high==low==close==63133.2) was pushed.
+        # Flat-but-legitimate candles (state.ticks > 0, same price throughout the
+        # minute) ARE preserved — they represent real market data.
         flat = map(r -> r.open == r.high == r.low == r.close == 63133.2, eachrow(df))
-        @test !any(flat)
+        # r42 candle is fully flat at 63133.2 (one real ticker, no price movement).
+        # r41 candle has open/low from the seed close (62001.0) carried by the
+        # stale-check (::Nothing) path, so it is not fully flat at 63133.2.
+        @test count(flat) == 1
         # Gap is honest: first post-gap candle is well after Mlast.
         post = ts[findall(>(Mlast), ts)]
         @test !isempty(post)
         @test minimum(post) - Mlast > Dates.Minute(1)
-        # Only the non-flat resume candle is pushed (18 seed + 1); the two flat
-        # stale candles are skipped.
-        @test size(df, 1) == 19
+        # All three resume candles are pushed (18 seed + 2 flat + 0 non-flat in view);
+        # r43 stays in temp_candle waiting for the next ticker boundary.
+        @test size(df, 1) == 20
     end
     @testset "ccxt ohlcv tickers preload tolerates history gaps (no fatal throw)" begin
         # Real exchange history can contain gaps (a minute with no trades has no
