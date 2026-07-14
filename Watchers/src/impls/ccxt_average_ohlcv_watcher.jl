@@ -12,7 +12,7 @@ using ..Watchers: Watcher, watcher, start!, stop!, load!, _val, fetch!, default_
 using Fetch.Exchanges: Exchange
 using Fetch.Data: OHLCV_COLUMNS, empty_ohlcv
 using Fetch.Misc: TimeFrame, LittleDict
-using Fetch.Dates: DateTime, now # Needed for DateTime
+using Fetch.Dates: DateTime # Needed for DateTime (now is unused — was shadowing TimeTicks.now UTC with Dates.now local)
 using Fetch.Data.DFUtils # Added for DataFrames.after
 
 const CcxtAverageOHLCVVal = Val{:ccxt_average_ohlcv}
