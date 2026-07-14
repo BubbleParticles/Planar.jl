@@ -153,7 +153,10 @@ function _init!(w::Watcher, ::CcxtOHLCVTickerVal)
     _view!(w, default_view(w, Dict{String,DataFrame}))
     a = attrs(w)
     a[:last_processed] = typemax(DateTime)
-    _checkson!(w)
+# Ticker-derived OHLCV can have legitimate gaps (no trades, WS hiccup).
+# Don't enforce strict contiguity on it — _fetchto! would error on the
+# gappy view during gap-fill and pollute the error buffer.
+# _ensure_ohlcv_check_contig! provides a non-fatal safety net instead.
 end
 
 @doc """ Resets the temporary candlestick chart with a new timestamp and price.
@@ -605,14 +608,14 @@ function _ensure_ohlcv!(w, sym)
         state.loaded = true
     end
 end
+
 function _ensure_ohlcv_check_contig!(w, df, sym)
-    # _fetchto! already performs a non-fatal contiguity check and logs any gap in
-    # the fetched exchange history. Re-raising here would abort the whole history
-    # preload on a *legitimate* exchange gap (e.g. a minute with no trades has no
-    # candle), leaving the view short and spamming "fetch failed" errors. Tolerate
-    # it — an honest gap is preferable to dropping the entire history load.
+    # Always check contiguity of fetched exchange data, regardless of the
+    # global _checks setting (which is Val(:off) for ticker watchers since
+    # ticker-derived OHLCV can have legitimate gaps). The try/catch makes
+    # this non-fatal — gaps are tolerated, not fatal.
     try
-        _do_check_contig(w, df, _checks(w))
+        _do_check_contig(w, df, Val(:on))
     catch e
         @debug "ohlcv tickers watcher: preloaded history not contiguous (gap tolerated)" _module = LogOHLCVTickers sym exception = (e, catch_backtrace())
     end
