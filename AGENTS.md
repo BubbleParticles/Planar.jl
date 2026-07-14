@@ -268,6 +268,8 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 
 36. **After fixing shared utility code (macros, helper functions), run ALL downstream tests, not just the specific example that triggered the fix**: The `@py` macro regression (`esc()` missing) affected the OHLCV candles watcher, which wasn't in the original debug target set. A fix that looks correct for one caller may silently break others — run the full downstream test suite.
 
+37. **Use `state.ticks` not `open==high==low==close` to detect stale candles in ticker-derived OHLCV**: A `open==high==low==close` filter is too aggressive — it skips legitimate one-ticker minutes where the market didn't move, creating unfillable gaps. Use `state.ticks == 0` instead: a candle with `state.ticks > 0` had at least one real ticker contribute to it and must be pushed even if flat. The `state.ticks` counter is reset to 0 at each new minute boundary and incremented by `_update_sym_ohlcv` for every real ticker. When `ticker=nothing` (stale-check path), `state.ticks` stays 0 and the candle is correctly skipped.
+
 ### Gotchas
 
 1. **Always wrap CcxtGateway calls in try/catch**: The gateway may not be running or may return errors. Always provide Python fallbacks with `_python` suffix.
