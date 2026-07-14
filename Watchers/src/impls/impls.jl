@@ -2,6 +2,7 @@ module WatchersImpls
 using ..Lang: @lget!, @kget!, fromdict, Option, @k_str
 using ..Lang: @statickeys!, @setkey!
 using ..TimeTicks
+using ..TimeTicks: now   # must come after other using to re-establish now = TimeTicks.now (UTC)
 using ..Misc
 using ..Watchers
 import ..Watchers:

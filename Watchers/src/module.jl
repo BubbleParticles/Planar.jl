@@ -12,6 +12,7 @@ using .Misc: after, truncate_file
 using Base.Threads: @spawn
 using JSON3
 import Rocket
+using .Misc.TimeTicks: now   # re-establish now = TimeTicks.now (UTC) after all other using
 
 @doc """ Attempts to fetch data for a watcher
 
