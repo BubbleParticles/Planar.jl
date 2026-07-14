@@ -762,3 +762,71 @@ duplicate timestamps, view is timestamp-ascending). Keep the lock on all call
 sites — a future caller that pushes without it reopens the race, and `_dedup_view!`
 is the backstop. When adding a new `_ensure_ohlcv!` caller, wrap it in
 `@lock state.lock @acquire w.sem`.
+### 22. Use `JULIA_DEBUG=<baremodule>` to enable `@debug` traces in watchers and locks
+
+The Watchers codebase instruments lock operations and watcher internals with structured
+`@debug` log statements, each scoped to a `baremodule` that serves as a logging namespace.
+Set `JULIA_DEBUG=<module>` (single) or `JULIA_DEBUG=<mod1>,<mod2>,...` (comma-separated)
+before launching Julia to see these traces at runtime:
+
+| Baremodule | Location | What it traces |
+|---|---|---|
+| `LogWatchLocks` | `Watchers/src/functions.jl` | Every `lock()`/`unlock()` on fetch and buffer locks, with caller frame |
+| `LogOHLCVTickers` | `Watchers/src/impls/ccxt_ohlcv_tickers.jl` | OHLCV ticker watcher path: `_ensure_ohlcv!`, `_update_sym_ohlcv`, `_maybe_push!`, gap resolution, exchange volume fallback |
+| `LogAverageOHLCV` | `Watchers/src/impls/ccxt_average_ohlcv_watcher.jl` | Average OHLCV watcher lifecycle: init, start, stop, fetch, process |
+| `LogOHLCVWatcher` | `Watchers/src/impls/ccxt_ohlcv_candles.jl` | Candle watcher fetch/resync cycles |
+
+**Common debugging invocations:**
+```bash
+# Trace every lock acquire/release on watcher operations
+JULIA_DEBUG=LogWatchLocks julia --project=PlanarDev -e '...'
+
+# Trace OHLCV ticker watcher detail (gap fills, volume fallback decisions, duplicate checks)
+JULIA_DEBUG=LogOHLCVTickers julia --project=PlanarDev -e '...'
+
+# Both combined
+JULIA_DEBUG=LogWatchLocks,LogOHLCVTickers julia --project=PlanarDev -e '...'
+```
+
+**When to use each:**
+- `LogWatchLocks` — stale-check fires at unexpected times? Two processes deadlock on the same
+  symbol? The acquire/release trace pinpoints which caller holds the lock longest.
+- `LogOHLCVTickers` — gap detection misfires, volume is zero or inflated, duplicate timestamps
+  appear in the view, or `_ensure_ohlcv!` fails unexpectedly.
+- `LogAverageOHLCV` / `LogOHLCVWatcher` — aggregate/candle watchers produce wrong data.
+
+The `baremodule` approach means these traces are **zero-cost when disabled** — Julia's logging
+machinery skips the `@debug` call entirely unless the env var matches. You can leave them in
+production code without overhead.
+### 23. Always use `now` from TimeTicks, never from Dates — timezone mismatch causes data corruption
+
+`TimeTicks` overrides `now()` to return `Dates.now(UTC)` (see `TimeTicks/src/module.jl:14`).
+Calling bare `now()` that resolves to `Dates.now()` instead returns **local wall-clock time**,
+which diverges from UTC by the system timezone offset (e.g. +2 h on UTC+2 machines). Exchange
+timestamps parsed by ccxt are always UTC, so a `now()` that returns local time silently
+shifts every comparison and every buffer entry timestamp relative to real exchange data:
+
+- **Buffer `.time` field**: entries stamped with local time while `ticker.timestamp` is UTC →
+  2-hour apparent lag on the ticker, incorrect gap detection, spurious stale-check triggers.
+- **Fetch ranges** (`_curdate`/`_nextdate`): `from` and `to` computed in local time but exchange
+  data returned in UTC → `rangebetween` filters out valid rows or includes invalid ones.
+- **Stale-check**: `latest_timestamp` from local `now()` compared with `lastdate(df)` (UTC) →
+  the watcher always thinks the data is stale by the timezone offset.
+
+**Rule**: every module that uses `now()` must ensure the binding comes from `TimeTicks`, not
+`Dates`. The safest pattern is an explicit import at the top of each file:
+
+```julia
+using ..TimeTicks: now   # unambiguous, survives any re-export chain
+```
+
+Avoid bare `now()` without verifying the import chain. `Misc/src/ttl.jl` does
+`using Dates: DateTime, Period, now` which can shadow the TimeTicks binding depending on
+module load order. Do NOT rely on `using ..TimeTicks` alone — always pair it with a
+dedicated `using ..TimeTicks: now` **after** other `using` statements to re-establish the
+binding, or use `TimeTicks.now()` qualified calls in critical paths.
+
+**When to verify**: any time you add a new file that calls `now()` in a time-sensitive path
+(buffer pushes, fetch ranges, stale checks, gap detection), confirm the import chain
+resolves to `TimeTicks.now()`. Running `JULIA_DEBUG=LogOHLCVTickers` and checking the
+timestamps in the output against exchange timestamps is the quickest smoke test.
