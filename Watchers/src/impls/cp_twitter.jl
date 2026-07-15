@@ -20,6 +20,8 @@ end
 cp_twitter_watcher(syms...) = cp_twitter_watcher([syms...])
 
 function _fetch!(w::Watcher, ::CpTwitterVal)
+    _stringify_keys(d::AbstractDict) = Dict{String,Any}(string(k) => _stringify_keys(v) for (k, v) in d)
+    _stringify_keys(x) = x
     tweets = Dict(s => cp.twitter(s) for s in attr(w, :ids))
     if length(tweets) > 0
         result = Dict{String,Vector{CpTweet}}()
@@ -28,7 +30,7 @@ function _fetch!(w::Watcher, ::CpTwitterVal)
             tweets = CpTweet[]
             for t in tws
                 empty!(temp)
-                merge!(temp, t)
+                merge!(temp, _stringify_keys(t))
                 temp["status"] = replace(temp["status"], r"(?:http[^ ]*)" => "")
                 push!(tweets, fromdict(CpTweet, String, temp))
             end
@@ -41,6 +43,18 @@ function _fetch!(w::Watcher, ::CpTwitterVal)
     end
 end
 
-_init!(w::Watcher, ::CpTwitterVal) = default_init(w, nothing)
-_process!(::Watcher, ::CpTwitterVal) = nothing
+function _cp_tweet_append_buffer(dict, buf, maxlen)
+    for entry in buf
+        for (sym, tweets) in pairs(entry.value)
+            df = @kget!(dict, sym, DataFrame())
+            for t in tweets
+                push!(df, t)
+            end
+            maxlen > 0 && nrow(df) > maxlen && deleteat!(df, 1:(nrow(df) - maxlen))
+        end
+    end
+end
+
+_init!(w::Watcher, ::CpTwitterVal) = default_init(w, Dict{String,DataFrame}())
+_process!(w::Watcher, ::CpTwitterVal) = default_process(w, _cp_tweet_append_buffer)
 _get!(w::Watcher, ::CpTwitterVal) = w.buffer

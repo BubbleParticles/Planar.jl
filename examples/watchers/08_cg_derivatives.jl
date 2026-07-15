@@ -14,6 +14,9 @@ using Watchers.WatchersImpls: cg_derivatives_watcher
 try
     global w = cg_derivatives_watcher("binance_futures")
     println("cg_derivatives_watcher created:  name=$(w.name)")
+    Watchers.fetch!(w)
+    Watchers.process!(w)
+    println("view has $(length(w.view)) symbols")
 catch e
     @warn "cg_derivatives_watcher failed (likely network)" exception = e
     w = nothing

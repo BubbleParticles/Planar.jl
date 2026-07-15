@@ -23,6 +23,7 @@ function cg_derivatives_watcher(exc_name)
     attrs = Dict{Symbol,Any}()
     attrs[:exc] = exc_name
     attrs[:key] = "cg_$(exc_name)_derivatives"
+    attrs[:serialized] = true
     watcher_type = Dict{Derivative,CgSymDerivative}
     wid = string(CgDerivativesVal.parameters[1], "-", hash(exc_name))
     watcher(
