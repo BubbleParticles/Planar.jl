@@ -10,7 +10,7 @@
 
 using Watchers
 using Watchers.WatchersImpls: cg_ticker_watcher
-using Watchers.Misc.TimeTicks
+using Watchers.Misc.TimeTicks: Minute
 
 # -- Watcher construction ------------------------------------------
 try

@@ -34,7 +34,7 @@ function _start_gateway_exchange(eid::String)
 end
 
 # JSON3-aware converters for fromdict (gateway data)
-_wconvert(::Type{DateTime}, v) = dt(Int(v))
+_wconvert(::Type{DateTime}, v) = v isa AbstractString ? _parsedatez(v) : dt(Int(v))
 _wconvert(::Type{TradeSide}, v) = TradeSide(v)
 _wconvert(::Type{TradeRole}, v) = TradeRole(v)
 _wconvert(::Type{Vector{T}}, v) where {T} = [_wconvert(T, x) for x in v]
@@ -42,7 +42,8 @@ function _wconvert(::Type{Union{Nothing, T}}, v) where {T}
     isnothing(v) && return nothing
     _wconvert(T, v)
 end
-_wconvert(::Type{T}, v) where {T<:DFT} = Float64(v)
+    _wconvert(::Type{T}, v) where {T<:DFT} = Float64(v)
+    _wconvert(::Type{T}, ::Nothing) where {T<:DFT} = nothing
 _wconvert(::Type{String}, v) = string(v)
 _wconvert(::Type{Symbol}, v) = Symbol(v)
 function _wconvert(::Type{Union{Nothing, DFT}}, v)
@@ -166,7 +167,7 @@ macro append_dict_data(dict, data, maxlen_var)
     df = esc(:df)
     quote
         function doappend((key, newdata))
-            $(df) = @kget! $(esc(dict)) key df()
+            $(df) = @kget! $(esc(dict)) key DataFrame()
             appendmax!($df, newdata, $maxlen)
         end
         foreach(doappend, $(esc(data)))
