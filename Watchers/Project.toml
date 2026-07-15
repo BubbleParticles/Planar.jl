@@ -1,6 +1,6 @@
 name = "Watchers"
 uuid = "4a3f9c16-ec8e-48c6-a58d-938fc30e2b4b"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["zbc"]
 
 [deps]
