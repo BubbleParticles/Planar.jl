@@ -15,6 +15,9 @@ using Watchers.Misc.TimeTicks
 try
     global w = cp_markets_watcher("binance", Minute(5))
     println("cp_markets_watcher created:  name=$(w.name)")
+    Watchers.fetch!(w)
+    Watchers.process!(w)
+    println("view: $(length(w.view)) symbols")
 catch e
     @warn "cp_markets_watcher failed (likely network)" exception = e
     w = nothing

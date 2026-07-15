@@ -1,7 +1,7 @@
 const CpMarketsVal = Val{:cp_markets}
 
 # Convert a dict (possibly with Symbol keys) to Dict{String, Any} for fromdict
-_stringify_keys(d::Dict) = Dict{String,Any}(string(k) => _stringify_keys(v) for (k, v) in d)
+_stringify_keys(d::AbstractDict) = Dict{String,Any}(string(k) => _stringify_keys(v) for (k, v) in d)
 _stringify_keys(x) = x
 const CpTick = @NamedTuple begin
     base_currency_id::String
