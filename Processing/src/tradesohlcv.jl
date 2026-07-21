@@ -72,8 +72,7 @@ function trades_to_ohlcv(
     trades = length(start:stop) == length(v) ? v : view(v, start:stop)
 
     data = [getproperty.(trades, c) for c in TRADES_COLS]
-    # FIXME
-    data[1][:] = apply.(tf, data[1])
+    data[1] = apply.(tf, data[1])
     df = DataFrame(data, TRADES_COLS; copycols=false)
     ohlcv = to_ohlcv(df)
     (; ohlcv, start, stop)

@@ -15,16 +15,19 @@ This function takes a data vector, frame size, source time delta, and target tim
 
 """
 function _left_and_right(data, frame_size, src_td, td)
+    n = size(data, 1)
     left = 1
-    while (timefloat(data.timestamp[left])) % td != 0.0
+    while left <= n && (timefloat(data.timestamp[left])) % td != 0.0
         left += 1
     end
-    right = size(data, 1)
+    left > n && return (1, 0)  # empty result
+    right = n
     let last_sample_candle_remainder = src_td * (frame_size - 1)
-        while (timefloat(data.timestamp[right])) % td != last_sample_candle_remainder
+        while right >= 1 && (timefloat(data.timestamp[right])) % td != last_sample_candle_remainder
             right -= 1
         end
     end
+    right < 1 && return (1, 0)
     left, right
 end
 
@@ -39,16 +42,16 @@ function _deltas(data, to_tf)
     # NOTE: need at least 2 points
     result(f=NaN, s=NaN, t=NaN; abort=nothing) = (f, s, t, abort)
     sz = size(data, 1)
-    sz > 1 || return result(; abort=empty_ohlcv())
+    sz > 1 || return result(; abort=nothing)
 
     td = timefloat(to_tf)
     src_prd = timeframe(data).period
     src_td = timefloat(src_prd)
 
-    td < src_td && return result(; abort=empty_ohlcv())
+    td < src_td && return result(; abort=nothing)
     td === src_td && return result(; abort=data)
     frame_size::Integer = td ÷ src_td
-    sz >= frame_size || return result(; abort=empty_ohlcv())
+    sz >= frame_size || return result(; abort=nothing)
     result(frame_size, src_td, td)
 end
 
@@ -144,7 +147,7 @@ function resample(mkts::AbstractDict{String,PairData}, timeframe; progress=false
                 @error "Failed to resample pair" pair=name exception = (e, catch_backtrace())
                 nothing
             end
-            isnothing(v) && return
+            isnothing(v) && continue
             @lock lk rs[name] = v
             progress && @pbupdate!
         end

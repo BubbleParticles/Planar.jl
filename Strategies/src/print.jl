@@ -214,8 +214,8 @@ function Base.print(out::IO, s::Strategy; price_func=lasttrade_price_func)
     try
         tot = current_total(s; price_func, local_bal=true)
         write(out, "$(t): $(tot) (Total)")
-    catch
-        @debug_backtrace()
+    catch e
+        @error "print: current_total failed" strategy=nameof(s) exception=(e, catch_backtrace())
         write(out, "$(t): Error! (use JULIA_DEBUG=Strategies) (Total)")
     end
 end

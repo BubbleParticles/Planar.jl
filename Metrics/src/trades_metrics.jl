@@ -12,6 +12,7 @@ The function `f` is used to aggregate the durations and defaults to the mean.
 
 """
 function trades_duration(ai::AssetInstance; raw=false, f=mean)
+    isempty(ai.history) && return raw ? Millisecond(0) : compact(Millisecond(0))
     periods = getproperty.(ai.history, :date) |> diff
     periods_num = getproperty.(periods, :value) # milliseconds
     μ = if length(ai.history) > 1
@@ -48,6 +49,7 @@ The function `f` is used to aggregate the sizes and defaults to the mean.
 """
 function trades_size(ai::AssetInstance; f=mean)
     vals = getproperty.(ai.history, :size)
+    isempty(vals) && return f(Int[])
     f(abs.(vals))
 end
 
@@ -73,6 +75,7 @@ The function `f` is used to aggregate the leverages and defaults to the mean.
 """
 function trades_leverage(ai::AssetInstance; f=mean)
     vals = getproperty.(ai.history, :leverage)
+    isempty(vals) && return f(Float64[])
     f(abs.(vals))
 end
 
@@ -87,6 +90,7 @@ The function `f` is used to aggregate the hours and defaults to the mean.
 function trades_hour(ai::AssetInstance; f=mean)
     h = Hour.(getproperty.(ai.history, :date))
     h = getproperty.(h, :value)
+    isempty(h) && return Hour(0)
     f(h) |> trunc |> Hour
 end
 
@@ -100,6 +104,7 @@ The function `f` is used to aggregate the weekdays and defaults to the mean.
 """
 function trades_weekday(ai::AssetInstance; f=mean)
     w = dayofweek.(getproperty.(ai.history, :date))
+    isempty(w) && return dayname(1)
     f(w) |> trunc |> Int |> dayname
 end
 
@@ -113,6 +118,7 @@ The function `f` is used to aggregate the days and defaults to the mean.
 """
 function trades_monthday(ai::AssetInstance; f=mean)
     w = dayofmonth.(getproperty.(ai.history, :date))
+    isempty(w) && return 1
     f(w) |> trunc |> Int
 end
 

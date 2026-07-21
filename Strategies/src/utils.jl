@@ -95,13 +95,13 @@ function current_total(
 )
     partials = zeros(DFT, length(s.holdings))
     @sync for (i, ai) in enumerate(s.holdings)
-        @async partials[i] = @errormonitor try
+        Threads.@spawn partials[i] = try
             cash(ai) * price_func(ai)
         catch e
             @error "current_total: failed to value holding" ai asset=raw(ai) exception = (
                 e, catch_backtrace()
             )
-            zero(DFT)
+            rethrow(e)
         end
     end
     sum(partials) + cash(s)
@@ -130,6 +130,7 @@ function current_total(s::MarginStrategy{Sim}; price_func=lasttrade_price_func, 
             @error "current_total: failed to value holding" ai asset=raw(ai) exception = (
                 e, catch_backtrace()
             )
+            rethrow(e)
         end
     end
     worth + cash(s)
@@ -147,13 +148,14 @@ The default price function used is `lasttrade_price_func`, which returns the clo
 function current_total(s::MarginStrategy{Paper}, price_func=lasttrade_price_func; kwargs...)
     partials = zeros(DFT, length(s.holdings) * 2)
     @sync for (i, ai) in enumerate(s.holdings)
-        @asyncm let current_price = try
+        Threads.@spawn begin
+            current_price = try
                 price_func(ai)
             catch e
                 @error "current_total: failed to price holding" ai asset=raw(ai) exception = (
                     e, catch_backtrace()
                 )
-                zero(DFT)
+                rethrow(e)
             end
             local idx = (i - 1) * 2
             for (j, p) in enumerate((Long, Short))

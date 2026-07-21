@@ -300,19 +300,22 @@ function _load_data(
     out = if serialized
         buf = IOBuffer()
         try
-            first_time = todata(buf, data[begin, 1])
-            first_val = todata(buf, data[begin, 2])
+            def_val = nothing
+            first_time = @something(todata(buf, data[begin, 1]), def_val)
+            first_val = @something(todata(buf, data[begin, 2]), def_val)
             first_el = (; time=first_time, value=first_val)
             this_type = typeof(first_el)
             def_val = default_value(this_type)
             out = Vector{this_type}(undef, size(data, 1))
             out[begin] = first_el
-            foreach(Iterators.drop(firstindex(data, 1):size(data, 1), 1)) do n
-                (;
-                    time=todata(buf, data[n, 1]),
-                    value=@something(todata(buf, data[n, 2]), def_val)
+            idx = firstindex(data, 1):size(data, 1)
+            for (j, i) in enumerate(Iterators.drop(idx, 1))
+                out[begin + j] = (
+                    time=@something(todata(buf, data[i, 1]), def_val),
+                    value=@something(todata(buf, data[i, 2]), def_val)
                 )
             end
+            out
         finally
             close(buf)
         end
