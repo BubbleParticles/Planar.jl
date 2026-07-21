@@ -1,0 +1,16 @@
+[[strategy]]
+name = "StrategyName"
+exchange = "exchange_name"
+account = "1"
+
+[strategy.env]
+ENV_VAR_1 = "value1"
+
+# Uncomment and edit the following block to add more strategies
+# [[strategy]]
+# name = "Strategy2"
+# exchange = "exchange_name"
+# account = "2"
+#
+# [strategy.env]
+# ENV_VAR_1 = "value1"

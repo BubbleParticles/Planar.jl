@@ -1,0 +1,6 @@
+---
+trigger: model_decision
+description: running cli commands, finding the project structure
+globs:
+---
+The repo root directory is not the project directory. When you want to run a julia command (e.g. `julia --project=.`) remember that the project directory is either ./Planar or ./PlanarDev or ./PlanarInteractive depending on which part of the project we are working on (usually PlanarDev, so the command would be `julia --project=./PlanaderDev`). Most subdirectories of repo root are project directories (the ones with a Project.toml file). NEVER use `julia --project=.`, there is no Project.toml in the root directory.

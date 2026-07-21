@@ -1,0 +1,96 @@
+module TwoIntervals
+using Planar
+
+const DESCRIPTION = "TwoIntervals"
+const EXC = :binance
+const TF = tf"15m"
+const MARGIN = NoMargin
+
+@strategyenv!
+using OnlineTechnicalIndicators: EMA, RSI, fit!
+@enum Trend Down = 0 Up = 1
+
+function call!(s::SC, ::ResetStrategy)
+    for n in (15, 40)
+        call!(
+            (args...) -> ind_ema(args...; n),
+            s,
+            InitData();
+            cols=(Symbol(:ema, n),),
+            timeframe=tf"1h",
+        )
+        call!(ind_rsi, s, InitData(); cols=(:rsi,), timeframe=tf"15m")
+    end
+end
+
+function call!(_::SC, ::WarmupPeriod)
+    Day(1)
+end
+function update_data!(s, ai)
+    for n in (15, 40)
+        call!(
+            (args...) -> ind_ema(args...; n),
+            s,
+            ai,
+            UpdateData();
+            cols=(Symbol(:ema, n),),
+            timeframe=tf"1h",
+        )
+    end
+    call!(ind_rsi, s, ai, UpdateData(); cols=(:rsi,), timeframe=tf"1h")
+end
+function handler(s, ai, ats, date)
+    ohlcv = ai.data[tf"1h"]
+    idx = dateindex(ohlcv, ats)
+    idx < 1 && return nothing
+    this_trend = ifelse(ohlcv[idx, :ema15] > ohlcv[idx, :ema40], Down, Up)
+    this_rsi = ai.data[tf"15m"][ats, :rsi]
+    if this_trend == Up && this_rsi < 40
+        price = closeat(ohlcv, ats)
+        amount = freecash(s) / price
+        @linfo 1 "Buying" asset = raw(ai) amount price
+        call!(s, ai, MarketOrder{Buy}; date, amount)
+    elseif this_trend == Down && this_rsi > 60
+        price = closeat(ohlcv, ats)
+        if !isdust(ai, price)
+            amount = float(ai)
+            @linfo 1 "Selling" asset = raw(ai) amount price
+            call!(s, ai, CancelOrders())
+            call!(s, ai, MarketOrder{Sell}; date, amount)
+        end
+    end
+end
+function call!(s::SC, ts::DateTime, _)
+    ats = available(tf"1h", ts)
+    foreach(s.universe) do ai
+        update_data!(s, ai)
+        handler(s, ai, ats, ts)
+    end
+end
+function call!(::Type{<:SC}, ::StrategyMarkets)
+    String["BTC/USDT"]
+end
+
+function ind_ema(ohlcv, from_date; n)
+    ohlcv = viewfrom(ohlcv, from_date; offset=-n)
+    ema = EMA{DFT}(period=n)
+    vec = Union{Missing,DFT}[]
+    for price in ohlcv.close
+        fit!(ema, price)
+        push!(vec, ema.value)
+    end
+    [vec;;]
+end
+
+function ind_rsi(ohlcv, from_date; n=14)
+    @assert timeframe!(ohlcv) == tf"15m"
+    ohlcv = viewfrom(ohlcv, from_date; offset=-n)
+    rsi = RSI{DFT}(period=n)
+    vec = Union{Missing,DFT}[]
+    for price in ohlcv.close
+        fit!(rsi, price)
+        push!(vec, rsi.value)
+    end
+    [vec;;]
+end
+end
