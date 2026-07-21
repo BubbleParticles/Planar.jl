@@ -161,7 +161,12 @@ function reset!(s::Strategy, config=false)
     if !isnothing(abs)
         empty!(abs)
     end
-    call!(s, ResetStrategy())
+    try
+        call!(s, ResetStrategy())
+    catch e
+        @error "reset! failed in call!(s, ResetStrategy())" strategy=nameof(s) exception=(e, catch_backtrace())
+        rethrow(e)
+    end
 end
 @doc """ Reloads OHLCV data for assets in the strategy universe.
 
@@ -171,7 +176,7 @@ The `reload!` function empties the data for each asset instance in the strategy'
 This is useful for refreshing the strategy's knowledge of the market state.
 """
 reload!(s::Strategy) = begin
-    for inst in universe(s).data.instance
+    @lock s for inst in universe(s).data.instance
         empty!(inst.data)
         load!(inst; reset=true)
     end

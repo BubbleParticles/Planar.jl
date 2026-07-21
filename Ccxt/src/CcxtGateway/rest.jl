@@ -4,6 +4,7 @@ using HTTP
 using JSON3
 using OrderedCollections
 using ..Types
+using Base: ReentrantLock
 
 export GatewayClient, build_url
 export start_exchange, stop_exchange, exchange_has
@@ -661,6 +662,7 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
         end
         error("Failed to spawn ccxt-gateway within 10 seconds")
     end
+end
 
 function stop_gateway()
     # Try graceful shutdown via HTTP endpoint first (works across containers)
@@ -723,5 +725,4 @@ restart_exchange(exchange_id::String) = restart_exchange(default_client(), excha
 call_exchange(exchange_id::String, ccxt_method::String; kwargs...) = call_exchange(default_client(), exchange_id, ccxt_method; kwargs...)
 
 const RestClient = GatewayClient()
-
-end # module Rest
+end

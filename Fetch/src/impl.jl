@@ -410,6 +410,8 @@ end
 
 Attempts WS one-shot methods first (fetchXxxWs) for lower latency; falls back
 to REST on gateway failure. `_first`'s try/catch loop handles the fallback
+
+"""
 function ohlcv_func_bykind(exc, kind)
     args = if kind == :mark
         (:fetchMarkOHLCVWs, :fetchMarkOHLCV)
@@ -423,7 +425,7 @@ function ohlcv_func_bykind(exc, kind)
     f = first(exc, args...)
     # Ensure we always have a valid fetch function
     if f === nothing
-        @error "No OHLCV fetch method available for exchange $(exc.name) kind=$kind"
+        error("No OHLCV fetch method available for exchange $(exc.name) kind=$kind")
     end
     f
 end

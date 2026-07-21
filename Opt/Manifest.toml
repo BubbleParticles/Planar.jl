@@ -1715,7 +1715,7 @@ uuid = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
 version = "1.11.0"
 
 [[deps.SimMode]]
-deps = ["Executors", "Pbar", "Simulations"]
+deps = ["Executors", "Pbar", "Simulations", "Random"]
 path = "../SimMode"
 uuid = "70084082-5615-4098-a9f0-eda0197c0e82"
 version = "0.1.0"

@@ -100,13 +100,15 @@ It first tries to access the `S` property of the module to get the margin mode.
 If this fails, it then tries to access the `SC` property of the module.
 """
 function _defined_marginmode(mod)
-    try
+    if isdefined(mod, :S)
         S = invokelatest(getfield, mod, :S)
-        marginmode(S)
-    catch
-        SC = invokelatest(getfield, mod, :SC)
-        marginmode(SC)
+        S isa Type{<:Strategy} && return marginmode(S)
     end
+    if isdefined(mod, :SC)
+        SC = invokelatest(getfield, mod, :SC)
+        SC isa Type{<:Strategy} && return marginmode(SC)
+    end
+    error("Strategy module $mod does not define S or SC margin mode")
 end
 
 @doc """ Performs checks on a loaded strategy.
@@ -227,6 +229,9 @@ function strategy!(src::Symbol, cfg::Config)
                     end
                     $src
                 end
+            catch e
+                @error "strategy loading: failed to load module $src" exception=(e, catch_backtrace())
+                rethrow(e)
             finally
                 if $isproject
                     $Pkg.activate($prev_proj; io=Base.devnull)
@@ -332,10 +337,10 @@ function strategy!(mod::Module, cfg::Config)
     end
     s = @something invokelatest(call_func, s_type, cfg, LoadStrategy()) try
         default_load(mod, s_type, cfg)
-    catch
-        @debug_backtrace
-        nothing
-    end bare_load(mod, s_type, cfg)
+    catch e
+        @error "strategy loading: default_load failed, falling back to bare_load" exception=(e, catch_backtrace())
+        bare_load(mod, s_type, cfg)
+    end
     # ensure strategy is stopped on process termination is paper or live
     if cfg.mode in (Paper(), Live())
         atexit(() -> stop!(s))
