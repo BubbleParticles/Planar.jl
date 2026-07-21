@@ -319,9 +319,9 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
             # Check metadata is set (DataFrames metadata API)
             @test !isnothing(Watchers.Data.DFUtils.metadata(df))
 
-            # Check first row values
-            @test df.bid_price[1] == 50100.0   # ask[1] becomes bid_price (note: swapped)
-            @test df.ask_price[1] == 50000.0   # bid[1] becomes ask_price
+        # Check first row values
+        @test df.bid_price[1] == 50000.0   # highest bid price
+        @test df.ask_price[1] == 50100.0   # lowest ask price
         end
 
         @testset "_parse_ticker_snapshot with Dict input" begin
