@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "cd269e90643ea4ed8bccbc4b5a26efd660a88c12"
+project_hash = "e75dbd9628dca12fff9c1c37939e6be0442008e3"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "2d9c9a55f9c93e8887ad391fbae72f8ef55e1177"
@@ -247,7 +247,7 @@ uuid = "16e96388-e60e-4b60-892f-986722d15ae4"
 version = "0.1.0"
 
 [[deps.Exchanges]]
-deps = ["Data", "ExchangeTypes", "Instruments", "JSON", "Pbar", "Reexport", "Serialization", "Simulations"]
+deps = ["Data", "ExchangeTypes", "Instruments", "JSON", "Pbar", "Reexport", "Serialization"]
 path = "../Exchanges"
 uuid = "ab04e009-1d60-4d36-ac2f-58b9338a89b5"
 version = "0.1.0"
@@ -684,7 +684,7 @@ uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
 version = "1.11.0"
 
 [[deps.SimMode]]
-deps = ["Executors", "Pbar", "Simulations"]
+deps = ["Executors", "Pbar", "Random", "Simulations"]
 path = "../SimMode"
 uuid = "70084082-5615-4098-a9f0-eda0197c0e82"
 version = "0.1.0"
@@ -772,7 +772,7 @@ version = "2.8.2"
     Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 
 [[deps.Stubs]]
-deps = ["CSV", "Pkg", "SimMode"]
+deps = ["CSV", "Pkg", "Random", "SimMode"]
 path = "."
 uuid = "19a5ee1f-efca-4178-b297-263c7ceb508d"
 version = "0.1.0"

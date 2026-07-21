@@ -39,7 +39,7 @@ end
 # end
 
 function load_stubtrades(ai)
-    ca.load_cache("trades_stub_$(ai.asset.bc).jls"; cache_path=stubscache_path())
+   ca.load_cache("trades_stub_$(ai.asset.bc).jls"; cache_path=stubscache_path(), raise=false)
 end
 
 function load_stubtrades!(ai)
@@ -50,7 +50,7 @@ end
 @doc "Generates trades and saves them to the stubs shed."
 function gensave_trades(n=10_000; s, dosave=true)
     for ai in s.universe
-        da.stub!(ai, n)
+        sml.stub!(ai, n)
     end
     SimMode.start!(s; doreset=true)
     if dosave

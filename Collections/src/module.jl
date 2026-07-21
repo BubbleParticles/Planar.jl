@@ -80,7 +80,6 @@ end
         sort!(instances; by=(ai) -> instances_ord[raw(ai)])
         AssetCollection(instances)
     end
-end
 
 @enum AssetCollectionColumn exchange = 1 asset = 2 instance = 3
 const AssetCollectionTypes = OrderedDict([

@@ -11,4 +11,5 @@ if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
     stop_gateway()
     try rm(Ccxt.GATEWAY_PIDFILE; force=true) catch end
     try rm(Ccxt.GATEWAY_LOCKFILE; force=true) catch end
-end
+end# Precompile workload removed to avoid gateway startup issues during compilation
+nothing

@@ -238,11 +238,11 @@ function _reset_candles_func!(w)
         params = Dict{String,Any}("symbolsAndTimeframes" => syms)
         corogen_func = (_) -> coro_func() = watch_func(syms)
         handler_task!(w; init_func, corogen_func, wrapper_func, if_func=!isemptish)
-
         # Try websocket subscription via _setup_ws_watcher! which handles both
         # initial connect and reconnection, with REST polling as heartbeat.
-        if _connect_ws_subscribe!(w, string(exc.id), "watchOHLCVForSymbols", params)
-            _tfunc!(attrs, _make_candles_func(w))
+        _rest_fallback = _make_candles_func(w)
+        if _setup_ws_watcher!(w, string(exc.id), "watchOHLCVForSymbols", params, _rest_fallback)
+            # WS connected — _tfunc is set up with reconnect logic
         else
             @warn "WebSocket unavailable for $(w.name), falling back to REST polling"
             _tfunc!(attrs, _make_candles_func(w))

@@ -35,14 +35,15 @@ is_right_adjacent(target, step) = x -> x - step < target           # right - ste
 function trim_to!(df::AbstractDataFrame, to, tf, tail=false)
     if tail
         f = is_right_adjacent(to, tf.period)
-        rev_idx = @something findfirst(f, @view(df.timestamp[end:-1:1])) 1
+        rev_idx = findfirst(f, @view(df.timestamp[end:-1:1]))
+        isnothing(rev_idx) && return
         start = size(df)[1] - rev_idx + 1
         idx = start:size(df)[1]
-        # @show rev_idx, start, idx, size(df), df.timestamp[end], to, tail
     else
         f = is_left_adjacent(to, tf.period)
-        stop = @something(findfirst(f, df.timestamp), 1) - 1
-        idx = 1:stop
+        stop_idx = findfirst(f, df.timestamp)
+        isnothing(stop_idx) && return
+        idx = 1:stop_idx - 1
     end
     if !isempty(idx)
         copysubs!(df) # Necessary to replace subarrays which are read-only
@@ -68,22 +69,29 @@ end
 function empty_unaligned!(data::AbstractDict)
     tsdict = Dict{DateTime, Int}()
     df_to_empty = Set{DataFrame}()
-    common = 0
-    check_ohlcvs(ohlcvs) = for df in ohlcvs
-        this_ts = df.timestamp[begin]
-        if !haskey(tsdict, this_ts)
-            tsdict[this_ts] = 1
-        else
-            tsdict[this_ts] += 1
-        end
-        if this_ts != maximum(tsdict).first
-            push!(df_to_empty, df)
-        end
-    end
+    # First pass: count occurrences of each timestamp
     for ohlcvs in values(data)
-        check_ohlcvs(ohlcvs)
+        for df in ohlcvs
+            this_ts = df.timestamp[begin]
+            tsdict[this_ts] = get(tsdict, this_ts, 0) + 1
+        end
     end
-    check_ohlcvs(first(values(data)))
+    # Find the most common timestamp
+    isempty(tsdict) && return data
+    common_ts = first(keys(tsdict))
+    max_count = 0
+    for (ts, count) in tsdict
+        if count > max_count
+            max_count = count
+            common_ts = ts
+        end
+    end
+    # Second pass: mark dataframes with different start timestamp
+    for ohlcvs in values(data)
+        for df in ohlcvs
+            df.timestamp[begin] != common_ts && push!(df_to_empty, df)
+        end
+    end
     foreach(empty!, df_to_empty)
     data
 end

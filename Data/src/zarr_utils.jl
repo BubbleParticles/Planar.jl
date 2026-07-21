@@ -202,12 +202,22 @@ default_value(t::T) where {T<:Type} = begin
     end
 end
 
-default_value(f::Function) =
+default_value(f::Function) = begin
     for t in Base.return_types(f)
         t === Union{} && continue
         if t ∉ (UnionAll, Any)
             return default_value(t)
         end
+    end
+    # Fallback for functions with no concrete return types (e.g., mean, median, std)
+    # Check if it's a known statistical function and return appropriate default
+    fname = string(nameof(f))
+    if fname in ("mean", "median", "std", "var", "sum", "minimum", "maximum")
+        return NaN
+    elseif fname == "extrema"
+        return (NaN, NaN)
+    end
+    nothing
 end
 Zarr.fill_value_decoding(v::Vector, t::Type) = default_value(t)
 

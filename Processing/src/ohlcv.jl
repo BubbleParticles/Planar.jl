@@ -117,8 +117,9 @@ function _fill_missing_candles(
     inplace || (df = deepcopy(df))
     try
         append!(df, ordered_rows)
-    catch
+    catch e
         # In case the dataframe is backed by a matrix we have to copy
+        @warn "Failed to append, retrying with copy" exception=(e, catch_backtrace())
         df = DataFrame(df; copycols=true)
         append!(df, ordered_rows)
     end

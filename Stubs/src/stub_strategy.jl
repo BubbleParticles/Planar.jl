@@ -17,8 +17,9 @@ using .Strategies.OrderTypes
 using .OrderTypes: BySide, ByPos
 
 using ..Lang
+using Random
 
-const CACHE = Dict{Symbol,Any}()
+const RNG = Random.default_rng()
 
 # # NOTE: do not export anything
 Strategies.@interface
@@ -54,10 +55,10 @@ function call!(s::S, ts::DateTime, ctx)
     date = ts
     foreach(s.universe) do ai
         if isopen(ai)
-            if rand(Bool)
+            if rand(RNG, Bool)
                 call!(s, ai, MarketOrder{Sell}; amount=cash(ai), date)
             end
-        elseif cash(s) > ai.limits.cost.min && rand(Bool)
+        elseif cash(s) > ai.limits.cost.min && rand(RNG, Bool)
             call!(
                 s,
                 ai,

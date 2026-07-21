@@ -23,45 +23,64 @@ function propagate_ohlcv!(
     if isempty(base_data)
         foreach(empty!, Iterators.drop(values(data), 1))
         return data
-    else
-        props_itr = Iterators.drop(data, 1)
-        props_n = length(props_itr)
-        for (dst_tf, dst_data) in props_itr
-            let src_data = base_data, src_tf = base_tf, tf_idx = 1
-                function dowarn()
-                    @debug "propagate ohlcv: failed" base_tf src_tf dst_tf
+    end
+    
+    # Collect timeframes for indexed access
+    tfs = collect(keys(data))
+    props_n = length(tfs) - 1  # exclude base
+    
+    for (i, (dst_tf, dst_data)) in enumerate(pairs(data))
+        i == 1 && continue  # skip base
+        src_tf = base_tf
+        src_data = base_data
+        tf_idx = 1
+        
+        function dowarn()
+            @debug "propagate ohlcv: failed" base_tf src_tf dst_tf
+        end
+        
+        while true
+            tf_idx > props_n && break
+            
+            # use a lower res frame if the upper res frame has not enough candles
+            if nrow(src_data) < count(src_tf, dst_tf)
+                tf_idx += 1
+                tf_idx > props_n && break
+                src_tf = tfs[tf_idx]
+                src_data = data[src_tf]
+                # Can't propagate if the source tf exceeds the target tf
+                if src_tf >= dst_tf
+                    dowarn()
+                    break
                 end
-                while true
-                    if tf_idx > props_n
-                        break
-                    end
-                    # use a lower res frame if the upper res frame has not enough candles
-                    if nrow(src_data) < count(src_tf, dst_tf)
-                        src_tf, src_data = first(Iterators.drop(data, tf_idx))
-                        # Can't propagate if the source tf exceedes the target tf
-                        if src_tf >= dst_tf
-                            dowarn()
-                            break
-                        end
-                        tf_idx += 1
-                        continue
-                    end
-                    update_func(src_tf, src_data, dst_tf, dst_data)
-                    # stop if dst data matches the padded date of source data
-                    if !isempty(dst_data) && islast(dst_data, src_data)
-                        break
-                    end
-                    src_tf, src_data = first(Iterators.drop(data, tf_idx))
-                    # Can't propagate if the source tf exceedes the target tf
-                    if src_tf >= dst_tf
-                        dowarn()
-                        break
-                    end
-                    tf_idx += 1
-                end
-                @deassert contiguous_ts(dst_data.timestamp, string(timeframe!(dst_data)))
+                continue
+            end
+            
+            try
+                update_func(src_tf, src_data, dst_tf, dst_data)
+            catch e
+                @error "propagate_ohlcv! update_func failed" exception=(e, catch_backtrace())
+                dowarn()
+                break
+            end
+            
+            # stop if dst data matches the padded date of source data
+            if !isempty(dst_data) && islast(dst_data, src_data)
+                break
+            end
+            
+            tf_idx += 1
+            tf_idx > props_n && break
+            src_tf = tfs[tf_idx]
+            src_data = data[src_tf]
+            # Can't propagate if the source tf exceeds the target tf
+            if src_tf >= dst_tf
+                dowarn()
+                break
             end
         end
+        
+        @deassert contiguous_ts(dst_data.timestamp, string(timeframe!(dst_data)))
     end
 end
 

@@ -250,12 +250,18 @@ function load_ohlcv(
     load_func = raw ? _load_zarr : _load_pairdata
     pairs isa AbstractString && (pairs = [pairs])
     results = Vector{Pair{String,Any}}(undef, length(pairs))
+    res_lock = ReentrantLock()
     @sync for (i, p) in enumerate(pairs)
-        @async results[i] = try
-            load_func(zi, exc_name, p, timeframe; kwargs...)
-        catch e
-            @error "Failed to load OHLCV data" pair=p exception = (e, catch_backtrace())
-            p => nothing
+        @async begin
+            res = try
+                load_func(zi, exc_name, p, timeframe; kwargs...)
+            catch e
+                @error "Failed to load OHLCV data" pair=p exception = (e, catch_backtrace())
+                p => nothing
+            end
+            lock(res_lock) do
+                results[i] = res
+            end
         end
     end
     out = Dict{String,raw ? ZArray : PairData}()
