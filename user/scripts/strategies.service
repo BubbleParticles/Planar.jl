@@ -1,0 +1,33 @@
+[Unit]
+Description=Planar Strategies
+After=network-online.target
+
+[Service]
+# Use 'forking' because tmux new-session -d detaches
+Type=forking
+# Help systemd find the main PID of the tmux server process
+GuessMainPID=yes
+
+# This script will be run inside the tmux session.
+# We add 'read' at the end to keep the tmux pane open after the script finishes.
+# # modify the exestart such that it first calls tmux start-server
+ExecStart=/usr/bin/bash -ic "/usr/bin/tmux new -d -s strategies 'bash \"%h/scripts/strategies.sh\"'"
+
+# command to stop the service: Kill the tmux session
+ExecStop=/usr/bin/tmux kill-session -t strategies
+
+# Optional: Restart the service if the tmux server process fails unexpectedly
+# Note: This might restart the service if the tmux server dies, but
+# not if just the script inside the tmux session crashes (due to 'read').
+Restart=on-failure
+
+# Optional: Set working directory
+WorkingDirectory=%h/dev/Planar.jl
+
+# Standard output/error will go to the systemd journal by default
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+# Enable the service to start automatically at boot
+WantedBy=multi-user.target

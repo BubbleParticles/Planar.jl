@@ -1,0 +1,17 @@
+/loop focus on the main packages that run the strategies (SimMode, PaperMode, LiveMode) do full
+audit. Spawn on subagent per package. Spot and fix all bugs you encounter starting from the most critical ones. The most important bugs are the ones that would make the runtime (julia crash) or the strategy error out of its running loops (throw exceptions or other things). Make sure all spawned tasks (async operations) are properly logged (no silent crashes or bugs). No cheating, no workarounds, no monkeypatches, no shortcuts, no place holders, no compromises. Proper, correct and maintainable code.
+
+focus on the these packages (1 group per TODO item)
+- Langs, TimeTicks, Misc, Instruments, Instances, Collections, OrderTypes
+- Ccxt, ExchangeTypes, Exchanges, Fetch, Watchers, Cli
+- Data, Processing, Strategies, Metrics, Pbar, Stubs
+- Opt, Plotting, Remote, Engine, Planar, PlanarDev, PlanarInteractive
+- Python, StrategyTools, StrategyStats, FeatureSelection, Scrapers
+Audit each one. Spawn on subagent per package (but only 1 group at a time). Spot and fix all bugs you encounter starting from the most critical ones. The most important bugs are the ones that would make the runtime (julia crash) or  
+the strategy error out of its running loops (throw exceptions or other things). Make sure all      
+spawned tasks (async operations) are properly logged (no silent crashes or bugs). No cheating, no 
+workarounds, no monkeypatches, no shortcuts, no place holders, no compromises. Proper, correct     
+and maintainable code. Even if I am asking to do it again, don't hesitate, focus on different     
+parts of the code compared to your previous audits and think really hard and deep about all       
+possible scenarios and edge cases you can come up with. Remember to stage and commit before doing 
+heavy modifications.

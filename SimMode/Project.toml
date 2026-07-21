@@ -1,0 +1,13 @@
+name = "SimMode"
+uuid = "70084082-5615-4098-a9f0-eda0197c0e82"
+version = "0.1.0"
+authors = ["zbc"]
+
+[deps]
+Executors = "8d044263-b64b-4593-bc6a-15d2ec3d7aea"
+Pbar = "7aed521b-3ea6-427a-8031-5ecc7305f19e"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Simulations = "a69aad36-f532-4133-ba48-77171b778e6d"
+
+[compat]
+Random = "1.11.0"

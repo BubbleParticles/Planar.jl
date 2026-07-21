@@ -1,0 +1,11 @@
+Dockerfile
+.github/
+*.el
+docs/
+deps/
+pyrightconfig.json
+user/.envrc
+user/logs/*
+.conda/
+*.so
+scripts/*build*

@@ -1,0 +1,47 @@
+using .Lang: @preset, @precomp
+
+if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
+@preset let
+    tries = 0
+    @precomp begin
+        while tries < 3
+            try
+                strategy()
+                break
+            catch
+                sleep(1)
+            end
+            tries += 1
+        end
+    end
+    # binance bans CI ips, use binanceusdm instead
+    kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binance) : (;)
+    try
+        s = strategy(; kwargs...)
+        @precomp begin
+            assets(s)
+            instances(s)
+            exchangeid(typeof(s))
+            freecash(s)
+            execmode(s)
+            nameof(s)
+            nameof(typeof(s))
+            reset!(s)
+            propertynames(s)
+            attrs(s)
+            s.attrs
+            coll.iscashable(s)
+            minmax_holdings(s)
+            trades_count(s)
+            orders(s, Buy)
+            orders(s, Sell)
+            show(devnull, s)
+        end
+    catch e
+        @warn "Strategies: precompile workload skipped (gateway/strategy unavailable)" exception = (
+            e, catch_backtrace()
+        )
+    end
+    ExchangeTypes._closeall()
+end
+end
