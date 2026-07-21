@@ -1,0 +1,3 @@
+using Cli
+
+Cli.main()

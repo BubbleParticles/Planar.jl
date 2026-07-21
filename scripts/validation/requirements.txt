@@ -1,0 +1,2 @@
+# Python dependencies for documentation validation
+# Add any Python package dependencies here if needed

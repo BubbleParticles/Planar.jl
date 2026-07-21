@@ -1,0 +1,304 @@
+# Planar Documentation Navigation Configuration
+# This file defines the structure and organization of the documentation
+
+site:
+  title: "Planar Documentation"
+  description: "Advanced Trading Bot Framework"
+  base_url: "/docs/"
+
+# Main navigation structure
+navigation:
+  getting_started:
+    title: "Getting Started"
+    description: "New to Planar? Start here"
+    icon: "🚀"
+    order: 1
+    path: "getting-started/"
+    pages:
+      - slug: "index"
+        title: "Overview"
+        description: "Getting started overview and path selection"
+        order: 1
+      - slug: "installation"
+        title: "Installation"
+        description: "Install Planar and dependencies"
+        order: 2
+        estimated_time: "10 minutes"
+      - slug: "quick-start"
+        title: "Quick Start"
+        description: "Get up and running in 15 minutes"
+        order: 3
+        estimated_time: "15 minutes"
+      - slug: "first-strategy"
+        title: "First Strategy"
+        description: "Build your first trading strategy"
+        order: 4
+        estimated_time: "20 minutes"
+    next_section: "guides"
+    
+  guides:
+    title: "Development Guides"
+    description: "Build trading strategies"
+    icon: "📚"
+    order: 2
+    path: "guides/"
+    pages:
+      - slug: "index"
+        title: "Overview"
+        description: "Guide overview and topics"
+        order: 1
+      - slug: "strategy-development"
+        title: "Strategy Development"
+        description: "Core development guide"
+        order: 2
+        estimated_time: "45 minutes"
+      - slug: "data-management"
+        title: "Data Management"
+        description: "Working with market data"
+        order: 3
+        estimated_time: "30 minutes"
+      - slug: "execution-modes"
+        title: "Execution Modes"
+        description: "Sim, Paper, and Live trading"
+        order: 4
+        estimated_time: "25 minutes"
+      - slug: "optimization"
+        title: "Optimization"
+        description: "Parameter tuning and optimization"
+        order: 5
+        estimated_time: "35 minutes"
+      - slug: "visualization"
+        title: "Visualization"
+        description: "Plotting and analysis"
+        order: 6
+        estimated_time: "20 minutes"
+    next_section: "advanced"
+    
+  advanced:
+    title: "Advanced Topics"
+    description: "Advanced usage and customization"
+    icon: "⚡"
+    order: 3
+    path: "advanced/"
+    pages:
+      - slug: "index"
+        title: "Overview"
+        description: "Advanced topics overview"
+        order: 1
+      - slug: "customization"
+        title: "Customization"
+        description: "Extending Planar functionality"
+        order: 2
+        estimated_time: "40 minutes"
+      - slug: "margin-trading"
+        title: "Margin Trading"
+        description: "Advanced trading features"
+        order: 3
+        estimated_time: "30 minutes"
+      - slug: "multi-exchange"
+        title: "Multi-Exchange"
+        description: "Complex multi-exchange setups"
+        order: 4
+        estimated_time: "35 minutes"
+      - slug: "performance"
+        title: "Performance"
+        description: "Optimization and scaling"
+        order: 5
+        estimated_time: "25 minutes"
+    next_section: "reference"
+    
+  reference:
+    title: "API Reference"
+    description: "Complete function documentation"
+    icon: "📖"
+    order: 4
+    path: "reference/"
+    pages:
+      - slug: "index"
+        title: "Overview"
+        description: "API reference overview"
+        order: 1
+      - slug: "configuration"
+        title: "Configuration"
+        description: "All configuration options"
+        order: 2
+      - slug: "types"
+        title: "Types"
+        description: "Type system reference"
+        order: 3
+    subsections:
+      api:
+        title: "API Documentation"
+        path: "reference/api/"
+        pages:
+          - slug: "core"
+            title: "Core API"
+            description: "Essential functions"
+          - slug: "strategies"
+            title: "Strategy API"
+            description: "Strategy development functions"
+          - slug: "exchanges"
+            title: "Exchange API"
+            description: "Exchange integration"
+          - slug: "data"
+            title: "Data API"
+            description: "Data management functions"
+      examples:
+        title: "Examples Library"
+        path: "reference/examples/"
+        pages:
+          - slug: "basic"
+            title: "Basic Examples"
+            description: "Simple usage patterns"
+          - slug: "advanced"
+            title: "Advanced Examples"
+            description: "Complex implementations"
+    next_section: "troubleshooting"
+    
+  troubleshooting:
+    title: "Troubleshooting"
+    description: "Problem resolution"
+    icon: "🔧"
+    order: 5
+    path: "troubleshooting/"
+    pages:
+      - slug: "index"
+        title: "Overview"
+        description: "Problem categories and quick fixes"
+        order: 1
+      - slug: "installation-issues"
+        title: "Installation Issues"
+        description: "Setup and dependency problems"
+        order: 2
+      - slug: "strategy-problems"
+        title: "Strategy Problems"
+        description: "Strategy development issues"
+        order: 3
+      - slug: "performance-issues"
+        title: "Performance Issues"
+        description: "Speed and memory problems"
+        order: 4
+      - slug: "exchange-issues"
+        title: "Exchange Issues"
+        description: "Connection and API problems"
+        order: 5
+    next_section: "resources"
+    
+  resources:
+    title: "Resources"
+    description: "Additional materials"
+    icon: "📚"
+    order: 6
+    path: "resources/"
+    pages:
+      - slug: "index"
+        title: "Overview"
+        description: "Available resources"
+        order: 1
+      - slug: "glossary"
+        title: "Glossary"
+        description: "Terms and concepts"
+        order: 2
+      - slug: "migration-guides"
+        title: "Migration Guides"
+        description: "Version update guides"
+        order: 3
+      - slug: "community"
+        title: "Community"
+        description: "Support and contacts"
+        order: 4
+
+# User journey paths for different personas
+user_journeys:
+  new_user:
+    title: "New to Planar"
+    description: "Complete beginner path"
+    path:
+      - "getting-started/installation"
+      - "getting-started/quick-start"
+      - "getting-started/first-strategy"
+      - "guides/strategy-development"
+    estimated_total_time: "90 minutes"
+    
+  strategy_developer:
+    title: "Strategy Developer"
+    description: "Focus on building strategies"
+    path:
+      - "guides/strategy-development"
+      - "guides/data-management"
+      - "guides/execution-modes"
+      - "guides/optimization"
+      - "advanced/customization"
+    estimated_total_time: "3 hours"
+    
+  advanced_user:
+    title: "Advanced User"
+    description: "Customization and scaling"
+    path:
+      - "advanced/customization"
+      - "advanced/margin-trading"
+      - "advanced/multi-exchange"
+      - "advanced/performance"
+      - "reference/api/core"
+    estimated_total_time: "2.5 hours"
+    
+  troubleshooter:
+    title: "Need Help"
+    description: "Problem resolution"
+    path:
+      - "troubleshooting/index"
+      - "troubleshooting/installation-issues"
+      - "troubleshooting/strategy-problems"
+      - "resources/community"
+    estimated_total_time: "30 minutes"
+
+# Breadcrumb configuration
+breadcrumbs:
+  separator: " > "
+  show_home: true
+  home_title: "Docs"
+  max_depth: 4
+
+# Cross-reference configuration
+cross_references:
+  # Automatic linking patterns
+  auto_link_patterns:
+    - pattern: "\\b(Planar|planar)\\b"
+      link: "index.md"
+      title: "Planar Documentation"
+    - pattern: "\\bstrategy development\\b"
+      link: "guides/strategy-development.md"
+      title: "Strategy Development Guide"
+    - pattern: "\\binstallation\\b"
+      link: "getting-started/installation.md"
+      title: "Installation Guide"
+    - pattern: "\\bquick start\\b"
+      link: "getting-started/quick-start.md"
+      title: "Quick Start Guide"
+      
+  # Related content suggestions
+  related_content_rules:
+    - if_category: "getting-started"
+      suggest_categories: ["guides"]
+      max_suggestions: 3
+    - if_category: "guides"
+      suggest_categories: ["advanced", "reference"]
+      max_suggestions: 4
+    - if_category: "advanced"
+      suggest_categories: ["reference", "troubleshooting"]
+      max_suggestions: 3
+    - if_category: "troubleshooting"
+      suggest_categories: ["getting-started", "guides"]
+      max_suggestions: 2
+
+# Search configuration
+search:
+  enabled: true
+  index_fields: ["title", "description", "content", "category"]
+  boost_factors:
+    title: 3.0
+    description: 2.0
+    category: 1.5
+    content: 1.0
+  category_filters: true
+  difficulty_filters: true

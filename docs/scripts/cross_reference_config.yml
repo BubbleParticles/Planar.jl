@@ -1,0 +1,214 @@
+# Cross-Reference Configuration
+# This file defines the relationships and mappings for automatic cross-referencing
+
+# Concept to link mappings
+concept_links:
+  # Core concepts
+  strategy: "../guides/strategy-development.md"
+  strategies: "../guides/strategy-development.md"
+  backtest: "../guides/execution-modes.md#simulation-mode"
+  backtesting: "../guides/execution-modes.md#simulation-mode"
+  paper trading: "../guides/execution-modes.md#paper-mode"
+  live trading: "../guides/execution-modes.md#live-mode"
+  simulation: "../guides/execution-modes.md#simulation-mode"
+  optimization: "../optimization.md"
+  parameter optimization: "../optimization.md"
+  
+  # Technical concepts
+  OHLCV: "../guides/data-management.md#ohlcv-data"
+  OHLCV data: "../guides/data-management.md#ohlcv-data"
+  market data: "../guides/data-management.md"
+  data management: "../guides/data-management.md"
+  timeframe: "../guides/data-management.md#timeframes"
+  timeframes: "../guides/data-management.md#timeframes"
+  
+  # Exchange concepts
+  exchange: "../exchanges.md"
+  exchanges: "../exchanges.md"
+  CCXT: "../exchanges.md#ccxt-integration"
+  API keys: "../getting-started/installation.md#api-configuration"
+  
+  # Margin trading
+  margin trading: "../guides/strategy-development.md#margin-trading-concepts"
+  leverage: "../guides/strategy-development.md#margin-modes"
+  isolated margin: "../guides/strategy-development.md#margin-modes"
+  cross margin: "../guides/strategy-development.md#margin-modes"
+  
+  # Technical indicators
+  RSI: "../guides/strategy-development.md#technical-indicators"
+  moving average: "../guides/strategy-development.md#technical-indicators"
+  technical indicators: "../guides/strategy-development.md#technical-indicators"
+  
+  # Configuration
+  configuration: "../config.md"
+  planar.toml: "../config.md#configuration-file"
+  secrets.toml: "../config.md#secrets-management"
+  
+  # Troubleshooting
+  troubleshooting: "../troubleshooting/"
+  installation issues: "../troubleshooting/installation-issues.md"
+  performance issues: "../troubleshooting/performance-issues.md"
+  
+  # Julia concepts
+  Julia: "https://julialang.org/"
+  dispatch system: "../guides/strategy-development.md#dispatch-system"
+  multiple dispatch: "../guides/strategy-development.md#dispatch-system"
+
+# Topic categories for automatic tagging
+topic_categories:
+  getting-started:
+    - installation
+    - quick-start
+    - first-strategy
+    - tutorial
+    - beginner
+    
+  strategy-development:
+    - strategy
+    - trading-logic
+    - indicators
+    - signals
+    - call!
+    - dispatch
+    
+  data-management:
+    - ohlcv
+    - market-data
+    - timeframes
+    - storage
+    - zarr
+    - fetch
+    
+  execution-modes:
+    - simulation
+    - paper-trading
+    - live-trading
+    - backtesting
+    - sim-mode
+    - paper-mode
+    - live-mode
+    
+  exchanges:
+    - ccxt
+    - api
+    - binance
+    - bybit
+    - kucoin
+    - exchange
+    
+  optimization:
+    - parameters
+    - grid-search
+    - bayesian
+    - performance
+    - optim
+    
+  margin-trading:
+    - leverage
+    - isolated
+    - cross
+    - positions
+    - margin
+    
+  troubleshooting:
+    - errors
+    - debugging
+    - performance
+    - installation
+    - problems
+    
+  configuration:
+    - settings
+    - toml
+    - secrets
+    - environment
+    - config
+    
+  visualization:
+    - plotting
+    - charts
+    - analysis
+    - metrics
+    - balloons
+
+# Related content mappings (bidirectional)
+related_content:
+  getting-started/installation.md:
+    - getting-started/quick-start.md
+    - getting-started/first-strategy.md
+    - troubleshooting/installation-issues.md
+    - config.md
+    
+  getting-started/quick-start.md:
+    - getting-started/installation.md
+    - getting-started/first-strategy.md
+    - guides/strategy-development.md
+    - guides/data-management.md
+    
+  getting-started/first-strategy.md:
+    - getting-started/quick-start.md
+    - guides/strategy-development.md
+    - guides/data-management.md
+    - optimization.md
+    
+  guides/strategy-development.md:
+    - guides/data-management.md
+    - guides/execution-modes.md
+    - optimization.md
+    - reference/api/
+    - troubleshooting/strategy-problems.md
+    
+  guides/data-management.md:
+    - guides/strategy-development.md
+    - exchanges.md
+    - troubleshooting/performance-issues.md
+    - config.md
+    
+  guides/execution-modes.md:
+    - guides/strategy-development.md
+    - engine/
+    - troubleshooting/strategy-problems.md
+    - config.md
+    
+  optimization.md:
+    - guides/strategy-development.md
+    - troubleshooting/performance-issues.md
+    - reference/api/
+    
+  exchanges.md:
+    - guides/data-management.md
+    - config.md
+    - troubleshooting/exchange-issues.md
+    
+  config.md:
+    - getting-started/installation.md
+    - guides/strategy-development.md
+    - troubleshooting/
+    
+  troubleshooting/index.md:
+    - troubleshooting/installation-issues.md
+    - troubleshooting/strategy-problems.md
+    - troubleshooting/performance-issues.md
+    - troubleshooting/exchange-issues.md
+
+# File descriptions for "See Also" sections
+file_descriptions:
+  installation.md: "Setup and installation guide"
+  quick-start.md: "15-minute getting started tutorial"
+  first-strategy.md: "Build your first trading strategy"
+  strategy-development.md: "Complete strategy development guide"
+  data-management.md: "Working with market data"
+  execution-modes.md: "Simulation, paper, and live trading"
+  optimization.md: "Parameter optimization techniques"
+  exchanges.md: "Exchange integration and configuration"
+  config.md: "Configuration and settings"
+  troubleshooting.md: "Problem resolution and debugging"
+
+# Hover tooltip definitions (for future implementation)
+tooltips:
+  strategy: "A Julia module that defines trading logic through call! methods"
+  OHLCV: "Open, High, Low, Close, Volume - basic market data format"
+  backtest: "Running a strategy against historical data to evaluate performance"
+  dispatch: "Julia's method selection based on argument types"
+  leverage: "Using borrowed capital to increase position size"
+  timeframe: "Time interval for market data (e.g., 1m, 5m, 1h, 1d)"

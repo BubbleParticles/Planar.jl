@@ -1,0 +1,593 @@
+"""Exchange subprocess that runs CCXT and communicates via ZeroMQ."""
+
+import asyncio
+import json
+import logging
+import sys
+print(f"DEBUG subprocess.py loaded from: {__file__}", file=sys.stderr)
+import os
+import signal
+import sys
+from typing import Any, Callable, Dict, List, Optional
+
+from ccxt_gateway.core.protocol import (
+    create_response,
+    create_subprocess_ready,
+    create_watch_update,
+    parse_message,
+)
+
+import zmq
+import zmq.asyncio
+
+logger: logging.Logger = logging.getLogger(__name__)
+
+# ── Exchange hotfix registry ──────────────────────────────────────────
+# Maps exchange names to lists of async callables (exchange, exchange_id, name) -> None.
+# Registered fixes run during _init_exchange after markets are loaded.
+_HOTFIXES: Dict[str, List[Callable]] = {}
+
+def register_hotfix(exchange_name: str, fix: Callable) -> None:
+    """Register a hotfix function for a specific exchange."""
+    _HOTFIXES.setdefault(exchange_name, []).append(fix)
+
+def get_hotfixes(exchange_name: str) -> List[Callable]:
+    """Return all registered hotfixes for an exchange name."""
+    return _HOTFIXES.get(exchange_name, [])
+
+
+class ExchangeSubprocess:
+    """Subprocess that handles CCXT calls for a specific exchange."""
+
+    def __init__(
+        self,
+        exchange_id: str,
+        exchange_name: str,
+        broker_address: str = "tcp://127.0.0.1:5555",
+        api_key: Optional[str] = None,
+        secret: Optional[str] = None,
+        password: Optional[str] = None,
+        uid: Optional[str] = None,
+        enable_rate_limit: bool = True,
+        timeout: int = 30000,
+        verbose: bool = False,
+        sandbox: bool = False,
+    ) -> None:
+        self.exchange_id: str = exchange_id
+        self.exchange_name: str = exchange_name
+        self.broker_address: str = broker_address
+        self.api_key: Optional[str] = api_key
+        self.secret: Optional[str] = secret
+        self.password: Optional[str] = password
+        self.uid: Optional[str] = uid
+        self.enable_rate_limit: bool = enable_rate_limit
+        self.timeout: int = timeout
+        self.verbose: bool = verbose
+        self.sandbox: bool = sandbox
+        self.parent_pid: int = os.getppid()
+
+        # Request kernel-delivered SIGTERM on parent death (Linux only)
+        try:
+            import ctypes
+            libc = ctypes.CDLL("libc.so.6", use_errno=True)
+            PR_SET_PDEATHSIG: int = 1
+            libc.prctl(PR_SET_PDEATHSIG, signal.SIGTERM, 0, 0, 0)
+        except Exception:
+            pass  # Best-effort; fallback to PPID polling in _message_loop
+
+        self.context: zmq.asyncio.Context = zmq.asyncio.Context()
+        self.socket: zmq.asyncio.Socket = self.context.socket(zmq.DEALER)
+        self.socket.setsockopt(zmq.IDENTITY, exchange_id.encode("utf-8"))
+
+        self.exchange: Any = None
+        self.running: bool = False
+        
+        # Setup signal handlers
+        signal.signal(signal.SIGTERM, self._signal_handler)
+        signal.signal(signal.SIGINT, self._signal_handler)
+
+    def _signal_handler(self, signum: int, frame: Any) -> None:
+        """Handle shutdown signals."""
+        logger.info("Received signal %d, shutting down...", signum)
+        self.running = False
+
+    async def start(self) -> None:
+        """Start the subprocess."""
+        self.running = True
+
+        # Connect to broker
+        self.socket.connect(self.broker_address)
+        logger.info("Connected to broker at %s", self.broker_address)
+
+        # Initialize CCXT exchange
+        await self._init_exchange()
+
+        # Send ready message
+        await self._send_ready()
+
+        # Main message loop
+        await self._message_loop()
+
+    async def _init_exchange(self) -> None:
+        """Initialize the CCXT exchange instance."""
+        try:
+            import ccxt.async_support as _ccxt_async
+            import ccxt.pro as _ccxt_pro
+
+            # Prefer ccxt.pro for websocket (watch*) support, fall back to async_support
+            ccxt_mod: Any = _ccxt_pro if hasattr(_ccxt_pro, self.exchange_name) else _ccxt_async
+
+            if not hasattr(ccxt_mod, self.exchange_name):
+                raise ValueError(f"Exchange {self.exchange_name} not supported by CCXT")
+
+            exchange_class: Any = getattr(ccxt_mod, self.exchange_name)
+
+            params: Dict[str, Any] = {
+                "enableRateLimit": self.enable_rate_limit,
+                "timeout": self.timeout,
+                "verbose": self.verbose,
+            }
+
+            if self.api_key:
+                params["apiKey"] = self.api_key
+            if self.secret:
+                params["secret"] = self.secret
+            if self.password:
+                params["password"] = self.password
+            if self.uid:
+                params["uid"] = self.uid
+
+            self.exchange = exchange_class(params)
+            logger.info("Initialized CCXT exchange: %s", self.exchange_name)
+
+            # Enable sandbox mode if requested
+            if self.sandbox:
+                try:
+                    self.exchange.set_sandbox_mode(True) if hasattr(self.exchange, 'set_sandbox_mode') else self.exchange.setSandboxMode(True)
+                    logger.info("Sandbox mode enabled for %s", self.exchange_name)
+                except Exception as se:
+                    logger.warning("Failed to enable sandbox mode for %s: %s", self.exchange_name, se)
+
+            # Pre-load markets so they're available immediately
+            try:
+                await self.exchange.load_markets()
+                logger.info("Loaded %d markets for %s", len(self.exchange.markets), self.exchange_name)
+            except Exception as me:
+                logger.warning("Failed to pre-load markets for %s: %s", self.exchange_name, me)
+
+            # Apply exchange-specific hotfixes (clock sync, WS overrides, etc.)
+            for fix in get_hotfixes(self.exchange_name):
+                try:
+                    await fix(self.exchange, self.exchange_id, self.exchange_name)
+                    logger.debug("Applied hotfix for %s", self.exchange_name)
+                except Exception as hf:
+                    logger.warning("Hotfix failed for %s: %s", self.exchange_name, hf)
+
+        except Exception as e:
+            logger.error("Failed to initialize exchange %s: %s", self.exchange_name, e)
+            raise
+
+    async def _send_ready(self) -> None:
+        """Send ready message to broker."""
+        import os
+        ready_msg: bytes = create_subprocess_ready(self.exchange_id, os.getpid())
+        # For DEALER socket, we need to send empty frame first
+        await self.socket.send_multipart([b"", ready_msg])
+        logger.info("Sent ready message for %s", self.exchange_id)
+
+    async def _message_loop(self) -> None:
+        """Main message loop."""
+        _parent_check_count: int = 0
+        while self.running:
+            try:
+                # Periodically check if parent process is still alive
+                _parent_check_count += 1
+                if _parent_check_count % 5 == 0:
+                    if os.getppid() != self.parent_pid:
+                        logger.warning(
+                            "Parent process %d died (reparented to %d), shutting down subprocess %s",
+                            self.parent_pid, os.getppid(), self.exchange_id,
+                        )
+                        self.running = False
+                        break
+
+                # Receive multipart: [empty, message]
+                try:
+                    parts: List[bytes] = await asyncio.wait_for(
+                        self.socket.recv_multipart(), timeout=5.0,
+                    )
+                except asyncio.TimeoutError:
+                    continue  # Back to the top to check parent PID and running flag
+                if len(parts) < 2:
+                    continue
+
+                empty: bytes = parts[0]
+                message: bytes = parts[1]
+
+                try:
+                    msg: Dict[str, Any] = parse_message(message)
+                    msg_type: str = msg.get("type", "")
+
+                    if msg_type == "request":
+                        await self._handle_request(msg)
+                    else:
+                        logger.warning("Unknown message type: %s", msg_type)
+
+                except json.JSONDecodeError as e:
+                    logger.error("Invalid JSON in message: %s", e)
+                    response: bytes = create_response(
+                        request_id="unknown",
+                        error="Invalid JSON",
+                        error_code="INVALID_JSON",
+                    )
+                    await self.socket.send_multipart([b"", response])
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error("Error in message loop: %s", e)
+
+        # Cleanup
+        await self._cleanup()
+
+    async def _handle_request(self, msg: Dict[str, Any]) -> None:
+        """Handle a request message."""
+        request_id: Optional[str] = msg.get("id")
+        method: Optional[str] = msg.get("method")
+        params: Dict[str, Any] = msg.get("params", {})
+        subscription_id: Optional[str] = msg.get("subscription_id")
+
+        logger.info("DEBUG _handle_request: method=%s params=%s", method, params)
+
+        if not request_id or not method:
+            logger.error("Invalid request message: missing id or method")
+            return
+
+        try:
+            if not self.exchange:
+                raise RuntimeError("Exchange not initialized")
+
+            # Settable properties — check params for set-operations
+            settable_props: Dict[str, str] = {"timeout": "value", "enableRateLimit": "flag", "rateLimit": "value"}
+            if method in settable_props and settable_props[method] in params:
+                setattr(self.exchange, method, params[settable_props[method]])
+                response = create_response(request_id, result={"status": "ok"})
+            # Custom command: set API key on a running exchange
+            elif method == "set_api_key":
+                api_key = params.get("apiKey", "")
+                secret = params.get("secret", "")
+                password = params.get("password", "")
+                wallet_address = params.get("walletAddress", "")
+                private_key = params.get("privateKey", "")
+                if api_key:
+                    self.exchange.apiKey = api_key
+                if secret:
+                    self.exchange.secret = secret
+                if password:
+                    self.exchange.password = password
+                if wallet_address:
+                    self.exchange.walletAddress = wallet_address
+                if private_key:
+                    self.exchange.privateKey = private_key
+                response = create_response(request_id, result={"status": "ok"})
+            # Try direct attribute first (methods, properties like timeframes, fees)
+            elif hasattr(self.exchange, method):
+                attr: Any = getattr(self.exchange, method)
+
+                if callable(attr):
+                    ccxt_method: Callable[..., Any] = attr
+
+                    # Parameter name normalization: set_sandbox_mode parameter
+                    # varies between exchanges (base class: "enabled", binance/okx: "enable")
+                    if method == "setSandboxMode":
+                        import inspect
+                        # Get unbound method signature to include 'self' parameter
+                        # Bound method signature excludes 'self', so check __func__ for unbound
+                        if hasattr(ccxt_method, '__func__'):
+                            unbound_method = ccxt_method.__func__
+                        else:
+                            unbound_method = getattr(self.exchange.__class__, method)
+                        sig = inspect.signature(unbound_method)
+                        sig_params = list(sig.parameters.keys())
+                        logger.info("DEBUG setSandboxMode: method=%s sig_params=%s params=%s", method, sig_params, params)
+                        if len(sig_params) >= 2:
+                            actual_name: str = sig_params[1]  # skip 'self'
+                            if actual_name != "enabled" and "enabled" in params:
+                                params[actual_name] = params.pop("enabled")
+                                logger.info("DEBUG setSandboxMode: normalized enabled->%s", actual_name)
+                            elif actual_name != "enable" and "enable" in params:
+                                params[actual_name] = params.pop("enable")
+                                logger.info("DEBUG setSandboxMode: normalized enable->%s", actual_name)
+
+                    # Julia sends camelCase (watchOHLCVForSymbols), ccxt uses snake_case (watch_ohlcv_for_symbols).
+                    # Both must route through _handle_watch_method for streaming dispatch.
+                    _is_watch: bool = method.startswith("watch") and (
+                        len(method) == 5 or method[5] == "_" or (len(method) > 5 and method[5].isupper())
+                    )
+                    if _is_watch:
+                        await self._handle_watch_method(method, ccxt_method, params, subscription_id, request_id)
+                        return
+
+                    result: Any = await self._call_method(ccxt_method, params)
+                    serializable_result: Any = self._make_serializable(result)
+                    response: bytes = create_response(request_id, result=serializable_result)
+                else:
+                    # Lazy-loaded attributes (markets, currencies, etc.):
+                    # try calling load_<attribute>() first to populate
+                    load_name: str = f"load_{method}"
+                    loaded: bool = False
+                    if hasattr(self.exchange, load_name):
+                        try:
+                            load_fn: Any = getattr(self.exchange, load_name)
+                            if asyncio.iscoroutinefunction(load_fn):
+                                await load_fn()
+                            else:
+                                load_fn()
+                            loaded = True
+                        except Exception as load_err:
+                            logger.warning("Failed to lazy-load %s: %s", method, load_err)
+                    # Special case: currencies are populated by load_markets(),
+                    # but can also be fetched via fetchCurrencies if still empty
+                    if not loaded and method == "currencies":
+                        try:
+                            fetch_name: str = f"fetch{method[0].upper()}{method[1:]}"
+                            if hasattr(self.exchange, fetch_name):
+                                fetch_fn: Any = getattr(self.exchange, fetch_name)
+                                if asyncio.iscoroutinefunction(fetch_fn):
+                                    await fetch_fn()
+                                else:
+                                    fetch_fn()
+                        except Exception as fetch_err:
+                            logger.warning("Failed to fetch %s: %s", method, fetch_err)
+                    # Re-read after loading
+                    attr = getattr(self.exchange, method)
+                    serializable_result: Any = self._make_serializable(attr)
+                    response: bytes = create_response(request_id, result=serializable_result)
+            else:
+                # Not a direct attribute — try the .has dict (e.g. publicAPI, fetchTicker flags)
+                has_dict: Dict[str, Any] = dict(self.exchange.has) if hasattr(self.exchange.has, "items") else {}
+                if method in has_dict:
+                    serializable_result: Any = self._make_serializable(has_dict[method])
+                    response: bytes = create_response(request_id, result=serializable_result)
+                elif method == "get_propertynames":
+                    import types as _types
+                    names: List[str] = []
+                    for k in dir(self.exchange):
+                        if k.startswith("_"):
+                            continue
+                        attr = getattr(self.exchange, k)
+                        # Skip only modules
+                        if isinstance(attr, _types.ModuleType):
+                            continue
+                        names.append(k)
+                    response = create_response(request_id, result=sorted(names))
+                else:
+                    raise AttributeError(f"Method {method} not found on exchange {self.exchange_name}")
+
+        except Exception as e:
+            logger.error("Error handling request %s: %s", request_id, e)
+            response = create_response(
+                request_id=request_id,
+                error=str(e),
+                error_code=type(e).__name__,
+            )
+
+        # Send response
+        await self.socket.send_multipart([b"", response])
+
+    def _ohlcv_max_ts(self, data: Any) -> Optional[int]:
+        """Extract max timestamp from OHLCV data."""
+        if isinstance(data, dict):
+            max_ts: Optional[int] = None
+            for tf_dict in data.values():
+                if not isinstance(tf_dict, dict):
+                    continue
+                for candles in tf_dict.values():
+                    ts = self._ohlcv_max_ts(candles)
+                    if ts is not None and (max_ts is None or ts > max_ts):
+                        max_ts = ts
+            return max_ts
+        if isinstance(data, list):
+            max_ts = None
+            for row in data:
+                if isinstance(row, list) and row:
+                    ts = row[0]
+                    if isinstance(ts, (int, float)) and (max_ts is None or int(ts) > max_ts):
+                        max_ts = int(ts)
+            return max_ts
+        return None
+
+    async def _handle_watch_method(
+        self,
+        method: str,
+        ccxt_method: Callable[..., Any],
+        params: Dict[str, Any],
+        subscription_id: Optional[str],
+        request_id: str,
+    ) -> None:
+        """Handle a watch* method (WebSocket streaming).
+
+        ccxt.pro watch methods work in two modes:
+        1. Async iterator mode: ``async for update in exchange.watch_*(...)``
+        2. One-shot mode: ``await exchange.watch_*(...)`` called repeatedly
+
+        Both are handled by sending a "subscribed" confirmation first, then
+        spawning a background task that streams updates as ``watch_update``
+        ZMQ messages — so the main message loop stays responsive.
+        """
+        try:
+            first_batch: Any = await self._call_method(ccxt_method, params)
+
+            response: bytes = create_response(
+                request_id, result={"status": "subscribed", "method": method}
+            )
+            await self.socket.send_multipart([b"", response])
+
+            if hasattr(first_batch, "__aiter__"):
+                asyncio.create_task(
+                    self._watch_iterator_loop(
+                        first_batch, subscription_id or request_id
+                    )
+                )
+            else:
+                asyncio.create_task(
+                    self._watch_poll_loop(
+                        ccxt_method, dict(params), subscription_id or request_id
+                    )
+                )
+
+        except Exception as e:
+            logger.error("Error in watch method %s: %s", method, e)
+            response = create_response(
+                request_id=request_id,
+                error=str(e),
+                error_code=type(e).__name__,
+            )
+            await self.socket.send_multipart([b"", response])
+
+    async def _watch_iterator_loop(
+        self,
+        iterator: Any,
+        subscription_id: str,
+    ) -> None:
+        try:
+            async for update in iterator:
+                update_msg: bytes = create_watch_update(subscription_id, update)
+                await self.socket.send_multipart([b"", update_msg])
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error("Error in watch iterator loop: %s", e)
+
+    async def _watch_poll_loop(
+        self,
+        method: Callable[..., Any],
+        params: Dict[str, Any],
+        subscription_id: str,
+    ) -> None:
+        """Background task: poll a one-shot watch method and stream updates.
+
+        ccxt.pro one-shot watch methods behave like:
+        ``while True: data = await exchange.watch_*(...)``
+        Each consecutive ``await`` returns the current cached state
+        (``newUpdates=true`` default), so this loop effectively
+        streams the latest data without busy-waiting.
+        """
+        try:
+            while self.running:
+                result: Any = await self._call_method(method, params)
+                update_msg: bytes = create_watch_update(subscription_id, result)
+                await self.socket.send_multipart([b"", update_msg])
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error("Error in watch poll loop: %s", e)
+
+    async def _call_method(self, method: Callable[..., Any], params: Dict[str, Any]) -> Any:
+        """Call a CCXT method with given params.
+
+        Positional args from the Julia client arrive under the "_args" key
+        (set by ExchangeTypes._first). Pop and forward them positionally
+        so callers can use the same positional signatures as ccxt.
+        """
+        positional: List[Any] = params.pop("_args", [])
+        caller_timeout: Optional[float] = params.pop("_timeout", None)
+        # ccxt.pro watch methods (watchOHLCVForSymbols, watchTickersForSymbols, etc.)
+        # expect the symbols/timeframes list as the first positional argument.
+        # Julia sends it under "symbolsAndTimeframes" (a list of [sym, tf] pairs).
+        # Move it from kwargs to positional so it maps to the first parameter.
+        if "symbolsAndTimeframes" in params:
+            positional = [params.pop("symbolsAndTimeframes")] + positional
+        orig_timeout: Optional[int] = None
+        if caller_timeout is not None and self.exchange is not None:
+            orig_timeout = getattr(self.exchange, 'timeout', None)
+            self.exchange.timeout = int(caller_timeout * 1000)
+        try:
+            if asyncio.iscoroutinefunction(method):
+                if positional:
+                    return await method(*positional, **params) if params else await method(*positional)
+                if params:
+                    return await method(**params)
+                return await method()
+            if positional:
+                return method(*positional, **params) if params else method(*positional)
+            if params:
+                return method(**params)
+            return method()
+        finally:
+            if orig_timeout is not None:
+                self.exchange.timeout = orig_timeout
+
+    def _make_serializable(self, result: Any) -> Any:
+        """Convert result to JSON-serializable format."""
+        try:
+            # Test if result is JSON serializable
+            json.dumps(result)
+            return result
+        except (TypeError, ValueError):
+            # Convert to string if not serializable
+            return str(result)
+
+    async def _cleanup(self) -> None:
+        """Cleanup resources."""
+        if self.exchange:
+            try:
+                await self.exchange.close()
+            except Exception as e:
+                logger.error("Error closing exchange: %s", e)
+
+        self.socket.close()
+        self.context.term()
+        logger.info("Subprocess %s cleaned up", self.exchange_id)
+
+
+async def main() -> None:
+    """Entry point for exchange subprocess."""
+    if len(sys.argv) < 3:
+        print("Usage: subprocess.py <exchange_id> <exchange_name>")
+        sys.exit(1)
+
+    exchange_id: str = sys.argv[1]
+    exchange_name: str = sys.argv[2]
+
+    # Parse additional arguments
+    broker_address: str = "tcp://127.0.0.1:5555"
+    api_key: Optional[str] = None
+    secret: Optional[str] = None
+    sandbox: bool = False
+
+    i: int = 3
+    while i < len(sys.argv):
+        if sys.argv[i] == "--broker" and i + 1 < len(sys.argv):
+            broker_address = sys.argv[i + 1]
+            i += 2
+        elif sys.argv[i] == "--api-key" and i + 1 < len(sys.argv):
+            api_key = sys.argv[i + 1]
+            i += 2
+        elif sys.argv[i] == "--secret" and i + 1 < len(sys.argv):
+            secret = sys.argv[i + 1]
+            i += 2
+        elif sys.argv[i] == "--sandbox":
+            sandbox = True
+            i += 1
+        else:
+            i += 1
+
+    subprocess: ExchangeSubprocess = ExchangeSubprocess(
+        exchange_id=exchange_id,
+        exchange_name=exchange_name,
+        broker_address=broker_address,
+        api_key=api_key,
+        secret=secret,
+        sandbox=sandbox,
+    )
+
+    await subprocess.start()
+
+
+# Import hotfixes to register them (side-effect: runs register_hotfix calls)
+import ccxt_gateway.exchange.hotfixes  # noqa: F401
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

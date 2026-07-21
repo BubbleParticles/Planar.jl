@@ -1,0 +1,45 @@
+#!/usr/bin/sh
+
+# Hook to push to rad after pushing to origin
+# Called by "git push" before anything has been pushed
+
+remote="$1"
+url="$2"
+
+# Only proceed if pushing to origin
+if [ "$remote" != "origin" ]; then
+    exit 0
+fi
+
+# Check if rad CLI is available
+if ! command -v rad >/dev/null 2>&1; then
+    exit 0
+fi
+
+# Check if RAD_PASSPHRASE is set
+if [ -z "$RAD_PASSPHRASE" ]; then
+    exit 0
+fi
+
+# Try to start rad node if not running
+if ! rad node status >/dev/null 2>&1; then
+    if ! rad node start; then
+        echo "Warning: Failed to start radicle node. Skipping rad push." >&2
+        exit 0
+    fi
+fi
+
+# Read the refs being pushed and push each to rad
+while read local_ref local_oid remote_ref remote_oid
+do
+    if [ "$local_oid" != "0000000000000000000000000000000000000000" ]; then
+        # Extract branch name from remote_ref (remove refs/heads/ prefix)
+        branch="${remote_ref#refs/heads/}"
+        # Push to rad
+        if ! git push rad "$branch"; then
+            echo "Warning: Failed to push branch '$branch' to rad remote." >&2
+        fi
+    fi
+done
+
+exit 0

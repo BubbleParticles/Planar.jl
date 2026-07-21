@@ -1,0 +1,32 @@
+using .Misc.Lang: wait, @preset, @precomp
+using .Misc: @skipoffline
+
+@preset let
+    id = :okx
+    @precomp let
+        getexchange!(id; markets=:force)
+        getexchange!(id; markets=:yes, sandbox=false)
+    end
+    ExchangeTypes._closeall()
+    emptycaches!()
+    qc = "USDT"
+    pair = "BTC/USDT"
+    e = getexchange!(id; markets=:yes)
+    @precomp @skipoffline let
+        futures(e)
+        timestamp(e)
+        check_timeout(e)
+        tickers(e, qc; min_vol=0.0, verbose=false)
+        tickers(e, qc; min_vol=-1.0, with_margin=true, verbose=false)
+        tickers(e, qc; min_vol=-0.0, with_leverage=:yes, verbose=false)
+        tickers(e, qc; min_vol=-1.0, with_leverage=:only, verbose=false)
+        tickers(e, qc; min_vol=-1.0, with_leverage=:from)
+        market!(pair, e)
+        is_pair_active(pair, e)
+        market_precision(pair, e)
+        market_limits(pair, e)
+        market_fees(pair, e)
+    end
+    ExchangeTypes._closeall()
+    emptycaches!()
+end
