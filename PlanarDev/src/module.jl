@@ -20,6 +20,7 @@ function backtest_strat(sym; mode=Sim(), config_attrs=(;), kwargs...)
     end
     @info "btstrat: strategy!" cfg.exchange
     s = egn.strategy!(sym, cfg)
+    isnothing(s) && return nothing
     Random.seed!(1)
     mode == Sim() && begin
         @info "btstrat: stub!"
