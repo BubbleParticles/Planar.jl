@@ -159,6 +159,36 @@ const MarginStrategy =
 const NoMarginStrategy = Strategy{X,N,<:ExchangeID,NoMargin,C} where {X<:ExecMode,N,C}
 @doc "Functions that are called (with the strategy as argument) right after strategy construction."
 const STRATEGY_LOAD_CALLBACKS = (; (m => Function[] for m in (:sim, :paper, :live))...)
+# Convenience constructors for type aliases
+# These allow creating strategies with just a name and margin mode for testing
+function SimStrategy(name::String, margin::MarginMode)
+    cfg = Config()
+    cfg.mode = Sim()
+    cfg.margin = margin
+    return Strategy(@__MODULE__, String[]; config=cfg)
+end
+
+function PaperStrategy(name::String, margin::MarginMode)
+    cfg = Config()
+    cfg.mode = Paper()
+    cfg.margin = margin
+    return Strategy(@__MODULE__, String[]; config=cfg)
+end
+
+function LiveStrategy(name::String, margin::MarginMode)
+    cfg = Config()
+    cfg.mode = Live()
+    cfg.margin = margin
+    return Strategy(@__MODULE__, String[]; config=cfg)
+end
+
+function RTStrategy(name::String, margin::MarginMode)
+    cfg = Config()
+    cfg.mode = Paper()
+    cfg.margin = margin
+    return Strategy(@__MODULE__, String[]; config=cfg)
+end
+
 
 include("methods.jl")
 include("interface.jl")

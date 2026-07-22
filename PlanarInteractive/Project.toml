@@ -11,6 +11,7 @@ Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 Plotting = "8ada5bfb-e60b-44be-8979-616e14670061"
 Scrapers = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
+Stubs = "19a5ee1f-efca-4178-b297-263c7ceb508d"
 WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 Watchers = "4a3f9c16-ec8e-48c6-a58d-938fc30e2b4b"
 

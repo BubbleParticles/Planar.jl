@@ -2849,7 +2849,7 @@ uuid = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
 version = "1.11.0"
 
 [[deps.Stubs]]
-deps = ["CSV", "Pkg", "SimMode"]
+deps = ["CSV", "Pkg", "Random", "SimMode"]
 path = "../Stubs"
 uuid = "19a5ee1f-efca-4178-b297-263c7ceb508d"
 version = "0.1.0"
