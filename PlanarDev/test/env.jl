@@ -24,11 +24,11 @@ if NO_TMP
         ENV["JULIA_CONDAPKG_OFFLINE"] = "yes"
     end
 end
+PROJECT_PATH = dirname(@__DIR__)
+PARENT_PATH = dirname(PROJECT_PATH)
+pushfirst!(LOAD_PATH, PARENT_PATH)
 
 using PlanarDev
-
-PROJECT_PATH = pathof(PlanarDev) |> dirname |> dirname
-push!(LOAD_PATH, dirname(PROJECT_PATH))
 FAILFAST = true # parse(Bool, get(ENV, "FAILFAST", "0"))
 
 const _INCLUDED_TEST_FILES = Set{String}()
