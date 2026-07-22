@@ -230,7 +230,7 @@ function strategy!(src::Symbol, cfg::Config)
     mod = if !isdefined(parent, src)
         @eval parent begin
             try
-                let
+                    ok = true
                     if $isproject
                         @debug "loading: " strat = $project_file
                         $Pkg.activate($project_file; io=Base.devnull)
@@ -238,21 +238,27 @@ function strategy!(src::Symbol, cfg::Config)
                             $Pkg.instantiate(; io=Base.devnull)
                         catch e
                             @error "loading: failed instantiation" exception = e
+                            ok = false
                         end
-                        using $src
+                    end
+                    if ok
+                        if $isproject
+                            using $src
+                        else
+                            include($path)
+                            using .$src
+                        end
+                        if isinteractive() && isdefined(Main, :Revise)
+                            try
+                                Main.Revise.track($src, $path)
+                            catch e
+                                @warn "strategy: Revise tracking failed for $src" exception=e
+                            end
+                        end
+                        $src
                     else
-                        include($path)
-                        using .$src
+                        nothing
                     end
-                    if isinteractive() && isdefined(Main, :Revise)
-                        try
-                            Main.Revise.track($src, $path)
-                        catch e
-                            @warn "strategy: Revise tracking failed for $src" exception=e
-                        end
-                    end
-                    $src
-                end
             catch e
                 @error "strategy loading: failed to load module $src" exception=(e, catch_backtrace())
                 rethrow(e)
@@ -265,6 +271,7 @@ function strategy!(src::Symbol, cfg::Config)
     else
         @eval parent $src
     end
+    isnothing(mod) && return nothing
     strategy!(mod, cfg)
 end
 _concrete(type, param) = isconcretetype(type) ? type : type{param}
