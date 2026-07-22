@@ -550,8 +550,8 @@ function test_series_categories()
     data = fred.series_categories("GDPC1")
     @test data isa Dict{String,Any}
     @test "categories" in keys(data)
-    yesterday = now() - Day(1)
-    data_realtime = fred.series_categories("GDPC1"; realtime_start=yesterday, realtime_end=now())
+    # FRED API requires realtime_end <= today (US Eastern time).
+    data_realtime = fred.series_categories("GDPC1"; realtime_start="2020-01-01", realtime_end="9999-12-31")
     @test data_realtime isa Dict{String,Any}
     return true
 end
