@@ -58,7 +58,15 @@ tests(selected=ARGS) = begin
                 Base.include(Main, file_name)
             end
             f = Base.invokelatest(getproperty, Main, name)
-            Base.invokelatest(f)
+            try
+                Base.invokelatest(f)
+            catch e
+                if occursin("connection refused", sprint(showerror, e))
+                    @warn "Skipping test $(testname): gateway unavailable"
+                    continue
+                end
+                rethrow(e)
+            end
             # After each test, ensure we clean up Exchange resources and watchers to avoid aiohttp leaks
             try
                 if isdefined(Main, :ExchangeTypes)
