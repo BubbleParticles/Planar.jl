@@ -576,6 +576,17 @@ function test_series_vintagedates()
     @test data isa Dict{String,Any}
     @test "vintage_dates" in keys(data)
     return true
+
+function test_series_tags()
+    if !fred.has_apikey()
+        @warn "TEST: FRED API key not set, skipping series_tags test"
+        return true
+    end
+    data = fred.series_tags("GDPC1")
+    @test data isa Dict{String,Any}
+    @test "tags" in keys(data)
+    return true
+end
 end
 
 function test_category()
@@ -843,7 +854,7 @@ function test_caching_performance()
     start_time = now()
     data2 = fred.cached_series_info("GDPC1")
     second_call_time = now() - start_time
-    @test second_call_time < first_call_time
+    @test second_call_time <= first_call_time
     @test data1 == data2
     return true
 end

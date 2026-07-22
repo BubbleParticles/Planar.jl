@@ -1245,12 +1245,12 @@ function series_updates(; realtime_start=nothing,
 end
 
 @doc "Get tags information."
-function tags(; tag_names=nothing, 
+function tags(; tag_names=nothing,
               tag_group_id=nothing,
               search_text=nothing,
               limit=nothing,
               offset=nothing,
-              sort_order="series_count",
+              sort_order="desc",
               order_by="series_count")
     
     query = Dict{String,Any}(
@@ -1323,7 +1323,7 @@ function related_tags(tag_names::Union{String,Vector{String}};
                      realtime_end=nothing, 
                      limit=nothing, 
                      offset=nothing, 
-                     sort_order="series_count",
+                     sort_order="desc",
                      order_by="series_count",
                      exclude_tag_names=nothing,
                      tag_group_id=nothing,
