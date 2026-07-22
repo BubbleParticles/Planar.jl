@@ -11,21 +11,30 @@ on:
         description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
         required: false
         default: false
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+env:
+  JULIA_VERSION: '1.12'
+  PYTHON: python3
+
 jobs:
   stub-test:
+    name: Stub Tests (Linux & macOS)
     strategy:
       max-parallel: 1
       matrix:
         os: [ubuntu-latest, macos-14]
     runs-on: ${{ matrix.os }}
     env:
-      JULIA_VERSION: 1
-      PYTHON: python3
       PLANAR_USE_STUB_CCXT: "1"
+      CCXT_GATEWAY_DISABLE: "true"
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: restore cache
-      uses: actions/cache/restore@v3
+      uses: actions/cache/restore@v4
       id: julia-cache
       with:
         path: |
@@ -36,7 +45,7 @@ jobs:
         restore-keys: |
           ${{ matrix.os }}-julia-${{ env.JULIA_VERSION }}-stub-test-
     - name: Set up Julia
-      uses: julia-actions/setup-julia@v1
+      uses: julia-actions/setup-julia@v2
       with:
         version: ${{ env.JULIA_VERSION }}
         include-all-prereleases: false
@@ -56,10 +65,10 @@ jobs:
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
     - name: Git submodules
       run: git submodule init; git submodule update
-    - name: Install dependencies
+    - name: Install dependencies (Linux)
       if: ${{ matrix.os == 'ubuntu-latest' }}
       run: sudo apt-get install -y xauth direnv
-    - name: Install dependencies
+    - name: Install dependencies (macOS)
       if: ${{ matrix.os == 'macos-14' }}
       run: brew install xauth direnv
     - name: Instantiate
@@ -81,7 +90,7 @@ jobs:
         direnv allow .
         eval "$(direnv export bash)"
         echo "Conda env path: ${JULIA_CONDAPKG_ENV}"
-        git reset --hard # otherwise instantiate fails
+        git reset --hard
         julia --project=PlanarDev/ -e 'import Pkg; Pkg.instantiate(); using PlanarDev;'
     - name: Install CCXT and stub_exchanges
       run: |
@@ -89,7 +98,7 @@ jobs:
         python3 -m pip install --user ccxt || python3 -m pip install ccxt
         python3 -m pip install --user -e ./stub_exchanges || python3 -m pip install -e ./stub_exchanges
       shell: bash
-    - name: Run tests # coverage is generated only on success
+    - name: Run tests
       env:
         PLANAR_TEST_EXCHANGE: "phemex"
         PLANAR_TEST_EXCHANGE_MM: "phemex"
@@ -104,6 +113,7 @@ jobs:
         PLANAR_BITMEX_SANDBOX_SECRET: ${{ secrets.PLANAR_BITMEX_SANDBOX_SECRET }}
         PLANAR_BITMEX_SANDBOX_PASSWORD: ${{ secrets.PLANAR_BITMEX_SANDBOX_PASSWORD }}
         PLANAR_CMC_APIKEY: ${{ secrets.PLANAR_CMC_APIKEY }}
+        CCXT_GATEWAY_DISABLE: "true"
       run: |
         direnv allow .
         eval "$(direnv export bash)"
@@ -114,33 +124,94 @@ jobs:
       with:
         directories: StrategyStats/src,Ccxt/src,Collections/src,Data/src,Engine/src,ExchangeTypes/src,Exchanges/src,Executors/src,Fetch/src,Instances/src,Instruments/src,Lang/src,LiveMode/src,Misc/src,Opt/src,OrderTypes/src,PaperMode/src,Pbar/src,Planar/src,Plotting/src,Processing/src,Python/src,Remote/src,Scrapers/src,SimMode/src,Simulations/src,Strategies/src,Stubs/src,TimeTicks/src,Watchers/src
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v4
       if: always()
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     - name: Save Cache
-      uses: actions/cache/save@v3
+      uses: actions/cache/save@v4
       if: always()
       with:
         path: |
           ~/.julia
           .conda
           PlanarDev/.CondaPkg/env
-        key: ${{ runner.os }}-julia-${{ env.JULIA_VERSION }}-stub-test-${{ github.sha }}
+        key: ${{ matrix.os }}-julia-${{ env.JULIA_VERSION }}-stub-test-${{ github.sha }}
+
+  gateway-test:
+    name: CcxtGateway Tests (Linux)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: restore cache
+      uses: actions/cache/restore@v4
+      id: julia-cache
+      with:
+        path: |
+          ~/.julia
+          .conda
+          PlanarDev/.CondaPkg/env
+        key: ubuntu-julia-${{ env.JULIA_VERSION }}-gateway-test-${{ github.sha }}
+        restore-keys: |
+          ubuntu-julia-${{ env.JULIA_VERSION }}-gateway-test-
+    - name: Set up Julia
+      uses: julia-actions/setup-julia@v2
+      with:
+        version: ${{ env.JULIA_VERSION }}
+        include-all-prereleases: false
+    - name: Git submodules
+      run: git submodule init; git submodule update
+    - name: Install dependencies
+      run: sudo apt-get install -y xauth direnv
+    - name: Start CcxtGateway
+      run: |
+        python3 -m pip install --user --upgrade pip setuptools wheel || true
+        python3 -m pip install --user -e ./ccxt-gateway || python3 -m pip install -e ./ccxt-gateway
+        python3 -m ccxt_gateway.daemon_gateway &
+        sleep 10
+      shell: bash
+    - name: Instantiate
+      env:
+        PLANAR_TEST_EXCHANGE: "binance"
+        PLANAR_TEST_EXCHANGE_MM: "binanceusdm"
+        PLANAR_NO_OPTENV: "1"
+      run: |
+        direnv allow .
+        eval "$(direnv export bash)"
+        git reset --hard
+        julia --project=PlanarDev/ -e 'import Pkg; Pkg.instantiate(); using PlanarDev;'
+    - name: Run gateway tests
+      env:
+        PLANAR_TEST_EXCHANGE: "binance"
+        PLANAR_TEST_EXCHANGE_MM: "binanceusdm"
+        PLANAR_NO_OPTENV: "1"
+        CCXT_GATEWAY_URL: ${{ secrets.CCXT_GATEWAY_URL }}
+      run: |
+        direnv allow .
+        eval "$(direnv export bash)"
+        julia --project=PlanarDev/ -e 'import Pkg; Pkg.test()'
+    - name: Process coverage
+      if: always()
+      uses: julia-actions/julia-processcoverage@v1
+      with:
+        directories: Ccxt/src,ExchangeTypes/src,Exchanges/src,Fetch/src,Watchers/src,Strategies/src,Processing/src,Data/src,Instances/src
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      if: always()
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   real-api-test:
+    name: Real API Tests (Linux & macOS)
     strategy:
       max-parallel: 1
       matrix:
         os: [ubuntu-latest, macos-14]
     runs-on: ${{ matrix.os }}
-    env:
-      JULIA_VERSION: 1
-      PYTHON: python3
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: restore cache
-      uses: actions/cache/restore@v3
+      uses: actions/cache/restore@v4
       id: julia-cache
       with:
         path: |
@@ -151,7 +222,7 @@ jobs:
         restore-keys: |
           ${{ matrix.os }}-julia-${{ env.JULIA_VERSION }}-real-api-test-
     - name: Set up Julia
-      uses: julia-actions/setup-julia@v1
+      uses: julia-actions/setup-julia@v2
       with:
         version: ${{ env.JULIA_VERSION }}
         include-all-prereleases: false
@@ -171,10 +242,10 @@ jobs:
       if: ${{ github.event_name == 'workflow_dispatch' && inputs.debug_enabled }}
     - name: Git submodules
       run: git submodule init; git submodule update
-    - name: Install dependencies
+    - name: Install dependencies (Linux)
       if: ${{ matrix.os == 'ubuntu-latest' }}
       run: sudo apt-get install -y xauth direnv
-    - name: Install dependencies
+    - name: Install dependencies (macOS)
       if: ${{ matrix.os == 'macos-14' }}
       run: brew install xauth direnv
     - name: Instantiate
@@ -196,9 +267,15 @@ jobs:
         direnv allow .
         eval "$(direnv export bash)"
         echo "Conda env path: ${JULIA_CONDAPKG_ENV}"
-        git reset --hard # otherwise instantiate fails
+        git reset --hard
         julia --project=PlanarDev/ -e 'import Pkg; Pkg.instantiate(); using PlanarDev;'
-    - name: Run tests # coverage is generated only on success
+    - name: Install CCXT and stub_exchanges
+      run: |
+        python3 -m pip install --user --upgrade pip setuptools wheel || true
+        python3 -m pip install --user ccxt || python3 -m pip install ccxt
+        python3 -m pip install --user -e ./stub_exchanges || python3 -m pip install -e ./stub_exchanges
+      shell: bash
+    - name: Run tests
       env:
         PLANAR_TEST_EXCHANGE: "phemex"
         PLANAR_TEST_EXCHANGE_MM: "phemex"
@@ -223,16 +300,16 @@ jobs:
       with:
         directories: StrategyStats/src,Ccxt/src,Collections/src,Data/src,Engine/src,ExchangeTypes/src,Exchanges/src,Executors/src,Fetch/src,Instances/src,Instruments/src,Lang/src,LiveMode/src,Misc/src,Opt/src,OrderTypes/src,PaperMode/src,Pbar/src,Planar/src,Plotting/src,Processing/src,Python/src,Remote/src,Scrapers/src,SimMode/src,Simulations/src,Strategies/src,Stubs/src,TimeTicks/src,Watchers/src
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v2
+      uses: codecov/codecov-action@v4
       if: always()
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     - name: Save Cache
-      uses: actions/cache/save@v3
+      uses: actions/cache/save@v4
       if: always()
       with:
         path: |
           ~/.julia
           .conda
           PlanarDev/.CondaPkg/env
-        key: ${{ runner.os }}-julia-${{ env.JULIA_VERSION }}-real-api-test-${{ github.sha }}
+        key: ${{ matrix.os }}-julia-${{ env.JULIA_VERSION }}-real-api-test-${{ github.sha }}
