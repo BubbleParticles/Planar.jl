@@ -1,10 +1,27 @@
 # All the packages added in the test/Project.toml go here (before the NO_TMP switch)
 using Aqua
+using Sockets
 using Test
-
 include("env.jl")
 ENV["PLANAR_NO_OPTENV"] = "1"
 
+const GATEWAY_TESTS = Set{Symbol}([
+    :exchanges, :markets, :collections, :orders, :orders2,
+    :positions, :instances, :strategies,
+    :ohlcv, :tradesohlcv, :watchers, :watcher_verification,
+    :profits, :roi, :stoploss,
+    :funding, :backtest, :paper, :warmup,
+])
+
+const GATEWAY_AVAILABLE = let
+    try
+        Sockets.connect("127.0.0.1", 8999)
+        true
+    catch
+        @warn "CcxtGateway not available (port 8999). Gateway-requiring tests will be skipped."
+        false
+    end
+end
 all_tests = [
     :aqua,
     :time,
@@ -50,11 +67,14 @@ tests(selected=ARGS) = begin
     test_all = "all" ∈ selected || length(selected) == 0
     for testname in all_tests
         if test_all || lowercase(string(testname)) ∈ selected
+            if testname in GATEWAY_TESTS && !GATEWAY_AVAILABLE
+                @warn "Skipping test $(testname): gateway unavailable (port 8999)"
+                continue
+            end
             name = Symbol(:test_, testname)
             file_name = joinpath(PROJECT_PATH, "test", string(name, ".jl"))
             if file_name ∉ _INCLUDED_TEST_FILES
                 push!(_INCLUDED_TEST_FILES, file_name)
-                # Include the test file into Main so `using` statements inside test files are at top-level.
                 Base.include(Main, file_name)
             end
             f = Base.invokelatest(getproperty, Main, name)
@@ -67,7 +87,6 @@ tests(selected=ARGS) = begin
                 end
                 rethrow(e)
             end
-            # After each test, ensure we clean up Exchange resources and watchers to avoid aiohttp leaks
             try
                 if isdefined(Main, :ExchangeTypes)
                     try
@@ -85,7 +104,6 @@ tests(selected=ARGS) = begin
                     catch
                     end
                 end
-                # Run garbage collection and short sleep to allow Python tasks to finalize
                 try
                     GC.gc()
                     sleep(0.05)
