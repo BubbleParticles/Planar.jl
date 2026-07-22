@@ -13,3 +13,9 @@ Watchers = "4a3f9c16-ec8e-48c6-a58d-938fc30e2b4b"
 include_file = "src/ExampleMargin.jl"
 margin = "Isolated"
 mode = "Paper"
+
+[sources]
+Planar = {path = "../../../Planar"}
+Watchers = {path = "../../../Watchers"}
+Metrics = {path = "../../../Metrics"}
+Opt = {path = "../../../Opt"}

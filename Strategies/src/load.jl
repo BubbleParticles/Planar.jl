@@ -252,7 +252,7 @@ function strategy!(src::Symbol, cfg::Config)
                             try
                                 Main.Revise.track($src, $path)
                             catch e
-                                @warn "strategy: Revise tracking failed for $src" exception=e
+                                @warn "strategy: Revise tracking failed" _module=$src exception=e
                             end
                         end
                         $src
@@ -260,7 +260,7 @@ function strategy!(src::Symbol, cfg::Config)
                         nothing
                     end
             catch e
-                @error "strategy loading: failed to load module $src" exception=(e, catch_backtrace())
+                @error "strategy loading: failed to load module" _module=$src exception=(e, catch_backtrace())
                 rethrow(e)
             finally
                 if $isproject

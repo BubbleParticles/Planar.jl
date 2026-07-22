@@ -308,7 +308,7 @@ This function iterates over the sources defined in the `cfg` object's TOML and s
 """
 _sources!(cfg, name) = begin
     for (k, v) in get(cfg.toml, "sources", ())
-        cfg.sources[Symbol(k)] = v
+        cfg.sources[Symbol(k)] = v isa AbstractDict ? string(something(get(v, "path", ""), "")) : string(v)
     end
     for k in setdiff(keys(cfg.toml), Set([name, "sources"]))
         cfg.attrs[k] = cfg.toml[k]
