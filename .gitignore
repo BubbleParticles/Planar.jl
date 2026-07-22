@@ -16,7 +16,9 @@
 !/user/scripts/
 Planar.so
 test/test.jlo
-Planar/test/
+Planar/test/*.jlo
+Planar/test/test.jlo
+Planar/test/stubs/trades_stub_*.jls
 PlanarInteractive/test/
 user/Load/test/
 reports/
