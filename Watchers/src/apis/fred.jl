@@ -226,27 +226,34 @@ end
 
 @doc "Get categories information."
 function categories(; category_id=nothing, parent_id=nothing, limit=nothing, offset=nothing, sort_order="asc")
-    query = Dict{String,Any}(
-        "sort_order" => sort_order
-    )
-    
     if !isnothing(category_id)
-        query["category_id"] = category_id
+        # Use /category endpoint for specific category
+        query = Dict{String,Any}(
+            "category_id" => category_id,
+            "sort_order" => sort_order
+        )
+        if !isnothing(limit)
+            query["limit"] = limit
+        end
+        if !isnothing(offset)
+            query["offset"] = offset
+        end
+        json = get(ApiPaths.category, query)
+    else
+        # Use /category/children for root categories or children of a parent
+        pid = isnothing(parent_id) ? 0 : parent_id
+        query = Dict{String,Any}(
+            "category_id" => pid,
+            "sort_order" => sort_order
+        )
+        if !isnothing(limit)
+            query["limit"] = limit
+        end
+        if !isnothing(offset)
+            query["offset"] = offset
+        end
+        json = get(ApiPaths.category_children, query)
     end
-    
-    if !isnothing(parent_id)
-        query["parent_id"] = parent_id
-    end
-    
-    if !isnothing(limit)
-        query["limit"] = limit
-    end
-    
-    if !isnothing(offset)
-        query["offset"] = offset
-    end
-    
-    json = get(ApiPaths.categories, query)
     return jsontodict(json)
 end
 
@@ -1374,7 +1381,7 @@ function tags_series(tag_names::Union{String,Vector{String}};
                     realtime_end=nothing, 
                     limit=nothing, 
                     offset=nothing, 
-                    sort_order="series_id",
+                    sort_order="asc",
                     order_by="series_id",
                     exclude_tag_names=nothing,
                     filter_variable=nothing,
