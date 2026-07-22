@@ -1508,7 +1508,7 @@ end
 
 # Cache for frequently accessed data
 const series_info_cache = safettl(String, Dict{String,Any}, Hour(24))
-const categories_cache = safettl(Nothing, Dict{String,Any}, Hour(24))
+const categories_cache = safettl(String, Dict{String,Any}, Hour(24))
 
 @doc "Get series info with caching."
 function cached_series_info(series_id::String)
