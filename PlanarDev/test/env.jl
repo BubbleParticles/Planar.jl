@@ -31,3 +31,12 @@ push!(LOAD_PATH, dirname(PROJECT_PATH))
 FAILFAST = true
 
 const _INCLUDED_TEST_FILES = Set{String}()
+
+function gateway_available()
+    try
+        Planar.Ccxt.ping()
+        return true
+    catch
+        return false
+    end
+end
