@@ -577,6 +577,8 @@ function test_series_vintagedates()
     @test "vintage_dates" in keys(data)
     return true
 
+end
+
 function test_series_tags()
     if !fred.has_apikey()
         @warn "TEST: FRED API key not set, skipping series_tags test"
@@ -586,7 +588,6 @@ function test_series_tags()
     @test data isa Dict{String,Any}
     @test "tags" in keys(data)
     return true
-end
 end
 
 function test_category()
