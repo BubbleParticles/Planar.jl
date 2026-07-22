@@ -45,6 +45,8 @@ end
 function splitkws(kws...; kwargs)
     (filtered=filterkws(kws...; kwargs), rest=filterkws(kws...; kwargs, pred=∉))
 end
+@doc "Returns `kwargs` without `kws...`"
+withoutkws(kws...; kwargs) = splitkws(kws...; kwargs).rest
 
 @doc "Returns `kwargs` without `kws...`"
 macro get(dict, k, expr)

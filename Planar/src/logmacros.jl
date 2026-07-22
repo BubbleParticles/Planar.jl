@@ -19,8 +19,10 @@ isliveorpaper(::SimStrategy) = false
 @doc "Log macro for logging debug messages only in `Paper` and `Live` mode."
 macro ldebug(args...)
     ex = quote
+        s = $(args[1])
+        msg = $(args[2])
         if $isliveorpaper(s)
-            $(@__MODULE__).@debugv $(args...)
+            $(@__MODULE__).@debugv 1 msg
         end
     end
     esc(ex)
@@ -29,8 +31,10 @@ end
 @doc "Log macro for logging info messages only in `Paper` and `Live` mode."
 macro linfo(args...)
     ex = quote
+        s = $(args[1])
+        msg = $(args[2])
         if $isliveorpaper(s)
-            $(@__MODULE__).@infov $(args...)
+            $(@__MODULE__).@infov 1 msg
         end
     end
     esc(ex)
@@ -39,8 +43,10 @@ end
 @doc "Log macro for logging warning messages only in `Paper` and `Live` mode."
 macro lwarn(args...)
     ex = quote
+        s = $(args[1])
+        msg = $(args[2])
         if $isliveorpaper(s)
-            $(@__MODULE__).@warnv $(args...)
+            $(@__MODULE__).@warnv 1 msg
         end
     end
     esc(ex)
@@ -49,8 +55,10 @@ end
 @doc "Log macro for logging error messages only in `Paper` and `Live` mode."
 macro lerror(args...)
     ex = quote
+        s = $(args[1])
+        msg = $(args[2])
         if $isliveorpaper(s)
-            $(@__MODULE__).@errorv $(args...)
+            $(@__MODULE__).@errorv 1 msg
         end
     end
     esc(ex)

@@ -260,7 +260,7 @@ function _parse(k, v)
             error("unsupported exec mode $mode")
         end
     elseif k == :margin
-        m = string(v)
+        m = lowercase(string(v))
         if m == "isolated"
             Isolated()
         elseif m == "cross"

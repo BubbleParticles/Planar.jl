@@ -102,11 +102,35 @@ If this fails, it then tries to access the `SC` property of the module.
 function _defined_marginmode(mod)
     if isdefined(mod, :S)
         S = invokelatest(getfield, mod, :S)
-        S isa Type{<:Strategy} && return marginmode(S)
+        # Handle both concrete types and UnionAll (parametric) type aliases
+        if S isa Type{<:Strategy}
+            return marginmode(S)
+        elseif S isa UnionAll
+            # For parametric type alias like S{M}, the margin mode is in the DataType body
+            body = S.body
+            while body isa UnionAll
+                body = body.body
+            end
+            if body isa DataType && body.name.wrapper == Strategy
+                mm_type = body.parameters[4]  # MarginMode is 4th parameter of Strategy
+                return mm_type()  # Return instance, not type
+            end
+        end
     end
     if isdefined(mod, :SC)
         SC = invokelatest(getfield, mod, :SC)
-        SC isa Type{<:Strategy} && return marginmode(SC)
+        if SC isa Type{<:Strategy}
+            return marginmode(SC)
+        elseif SC isa UnionAll
+            body = SC.body
+            while body isa UnionAll
+                body = body.body
+            end
+            if body isa DataType && body.name.wrapper == Strategy
+                mm_type = body.parameters[4]
+                return mm_type()
+            end
+        end
     end
     error("Strategy module $mod does not define S or SC margin mode")
 end

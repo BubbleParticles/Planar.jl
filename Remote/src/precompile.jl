@@ -81,4 +81,5 @@ using .Misc.Lang: @preset, @precomp, @ignore
     LiveMode.Watchers._closeall()
     LiveMode.ExchangeTypes._closeall()
     dostop()
+    Remote.TIMEOUT[] = 20
 end
