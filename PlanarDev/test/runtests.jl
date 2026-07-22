@@ -1,6 +1,5 @@
 # All the packages added in the test/Project.toml go here (before the NO_TMP switch)
 using Aqua
-using Sockets
 using Test
 include("env.jl")
 ENV["PLANAR_NO_OPTENV"] = "1"
@@ -12,15 +11,9 @@ const GATEWAY_TESTS = Set{Symbol}([
     :profits, :roi, :stoploss,
     :funding, :backtest, :paper, :warmup,
 ])
-
-const GATEWAY_AVAILABLE = let
-    try
-        Sockets.connect("127.0.0.1", 8999)
-        true
-    catch
-        @warn "CcxtGateway not available (port 8999). Gateway-requiring tests will be skipped."
-        false
-    end
+const GATEWAY_AVAILABLE = isfile("/tmp/ccxt_gateway.pid")
+if !GATEWAY_AVAILABLE
+    @warn "CcxtGateway not available (no pidfile at /tmp/ccxt_gateway.pid). Gateway-requiring tests will be skipped."
 end
 all_tests = [
     :aqua,
