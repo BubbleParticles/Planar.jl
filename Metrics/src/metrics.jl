@@ -150,26 +150,25 @@ The drawdown is the largest percentage drop in the cumulative product of 1 plus 
 
 """
 function maxdd(returns)
-    isempty(returns) && return (; dd=NaN, ath=NaN, cum_returns=returns)
+    isempty(returns) && return (; dd=0.0, ath=NaN, cum_returns=returns)
     length(returns) == 1 && return (; dd=0.0, ath=first(returns), cum_returns=returns)
     @deassert all(x >= -1.0 for x in returns)
-    cum_returns = log1p.(v == -1.0 ? -1.0 + eps() : v for v in returns)
-    cumsum!(cum_returns, cum_returns)
-    replace!(expm1, cum_returns)
+    cum_returns = cumprod(1.0 .+ returns)
     ath = first(cum_returns)
-    dd = typemax(ath)
+    dd = typemax(eltype(cum_returns))
     for n in eachindex(cum_returns)
         bal = cum_returns[n]
         if bal > ath
             ath = bal
-        else
+        elseif bal < ath
             this_dd = bal / ath
             if this_dd < dd
                 dd = this_dd
             end
         end
     end
-    (; dd=-dd, ath, cum_returns)
+    dd = dd == typemax(eltype(cum_returns)) ? 0.0 : -(1.0 - dd)
+    (; dd, ath, cum_returns)
 end
 
 @doc """ Computes the Calmar ratio for a given strategy.
@@ -298,6 +297,7 @@ function multi(
     end for m in metrics)...)
 end
 
+_zeronan(v) = isnan(v) ? 0.0 : v
 _sanitize(v) = isnan(v) ? 0.0 : (isinf(v) ? sign(v)*1e6 : v)
 _clamp_metric(v, max) = clamp(_sanitize(v / max), zero(v), one(v))
 @doc """ Normalize a metric. Based on the value of `max`. """

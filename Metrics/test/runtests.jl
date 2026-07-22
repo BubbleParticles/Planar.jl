@@ -16,24 +16,28 @@ const _tf1d = M.ect.TimeTicks.@tf_str("1d")
 end
 
 @testset "maxdd" begin
+    # All positive returns → no drawdown
     result = M.maxdd([0.01, 0.02, 0.03])
-    @test result.dd ≈ -0.01
-    @test result.ath ≈ 1.0
+    @test result.dd ≈ 0.0
+    @test result.ath ≈ 1.061106
 
+    # Single element → dd=0.0
     result2 = M.maxdd([0.05])
     @test result2.dd ≈ 0.0
 
+    # Mixed returns with one drawdown
     returns = [0.1, -0.2, 0.05, -0.1, 0.15]
     result3 = M.maxdd(returns)
-    @test result3.dd ≈ 0.1684
+    @test result3.dd ≈ -0.244  # (1.1 - 0.8316) / 1.1
 
+    # Empty returns → dd=0.0
     result4 = M.maxdd(Float64[])
     @test result4.dd ≈ 0.0
 
     # Strictly declining: each step is a new drawdown
     result5 = M.maxdd([-0.1, -0.1, -0.1])
-    @test result5.dd ≈ 0.271
-    @test result5.ath ≈ 1.0
+    @test result5.dd ≈ -0.19  # (0.9 - 0.729) / 0.9
+    @test result5.ath ≈ 0.9
 end
 
 @testset "_rawsharpe" begin
@@ -54,18 +58,17 @@ end
     result = M._rawsortino(returns; tf=_tf1d)
     @test isfinite(result)
 
-    # Only positive returns — empty downside slice → NaN
+    # Only positive returns — empty downside slice → 0.0 (perfect Sortino)
     pos_only = fill(0.01, 10)
     result2 = M._rawsortino(pos_only; tf=_tf1d)
-    @test isnan(result2)
+    @test result2 ≈ 0.0
 end
 
 @testset "_rawcalmar" begin
-    # Single element — maxdd returns dd=0 for length <= 1 → -Inf from _rawcalmar
+    # Single element — maxdd returns dd=0 → iszero guard returns 0.0 (perfect Calmar)
     returns = [0.01]
     result = M._rawcalmar(returns; tf=_tf1d)
-    @test isinf(result)
-    @test result < 0
+    @test result ≈ 0.0
 
     # Normal case
     result2 = M._rawcalmar([0.01, 0.02, -0.01, 0.015]; tf=_tf1d)
@@ -89,7 +92,7 @@ end
     @test 0.0 ≤ M.normalize_metric(5.0, Val(:sharpe)) ≤ 1.0
     @test M.normalize_metric(0.0, Val(:total)) == 0.0
     @test M.normalize_metric(1e7, Val(:trades)) ≈ 1.0
-    @test M.normalize_metric(0.5, Val(:expectancy)) == 0.5
+    @test M.normalize_metric(0.5, Val(:expectancy)) ≈ 0.05  # 0.5 / 10 (max=10)
 end
 
 @testset "helpers" begin

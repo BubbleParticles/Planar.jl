@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "454208f837e55e3e9e1bbfe004cdee5eb9deab4b"
+project_hash = "1113036c97897ba93bd3591564409175c0d02c1f"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "ec6be48a85c93d995563b84bff8a86bc98df45ce"
@@ -2606,8 +2606,8 @@ uuid = "856f2bd8-1eba-4b0a-8007-ebc267875bd4"
 version = "1.11.0"
 
 [[deps.Stubs]]
-deps = ["CSV", "Pkg", "SimMode"]
-path = "../Stubs"
+deps = ["CSV", "Pkg", "Random", "SimMode"]
+path = "/Planar.jl/Stubs"
 uuid = "19a5ee1f-efca-4178-b297-263c7ceb508d"
 version = "0.1.0"
 

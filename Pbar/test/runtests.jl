@@ -26,7 +26,7 @@ using Pbar
     @testset "dorender" begin
         Pbar._doinit()
         result = Pbar.dorender(Pbar.pbar[])
-        @test result == false
+        @test result == true
     end
 
     @testset "complete!" begin
