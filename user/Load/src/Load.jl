@@ -3,8 +3,8 @@ using PrecompileTools
 
 @compile_workload begin
     using Planar
-    using Stubs
-    using Scrapers
+    using PlanarCore.Stubs
+    using PlanarCore.Scrapers
     using Metrics
 end
 
