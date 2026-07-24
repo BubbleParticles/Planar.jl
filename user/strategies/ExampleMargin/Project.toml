@@ -5,9 +5,8 @@ authors = ["zbc"]
 
 [deps]
 Metrics = "3fcce980-bff0-41b4-8aec-9cac67d74284"
-Opt = "01937fd2-c099-442f-ae89-75fa208aad36"
+PlanarOptim = "01937fd2-c099-442f-ae89-75fa208aad36"
 Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
-Watchers = "4a3f9c16-ec8e-48c6-a58d-938fc30e2b4b"
 
 [strategy]
 include_file = "src/ExampleMargin.jl"
@@ -16,6 +15,5 @@ mode = "Paper"
 
 [sources]
 Planar = {path = "../../../Planar"}
-Watchers = {path = "../../../Watchers"}
 Metrics = {path = "../../../Metrics"}
-Opt = {path = "../../../Opt"}
+PlanarOptim = {path = "../../../Opt"}
