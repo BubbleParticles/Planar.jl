@@ -4,11 +4,14 @@ version = "0.1.0"
 authors = ["zbc"]
 
 [deps]
-Metrics = "3fcce980-bff0-41b4-8aec-9cac67d74284"
 PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
 Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
-PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 PlanarCore = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 
 [compat]
 PackageCompiler = "2.2.2"
+
+[sources]
+Planar = {path = "../../Planar"}
+PlanarCore = {path = "../../PlanarCore"}

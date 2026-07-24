@@ -14,3 +14,6 @@ OnlineTechnicalIndicators = "0.1.2"
 include_file = "src/TwoIntervals.jl"
 margin = "NoMargin"
 mode = "Sim"
+
+[sources]
+PlanarCore = {path = "../../../PlanarCore"}

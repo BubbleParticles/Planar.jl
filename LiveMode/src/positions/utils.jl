@@ -1,5 +1,5 @@
 using .Instances: MarginInstance, raw, cash, cash!
-using Watchers: buffer
+using PlanarCore.Watchers: buffer
 using .Misc.Lang: @lget!, Option, @caller
 using .Executors.OrderTypes: ByPos
 using .Executors: committed, marginmode, update_leverage!, liqprice!, update_maintenance!

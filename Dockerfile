@@ -56,7 +56,6 @@ ENV JULIA_PROJECT=/planar/Planar
 ENV CI=true
 RUN $JULIA_CMD -e "import Pkg; Pkg.instantiate()"
 RUN $JULIA_CMD -e "using Planar"
-RUN $JULIA_CMD -e "using Metrics"
 
 FROM planar-precomp AS planar-precomp-interactive
 ENV JULIA_PROJECT=/planar/PlanarInteractive

@@ -13,3 +13,6 @@ OnlineTechnicalIndicators = "0.1.0"
 [strategy]
 margin = "Isolated"
 mode = "Paper"
+
+[sources]
+PlanarCore = {path = "../../../PlanarCore"}

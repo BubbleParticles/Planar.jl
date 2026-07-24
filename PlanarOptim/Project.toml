@@ -5,7 +5,6 @@ authors = ["zbc"]
 
 [deps]
 BlackBoxOptim = "a134a8b2-14d6-55f6-9291-3336d3ab0209"
-Metrics = "3fcce980-bff0-41b4-8aec-9cac67d74284"
 Optimization = "7f7a1694-90dd-40f0-9382-eb1efda571ba"
 OptimizationBBO = "3e6eede4-6085-4f62-9a71-46d9bc1eb92b"
 OptimizationCMAEvolutionStrategy = "bd407f91-200f-4536-9381-e4ba712f53f8"
@@ -24,7 +23,7 @@ BayesianOptimization = "4c6ed407-134f-591c-93fa-e0f7c164a0ec"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 
 [sources]
-Metrics = {path = "../Metrics"}
+PlanarCore = {path = "../PlanarCore"}
 
 [extensions]
 BayesExt = "BayesianOptimization"
