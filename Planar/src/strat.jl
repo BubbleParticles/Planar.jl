@@ -1,8 +1,8 @@
 using Core: LineInfoNode
 # using .Misc: config_path
-using Engine.Strategies: strategy!, SortedDict
-using Engine.Misc: config_path, TOML, user_dir
-using Engine.Misc.Lang: @lget!
+using PlanarCore.Strategies: strategy!, SortedDict
+using PlanarCore.Misc: config_path, TOML, user_dir
+using PlanarCore.Misc.Lang: @lget!
 using MacroTools
 using MacroTools: postwalk
 using REPL.TerminalMenus

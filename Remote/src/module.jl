@@ -1,13 +1,13 @@
-using LiveMode
-using LiveMode: st
-using .st: Strategy
-using LiveMode.Misc
+using ..LiveMode
+using ..LiveMode: st
+using ..LiveMode.st: Strategy
+using ..LiveMode.Misc
 using Telegram, Telegram.API, Telegram.JSON3, Telegram.HTTP
 const lm = LiveMode
 const ect = lm.Executors
-using .Misc.Lang: @lget!, @debug_backtrace, Option, @ifdebug
-using .Misc: LittleDict, kill_task
-using .ect: cnum
+using PlanarCore.Misc.Lang: @lget!, @debug_backtrace, Option, @ifdebug
+using PlanarCore.Misc: LittleDict, kill_task
+using PlanarCore.Executors: cnum
 
 @doc """ The `TaskState` type is used to store the state of a task. """
 const TaskState = NamedTuple{(:task, :offset, :running),Tuple{Task,Ref{Int},Ref{Bool}}}

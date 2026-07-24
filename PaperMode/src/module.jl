@@ -1,25 +1,25 @@
-using Fetch: Fetch
-using SimMode
-using SimMode.Executors
+using PlanarCore.Fetch: Fetch
+using PlanarCore.SimMode
+using PlanarCore.SimMode.Executors
 using Base: with_logger
-using .Executors: orders, orderscount
-using .Executors.OrderTypes
-using .Executors.TimeTicks
-using .Executors.Instances
-using .Executors.Misc
-using .Executors.Instruments: compactnum as cnum
-using .Misc.ConcurrentCollections: ConcurrentDict
-using .Misc.TimeToLive: safettl
-using .Misc.LoggingExtras
-using .Misc.Lang: @lget!, @ifdebug, @deassert, Option, @writeerror, @debug_backtrace
-using .Executors.Strategies: MarginStrategy, Strategy, Strategies as st, call!
-using .Executors.Strategies
-using .Instances: MarginInstance
-using .Instances.Exchanges: CcxtTrade
-using .Instances.Data.DataStructures: CircularBuffer
-using SimMode: AnyMarketOrder, AnyLimitOrder
-import .Executors: call!
-import .Misc: start!, stop!, isrunning, sleep_pad, LOGGING_GROUPS, kill_task
+using PlanarCore.Executors: orders, orderscount
+using PlanarCore.Executors.OrderTypes
+using PlanarCore.Executors.TimeTicks
+using PlanarCore.Executors.Instances
+using PlanarCore.Executors.Misc
+using PlanarCore.Executors.Instruments: compactnum as cnum
+using PlanarCore.Misc.ConcurrentCollections: ConcurrentDict
+using PlanarCore.Misc.TimeToLive: safettl
+using PlanarCore.Misc.LoggingExtras
+using PlanarCore.Misc.Lang: @lget!, @ifdebug, @deassert, Option, @writeerror, @debug_backtrace
+using PlanarCore.Executors.Strategies: MarginStrategy, Strategy, Strategies as st, call!
+using PlanarCore.Executors.Strategies
+using PlanarCore.Instances: MarginInstance
+using PlanarCore.Instances.Exchanges: CcxtTrade
+using PlanarCore.Instances.Data.DataStructures: CircularBuffer
+using PlanarCore.SimMode: AnyMarketOrder, AnyLimitOrder
+import PlanarCore.Executors: call!
+import PlanarCore.Misc: start!, stop!, isrunning, sleep_pad, LOGGING_GROUPS, kill_task
 
 @doc "A constant `TradesCache` that is a dictionary mapping `AssetInstance` to a circular buffer of `CcxtTrade`."
 const TradesCache = Dict{AssetInstance,CircularBuffer{CcxtTrade}}()

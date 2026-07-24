@@ -1,8 +1,8 @@
-using Engine
-using Engine.Exchanges
-using Remote: Remote
-using Engine.Data
-using Engine.Misc
+using Planar.Engine
+using Planar.Engine.Exchanges
+using Planar.Remote: Remote
+using Planar.Engine.Data
+using Planar.Engine.Misc
 using .Misc: Lang
 using .Misc.TimeTicks: @tf_str
 using Pkg: Pkg as Pkg
@@ -25,7 +25,7 @@ macro environment!(pln=@__MODULE__)
         end
         using .pln.Exchanges
         using .pln.Exchanges: Exchanges as exs
-        using .pln.Engine:
+        using Planar.Engine:
             OrderTypes as ot,
             Instances as inst,
             Collections as co,
@@ -57,7 +57,7 @@ macro environment!(pln=@__MODULE__)
         using .Watchers: WatchersImpls as wi
 
         if !isdefined($(__module__), :Stubs)
-            using Stubs
+            using PlanarCore.Stubs
         end
         using .sml.Random
         using .inst
@@ -115,7 +115,7 @@ macro strategyenv!()
 
         using .pln.Engine.LiveMode: asset_tasks, strategy_tasks, @retry
 
-        $(Planar.Engine.Strategies).@interface
+        $(PlanarCore.Strategies).@interface
 
         const EXCID = ExchangeID(isdefined(@__MODULE__, :EXC) ? EXC : Symbol())
         if !isdefined(@__MODULE__, :MARGIN)
@@ -154,10 +154,11 @@ It prepares the environment for working with simulation modes and statistics.
 """
 macro optenv!()
     quote
-        using Planar.Engine.SimMode: SimMode as sm
-        using Opt
-        using Opt.Metrics: Metrics as mt
+        using PlanarCore.SimMode: SimMode as sm
+        using PlanarOptim
+        using Metrics
     end
+    esc(expr)
 end
 
 export ExchangeID, @tf_str, @strategyenv!, @contractsenv!, @optenv!, @environment!

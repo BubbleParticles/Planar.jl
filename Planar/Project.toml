@@ -5,12 +5,15 @@ data_store = ""
 version = "1.7.1"
 
 [deps]
+LRUCache = "8ac3fa9e-de4c-5943-b1dc-09c6b5f20637"
+MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+PlanarCore = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
 REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-Engine = "2ee4d486-7c03-4138-87ff-17a01ae58543"
-Remote = "711acd30-27b5-475d-809f-796ffbe15f78"
-MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
+Rocket = "df971d30-c9d6-4b37-b8ff-e965b2cb3a40"
+Telegram = "1da6f4ae-116c-4c38-8ee9-19974ff3601d"
 
 [extras]
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
@@ -22,8 +25,6 @@ Pkg = "1"
 julia = "1.12"
 REPL = "1"
 Random = "1"
-Engine = "0.1"
-Remote = "0.1"
 SnoopPrecompile = "1.0"
 MacroTools = "0.5"
 
