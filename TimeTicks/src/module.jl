@@ -1,8 +1,8 @@
 using Reexport
 @reexport using Dates
 using TimeFrames: TimeFrames, TimeFrame, apply, TimePeriodFrame
-using Lang: @lget!, Lang
-using Lang.DocStringExtensions
+using ..Lang: @lget!, Lang
+using ..Lang.DocStringExtensions
 using Serialization
 using Base: AbstractCmd
 import Base: convert, isless, ==

@@ -1,0 +1,281 @@
+{
+  "Lang": {
+    "module_name": "Lang",
+    "using_lines": [
+      "using Distributed: Distributed, @distributed",
+      "using Logging: Logging, with_logger, NullLogger",
+      "using PrecompileTools",
+      "using DocStringExtensions",
+      "using Preferences: Preferences",
+      "using Base: AbstractLock"
+    ]
+  },
+  "TimeTicks": {
+    "module_name": "TimeTicks",
+    "using_lines": [
+      "using Reexport",
+      "@reexport using DocStringExtensions",
+      "using JSON3",
+      "using TimeTicks",
+      "using TimeTicks: Lang",
+      "using FunctionalCollections: PersistentHashMap",
+      "using ConcurrentCollections: ConcurrentCollections",
+      "using OrderedCollections: OrderedCollections, OrderedDict, LittleDict",
+      "using LoggingExtras: LoggingExtras"
+    ]
+  },
+  "Pbar": {
+    "module_name": "Pbar",
+    "using_lines": [
+      "using Term.Progress",
+      "using TimeTicks",
+      "using TimeTicks: Lang"
+    ]
+  },
+  "Misc": {
+    "module_name": "Misc",
+    "using_lines": [
+      "using Distributed: Distributed, @distributed",
+      "using Logging: Logging, with_logger, NullLogger",
+      "using PrecompileTools",
+      "using DocStringExtensions",
+      "using Preferences: Preferences",
+      "using Base: AbstractLock"
+    ]
+  },
+  "Ccxt": {
+    "module_name": "Ccxt",
+    "using_lines": [
+      "using FileWatching",
+      "using Misc: DATA_PATH, Misc",
+      "using Misc.ConcurrentCollections: ConcurrentDict",
+      "using Misc.Lang: @lget!, Option",
+      "using Misc.DocStringExtensions",
+      "include(\"CcxtGateway/CcxtGateway.jl\")",
+      "using .CcxtGateway"
+    ]
+  },
+  "ExchangeTypes": {
+    "module_name": "ExchangeTypes",
+    "using_lines": [
+      "using Ccxt",
+      "using Ccxt.CcxtGateway",
+      "using Ccxt.Misc.Lang: Option, waitfunc",
+      "using Ccxt.Misc.DocStringExtensions",
+      "using FunctionalCollections",
+      "using JSON3",
+      "using OrderedCollections"
+    ]
+  },
+  "Data": {
+    "module_name": "Data",
+    "using_lines": [
+      "using Reexport",
+      "@reexport using Dates",
+      "using TimeFrames: TimeFrames, TimeFrame, apply, TimePeriodFrame",
+      "using Lang: @lget!, Lang",
+      "using Lang.DocStringExtensions",
+      "using Serialization",
+      "using Base: AbstractCmd",
+      "import Base: convert, isless, =="
+    ]
+  },
+  "Instruments": {
+    "module_name": "Instruments",
+    "using_lines": [
+      "using Lang: @lget!",
+      "import Base: ==, +, -, ÷, /, *, ≈"
+    ]
+  },
+  "Processing": {
+    "module_name": "Processing",
+    "using_lines": [
+      "using Data: Misc, Data",
+      "using .Misc: Lang, TimeTicks",
+      "using .Misc.DocStringExtensions",
+      "using .TimeTicks",
+      "using .Lang: @preset, @precomp"
+    ]
+  },
+  "Exchanges": {
+    "module_name": "Exchanges",
+    "using_lines": [
+      "include(\"utils.jl\")",
+      "include(\"constructors.jl\")",
+      "include(\"currency.jl\")",
+      "include(\"tickers.jl\")",
+      "include(\"data.jl\")",
+      "include(\"accounts.jl\")",
+      "include(\"adhoc/utils.jl\")",
+      "include(\"leverage.jl\")",
+      "include(\"trades.jl\")",
+      "include(\"adhoc/leverage.jl\")",
+      "include(\"adhoc/constructors.jl\")",
+      "include(\"adhoc/tickers.jl\")",
+      "using Reexport",
+      "@reexport using ExchangeTypes"
+    ]
+  },
+  "OrderTypes": {
+    "module_name": "OrderTypes",
+    "using_lines": [
+      "using ExchangeTypes",
+      "using .ExchangeTypes: Exchange",
+      "import OrderTypes: trades"
+    ]
+  },
+  "Instances": {
+    "module_name": "Instances",
+    "using_lines": [
+      "using Exchanges",
+      "import OrderTypes: trades"
+    ]
+  },
+  "Collections": {
+    "module_name": "Collections",
+    "using_lines": [
+      "using Instances",
+      "import .Misc: reset!"
+    ]
+  },
+  "Fetch": {
+    "module_name": "Fetch",
+    "using_lines": [
+      "using Collections: AssetCollection, Collections as coll, Instances, Data",
+      "using Pkg: Pkg"
+    ]
+  },
+  "Strategies": {
+    "module_name": "Strategies",
+    "using_lines": [
+      "using Collections: AssetCollection, Collections as coll, Instances, Data",
+      "using Pkg: Pkg"
+    ]
+  },
+  "Simulations": {
+    "module_name": "Simulations",
+    "using_lines": [
+      "using Data: Candle, Misc",
+      "using .Misc.DocStringExtensions",
+      "include(\"mootils.jl\")",
+      "using .Mootils: Mootils as mt",
+      "using .Misc: Lang, TimeTicks",
+      "using Random: Random",
+      "using Statistics: Statistics"
+    ]
+  },
+  "Executors": {
+    "module_name": "Executors",
+    "using_lines": [
+      "using Strategies: Strategies",
+      "using Strategies.OrderTypes",
+      "using Strategies: Instances, Instruments",
+      "using Strategies.Misc",
+      "using .Misc.TimeTicks",
+      "using .Misc: Lang",
+      "using .Misc.DocStringExtensions",
+      "import .Misc: call!, call!"
+    ]
+  },
+  "SimMode": {
+    "module_name": "SimMode",
+    "using_lines": [
+      "using Executors",
+      "using Executors: Misc",
+      "using Executors: Strategies, Strategies as st",
+      "using Simulations: Simulations as sml",
+      "using Simulations.Processing.Alignments",
+      "using .Strategies: Strategy, call!, WarmupPeriod, OrderTypes",
+      "using .OrderTypes",
+      "using .OrderTypes: LimitOrderType, MarketOrderType",
+      "using .Misc",
+      "using .Misc.TimeTicks",
+      "using .TimeTicks: TimeTicks as tt",
+      "using .Misc.Lang: Lang, @deassert, @ifdebug",
+      "using Base: negate",
+      "using Random",
+      "using Executors.Checks: cost, withfees",
+      "using Executors.Instances",
+      "using Executors.Instances: getexchange!",
+      "using Executors.Instruments",
+      "using Executors.Instruments: @importcash!",
+      "using Executors: attr",
+      "import Executors: call!",
+      "@importcash!"
+    ]
+  },
+  "Stubs": {
+    "module_name": "Stubs",
+    "using_lines": [
+      "using SimMode",
+      "using Pkg: Pkg"
+    ]
+  },
+  "Watchers": {
+    "module_name": "Watchers",
+    "using_lines": [
+      "using Fetch: Fetch",
+      "using Fetch.Data",
+      "using Fetch.Misc",
+      "using Ccxt",
+      "using .Data: rangeafter",
+      "using .Data.DataStructures: CircularBuffer",
+      "using .Data.DataFrames: DataFrame",
+      "using .Misc",
+      "using .Misc.TimeTicks",
+      "using .Misc.Lang: Option, safewait, safenotify, @lget!, Lang",
+      "using .Misc: after, truncate_file",
+      "using Base.Threads: @spawn",
+      "using JSON3",
+      "import Rocket",
+      "using .Misc.TimeTicks: now"
+    ]
+  },
+  "Scrapers": {
+    "module_name": "Scrapers",
+    "using_lines": [
+      "using Processing: TradesOHLCV as tra, cleanup_ohlcv_data, trail!",
+      "using Processing: Processing, Pbar, Data",
+      "using CSV",
+      "using Instruments",
+      "using ZipFile: ZipFile as zip",
+      "using HTTP",
+      "using .Data: zi, zinstance",
+      "using .Data.Misc",
+      "using CodecZlib: CodecZlib as zlib",
+      "using .Misc.TimeTicks",
+      "using .Misc.Lang",
+      "using .Misc.Lang: @ifdebug, @acquire, splitkws",
+      "using .Misc: LittleDict",
+      "using .Misc.DocStringExtensions",
+      "using .Data.Cache: Cache as ca",
+      "using .Data.DFUtils: lastdate, firstdate",
+      "using .Data.DataFrames",
+      "using .Pbar"
+    ]
+  },
+  "FeatureSelection": {
+    "module_name": "FeatureSelection",
+    "using_lines": [
+      "import Statistics",
+      "import Processing",
+      "import LinearAlgebra",
+      "import StatsBase",
+      "import Processing.Misc.TimeTicks",
+      "using Strategies: Strategies as st",
+      "using .st.Misc: DFT, Option, @lget!"
+    ]
+  },
+  "Plotting": {
+    "module_name": "Plotting",
+    "using_lines": [
+      "using Makie",
+      "using Makie: parent_scene, shift_project, update_tooltip_alignment!, Figure",
+      "using Metrics",
+      "using Metrics: ect",
+      "using .ect.Misc",
+      "using .Misc.TimeTicks",
+      "using .Misc.Lang"
+    ]
+  }
+}

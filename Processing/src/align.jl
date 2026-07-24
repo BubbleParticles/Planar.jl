@@ -7,10 +7,10 @@ using ..Misc
 using ..Misc.TimeTicks
 using ..Misc.Lang
 using ..Misc.DocStringExtensions
-using Data.DataStructures
-using Data.DataFrames
-using Data: PairData, @with
-using Data.DFUtils: copysubs!
+using ..Data.DataStructures
+using ..Data.DataFrames
+using ..Data: PairData, @with
+using ..Data.DFUtils: copysubs!
 
 timestamp_by_timeframe(df, tf, tail) = apply(tf, df[tail ? end : begin, :timestamp])
 

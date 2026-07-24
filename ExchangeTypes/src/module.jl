@@ -1,7 +1,7 @@
-using Ccxt
-using Ccxt.CcxtGateway
-using Ccxt.Misc.Lang: Option, waitfunc
-using Ccxt.Misc.DocStringExtensions
+using ..Ccxt
+using ..Ccxt.CcxtGateway
+using ..Ccxt.Misc.Lang: Option, waitfunc
+using ..Ccxt.Misc.DocStringExtensions
 using FunctionalCollections
 using JSON3
 using OrderedCollections

@@ -1,4 +1,4 @@
-using Data: Misc, Data
+using ..Data: Misc, Data
 using .Misc: Lang, TimeTicks
 using .Misc.DocStringExtensions
 using .TimeTicks

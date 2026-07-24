@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "a4f55928df5e9f41b483ee0a53c8480ee0bf1dc3"
+project_hash = "8e198b3437d3bc123d2ecd5a521cac8e513bb986"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "ec6be48a85c93d995563b84bff8a86bc98df45ce"
@@ -258,7 +258,7 @@ uuid = "5520caf5-2dd7-5c5d-bfcb-a00e56ac49f7"
 version = "3.0.0"
 
 [[deps.Ccxt]]
-deps = ["FileWatching", "HTTP", "JSON3", "MbedTLS", "Misc", "OrderedCollections", "PrecompileTools", "WebSockets"]
+deps = ["FileWatching", "HTTP", "JSON3", "MbedTLS", "Misc", "OrderedCollections", "PrecompileTools", "PythonCall", "WebSockets"]
 path = "../Ccxt"
 uuid = "a58c4053-12c5-4e22-b66a-82c3bd74bf8a"
 version = "0.2.0"
@@ -301,7 +301,7 @@ version = "1.0.0"
 
 [[deps.Cli]]
 deps = ["Comonicon", "Data", "Exchanges", "Fetch", "Misc", "Processing"]
-path = "/Planar.jl/Cli"
+path = "../Cli"
 uuid = "dd3f7155-34c1-473d-a171-ef1e8dc6f388"
 version = "0.1.0"
 
@@ -815,7 +815,7 @@ version = "0.3.2"
 
 [[deps.FeatureSelection]]
 deps = ["Clustering", "Distances", "Distributions", "GLM", "LinearAlgebra", "OnlineStats", "OnlineTechnicalIndicators", "Processing", "Statistics", "StatsBase", "Strategies"]
-path = "/Planar.jl/FeatureSelection"
+path = "../FeatureSelection"
 uuid = "5a3114d4-1c97-448f-b718-4e393fdbdf17"
 version = "0.1.0"
 
@@ -1503,7 +1503,7 @@ weakdeps = ["ChainRulesCore", "SparseArrays", "Statistics"]
     LinearMapsStatisticsExt = "Statistics"
 
 [[deps.LiveMode]]
-deps = ["LRUCache", "PaperMode", "Rocket", "Watchers"]
+deps = ["Exchanges", "LRUCache", "PaperMode", "Rocket", "Watchers"]
 path = "../LiveMode"
 uuid = "c1773ea8-8a7c-4b58-b57f-053be4f98df9"
 version = "0.1.0"
@@ -1722,7 +1722,7 @@ version = "2.14.1"
 
 [[deps.Metrics]]
 deps = ["Executors", "Simulations", "Stubs"]
-path = "/Planar.jl/Metrics"
+path = "../Metrics"
 uuid = "3fcce980-bff0-41b4-8aec-9cac67d74284"
 version = "0.1.0"
 
@@ -2136,7 +2136,7 @@ version = "1.4.4"
 
 [[deps.Plotting]]
 deps = ["Makie", "Metrics", "Processing", "Random"]
-path = "/Planar.jl/Plotting"
+path = "../Plotting"
 uuid = "8ada5bfb-e60b-44be-8979-616e14670061"
 version = "0.1.0"
 
@@ -2255,7 +2255,7 @@ version = "1.4.0"
 
 [[deps.Python]]
 deps = ["Dates", "DocStringExtensions", "Lang", "PrecompileTools", "PythonCall", "Reexport"]
-path = "/Planar.jl/Python"
+path = "../Python"
 uuid = "e8cdc95d-7257-4c38-ab0e-cc8a28c19776"
 version = "0.1.0"
 
@@ -2796,7 +2796,7 @@ version = "0.1.0"
 
 [[deps.StrategyStats]]
 deps = ["Ccxt", "Data", "DataFrames", "ExchangeTypes", "Lang", "Logging", "Misc", "OnlineTechnicalIndicators", "Statistics", "TimeTicks"]
-path = "/Planar.jl/StrategyStats"
+path = "../StrategyStats"
 uuid = "d4fe19c2-883d-48d3-92d7-80b36677371b"
 version = "0.1.0"
 
@@ -2811,7 +2811,7 @@ version = "0.1.0"
 
 [[deps.StrategyTools]]
 deps = ["OnlineTechnicalIndicators", "Planar", "Statistics"]
-path = "/Planar.jl/StrategyTools"
+path = "../StrategyTools"
 uuid = "bc793e09-ff97-408c-9766-388aa928ad5c"
 version = "0.1.0"
 

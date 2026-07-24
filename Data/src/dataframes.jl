@@ -4,8 +4,8 @@ using DataFrames
 using DataFrames: index
 using ..TimeTicks
 import ..TimeTicks: TimeTicks, timeframe, timeframe!
-import Misc: after, before
-using Misc.DocStringExtensions
+import ..Misc: after, before
+using ..Misc.DocStringExtensions
 using ..Lang
 import Base: getindex
 import ..Data: contiguous_ts

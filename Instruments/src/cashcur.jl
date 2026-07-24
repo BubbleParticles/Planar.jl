@@ -1,7 +1,7 @@
-using Lang: @deassert, @ifdebug, @debug_backtrace
-using Misc: ATOL
+using ..Lang: @deassert, @ifdebug, @debug_backtrace
+using ..Misc: ATOL
 using Printf
-using Lang.DocStringExtensions
+using ..Lang.DocStringExtensions
 
 @doc """Abstract base type for representing a variable quantity of some currency.
 

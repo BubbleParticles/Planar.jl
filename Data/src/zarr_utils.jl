@@ -5,7 +5,7 @@ const ZARR_FORMAT = Zarr.ZarrFormat(2)
 is_zarray(store, path) = Zarr.is_zarray(ZARR_FORMAT, store, path)
 is_zgroup(store, path) = Zarr.is_zgroup(ZARR_FORMAT, store, path)
 using .TimeTicks
-using Misc: DATA_PATH, isdirempty
+using ..Misc: DATA_PATH, isdirempty
 using .Lang: @lget!, Option
 using .Lang.Preferences
 import Base: delete!, isempty, empty!
