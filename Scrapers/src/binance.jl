@@ -19,7 +19,7 @@ using ..Scrapers:
 using ..Data: OHLCV_COLUMNS, Cache as ca, zi, save_ohlcv, load_ohlcv
 using ..Data.DataFrames
 using ..Pbar
-using Instruments
+using ..Instruments
 using ..Lang:
     @ifdebug, @lget!, filterkws, splitkws, withoutkws, @argstovec, @acquire, @except
 using ..TimeTicks

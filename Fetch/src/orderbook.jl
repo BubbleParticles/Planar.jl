@@ -1,6 +1,6 @@
-using Exchanges: ExchangeID
-using Exchanges.Ccxt: _multifunc, default_client, call_exchange
-using Exchanges.Misc: LittleDict
+using ..Exchanges: ExchangeID
+using ..Exchanges.Ccxt: _multifunc, default_client, call_exchange
+using ..Exchanges.Misc: LittleDict
 @enum OrderBookLevel L1 L2 L3
 Base.convert(::Type{OrderBookLevel}, n::Integer) = OrderBookLevel(n - 1)
 

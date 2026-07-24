@@ -1,16 +1,16 @@
 using Base: negate
-using Executors: @amount!, @price!, NewTrade, trade!
-using Executors.Checks: cost, withfees, checkprice
-using Executors.Instances
-using Executors.Instruments
-using Executors.Instances: NoMarginInstance, Instances as inst, price
-using .Strategies: lowat, highat, closeat, openat, volumeat
-using .Strategies: IsolatedStrategy, NoMarginStrategy
-using .OrderTypes: BuyOrder, SellOrder, ShortBuyOrder, ShortSellOrder
-using .OrderTypes: OrderTypes as ot, PositionSide
-import .Strategies: call!
-import Executors: maketrade
-using .Misc: DFT
+using ..Executors: @amount!, @price!, NewTrade, trade!
+using ..Executors.Checks: cost, withfees, checkprice
+using ..Executors.Instances
+using ..Executors.Instruments
+using ..Executors.Instances: NoMarginInstance, Instances as inst, price
+using ..Strategies: lowat, highat, closeat, openat, volumeat
+using ..Strategies: IsolatedStrategy, NoMarginStrategy
+using ..OrderTypes: BuyOrder, SellOrder, ShortBuyOrder, ShortSellOrder
+using ..OrderTypes: OrderTypes as ot, PositionSide
+import ..Strategies: call!
+import ..Executors: maketrade
+using ..Misc: DFT
 
 include("slippage.jl")
 

@@ -1,4 +1,4 @@
-using Exchanges: market_limits, market_precision, market_fees
+using ..Exchanges: market_limits, market_precision, market_fees
 
 @doc """ Creates an AssetInstance.
 

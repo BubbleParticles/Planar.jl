@@ -1,5 +1,5 @@
-using .TimeTicks
-using Data: AbstractDataFrame
+using ..TimeTicks
+using ..Data: AbstractDataFrame
 @doc "A constant `DF` representing a union of `DateTime` and `Float64` types."
 const DF = Union{DateTime,Float64}
 @doc """ A named tuple `PricePair` representing the previous and current values of a data field.

@@ -1,7 +1,7 @@
-using ExchangeTypes
-import ExchangeTypes: exchangeid
-using Instruments
-using Instruments: Misc
+using ..ExchangeTypes
+import ..ExchangeTypes: exchangeid
+using ..Instruments
+using ..Instruments: Misc
 import Base: ==
 
 using .Misc: config, PositionSide, Long, Short, TimeTicks, Lang

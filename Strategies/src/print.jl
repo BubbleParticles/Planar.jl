@@ -1,6 +1,6 @@
-using .Data: closelast
-using .Instances: pnl, MarginInstance, NoMarginInstance, value, ohlcv, trades
-using .OrderTypes:
+using ..Data: closelast
+using ..Instances: pnl, MarginInstance, NoMarginInstance, value, ohlcv, trades
+using ..OrderTypes:
     LiquidationTrade, LongLiquidationTrade, ShortLiquidationTrade, LongTrade, ShortTrade
 
 @doc """ Updates the minimum and maximum holdings based on the provided value.

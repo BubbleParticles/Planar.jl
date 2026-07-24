@@ -1,12 +1,12 @@
 
-using Strategies: Strategies
-using Strategies.OrderTypes
-using Strategies: Instances, Instruments
-using Strategies.Misc
-using .Misc.TimeTicks
-using .Misc: Lang
-using .Misc.DocStringExtensions
-import .Misc: call!, call!
+using ..Strategies: Strategies
+using ..Strategies.OrderTypes
+using ..Strategies: Instances, Instruments
+using ..Strategies.Misc
+using ..Misc.TimeTicks
+using ..Misc: Lang
+using ..Misc.DocStringExtensions
+import ..Misc: call!, call!
 
 include("context.jl")
 include("checks.jl")

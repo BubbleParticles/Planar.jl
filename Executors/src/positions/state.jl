@@ -1,8 +1,8 @@
-using .OrderTypes: PositionTrade, IncreaseTrade, ReduceTrade, liqside, LiquidationOverride
-using .Instances: leverage, _roundlev, _roundpos, Position, margin, maintenance, lastprice
-import .Instances: leverage!, maintenance!, notional!, entryprice!, tier, liqprice
-using .Instances: MarginInstance, liqprice!
-using Strategies: lowat, highat
+using ..OrderTypes: PositionTrade, IncreaseTrade, ReduceTrade, liqside, LiquidationOverride
+using ..Instances: leverage, _roundlev, _roundpos, Position, margin, maintenance, lastprice
+import ..Instances: leverage!, maintenance!, notional!, entryprice!, tier, liqprice
+using ..Instances: MarginInstance, liqprice!
+using ..Strategies: lowat, highat
 
 @doc """ Update the entry price from notional, amount diff and cash.
 

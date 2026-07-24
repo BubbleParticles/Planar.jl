@@ -1,5 +1,5 @@
-import Data: load_ohlcv, save_ohlcv
-using Data: zi, PairData, ZarrInstance
+import ..Data: load_ohlcv, save_ohlcv
+using ..Data: zi, PairData, ZarrInstance
 using .Misc: config, Iterable
 
 @doc "Loads all pairs for a given exchange and timeframe, matching the global `config` and `zi` (Zarr Instance).

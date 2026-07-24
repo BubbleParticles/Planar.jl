@@ -7,14 +7,14 @@ using ..Data.DFUtils
 using ..Data.DataFrames
 
 using ..Strategies
-using .Strategies.Instances.Instruments
-using .Strategies: Strategies as st
-using .Strategies.Exchanges.ExchangeTypes
-using .Strategies: Instances as inst
+using ..Strategies.Instances.Instruments
+using ..Strategies: Strategies as st
+using ..Strategies.Exchanges.ExchangeTypes
+using ..Strategies: Instances as inst
 using ..SimMode.Executors
-using .Executors: Executors, Executors as ect
-using .Strategies.OrderTypes
-using .OrderTypes: BySide, ByPos
+using ..Executors: Executors, Executors as ect
+using ..Strategies.OrderTypes
+using ..OrderTypes: BySide, ByPos
 
 using ..Lang
 using Random

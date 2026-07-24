@@ -1,15 +1,15 @@
 using .Checks: sanitize_price, sanitize_amount
 using .Checks: iscost, ismonotonic, SanitizeOff, cost, withfees
-using .Strategies: PriceTime, universe
-using .Instances:
+using ..Strategies: PriceTime, universe
+using ..Instances:
     MarginInstance, NoMarginInstance, AssetInstance, @rprice, @ramount, amount_with_fees
-using .OrderTypes:
+using ..OrderTypes:
     IncreaseOrder, ShortBuyOrder, LimitOrderType, MarketOrderType, PostOnlyOrderType
-using .OrderTypes: ExchangeID, ByPos, ordertype
-using .Instruments: AbstractAsset
+using ..OrderTypes: ExchangeID, ByPos, ordertype
+using ..Instruments: AbstractAsset
 using Base: negate, beginsym
-using .Lang: @lget!, @deassert, @caller
-using .Misc: Long, Short, PositionSide
+using ..Lang: @lget!, @deassert, @caller
+using ..Misc: Long, Short, PositionSide
 
 @doc """ Type alias for any limit order """
 const AnyLimitOrder{S<:OrderSide,P<:PositionSide} = Order{

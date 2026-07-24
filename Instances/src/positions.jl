@@ -1,11 +1,11 @@
 using .Misc: MarginMode, WithMargin, Long, Short, PositionSide, ExecAction, HedgedMode
 import .Misc: opposite, reset!, Misc
 using .Instruments.Derivatives: Derivative
-using Exchanges: LeverageTier, leverage_tiers, tier
-import Exchanges: maxleverage, tier
+using ..Exchanges: LeverageTier, leverage_tiers, tier
+import ..Exchanges: maxleverage, tier
 using .Lang: @ifdebug
 using Base: negate
-import OrderTypes: isshort, islong, commit!, PositionUpdated, LeverageUpdated, MarginUpdated
+import ..OrderTypes: isshort, islong, commit!, PositionUpdated, LeverageUpdated, MarginUpdated
 import .Misc: marginmode
 import .Instruments: cash!
 

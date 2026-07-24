@@ -1,6 +1,6 @@
 using .Misc: MM, toprecision, DFT
 using .Instruments: AbstractCash, atleast!, Cash
-import Instruments: value, addzero!
+import ..Instruments: value, addzero!
 Instruments.@importcash!
 import Base: ==, +, -, ÷, /, *
 import .Misc: gtxzero, ltxzero, approxzero, ZERO

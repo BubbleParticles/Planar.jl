@@ -1,6 +1,6 @@
 module OnlineCrossCorr
 
-using Strategies: Strategies as st, DFT, DateTime, @lget!, Option
+using ..Strategies: Strategies as st, DFT, DateTime, @lget!, Option
 using ..FeatureSelection: center_data, ratio!, lagsbytf, tickers, raw, metadata, DataFrame, roc_to_ratio
 using .st.Data.DataFrames: DataFrame, select!, metadata!
 using OnlineTechnicalIndicators: ROC, OnlineTechnicalIndicators as oti

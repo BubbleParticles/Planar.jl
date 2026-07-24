@@ -2,18 +2,18 @@ baremodule LogAverageOHLCV end
 
 # Core implementation follows at file scope (no module wrapping)
 
-using Fetch.Data.DataFrames # Needed for DataFrame
+using ..Fetch.Data.DataFrames # Needed for DataFrame
 using Statistics: mean # Only import mean, as used in the code
 
 # Core components from the parent Watchers module.
 # _init!, _start!, etc. are being defined for Watcher{CcxtAverageOHLCVVal}, so not imported here.
 using ..Watchers: Watcher, watcher, start!, stop!, load!, _val, fetch!, default_init
 
-using Fetch.Exchanges: Exchange
-using Fetch.Data: OHLCV_COLUMNS, empty_ohlcv
-using Fetch.Misc: TimeFrame, LittleDict
-using Fetch.Dates: DateTime # Needed for DateTime (now is unused — was shadowing TimeTicks.now UTC with Dates.now local)
-using Fetch.Data.DFUtils # Added for DataFrames.after
+using ..Fetch.Exchanges: Exchange
+using ..Fetch.Data: OHLCV_COLUMNS, empty_ohlcv
+using ..Fetch.Misc: TimeFrame, LittleDict
+using ..Fetch.Dates: DateTime # Needed for DateTime (now is unused — was shadowing TimeTicks.now UTC with Dates.now local)
+using ..Fetch.Data.DFUtils # Added for DataFrames.after
 
 const CcxtAverageOHLCVVal = Val{:ccxt_average_ohlcv}
 

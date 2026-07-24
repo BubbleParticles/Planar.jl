@@ -4,17 +4,17 @@ using Serialization: AbstractSerializer, serialize_type
 
 using Reexport
 using Pbar.Term: RGBColor, tprint
-using ExchangeTypes
-using Data: Data, DataFrame, eventtrace
+using ..ExchangeTypes
+using ..Data: Data, DataFrame, eventtrace
 @reexport using ExchangeTypes
-using ExchangeTypes: OptionsDict, CcxtExchange
-using ExchangeTypes.Ccxt: Ccxt, choosefunc
+using ..ExchangeTypes: OptionsDict, CcxtExchange
+using ..ExchangeTypes.Ccxt: Ccxt, choosefunc
 import .Ccxt: issupported
-import ExchangeTypes.CcxtGateway: default_client, call_exchange
+import ..ExchangeTypes.CcxtGateway: default_client, call_exchange
 const HTTP = ExchangeTypes.CcxtGateway.HTTP
 using JSON
-using Instruments
-using Instruments: Misc
+using ..Instruments
+using ..Instruments: Misc
 using .Misc:
     DATA_PATH, dt, futures_exchange, exchange_keys, Misc, NoMargin, LittleDict, isoffline
 using .Misc.OrderedCollections: OrderedSet

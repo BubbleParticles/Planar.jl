@@ -1,24 +1,24 @@
 using Collections: AssetCollection, Collections as coll, Instances, Data
 
-using .Instances: AssetInstance, Position, MarginMode, PositionSide, ishedged, Instances
-using .Instances: CurrencyCash, CCash
-using .Instances.Exchanges
-using .Instances: OrderTypes
-using .OrderTypes: Order, OrderType, AnyBuyOrder, AnySellOrder, Buy, Sell, OrderSide
-using .OrderTypes: OrderError, StrategyEvent, Instruments
-using .Instruments: AbstractAsset, Cash, cash!, Derivatives.Derivative
+using ..Instances: AssetInstance, Position, MarginMode, PositionSide, ishedged, Instances
+using ..Instances: CurrencyCash, CCash
+using ..Instances.Exchanges
+using ..Instances: OrderTypes
+using ..OrderTypes: Order, OrderType, AnyBuyOrder, AnySellOrder, Buy, Sell, OrderSide
+using ..OrderTypes: OrderError, StrategyEvent, Instruments
+using ..Instruments: AbstractAsset, Cash, cash!, Derivatives.Derivative
 
-import .Data: candleat, openat, highat, lowat, closeat, volumeat, closelast
-using .Data: Misc, EventTrace
-using .Data.DataFrames: nrow
-using .Data.DataStructures: SortedDict, Ordering
-import .Data.DataStructures: lt
-using .Data: closelast
-using .Misc
-using .Misc: DFT, IsolatedMargin, TimeTicks, Lang
-import .Misc: reset!, Long, Short, attrs, call!, call!
-using .TimeTicks
-using .Lang: @lget!
+import ..Data: candleat, openat, highat, lowat, closeat, volumeat, closelast
+using ..Data: Misc, EventTrace
+using ..Data.DataFrames: nrow
+using ..Data.DataStructures: SortedDict, Ordering
+import ..Data.DataStructures: lt
+using ..Data: closelast
+using ..Misc
+using ..Misc: DFT, IsolatedMargin, TimeTicks, Lang
+import ..Misc: reset!, Long, Short, attrs, call!, call!
+using ..TimeTicks
+using ..Lang: @lget!
 using Pkg: Pkg
 
 @doc "The base type for all strategies."

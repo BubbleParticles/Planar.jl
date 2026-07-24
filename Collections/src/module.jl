@@ -1,26 +1,26 @@
-using Instances
-using Instances.Exchanges.ExchangeTypes
-using Instances.Exchanges: getexchange!
-using Instances: OrderTypes, Data, Instruments
-using Instances: NoMarginInstance, MarginInstance
+using ..Instances
+using ..Instances.Exchanges.ExchangeTypes
+using ..Instances.Exchanges: getexchange!
+using ..Instances: OrderTypes, Data, Instruments
+using ..Instances: NoMarginInstance, MarginInstance
 
-using .Data.DataFrames
-using .Data.DataFramesMeta
-using .Data: load, zi, empty_ohlcv
-using .Data.DFUtils
-using .Data.DataStructures: SortedDict
+using ..Data.DataFrames
+using ..Data.DataFramesMeta
+using ..Data: load, zi, empty_ohlcv
+using ..Data.DFUtils
+using ..Data.DataStructures: SortedDict
 
-using .Instruments: fiatnames, AbstractAsset, Asset, AbstractCash, compactnum as cnum
-using .Instruments.Derivatives
-using .Instruments: Misc
-using .Misc: TimeTicks, Lang
-using .TimeTicks
-using .Misc: Iterable, swapkeys, MarginMode
-using .Lang: @lget!, MatchString, Option
+using ..Instruments: fiatnames, AbstractAsset, Asset, AbstractCash, compactnum as cnum
+using ..Instruments.Derivatives
+using ..Instruments: Misc
+using ..Misc: TimeTicks, Lang
+using ..TimeTicks
+using ..Misc: Iterable, swapkeys, MarginMode
+using ..Lang: @lget!, MatchString, Option
 using Base.Enums: namemap
-using .Misc: OrderedDict, OrderedCollections
-using .Misc.DocStringExtensions
-import .Misc: reset!
+using ..Misc: OrderedDict, OrderedCollections
+using ..Misc.DocStringExtensions
+import ..Misc: reset!
 
 @doc """A type representing a collection of asset instances.
 
@@ -94,7 +94,7 @@ if !isdefined(@__MODULE__, :AssetCollectionRow)
     }
 end
 
-using .Instruments: isbase, isquote
+using ..Instruments: isbase, isquote
 function Base.getindex(ac::AssetCollection, i::ExchangeID, col=Colon())
     @view ac.data[ac.data.exchange .== i, col]
 end

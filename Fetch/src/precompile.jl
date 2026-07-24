@@ -1,4 +1,4 @@
-using .Misc.Lang: PrecompileTools, @preset, @precomp
+using ..Misc.Lang: PrecompileTools, @preset, @precomp
 
 @preset let
     pair = "BTC/USDT"

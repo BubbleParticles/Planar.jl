@@ -1,6 +1,6 @@
-using .Instances: ispos
-using .OrderTypes: ByPos
-using .Lang: @caller
+using ..Instances: ispos
+using ..OrderTypes: ByPos
+using ..Lang: @caller
 
 @doc """ Returns a generator for orders matching a given position side and order side
 
