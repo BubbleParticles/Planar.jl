@@ -1,8 +1,8 @@
 using Reexport
 @reexport using DocStringExtensions
 using JSON3
-using TimeTicks
-using TimeTicks: Lang
+using ..TimeTicks
+using ..TimeTicks: Lang
 using FunctionalCollections: PersistentHashMap
 using ConcurrentCollections: ConcurrentCollections
 using OrderedCollections: OrderedCollections, OrderedDict, LittleDict

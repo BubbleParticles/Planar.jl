@@ -36,11 +36,19 @@ StrategyStats = "d4fe19c2-883d-48d3-92d7-80b36677371b"
 StrategyTools = "bc793e09-ff97-408c-9766-388aa928ad5c"
 Stubs = "19a5ee1f-efca-4178-b297-263c7ceb508d"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
+TimeFrames = "51948d2b-02eb-5b28-9840-c902cc6821c9"
 Zarr = "0a941bbe-ad1d-11e8-39d9-ab76183a1d99"
 
 [sources]
+Cli = {path = "../Cli"}
+FeatureSelection = {path = "../FeatureSelection"}
+Metrics = {path = "../Metrics"}
 Planar = {path = "../Planar"}
+Plotting = {path = "../Plotting"}
+Python = {path = "../Python"}
 Scrapers = {path = "../Scrapers"}
+StrategyStats = {path = "../StrategyStats"}
+StrategyTools = {path = "../StrategyTools"}
 Stubs = {path = "../Stubs"}
 
 [compat]
@@ -63,6 +71,7 @@ OptimizationOptimJL = "0.4.16"
 PythonCall = "0.9.35"
 Revise = "3.16.1"
 Symbolics = "6.58.0"
+TimeFrames = "0.2.0"
 Zarr = "0.10.1"
 
 [extras]

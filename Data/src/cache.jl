@@ -14,8 +14,8 @@ module Cache
 using ..Data: tobytes, todata
 using CodecZlib
 using ..TimeTicks
-using Misc: local_dir
-using Misc.DocStringExtensions
+using ..Misc: local_dir
+using ..Misc.DocStringExtensions
 const CACHE_PATH = Ref(local_dir("cache"))
 
 function __init__()

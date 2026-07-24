@@ -1,4 +1,7 @@
 using PaperMode.OrderTypes
+using Exchanges: islist, isdict
+using Watchers: Watcher
+using Watchers.WatchersImpls: _dopush!
 using PaperMode: SimMode, strategy_logger!
 using .SimMode: _simmode_defaults!
 using .Lang: @lget!, Option, @get, MatchString
@@ -7,18 +10,13 @@ using .Misc:
     LittleDict,
     istaskrunning,
     @istaskrunning,
-    init_task,
-    start_task,
-    stop_task,
+    sleep_pad,
+    LOGGING_GROUPS,
+    @loggroup,
     kill_task,
-    TaskFlag,
-    waitforcond,
-    @start_task,
     task_sem
 using .SimMode.Instances.Data: nrow
 using .st: asset_bysym, symsdict
-using Watchers: Watcher
-using Watchers.WatchersImpls: islist, isdict, _dopush!
 import .Instances: timestamp
 import .Data.DFUtils: lastdate
 

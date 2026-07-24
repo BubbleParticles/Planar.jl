@@ -6,10 +6,10 @@
 abstract type Py end
 
 using FileWatching
-using Misc: DATA_PATH, Misc
-using Misc.ConcurrentCollections: ConcurrentDict
-using Misc.Lang: @lget!, Option
-using Misc.DocStringExtensions
+using ..Misc: DATA_PATH, Misc
+using ..Misc.ConcurrentCollections: ConcurrentDict
+using ..Misc.Lang: @lget!, Option
+using ..Misc.DocStringExtensions
 
 # Use CcxtGateway for HTTP-based ccxt communication
 include("CcxtGateway/CcxtGateway.jl")
