@@ -1,27 +1,27 @@
-using LiveMode
-using .LiveMode.PaperMode
-using .LiveMode: empty_ohlcv
-using .PaperMode.SimMode
-using .SimMode.OrderTypes
-using .SimMode.sml: Simulations
-using .SimMode: Executors, Executors as ect
-using .ect.Strategies
-using .Strategies.coll
-using .Strategies.Instances
-using .Instances.Exchanges: Exchanges, market_fees, market_limits, market_precision
-using .Exchanges: getexchange!
-using .Exchanges.Data
-import .Data: stub!
-using .Data: load, zi
-using .Data.DataFramesMeta
-using .Data.DFUtils
-using .Simulations.Processing: resample, Processing
-using .Instances.Instruments: AbstractAsset, Asset, fiatnames, Instruments
-using .ect.Misc
-using .Misc.TimeTicks
-using .Misc.Lang: Lang
-using .Misc: swapkeys
-using .Misc.DocStringExtensions
+using ..LiveMode
+using ..PaperMode
+using ..LiveMode: empty_ohlcv
+using PlanarCore.SimMode
+using PlanarCore.OrderTypes
+using PlanarCore.Simulations: Simulations
+using PlanarCore.SimMode: Executors, Executors as ect
+using PlanarCore.Strategies
+using PlanarCore.Collections
+using PlanarCore.Instances
+using PlanarCore.Exchanges: Exchanges, market_fees, market_limits, market_precision
+using PlanarCore.Exchanges: getexchange!
+using PlanarCore.Data
+import PlanarCore.Data: stub!
+using PlanarCore.Data: load, zi
+using PlanarCore.Data.DataFramesMeta
+using PlanarCore.Data.DFUtils
+using PlanarCore.Processing: resample, Processing
+using PlanarCore.Instruments: AbstractAsset, Asset, fiatnames, Instruments
+using PlanarCore.Misc
+using PlanarCore.TimeTicks
+using PlanarCore.Lang: Lang
+using PlanarCore.Misc: swapkeys
+using PlanarCore.Misc.DocStringExtensions
 
 # include("consts.jl")
 include("types/constructors.jl")

@@ -76,18 +76,14 @@ end
 plots!() = _activate_and_import(:Plotting, :plo)
 @doc """ Imports the `Metrics` module. """
 metrics!() = module!(:Metrics, :ss)
-@doc """ Imports the `Engine` module. """
-engine!() = module!(:Engine, :egn)
 @doc """ Imports the `StrategyStats` module. """
 analysis!() = module!(:StrategyStats, :sst)
-@doc """ Imports the `Stubs` module. """
-stubs!() = module!(:Stubs, :stubs)
-@doc """ Activates and Imports the `Opt` module. """
-optim!() = _activate_and_import(:Opt, :opt)
+@doc """ Activates and Imports the `PlanarOptim` module. """
+optim!() = _activate_and_import(:PlanarOptim, :opt)
 @doc """ Activates and Imports the `PlanarInteractive` module. """
 interactive!() = _activate_and_import(:PlanarInteractive, :plni)
 @doc """ Activates and Imports the `Scrapers` module. """
 scrape!() = _activate_and_import(:Scrapers, :scr)
 feats!() = _activate_and_import(:FeatureSelection, :feats)
 
-export plots!, optim!, metrics!, engine!, analysis!, interactive!, scrape!, feats!
+export plots!, optim!, metrics!, analysis!, interactive!, scrape!, feats!
