@@ -1,10 +1,10 @@
-using PaperMode.SimMode: _lev_value, leverage!, leverage, position!, singlewaycheck
+using ..PaperMode.SimMode: _lev_value, leverage!, leverage, position!, singlewaycheck
 using .st: IsolatedStrategy
 using .Executors: hasorders, update_leverage!
 using .st: exchange
 using .Executors.Instances: raw
 using .OrderTypes: isimmediate
-using Watchers: fetch!
+using PlanarCore.Watchers: fetch!
 import .Executors: call!
 
 @doc """ Updates leverage or places an order in a live trading strategy.

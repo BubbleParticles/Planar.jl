@@ -11,3 +11,6 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [extras]
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+[sources]
+Planar = {path = "../Planar"}
+PlanarCore = {path = "../PlanarCore"}

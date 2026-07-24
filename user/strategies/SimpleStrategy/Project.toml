@@ -10,3 +10,6 @@ Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 include_file = "src/SimpleStrategy.jl"
 margin = "NoMargin"
 mode = "Sim"
+
+[sources]
+PlanarCore = {path = "../../../PlanarCore"}

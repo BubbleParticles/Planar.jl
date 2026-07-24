@@ -1,7 +1,7 @@
 using .Misc: LittleDict, start_task, init_task, DFT
 using .Misc.Lang: @lget!, @ifdebug, @deassert, Option
 using .Instances.Exchanges: has
-using SimMode: trade!
+using PlanarCore.SimMode: trade!
 using .Executors: AnyGTCOrder
 using .OrderTypes: ImmediateOrderType, OrderCanceled
 using TimeFrames: TimeFrame, timeframe

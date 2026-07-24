@@ -1,5 +1,5 @@
-using Planar.Engine.Lang: @ifdebug, safewait, safenotify
-using Planar.Engine.LiveMode.Watchers.WatchersImpls:
+using PlanarCore.Lang: @ifdebug, safewait, safenotify
+using PlanarCore.Watchers.WatchersImpls:
     ccxt_ohlcv_tickers_watcher, start!, load!, isstopped
 
 __revise_mode__ = :eval

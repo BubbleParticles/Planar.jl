@@ -1,8 +1,8 @@
-using PaperMode.OrderTypes
-using Exchanges: islist, isdict
-using Watchers: Watcher
-using Watchers.WatchersImpls: _dopush!
-using PaperMode: SimMode, strategy_logger!
+using ..PaperMode.OrderTypes
+using PlanarCore.Exchanges: islist, isdict
+using PlanarCore.Watchers: Watcher
+using PlanarCore.Watchers.WatchersImpls: _dopush!
+using ..PaperMode: SimMode, strategy_logger!
 using .SimMode: _simmode_defaults!
 using .Lang: @lget!, Option, @get, MatchString
 using .TimeTicks: dtstamp

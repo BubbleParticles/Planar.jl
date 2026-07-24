@@ -1,11 +1,11 @@
 @doc "User module, use only to import and export preferred functions inside the repl."
 
-using Processing
+using PlanarCore.Processing
 using Statistics: mean
-using Data.DataFramesMeta
-using Data.DataFrames
-using Data.DataFrames: index
-using Misc: @lev!, @margin!
+using PlanarCore.Data.DataFramesMeta
+using PlanarCore.Data.DataFrames
+using PlanarCore.Data.DataFrames: index
+using PlanarCore.Misc: @lev!, @margin!
 export @margin!, @lev!
 
 if !isdefined(@__MODULE__, :an)

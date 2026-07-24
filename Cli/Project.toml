@@ -6,3 +6,5 @@ version = "0.1.0"
 [deps]
 Comonicon = "863f3e99-da2a-4334-8734-de3dacbe5542"
 PlanarCore = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+[sources]
+PlanarCore = {path = "../PlanarCore"}

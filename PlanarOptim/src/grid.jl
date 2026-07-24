@@ -1,5 +1,5 @@
-using Pbar.Term.Progress: @track, ProgressJob, Progress
-using Pbar: pbar!, @withpbar!, @pbupdate!, pbar, dorender
+using PlanarCore.Pbar.Term.Progress: @track, ProgressJob, Progress
+using PlanarCore.Pbar: pbar!, @withpbar!, @pbupdate!, pbar, dorender
 using PlanarCore.SimMode.Instruments: compactnum as cnum, Instruments
 using PlanarCore.SimMode.Lang.Logging: SimpleLogger, with_logger, current_logger
 using PlanarCore.SimMode.Lang: splitkws
@@ -10,9 +10,9 @@ using PlanarCore.SimMode: Context, Sim
 
 using Printf: @sprintf
 using Base.Sys: free_memory
-import .Progress: AbstractColumn, get_columns
-import Pbar.Term.Segments: Segment
-import Pbar.Term.Measures: Measure
+import PlanarCore.Pbar.Term.Progress: AbstractColumn, get_columns
+import PlanarCore.Pbar.Term.Segments: Segment
+import PlanarCore.Pbar.Term.Measures: Measure
 
 function _tostring(_, s::String)
     s[begin:min(displaysize()[2], length(s))]

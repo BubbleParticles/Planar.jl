@@ -1,4 +1,4 @@
-using SimMode: create_sim_limit_order, limitorder_ifprice!, hold!
+using PlanarCore.SimMode: create_sim_limit_order, limitorder_ifprice!, hold!
 using .st: NoMarginStrategy
 using .OrderTypes: LimitOrderType, ImmediateOrderType, AnyMarketOrder
 using .Misc.Lang: splitkws

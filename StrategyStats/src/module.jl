@@ -1,7 +1,7 @@
 using PlanarCore.ExchangeTypes: Exchange, exc
 using PlanarCore.Data: @to_mat, save_ohlcv, PairData, empty_ohlcv, DataFrames, Misc
-using Misc.TimeTicks: td_tf, timefloat, @as_td
-using Misc.DocStringExtensions
+using PlanarCore.Misc.TimeTicks: td_tf, timefloat, @as_td
+using PlanarCore.Misc.DocStringExtensions
 using DataFrames: DataFrame, groupby, combine, Not, select!, index, rename!
 using Logging: NullLogger, with_logger
 

@@ -1,5 +1,5 @@
-using SimMode: create_sim_market_order, marketorder!, AnyFOKOrder, AnyIOCOrder
-using Fetch: orderbook
+using PlanarCore.SimMode: create_sim_market_order, marketorder!, AnyFOKOrder, AnyIOCOrder
+using PlanarCore.Fetch: orderbook
 using .Instances.Exchanges: ticker!
 using .OrderTypes: ordertype, positionside, NotEnoughLiquidity, isimmediate
 using .Executors: isfilled

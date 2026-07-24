@@ -4,7 +4,6 @@ version = "0.1.0"
 authors = ["zbc"]
 
 [deps]
-Metrics = "3fcce980-bff0-41b4-8aec-9cac67d74284"
 PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
@@ -13,7 +12,6 @@ PlanarOptim = "01937fd2-c099-442f-ae89-75fa208aad36"
 WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 
 [sources]
-Metrics = {path = "../Metrics"}
 Planar = {path = "../Planar"}
 PlanarCore = {path = "../PlanarCore"}
 PlanarOptim = {path = "../PlanarOptim"}

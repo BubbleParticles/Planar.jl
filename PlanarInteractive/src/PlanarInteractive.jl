@@ -28,6 +28,6 @@ using PlanarOptim
 using PlanarCore.Watchers
 using PlanarCore.Scrapers
 
-export PlanarCore.Plotting, PlanarOptim, PlanarCore.Watchers, PlanarCore.Scrapers
+export Plotting, PlanarOptim, Watchers, Scrapers
 
 end # module IPlanar
