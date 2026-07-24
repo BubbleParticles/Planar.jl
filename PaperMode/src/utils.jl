@@ -1,4 +1,4 @@
-using SimMode: _simmode_defaults!
+using PlanarCore.SimMode: _simmode_defaults!
 using .Instances.Exchanges: lastprice
 import .Executors: priceat
 using .Misc.Lang: @lget!

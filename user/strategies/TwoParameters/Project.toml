@@ -15,3 +15,6 @@ include_file = "src/TwoParameters.jl"
 margin = "NoMargin"
 min_timeframe = "1h"
 mode = "Sim"
+
+[sources]
+PlanarCore = {path = "../../../PlanarCore"}

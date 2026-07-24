@@ -9,6 +9,7 @@ PlanarOptim = "01937fd2-c099-442f-ae89-75fa208aad36"
 Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 
 [sources]
+PlanarCore = {path = "../../../PlanarCore"}
 PlanarOptim = {path = "../../../PlanarOptim"}
 Planar = {path = "../../../Planar"}
 

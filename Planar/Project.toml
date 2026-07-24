@@ -12,9 +12,15 @@ PlanarCore = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
 REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+TimeFrames = "51948d2b-02eb-5b28-9840-c902cc6821c9"
 Rocket = "df971d30-c9d6-4b37-b8ff-e965b2cb3a40"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+StrategyStats = "d4fe19c2-883d-48d3-92d7-80b36677371b"
 Telegram = "1da6f4ae-116c-4c38-8ee9-19974ff3601d"
 
+[sources]
+PlanarCore = {path = "../PlanarCore"}
+StrategyStats = {path = "../StrategyStats"}
 [extras]
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
 Data = "934a4ae5-3fdb-4fa4-b6dd-2cd889d3d27b"

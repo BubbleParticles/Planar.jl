@@ -1,7 +1,7 @@
 using PlanarCore.Data.DataFramesMeta
-using Misc: config, DFT
+using PlanarCore.Misc: config, DFT
 using PlanarCore.Data: @to_mat, PairData
-using Misc.Lang
+using PlanarCore.Misc.Lang
 
 @doc """Identifies maximum and minimum points in a DataFrame.
 

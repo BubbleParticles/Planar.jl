@@ -1,10 +1,11 @@
 module Query
-using Misc.DocStringExtensions
+using PlanarCore.Misc.DocStringExtensions
 using Statistics: mean
 using DataFrames: DataFrame, hcat, sort!
-using .StrategyStats
-const sst = StrategyStats
+using ..StrategyStats
+using ..StrategyStats: find_bottomed, find_peaked, resample, explore!, bbsstds
 using DataFrames
+const sst = StrategyStats
 include("slope.jl")
 
 @doc """Filters exchange data based on slope angle and saves the output.

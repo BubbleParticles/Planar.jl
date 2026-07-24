@@ -3,6 +3,10 @@ module Planar
     include("submodules/LiveMode.jl")
     include("submodules/Remote.jl")
     include("submodules/Engine.jl")
+    using PlanarCore.Misc: TYPEDSIGNATURES
+    using Pkg: Pkg as Pkg
+    using StrategyStats
+    using PlanarCore.Plotting
 
     # Re-exports for backward compat
     include("repl.jl")

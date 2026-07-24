@@ -14,7 +14,7 @@ using .Executors:
     order_byid,
     tradetuple
 using .st: Strategy, SimStrategy, asset_bysym
-using PaperMode.SimMode.Executors: _update_from_trade!
+using ..PaperMode.SimMode.Executors: _update_from_trade!
 
 function live_sync_universe_cash!(s::LiveStrategy, args...; kwargs...)
     _live_sync_universe_cash!(s, args...; kwargs...)

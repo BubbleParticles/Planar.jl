@@ -1,6 +1,6 @@
-using Watchers
-using Watchers: default_init
-using Watchers.WatchersImpls:
+using PlanarCore.Watchers
+using PlanarCore.Watchers: default_init
+using PlanarCore.Watchers.WatchersImpls:
     _tfunc!,
     _tfunc,
     _exc!,
@@ -12,7 +12,7 @@ using Watchers.WatchersImpls:
     _lastcount!,
     _lastcount
 @watcher_interface!
-using .Exchanges: check_timeout
+using PlanarCore.Exchanges: check_timeout
 using .Lang: splitkws, withoutkws
 
 const CcxtBalanceVal = Val{:ccxt_balance_val}

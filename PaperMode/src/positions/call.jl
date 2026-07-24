@@ -1,6 +1,6 @@
 using .st: IsolatedStrategy
 using .Executors: AnyMarketOrder
-using SimMode: singlewaycheck
+using PlanarCore.SimMode: singlewaycheck
 using .Misc: DFT
 using .Misc.Lang: splitkws
 

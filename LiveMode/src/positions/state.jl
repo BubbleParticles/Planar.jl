@@ -1,4 +1,4 @@
-import PaperMode.SimMode: liquidate!
+import ..PaperMode.SimMode: liquidate!
 using .Instances: value
 
 function _debug_aftertrade1(ai, o, t)

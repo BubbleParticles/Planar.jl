@@ -1,12 +1,12 @@
 using PlanarCore.SimMode: SimMode
 using PlanarCore.SimMode.Executors: st, Instances, OptSetup, OptRun, OptScore, OptMinimize, Context
 using PlanarCore.SimMode.TimeTicks
-using Instances: value
-using Instances.Data: DataFrame, Not, save_data, load_data, nrow, todata, tobytes
-using Instances.Data: zinstance, Zarr as za, default_value
-using Instances.Data.Zarr: getattrs, writeattrs, writemetadata
-using Instances.Exchanges: sb_exchanges
-using st: Strategy, Sim, SimStrategy, WarmupPeriod
+using .Instances: value
+using .Instances.Data: DataFrame, Not, save_data, load_data, nrow, todata, tobytes
+using .Instances.Data: zinstance, Zarr as za, default_value
+using .Instances.Data.Zarr: getattrs, writeattrs, writemetadata
+using .Instances.Exchanges: sb_exchanges
+using .st: Strategy, Sim, SimStrategy, WarmupPeriod
 using PlanarCore.SimMode.Misc: DFT, user_dir
 using PlanarCore.SimMode.Lang: Option, splitkws, @debug_backtrace
 using PlanarCore.Metrics.Statistics: median, mean
@@ -15,8 +15,8 @@ using REPL.TerminalMenus
 using Pkg: Pkg
 using Base.Threads: threadid
 using PlanarCore.SimMode.Misc.DocStringExtensions
-import st: call!
-using Instances.Data.DataFrames: metadata, metadata!, metadatakeys
+import .st: call!
+using .Instances.Data.DataFrames: metadata, metadata!, metadatakeys
 
 @doc "A constant representing the default objective value."
 const DEFAULT_OBJ = float(typemax(Int))
