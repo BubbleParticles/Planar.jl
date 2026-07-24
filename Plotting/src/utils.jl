@@ -1,4 +1,4 @@
-using .ect.Instruments: compactnum as cn
+using ..Instruments: compactnum as cn
 
 makefig() = begin
     Figure(; size=(1900, 900))

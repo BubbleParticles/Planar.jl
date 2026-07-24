@@ -4,11 +4,11 @@ using ..Instances.Data.DFUtils: lastdate
 using ..Misc.LoggingExtras
 using Base: with_logger
 using .st: universe, current_total, trades_count
-using Pbar: @withpbar!, @pbupdate!, ProgressBar, addjob!, ProgressJob, pbar!, Progress, pbar
+using ..Pbar: @withpbar!, @pbupdate!, ProgressBar, addjob!, ProgressJob, pbar!, Progress, pbar
 using .Progress: DescriptionColumn, CompletedColumn, SeparatorColumn, ProgressColumn, AbstractColumn
-using Pbar.Term.Segments: Segment
-using Pbar.Term.Measures: Measure
-using Pbar.Term.Progress: Progress
+using ..Pbar.Term.Segments: Segment
+using ..Pbar.Term.Measures: Measure
+using ..Pbar.Term.Progress: Progress
 
 import ..Misc: start!, stop!
 

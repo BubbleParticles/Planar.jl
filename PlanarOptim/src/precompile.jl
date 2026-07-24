@@ -1,5 +1,5 @@
 using PlanarCore.SimMode.Misc.Lang: @precomp, @preset, @ignore
-using Metrics: sharpe
+using PlanarCore.Metrics: sharpe
 
 function _precomp_strat(mod=Opt)
     @eval mod begin

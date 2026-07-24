@@ -19,4 +19,4 @@ export leverage!, marginmode!
 export islist, isdict
 
 using Reexport
-@reexport using ExchangeTypes
+@reexport using ..ExchangeTypes

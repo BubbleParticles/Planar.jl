@@ -2,7 +2,7 @@ using .Lang: @preset, @precomp
 
 if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
     @preset let
-        using Metrics.Stubs
+        using ..Stubs
         try
             s = Stubs.stub_strategy(; dostub=false)
             Stubs.gensave_trades(; s, dosave=false)

@@ -3,7 +3,7 @@ using Pbar: pbar!, @withpbar!, @pbupdate!, pbar, dorender
 using PlanarCore.SimMode.Instruments: compactnum as cnum, Instruments
 using PlanarCore.SimMode.Lang.Logging: SimpleLogger, with_logger, current_logger
 using PlanarCore.SimMode.Lang: splitkws
-using Metrics.Data: Cache as ca, nrow, groupby, combine, DataFrame, DATA_PATH
+using PlanarCore.Metrics.Data: Cache as ca, nrow, groupby, combine, DataFrame, DATA_PATH
 using PlanarCore.SimMode.Misc: attr, LittleDict
 using Random: shuffle!
 using PlanarCore.SimMode: Context, Sim

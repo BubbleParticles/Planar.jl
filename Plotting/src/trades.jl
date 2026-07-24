@@ -1,18 +1,18 @@
 using Random: seed!
-using Metrics: trades_balance, expand
+using ..Metrics: trades_balance, expand
 using Base: remove_linenums!
 using Makie: point_in_triangle, point_in_quad_parameter
 
-using .ect.Lang: Option
-using .ect.Strategies: Data
+using ..Lang: Option
+using ..Strategies: Data
 using .Data.DFUtils
 using .Data.DataFrames
 using .Data: load, zi
 using ..Processing: normalize as norm, normalize! as norm!
 
-using .ect.Strategies.Exchanges: getexchange!
-using .ect.Strategies: Strategy, Strategies as st, AssetInstance
-using .ect.OrderTypes
+using ..Strategies.Exchanges: getexchange!
+using ..Strategies: Strategy, Strategies as st, AssetInstance
+using ..OrderTypes
 using .st.Instruments
 
 normalize(args...; kwargs...) = norm(args...; unit=true, kwargs...)

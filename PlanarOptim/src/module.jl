@@ -9,8 +9,8 @@ using Instances.Exchanges: sb_exchanges
 using st: Strategy, Sim, SimStrategy, WarmupPeriod
 using PlanarCore.SimMode.Misc: DFT, user_dir
 using PlanarCore.SimMode.Lang: Option, splitkws, @debug_backtrace
-using Metrics.Statistics: median, mean
-using Metrics: Metrics
+using PlanarCore.Metrics.Statistics: median, mean
+using PlanarCore.Metrics: Metrics
 using REPL.TerminalMenus
 using Pkg: Pkg
 using Base.Threads: threadid
