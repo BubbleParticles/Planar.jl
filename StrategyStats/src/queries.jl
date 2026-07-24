@@ -1,8 +1,8 @@
 module Query
-using ..Misc.DocStringExtensions
+using Misc.DocStringExtensions
 using Statistics: mean
 using DataFrames: DataFrame, hcat, sort!
-using ..StrategyStats
+using .StrategyStats
 const sst = StrategyStats
 using DataFrames
 include("slope.jl")

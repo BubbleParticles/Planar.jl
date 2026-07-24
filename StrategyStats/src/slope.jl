@@ -1,4 +1,4 @@
-using Data.DataFrames: DataFrame, AbstractDataFrame
+using PlanarCore.Data.DataFrames: DataFrame, AbstractDataFrame
 using Statistics: cov, var
 
 @doc """Applies a slope filter to a dataset.

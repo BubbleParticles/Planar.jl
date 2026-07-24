@@ -1,9 +1,9 @@
-using .ect: DFT
-using .ect.OrderTypes: Order
-using .ect.Instances: pnl
-using .ect.Strategies: NoMarginStrategy, MarginStrategy
-using .ect.Misc: MarginMode, NoMargin, WithMargin, marginmode
-using .ect.Lang: @ifdebug
+using ect: DFT
+using ect.OrderTypes: Order
+using ect.Instances: pnl
+using ect.Strategies: NoMarginStrategy, MarginStrategy
+using ect.Misc: MarginMode, NoMargin, WithMargin, marginmode
+using ect.Lang: @ifdebug
 
 @doc "A NamedTuple representing trade data, including `date`, `amount`, `price`, `value`, `fees`, `fees_base`, `size`, `leverage`, `entryprice`, and `order`."
 const TradesTuple = NamedTuple{
