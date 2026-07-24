@@ -1,5 +1,5 @@
-using .ect.TimeTicks
-using .ect.Strategies.Data
+using ..TimeTicks
+using ..Strategies.Data
 using .Data.DataFrames
 using .Data.DFUtils
 using .Data: AbstractDataFrame

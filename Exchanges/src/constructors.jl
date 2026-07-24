@@ -3,13 +3,13 @@ import Serialization: deserialize, serialize
 using Serialization: AbstractSerializer, serialize_type
 
 using Reexport
-using Pbar.Term: RGBColor, tprint
+using ..Pbar.Term: RGBColor, tprint
 using ..ExchangeTypes
 using ..Data: Data, DataFrame, eventtrace
-@reexport using ExchangeTypes
+@reexport using ..ExchangeTypes
 using ..ExchangeTypes: OptionsDict, CcxtExchange
 using ..ExchangeTypes.Ccxt: Ccxt, choosefunc
-import .Ccxt: issupported
+import ..Ccxt: issupported
 import ..ExchangeTypes.CcxtGateway: default_client, call_exchange
 const HTTP = ExchangeTypes.CcxtGateway.HTTP
 using JSON

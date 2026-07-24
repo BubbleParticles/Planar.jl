@@ -3,7 +3,7 @@ using ..OrderTypes
 
 import ..Exchanges.ExchangeTypes: exchangeid, exchange
 using ..Exchanges: CurrencyCash, Data, TICKERS_CACHE10, markettype, @tickers!
-using OrderTypes: ByPos, AssetEvent, positionside, Instruments, ordertype
+using ..OrderTypes: ByPos, AssetEvent, positionside, Instruments, ordertype
 using .Data: load, zi, empty_ohlcv, DataFrame, DataStructures
 using .Data.DFUtils: daterange, timeframe
 import .Data: stub!
@@ -22,7 +22,7 @@ using .DataStructures: SortedDict
 using .Lang: Option, @deassert, @lget!, @caller
 import Base: position, isopen
 import ..Exchanges: lastprice, leverage!
-import OrderTypes: trades
+import ..OrderTypes: trades
 
 baremodule InstancesLock end
 

@@ -1,7 +1,0 @@
-name = "Metrics"
-uuid = "3fcce980-bff0-41b4-8aec-9cac67d74284"
-version = "0.1.0"
-authors = ["zbc"]
-
-[deps]
-PlanarCore = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"

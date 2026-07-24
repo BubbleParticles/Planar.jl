@@ -5,7 +5,7 @@ using Base: beginsym
 using ..Data: zi, save_ohlcv, PairData, empty_ohlcv
 using ..Data.DFUtils
 using ..Data.DataFrames
-using Pbar
+using ..Pbar
 
 @doc """Returns the left and right indices for a given frame.
 

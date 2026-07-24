@@ -3,7 +3,7 @@ import ..Processing
 import LinearAlgebra
 import StatsBase
 import ..Processing.Misc.TimeTicks
-using ..Strategies: Strategies as st
+using PlanarCore.Strategies: Strategies as st
 using .st.Misc: DFT, Option, @lget!
 
 include("ratio.jl")
