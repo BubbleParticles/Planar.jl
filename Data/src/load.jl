@@ -4,7 +4,7 @@ using DataFrames: DataFrameRow, AbstractDataFrame
 using DataFramesMeta
 using .TimeTicks
 using .Lang: Option, @as, @ifdebug
-using Misc: LeftContiguityException, RightContiguityException, config, rangeafter
+using ..Misc: LeftContiguityException, RightContiguityException, config, rangeafter
 
 include("candles.jl")
 include("ohlcv.jl")

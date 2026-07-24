@@ -1,4 +1,4 @@
-using Lang: @preset, @precomp
+using ..Lang: @preset, @precomp
 @preset begin
     funcs = [*, +, -, *, ÷]
     funcs2 = [sub!, add!, cash!, mul!, div!, rdiv!]

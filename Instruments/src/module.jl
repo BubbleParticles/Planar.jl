@@ -1,6 +1,6 @@
-using Lang: @lget!
-using Misc: Misc
-using Misc.DocStringExtensions
+using ..Lang: @lget!
+using ..Misc: Misc
+using ..Misc.DocStringExtensions
 import Base: ==, +, -, ÷, /, *, ≈
 include("cashcur.jl")
 

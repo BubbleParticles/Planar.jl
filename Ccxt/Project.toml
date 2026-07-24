@@ -11,6 +11,7 @@ MbedTLS = "739be429-bea8-5141-9913-cc70e7f3736d"
 Misc = "ff97321b-aa60-4104-8cd6-2e42973349ab"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
+PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 WebSockets = "104b5d7c-a370-577a-8038-80a2059c5097"
 
 [weakdeps]
@@ -21,6 +22,7 @@ CcxtPythonExt = "Python"
 
 [compat]
 FileWatching = "1.11.0"
+PythonCall = "0.9.35"
 
 [extras]
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
