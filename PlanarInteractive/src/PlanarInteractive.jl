@@ -23,11 +23,11 @@ end
 
 using Planar
 using WGLMakie
-using Plotting
-using Opt
-using Watchers
-using Scrapers
+using PlanarCore.Plotting
+using PlanarOptim
+using PlanarCore.Watchers
+using PlanarCore.Scrapers
 
-export Plotting, Opt, Watchers, Scrapers
+export PlanarCore.Plotting, PlanarOptim, PlanarCore.Watchers, PlanarCore.Scrapers
 
 end # module IPlanar

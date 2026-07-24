@@ -1,15 +1,15 @@
 using Reexport
 using Pkg: Pkg
 @reexport using Planar
-using Planar.Engine: Strategies as st, Engine as egn
+using PlanarCore.Strategies: Strategies as st
+using Planar.Engine: Engine as egn
 using Planar: @environment!
 using Random
-using Stubs
-using Planar.Misc
-using .Misc.Lang
+using PlanarCore.Stubs
+using PlanarCore.Misc
+using PlanarCore.Lang
 
-import .egn.Data: stub!
-
+import PlanarCore.Data: stub!
 global s, ai, e
 
 function backtest_strat(sym; mode=Sim(), config_attrs=(;), kwargs...)
@@ -24,7 +24,7 @@ function backtest_strat(sym; mode=Sim(), config_attrs=(;), kwargs...)
     Random.seed!(1)
     mode == Sim() && begin
         @info "btstrat: stub!"
-        Stubs.stub!(s; trades=false)
+        PlanarCore.Stubs.stub!(s; trades=false)
     end
     s
 end
@@ -39,7 +39,7 @@ end
 
 function default_data_loader(load_func=nothing)
     @eval Main begin
-        using Scrapers: Scrapers as scr
+        using PlanarCore.Scrapers: Scrapers as scr
         let f = @something $(load_func) scr.BinanceData.binanceload
             (pairs, qc; kwargs...) -> f(pairs; quote_currency=qc, kwargs...)
         end

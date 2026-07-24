@@ -1,11 +1,11 @@
 using Base.Iterators: flatten
 import Comonicon: @main, @cast
-using Data: load_ohlcv
-using Exchanges
-using Exchanges: tickers
-using Fetch
-using Misc: config
-using Processing: resample
+using PlanarCore.Data: load_ohlcv
+using PlanarCore.Exchanges
+using PlanarCore.Exchanges: tickers
+using PlanarCore.Fetch
+using PlanarCore.Misc: config
+using PlanarCore.Processing: resample
 
 macro choosepairs()
     pairs = esc(:pairs)
