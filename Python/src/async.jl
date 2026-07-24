@@ -1,7 +1,7 @@
 using PythonCall:
     Py, pynew, pydict, pyimport, pyexec, pycopy!, pyisnull, pybuiltins, pyconvert
 using Dates: Period, Second
-using Lang: safenotify, safewait
+using PlanarCore.Lang: safenotify, safewait
 
 @doc """ Checks if python async state (event loop) is initialized.
 

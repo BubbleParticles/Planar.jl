@@ -1,12 +1,12 @@
 using Pbar.Term.Progress: @track, ProgressJob, Progress
 using Pbar: pbar!, @withpbar!, @pbupdate!, pbar, dorender
-using SimMode.Instruments: compactnum as cnum, Instruments
-using SimMode.Lang.Logging: SimpleLogger, with_logger, current_logger
-using SimMode.Lang: splitkws
+using PlanarCore.SimMode.Instruments: compactnum as cnum, Instruments
+using PlanarCore.SimMode.Lang.Logging: SimpleLogger, with_logger, current_logger
+using PlanarCore.SimMode.Lang: splitkws
 using Metrics.Data: Cache as ca, nrow, groupby, combine, DataFrame, DATA_PATH
-using SimMode.Misc: attr, LittleDict
+using PlanarCore.SimMode.Misc: attr, LittleDict
 using Random: shuffle!
-using SimMode: Context, Sim
+using PlanarCore.SimMode: Context, Sim
 
 using Printf: @sprintf
 using Base.Sys: free_memory

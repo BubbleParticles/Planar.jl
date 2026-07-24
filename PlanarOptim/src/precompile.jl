@@ -1,4 +1,4 @@
-using SimMode.Misc.Lang: @precomp, @preset, @ignore
+using PlanarCore.SimMode.Misc.Lang: @precomp, @preset, @ignore
 using Metrics: sharpe
 
 function _precomp_strat(mod=Opt)

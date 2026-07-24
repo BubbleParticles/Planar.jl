@@ -1,6 +1,6 @@
-using .OrderTypes: LiquidationTrade, LongTrade, ShortTrade
-using .Data: default_value
-using .Data.Misc: OrderedDict
+using OrderTypes: LiquidationTrade, LongTrade, ShortTrade
+using Data: default_value
+using Data.Misc: OrderedDict
 
 @doc """ Computes the average duration of trades for an asset instance.
 

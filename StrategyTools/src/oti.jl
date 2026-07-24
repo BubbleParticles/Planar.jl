@@ -1,5 +1,5 @@
 # Dispatching for OnlineTechnicalIndicators functions
-using .egn.Data: Candle
+using PlanarCore.Data: Candle
 
 @doc "Return the inputs for the `fit!` function of the signal."
 function indicator_range(

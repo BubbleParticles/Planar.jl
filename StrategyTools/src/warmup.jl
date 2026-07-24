@@ -1,6 +1,6 @@
-import .egn: ExecAction, call!
-using .egn: WarmupPeriod
-using .egn: issandbox
+import PlanarCore.Executors: ExecAction, call!
+using PlanarCore.Executors: WarmupPeriod
+using PlanarCore.Executors: issandbox
 
 struct SimWarmup <: ExecAction end
 struct InitSimWarmup <: ExecAction end
