@@ -1,9 +1,9 @@
-using SimMode.TimeTicks: current!, compact, Second, Millisecond
-using SimMode: start!
+using PlanarCore.SimMode.TimeTicks: current!, compact, Second, Millisecond
+using PlanarCore.SimMode: start!
 using Random
-using SimMode.Lang: @debug_backtrace
+using PlanarCore.SimMode.Lang: @debug_backtrace
 using Base.Threads: ReentrantLock
-using SimMode.Dates: Second
+using PlanarCore.SimMode.Dates: Second
 
 # Add Optimization.jl imports
 using Optimization

@@ -1,7 +1,7 @@
 """
-    Optimization
+    PlanarOptim
 
-The `Optimization` module provides tools and abstractions for defining, configuring, and executing optimization routines within the Planar.jl framework. It is designed to support a variety of optimization strategies, including parameter tuning, strategy selection, and performance evaluation for trading systems and related applications. The module integrates seamlessly with other Planar.jl components, ensuring type safety, extensibility, and efficient execution.
+The `PlanarOptim` module provides tools and abstractions for defining, configuring, and executing optimization routines within the Planar.jl framework. It is designed to support a variety of optimization strategies, including parameter tuning, strategy selection, and performance evaluation for trading systems and related applications. The module integrates seamlessly with other Planar.jl components, ensuring type safety, extensibility, and efficient execution.
 
 Main features:
 - Flexible optimization workflows for trading strategies and system parameters
@@ -30,11 +30,11 @@ Main features:
 - `optimize(s::Strategy; ...)`: Black-box optimization using the Optimization.jl framework (supports global optimization algorithms).
 - `boptimize!(s::Strategy; ...)`: Bayesian optimization using Gaussian Processes (requires BayesExt and BayesianOptimization.jl).
 """
-module Opt
+module PlanarOptim
 
 include("module.jl")
 if occursin(string(@__MODULE__), get(ENV, "JULIA_PRECOMP", ""))
     include("precompile.jl")
 end
 
-end # module Opt
+end # module PlanarOptim

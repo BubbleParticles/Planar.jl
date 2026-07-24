@@ -1,6 +1,6 @@
 using Metrics.Data: DataFrame
 using Metrics: mean, median
-using SimMode.Misc: attr
+using PlanarCore.SimMode.Misc: attr
 
 # Wrapper for median that handles vector of vectors
 function safe_median(values)

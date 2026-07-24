@@ -1,4 +1,4 @@
-using .ect.Lang: PrecompileTools, @preset, @precomp, @ignore
+using ect.Lang: PrecompileTools, @preset, @precomp, @ignore
 
 # FIXME: This precompilation bloats the module
 # maybe we should just input the precompile statements here.
