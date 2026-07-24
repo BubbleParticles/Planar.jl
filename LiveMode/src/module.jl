@@ -1,25 +1,25 @@
-using PaperMode
-using PaperMode.Executors
-using .Executors: Strategies as st
-using .Executors.Instances: Instances, Exchanges, Data, MarginInstance, NoMarginInstance, HedgedInstance, _internal_lock
-using .Instances
-using .Exchanges
-using .Exchanges: gettimeout, resptobool, islist, isdict
+using ..PaperMode
+using ..PaperMode.Executors
+using PlanarCore.Executors: Strategies as st
+using PlanarCore.Executors.Instances: Instances, Exchanges, Data, MarginInstance, NoMarginInstance, HedgedInstance, _internal_lock
+using PlanarCore.Instances
+using PlanarCore.Exchanges
+using PlanarCore.Exchanges: gettimeout, resptobool, islist, isdict
 using .st: Strategy, MarginStrategy, NoMarginStrategy, LiveStrategy, call!, RTStrategy, throttle, ExchangeAsset, universe, WarmupPeriod
-using PaperMode.OrderTypes
-using PaperMode.Misc
-using .Misc: Lang, LittleDict
-using .Misc.TimeTicks
-using .Lang: @deassert, @caller, @ifdebug, @debug_backtrace, @lget!, withoutkws, isowned, isownable
+using ..PaperMode.OrderTypes
+using ..PaperMode.Misc
+using PlanarCore.Misc: Lang, LittleDict
+using PlanarCore.Misc.TimeTicks
+using PlanarCore.Lang: @deassert, @caller, @ifdebug, @debug_backtrace, @lget!, withoutkws, isowned, isownable
 using Base: with_logger
-using .Executors.Instruments: cnum
-import .Executors: call!
-import .Misc: start!, stop!
-using .Misc.DocStringExtensions
-using Watchers: Watchers
+using PlanarCore.Executors.Instruments: cnum
+import PlanarCore.Executors: call!
+import PlanarCore.Misc: start!, stop!
+using PlanarCore.Misc.DocStringExtensions
+using PlanarCore.Watchers: Watchers
 const Rocket = Watchers.Rocket
-using .Exchanges.Ccxt: CcxtGateway, default_client, call_exchange, _multifunc, exchange_has
-using Watchers.WatchersImpls: maybe_backoff!
+using PlanarCore.Exchanges.Ccxt: CcxtGateway, default_client, call_exchange, _multifunc, exchange_has
+using PlanarCore.Watchers.WatchersImpls: maybe_backoff!
 
 include("utils.jl")
 include("caching.jl")
