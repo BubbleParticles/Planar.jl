@@ -1,5 +1,5 @@
-using .Misc.ConcurrentCollections: ConcurrentDict
-using Fetch.Exchanges: ExchangeID
+using ..Misc.ConcurrentCollections: ConcurrentDict
+using ..Fetch.Exchanges: ExchangeID
 
 const OHLCV_CACHE_KEY = Tuple{ExchangeID,Symbol,Period,String}
 const OHLCV_CACHE = ConcurrentDict{OHLCV_CACHE_KEY,DataFrame}()

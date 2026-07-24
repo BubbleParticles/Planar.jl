@@ -4,7 +4,7 @@ using .Data.DataFrames
 using .Data.DFUtils
 using .Data: AbstractDataFrame
 using .Data.DataFramesMeta
-using Processing: resample
+using ..Processing: resample
 
 @doc """ Returns a formatted asset string or an empty string if the asset is `nothing` """
 maybe_asset(a) = isnothing(a) ? "" : "Asset: $(a)\n"

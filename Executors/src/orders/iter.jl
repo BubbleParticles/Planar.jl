@@ -1,5 +1,5 @@
-using .Strategies: PriceTime, asset_bysym
-import .Instances: trades
+using ..Strategies: PriceTime, asset_bysym
+import ..Instances: trades
 
 @doc """
 A data structure for maintaining a collection of iterators.

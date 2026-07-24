@@ -1,6 +1,6 @@
-using .Data.Cache: save_cache, load_cache
-using .Misc: user_dir, config_path
-using .Misc.Lang: @debug_backtrace
+using ..Data.Cache: save_cache, load_cache
+using ..Misc: user_dir, config_path
+using ..Misc.Lang: @debug_backtrace
 
 @doc """ Raises an error when a strategy is not found at a given path.  """
 macro notfound(path)

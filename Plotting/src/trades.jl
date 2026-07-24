@@ -8,7 +8,7 @@ using .ect.Strategies: Data
 using .Data.DFUtils
 using .Data.DataFrames
 using .Data: load, zi
-using Processing: normalize as norm, normalize! as norm!
+using ..Processing: normalize as norm, normalize! as norm!
 
 using .ect.Strategies.Exchanges: getexchange!
 using .ect.Strategies: Strategy, Strategies as st, AssetInstance

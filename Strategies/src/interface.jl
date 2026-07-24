@@ -1,4 +1,4 @@
-using .OrderTypes: OrderError, AssetEvent, event!
+using ..OrderTypes: OrderError, AssetEvent, event!
 
 ## Strategy interface
 @doc "Called on each timestep iteration, possible multiple times.

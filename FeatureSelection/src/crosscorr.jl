@@ -1,12 +1,12 @@
 using StatsBase: crosscor
-using Strategies: Strategies as st
+using ..Strategies: Strategies as st
 using .st.Misc: Option
 using .st.Data: Data as da
 using .da.DataFrames: DataFrame, innerjoin, outerjoin, metadata!, metadata, select!, names
 using .st: TimeFrame, DFT, @tf_str
 using .st.coll: _flatten_noempty!, raw
 using .st.Exchanges: tickers
-using Processing.Alignments: trim!, empty_unaligned!
+using ..Processing.Alignments: trim!, empty_unaligned!
 using OnlineTechnicalIndicators: OnlineTechnicalIndicators as oti
 
 # Import specific indicators from OnlineTechnicalIndicators

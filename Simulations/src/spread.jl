@@ -1,10 +1,10 @@
-using .Lang
-using Instances
+using ..Lang
+using ..Instances
 using Statistics: cov, mean
-using Data.DFUtils
-using Instances.Instruments
-using .Instruments.Misc
-using .Misc.TimeTicks
+using ..Data.DFUtils
+using ..Instances.Instruments
+using ..Instruments.Misc
+using ..Misc.TimeTicks
 
 @doc """ Calculate the skewed spread of a trading asset
 

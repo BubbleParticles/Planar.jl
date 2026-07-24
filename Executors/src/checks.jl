@@ -5,7 +5,7 @@ using ..Misc.DocStringExtensions
 using ..Instances
 using ..Strategies: NoMarginStrategy, IsolatedStrategy, Strategy
 using ..OrderTypes
-using .Instances.Instruments: value
+using ..Instances.Instruments: value
 using Base: negate
 
 struct SanitizeOn end

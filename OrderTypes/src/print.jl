@@ -1,4 +1,4 @@
-using Instruments: compactnum as cnum
+using ..Instruments: compactnum as cnum
 
 @doc "Prints the number of trades in the order."
 function _printtrades(io, o)
