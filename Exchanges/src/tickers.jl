@@ -2,8 +2,8 @@ using .Misc.Lang: @get, @multiget, @lget!, Option, safenotify, safewait
 using .Misc: config, NoMargin, DFT
 using .Misc.ConcurrentCollections: ConcurrentDict
 using .Misc: waitforcond
-using Instruments: isfiatquote, spotpair
-using ExchangeTypes: decimal_to_size, excDecimalPlaces, excSignificantDigits, excTickSize
+using ..Instruments: isfiatquote, spotpair
+using ..ExchangeTypes: decimal_to_size, excDecimalPlaces, excSignificantDigits, excTickSize
 
 @doc """A leveraged pair is a pair like `BTC3L/USD`.
 - `:yes` : Leveraged pairs will not be filtered.

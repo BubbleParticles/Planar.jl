@@ -1,5 +1,5 @@
-using Exchanges.Instruments
-using Exchanges:
+using ..Exchanges.Instruments
+using ..Exchanges:
     Exchanges,
     Exchange,
     tickers,
@@ -7,11 +7,11 @@ using Exchanges:
     issupported,
     save_ohlcv,
     to_float
-using Exchanges.Ccxt
-using .Ccxt: CcxtGateway, default_client, call_exchange
-using Processing: cleanup_ohlcv_data, islast, resample, Processing
-using Processing.Pbar
-using Exchanges.Data:
+using ..Exchanges.Ccxt
+using ..Ccxt: CcxtGateway, default_client, call_exchange
+using ..Processing: cleanup_ohlcv_data, islast, resample, Processing
+using ..Processing.Pbar
+using ..Exchanges.Data:
     Data,
     load,
     to_ohlcv,
@@ -24,16 +24,16 @@ using Exchanges.Data:
     OHLCV_COLUMNS,
     OHLCVTuple,
     ohlcvtuple
-import .Data: propagate_ohlcv!
-using .Data.DFUtils: lastdate, addcols!, copysubs!
-using .Data.DataStructures: SortedDict
-using .Data.Misc
-using .Data.Cache: save_cache, load_cache
-using .Misc: _instantiate_workers, config, DATA_PATH, fetch_limits, drop, StrOrVec, Iterable
-using .Misc.TimeTicks
-using .Misc.DocStringExtensions
-using .TimeTicks: TimeFrameOrStr, timestamp, dtstamp
-using .Misc.Lang: @distributed, @parallel, Option, filterkws, @ifdebug, @deassert
+import ..Data: propagate_ohlcv!
+using ..Data.DFUtils: lastdate, addcols!, copysubs!
+using ..Data.DataStructures: SortedDict
+using ..Data.Misc
+using ..Data.Cache: save_cache, load_cache
+using ..Misc: _instantiate_workers, config, DATA_PATH, fetch_limits, drop, StrOrVec, Iterable
+using ..Misc.TimeTicks
+using ..Misc.DocStringExtensions
+using ..TimeTicks: TimeFrameOrStr, timestamp, dtstamp
+using ..Misc.Lang: @distributed, @parallel, Option, filterkws, @ifdebug, @deassert
 @ifdebug using .TimeTicks: dt
 
 @doc "Used to slide the `since` param forward when retrying fetching (in case the requested timestamp is too old)."
@@ -569,7 +569,7 @@ function __pairdata!(zi, data, ohlcv, name, timeframe, z, exc_name, reset)
     data[name] = p
 end
 
-using .Data: ZarrInstance, ZArray
+using ..Data: ZarrInstance, ZArray
 @doc """Fetches OHLCV data from an exchange for a list of pairs.
 
 $(TYPEDSIGNATURES)

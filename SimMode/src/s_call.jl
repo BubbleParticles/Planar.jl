@@ -1,5 +1,5 @@
-import .Instances: PositionOpen, PositionUpdate, PositionChange, Position
-import .OrderTypes: Trade
+import ..Instances: PositionOpen, PositionUpdate, PositionChange, Position
+import ..OrderTypes: Trade
 
 call!(::Strategy, ai, trade, ::NewTrade) = nothing
 

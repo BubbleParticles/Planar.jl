@@ -1,7 +1,7 @@
-using Executors: orderscount
-using Executors: isoutof_orders
-using .Instances.Data.DFUtils: lastdate
-using .Misc.LoggingExtras
+using ..Executors: orderscount
+using ..Executors: isoutof_orders
+using ..Instances.Data.DFUtils: lastdate
+using ..Misc.LoggingExtras
 using Base: with_logger
 using .st: universe, current_total, trades_count
 using Pbar: @withpbar!, @pbupdate!, ProgressBar, addjob!, ProgressJob, pbar!, Progress, pbar
@@ -10,7 +10,7 @@ using Pbar.Term.Segments: Segment
 using Pbar.Term.Measures: Measure
 using Pbar.Term.Progress: Progress
 
-import .Misc: start!, stop!
+import ..Misc: start!, stop!
 
 # Custom column to display trades and balance
 struct StatsColumn <: AbstractColumn

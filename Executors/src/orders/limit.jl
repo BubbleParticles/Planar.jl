@@ -1,11 +1,11 @@
-using .Instances
-import .Instances: committed, PositionOpen, PositionClose, freecash
-using .OrderTypes:
+using ..Instances
+import ..Instances: committed, PositionOpen, PositionClose, freecash
+using ..OrderTypes:
     LimitOrderType, PositionSide, ExchangeID, ShortSellOrder, FOKOrderType, IOCOrderType
-using Strategies: NoMarginStrategy
+using ..Strategies: NoMarginStrategy
 using Base: negate
-using .Misc: Long, Short
-using .Lang: @ifdebug
+using ..Misc: Long, Short
+using ..Lang: @ifdebug
 import Base: fill!
 
 @doc "Union type representing limit order increase operations. Includes Buy and Sell Short orders."

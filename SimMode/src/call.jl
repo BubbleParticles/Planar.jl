@@ -1,6 +1,6 @@
-using Executors: WatchOHLCV
-using .Instances.Data: empty_ohlcv
-using .Instances.Data.DFUtils: firstdate, setcols!
+using ..Executors: WatchOHLCV
+using ..Instances.Data: empty_ohlcv
+using ..Instances.Data.DFUtils: firstdate, setcols!
 @doc "Watchers are not used in `SimMode`."
 call!(::Strategy{Sim}, ::WatchOHLCV; kwargs...) = nothing
 @doc "Data should be pre initialized in `SimMode`."

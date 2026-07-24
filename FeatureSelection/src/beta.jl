@@ -1,14 +1,14 @@
 using StatsBase: cov, var
 using GLM
 using Statistics: mean
-using Strategies: Strategies as st
+using ..Strategies: Strategies as st
 using .st.Misc: Option
 using .st.Data: Data as da, DataFrame
 using .da.DataFrames: DataFrame, metadata!, deletemetadata!, names, metadata
 using .st: TimeFrame, DFT, @tf_str
 using .st.coll: _flatten_noempty!, raw, flatten
 using .st.Exchanges: tickers
-using Processing.Alignments: trim!, empty_unaligned!
+using ..Processing.Alignments: trim!, empty_unaligned!
 using GLM: @formula
 using LinearAlgebra: diag
 

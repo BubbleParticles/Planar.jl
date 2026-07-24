@@ -1,8 +1,8 @@
-import .Data: candleat, openat, highat, lowat, closeat, volumeat, closelast
-using .Data.DFUtils: firstdate, lastdate
-using .Instances: pnl, position, margin
-using .Instruments
-using .Instruments: @importcash!, AbstractCash
+import ..Data: candleat, openat, highat, lowat, closeat, volumeat, closelast
+using ..Data.DFUtils: firstdate, lastdate
+using ..Instances: pnl, position, margin
+using ..Instruments
+using ..Instruments: @importcash!, AbstractCash
 @importcash!
 
 @doc "Get the candle for the asset at `date` with timeframe `tf`."

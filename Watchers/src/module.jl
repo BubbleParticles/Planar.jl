@@ -1,18 +1,18 @@
-using Fetch: Fetch
-using Fetch.Data
-using Fetch.Misc
-using Ccxt
-using .Data: rangeafter
-using .Data.DataStructures: CircularBuffer
-using .Data.DataFrames: DataFrame
-using .Misc
-using .Misc.TimeTicks
-using .Misc.Lang: Option, safewait, safenotify, @lget!, Lang
-using .Misc: after, truncate_file
+using ..Fetch: Fetch
+using ..Fetch.Data
+using ..Fetch.Misc
+using ..Ccxt
+using ..Data: rangeafter
+using ..Data.DataStructures: CircularBuffer
+using ..Data.DataFrames: DataFrame
+using ..Misc
+using ..Misc.TimeTicks
+using ..Misc.Lang: Option, safewait, safenotify, @lget!, Lang
+using ..Misc: after, truncate_file
 using Base.Threads: @spawn
 using JSON3
 import Rocket
-using .Misc.TimeTicks: now   # re-establish now = TimeTicks.now (UTC) after all other using
+using ..Misc.TimeTicks: now   # re-establish now = TimeTicks.now (UTC) after all other using
 
 @doc """ Attempts to fetch data for a watcher
 

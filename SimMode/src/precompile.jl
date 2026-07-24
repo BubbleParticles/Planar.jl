@@ -1,4 +1,4 @@
-using .Lang: @preset, @precomp, @m_str, @ignore
+using ..Lang: @preset, @precomp, @m_str, @ignore
 
 if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
 @preset let
