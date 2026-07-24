@@ -41,4 +41,4 @@ end
 include("utils.jl")
 include("bybit.jl")
 include("binance.jl")
-include("DBNomics.jl")
+try; include("DBNomics.jl"); catch e; @warn "DBNomics not available: $(sprint(showerror, e))"; end

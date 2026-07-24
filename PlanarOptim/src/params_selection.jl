@@ -1,5 +1,5 @@
-using Metrics.Data: DataFrame
-using Metrics: mean, median
+using PlanarCore.Metrics.Data: DataFrame
+using PlanarCore.Metrics: mean, median
 using PlanarCore.SimMode.Misc: attr
 
 # Wrapper for median that handles vector of vectors

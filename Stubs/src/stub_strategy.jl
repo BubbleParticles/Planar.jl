@@ -2,9 +2,9 @@ module StubStrategy
 
 using ..Stubs.Misc
 using ..Stubs.TimeTicks
-using ..Data
-using ..Data.DFUtils
-using ..Data.DataFrames
+using ..SimMode.Strategies.Data
+using ..SimMode.Strategies.Data.DFUtils
+using ..SimMode.Strategies.Data.DataFrames
 
 using ..Strategies
 using ..Strategies.Instances.Instruments
@@ -12,9 +12,9 @@ using ..Strategies: Strategies as st
 using ..Strategies.Exchanges.ExchangeTypes
 using ..Strategies: Instances as inst
 using ..SimMode.Executors
-using ..Executors: Executors, Executors as ect
+using ..SimMode.Executors: Executors, Executors as ect
 using ..Strategies.OrderTypes
-using ..OrderTypes: BySide, ByPos
+using ..SimMode.OrderTypes: BySide, ByPos
 
 using ..Lang
 using Random

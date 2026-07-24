@@ -1,7 +1,7 @@
 name = "PlanarCore"
 uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-authors = ["zbc"]
 version = "1.0.0"
+authors = ["zbc"]
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
@@ -12,7 +12,6 @@ DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DataFramesMeta = "1313f7d8-7da2-5740-9ea0-a2ca25f37964"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
-DBnomics = "748a5540-242a-11e9-3d63-bf3149dae578"
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
@@ -54,7 +53,6 @@ Zarr = "0a941bbe-ad1d-11e8-39d9-ab76183a1d99"
 ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 
 [sources]
-Metrics = {path = "../Metrics"}
 
 [compat]
 julia = "1.12"

@@ -1,4 +1,4 @@
-using Collections: AssetCollection, Collections as coll, Instances, Data
+using ..Collections: AssetCollection, Collections as coll, Instances, Data
 
 using ..Instances: AssetInstance, Position, MarginMode, PositionSide, ishedged, Instances
 using ..Instances: CurrencyCash, CCash

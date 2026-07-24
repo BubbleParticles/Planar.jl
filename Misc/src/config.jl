@@ -1,7 +1,7 @@
 using Pkg: Pkg
 using TOML
 using JSON3
-using TimeTicks
+using ..TimeTicks
 using FunctionalCollections: PersistentHashMap
 using .Lang: @lget!, Option, splitkws
 

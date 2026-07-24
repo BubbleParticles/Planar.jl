@@ -1,4 +1,4 @@
-using TimeTicks
+using ..TimeTicks
 using .Sandbox: safereval
 import Base: ==
 const td_tf = TimeTicks.td_tf
