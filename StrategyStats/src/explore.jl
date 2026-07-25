@@ -1,4 +1,3 @@
-using PlanarCore.ExchangeTypes: exc
 using PlanarCore.Data: load, zi, PairData, OHLCV_COLUMNS
 
 include("metrics.jl")

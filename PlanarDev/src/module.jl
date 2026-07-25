@@ -1,9 +1,9 @@
 using Reexport
 using Pkg: Pkg
 @reexport using Planar
+using Planar: @environment!
 using PlanarCore.Strategies: Strategies as st
 using Planar.Engine: Engine as egn
-using Planar: @environment!
 using Random
 using PlanarCore.Stubs
 using PlanarCore.Misc

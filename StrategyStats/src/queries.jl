@@ -3,7 +3,7 @@ using PlanarCore.Misc.DocStringExtensions
 using Statistics: mean
 using DataFrames: DataFrame, hcat, sort!
 using ..StrategyStats
-using ..StrategyStats: find_bottomed, find_peaked, resample, explore!, bbsstds
+using ..StrategyStats: find_bottomed, find_peaked
 using DataFrames
 const sst = StrategyStats
 include("slope.jl")

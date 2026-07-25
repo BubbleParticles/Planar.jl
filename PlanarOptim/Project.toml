@@ -11,8 +11,9 @@ OptimizationCMAEvolutionStrategy = "bd407f91-200f-4536-9381-e4ba712f53f8"
 OptimizationEvolutionary = "cb963754-43f6-435e-8d4b-99009ff27753"
 OptimizationManopt = "e57b7fff-7ee7-4550-b4f0-90e9476e9fb6"
 OptimizationOptimJL = "36348300-93cb-4f02-beb5-3c3902f8871e"
-PlanarCore = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
+PlanarCore = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
@@ -23,7 +24,7 @@ BayesianOptimization = "4c6ed407-134f-591c-93fa-e0f7c164a0ec"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 
 [sources]
-PlanarCore = {path = "../PlanarCore"}
+PlanarCore = {path = "/Planar.jl/PlanarCore"}
 
 [extensions]
 BayesExt = "BayesianOptimization"

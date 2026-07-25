@@ -1,0 +1,28 @@
+using Test
+
+@testset "PlanarCore" begin
+    include("Ccxt/runtests.jl")
+    include("Collections/runtests.jl")
+    include("Data/runtests.jl")
+    include("ExchangeTypes/runtests.jl")
+    include("Exchanges/runtests.jl")
+    include("Executors/runtests.jl")
+    include("FeatureSelection/runtests.jl")
+    include("Fetch/runtests.jl")
+    include("Instances/runtests.jl")
+    include("Instruments/runtests.jl")
+    include("Lang/runtests.jl")
+    include("Metrics/runtests.jl")
+    include("Misc/runtests.jl")
+    include("OrderTypes/runtests.jl")
+    include("Pbar/runtests.jl")
+    include("Plotting/runtests.jl")
+    include("Processing/runtests.jl")
+    include("Scrapers/runtests.jl")
+    include("SimMode/runtests.jl")
+    include("Simulations/runtests.jl")
+    include("Strategies/runtests.jl")
+    include("Stubs/runtests.jl")
+    include("TimeTicks/runtests.jl")
+    include("Watchers/runtests.jl")
+end

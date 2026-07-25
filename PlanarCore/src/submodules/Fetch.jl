@@ -1,4 +1,4 @@
 module Fetch
-    include("../../../Fetch/src/module.jl")
+    include("../Fetch/module.jl")
     isdefined(@__MODULE__, :__doinit__) && __doinit__()
 end

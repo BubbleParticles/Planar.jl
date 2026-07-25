@@ -1,8 +1,8 @@
 module OptTests
 
 using Test
-using Opt
-using Opt: filtervecs, DEFAULT_OBJ, bbomethods, disabled_methods
+using PlanarOptim
+using PlanarOptim: filtervecs, DEFAULT_OBJ, bbomethods, disabled_methods
 
 @testset "Opt" begin
     @testset "DEFAULT_OBJ constant" begin
