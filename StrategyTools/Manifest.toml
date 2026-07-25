@@ -1318,13 +1318,13 @@ version = "0.3.3"
 
 [[deps.Planar]]
 deps = ["LRUCache", "MacroTools", "Pkg", "PlanarCore", "PrettyTables", "REPL", "Random", "Rocket", "Statistics", "StrategyStats", "Telegram", "TimeFrames"]
-path = "../Planar"
+path = "/Planar.jl/Planar"
 uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 version = "1.7.1"
 
 [[deps.PlanarCore]]
 deps = ["CSV", "Clustering", "CodecZlib", "ConcurrentCollections", "DataFrames", "DataFramesMeta", "DataStructures", "Dates", "Distances", "Distributed", "Distributions", "DocStringExtensions", "EzXML", "FileWatching", "FunctionalCollections", "GLM", "HTTP", "IterTools", "JSON", "JSON3", "LMDB", "LinearAlgebra", "Logging", "LoggingExtras", "Makie", "MbedTLS", "OnlineStats", "OnlineTechnicalIndicators", "OrderedCollections", "Pkg", "PrecompileTools", "Preferences", "Printf", "PythonCall", "Random", "Reexport", "Rocket", "Serialization", "Statistics", "StatsBase", "TOML", "Term", "TimeFrames", "URIs", "WebSockets", "Zarr", "ZipFile"]
-path = "../PlanarCore"
+path = "/Planar.jl/PlanarCore"
 uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 version = "1.0.0"
 

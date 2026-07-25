@@ -1,9 +1,9 @@
 using Test
 using StrategyTools
 using Statistics: mean
-
 const ST = StrategyTools
-const CB = ST.egn.Data.DataStructures.CircularBuffer
+using PlanarCore.Data.DataStructures: CircularBuffer
+const CB = CircularBuffer
 
 @testset "degrees" begin
     @test ST.degrees(0.0) == 0.0

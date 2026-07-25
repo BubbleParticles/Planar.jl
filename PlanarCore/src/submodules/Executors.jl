@@ -1,4 +1,4 @@
 module Executors
-    include("../../../Executors/src/module.jl")
+    include("../Executors/module.jl")
     isdefined(@__MODULE__, :__doinit__) && __doinit__()
 end

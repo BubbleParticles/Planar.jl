@@ -1,5 +1,5 @@
 module Pbar
     using Term
-    include("../../../Pbar/src/module.jl")
+    include("../Pbar/module.jl")
     isdefined(@__MODULE__, :__doinit__) && __doinit__()
 end
