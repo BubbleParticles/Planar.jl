@@ -141,3 +141,13 @@ end
     @test Planar.NoMargin() isa Planar.MarginMode
     @test Planar.Isolated() isa Planar.MarginMode
 end
+
+# ──────────────────────────────────────────────
+# Planar submodule tests (Engine, LiveMode, PaperMode, Remote)
+# ──────────────────────────────────────────────
+@testset "Planar Submodules" begin
+    include("Engine/runtests.jl")
+    include("LiveMode/runtests.jl")
+    include("PaperMode/runtests.jl")
+    include("Remote/runtests.jl")
+end

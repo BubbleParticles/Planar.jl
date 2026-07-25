@@ -1,4 +1,4 @@
 module Instances
-    include("../../../Instances/src/module.jl")
+    include("../Instances/module.jl")
     isdefined(@__MODULE__, :__doinit__) && __doinit__()
 end

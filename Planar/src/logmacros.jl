@@ -1,7 +1,5 @@
-using Engine.Executors: Strategy
-using Engine.Strategies: SimStrategy
-using Engine.LiveMode: RTStrategy
-using .Misc.LoggingExtras
+using PlanarCore.Strategies: Strategy, SimStrategy, RTStrategy
+import PlanarCore.Misc.LoggingExtras: @debugv, @infov, @warnv, @errorv
 
 _logmsg(::SimStrategy, val, msg; kwargs...) = nothing
 function _logmsg(::RTStrategy, ::Val{:debug}, msg; kwargs...)

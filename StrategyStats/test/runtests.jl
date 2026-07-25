@@ -1,14 +1,15 @@
 module StrategyStatsTests
 
 using Test
+using PlanarCore
 using StrategyStats
 using StrategyStats: diffn, momentum, slopetoangle, mlr_slope, slopeangle, fltsummary, filterminmax, is_slopebetween
 using StrategyStats: up_successrate, down_successrate, is_peaked, is_bottomed, is_uptrend
 using StrategyStats: find_bottomed, find_peaked
-using Data: PairData
-using Data.DataFrames: DataFrame
+using PlanarCore.Data: PairData
+using PlanarCore.Data.DataFrames: DataFrame
 
-const Dates = StrategyStats.Misc.TimeTicks.Dates
+const Dates = PlanarCore.TimeTicks.Dates
 
 function test_ohlcv(n=100)
     ts = Dates.DateTime(2024,1,1):Dates.Day(1):Dates.DateTime(2024,1,1)+Dates.Day(n-1)

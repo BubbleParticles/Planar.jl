@@ -1,5 +1,5 @@
 module TimeTicks
     using Dates, Reexport, Serialization, TimeFrames
-    include("../../../TimeTicks/src/module.jl")
+    include("../TimeTicks/module.jl")
     isdefined(@__MODULE__, :__doinit__) && __doinit__()
 end

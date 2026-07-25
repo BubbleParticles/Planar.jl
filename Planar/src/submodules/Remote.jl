@@ -1,5 +1,5 @@
 module Remote
     using PrettyTables, Telegram
-    include("../../../Remote/src/module.jl")
+    include("../Remote/module.jl")
     isdefined(@__MODULE__, :__doinit__) && __doinit__()
 end

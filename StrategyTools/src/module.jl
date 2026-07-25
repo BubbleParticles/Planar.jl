@@ -14,7 +14,7 @@ using PlanarCore.Strategies: freecash, current_total, volumeat, closeat
 using PlanarCore.Executors: Context
 using Planar.LiveMode: asset_tasks, empty_ohlcv
 using PlanarCore.Fetch: update_ohlcv!
-using PlanarCore.Executors: ispaper, islive
+using PlanarCore.Strategies: ispaper, islive
 using Statistics: mean
 
 using OnlineTechnicalIndicators: OnlineTechnicalIndicators as oti

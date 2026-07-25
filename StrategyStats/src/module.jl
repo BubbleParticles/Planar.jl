@@ -1,4 +1,4 @@
-using PlanarCore.ExchangeTypes: Exchange, exc
+using PlanarCore.ExchangeTypes: Exchange
 using PlanarCore.Data: @to_mat, save_ohlcv, PairData, empty_ohlcv, DataFrames, Misc
 using PlanarCore.Misc.TimeTicks: td_tf, timefloat, @as_td
 using PlanarCore.Misc.DocStringExtensions
