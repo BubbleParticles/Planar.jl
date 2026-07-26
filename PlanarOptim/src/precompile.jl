@@ -1,35 +1,33 @@
 using PlanarCore.SimMode.Misc.Lang: @precomp, @preset, @ignore
 using PlanarCore.Metrics: sharpe
 
-function _precomp_strat(mod=Opt)
-    @eval mod begin
-        using .SimMode: Executors as ect, sml
-        using .SimMode.Misc: ZERO
-
+function _precomp_strat(mod=@__MODULE__)
+    Core.eval(mod, quote
         s = let kwargs = get(ENV, "CI", "") != "" ? (; exchange = :binance) : (;)
             try
-                st.strategy(:BareStrat)
+                PlanarCore.SimMode.Executors.st.strategy(:BareStrat)
             catch e
                 @warn "precomp: could not load BareStrat: $e"
                 nothing
             end
         end
         if !isnothing(s)
+            sml = PlanarCore.Simulations
             for ai in s.universe
                 append!(
-                    st.Instances.ohlcv_dict(ai)[s.timeframe],
+                    PlanarCore.SimMode.Executors.st.Instances.ohlcv_dict(ai)[s.timeframe],
                     sml.Processing.Data.to_ohlcv(sml.synthohlcv());
                     cols=:union,
                 )
             end
         end
         s
-    end
+    end)
 end
 
 @preset begin
     s = _precomp_strat()
-    ect = invokelatest(getfield, Opt, :ect)
+    ect = PlanarCore.SimMode.Executors
     function st.call!(::typeof(s), ::ect.OptSetup)
         (;
             ctx=Context(Sim(), tf"1d", dt"2020-", now()),

@@ -2,7 +2,7 @@ module OptimizationExt
 
 using Plotting
 using .Plotting: normalize, normalize!, scatter, surface, DataInspector
-using Opt: OptSession, Opt
+using PlanarOptim: OptSession
 using Metrics: mean
 using Makie
 using Metrics.Data: Not, DataFrame, groupby, combine, nrow
@@ -242,17 +242,16 @@ function by_plot_coords(f, args...; kwargs...)
 end
 
 using .Plotting.Misc.Lang: @preset, @precomp
-using Opt: Opt as opt, SimMode, st
-if occursin("Plotting", get(ENV, "JULIA_PRECOMP", "")) && isdefined(opt, :_precomp_strat)
+if occursin("Plotting", get(ENV, "JULIA_PRECOMP", "")) && isdefined(PlanarOptim, :_precomp_strat)
     @preset begin
-        s = opt._precomp_strat(OptimizationExt)
+        s = PlanarOptim._precomp_strat(OptimizationExt)
         # `_precomp_strat` returns `nothing` when BareStrat cannot be loaded
         # (e.g. opt functions commented out). There is no session to plot then,
         # so skip the workload instead of calling `gridsearch(nothing)`, which
         # has no method for `Nothing` and would abort the Plotting precompile.
         isnothing(s) && @goto __skip_opt_precomp
-        sess = opt.gridsearch(s; resume=false)
-        # because BareStrat (in `user/strategies/BareStrat.jl`) does has opt functions commented out
+        sess = PlanarOptim.gridsearch(s; resume=false)
+        # because BareStrat (in `user/strategies/BareStrat.jl`) does have opt functions commented out
         # avoids assertion in plot_results after filtering
         for obj in sess.results.obj
             obj[1] = 1.0
@@ -264,5 +263,4 @@ if occursin("Plotting", get(ENV, "JULIA_PRECOMP", "")) && isdefined(opt, :_preco
         end
         @label __skip_opt_precomp
     end
-end
 end
