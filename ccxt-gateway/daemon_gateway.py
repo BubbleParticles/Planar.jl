@@ -82,8 +82,6 @@ def daemonize():
     # Generate self-signed SSL certificate so the gateway serves HTTPS.
     # The env vars are consumed by ccxt_gateway.config.ServerConfig via Pydantic.
     if _ensure_ssl_cert():
-        cert_file = os.path.join(CACHE_DIR, "server.crt")
-        key_file = os.path.join(CACHE_DIR, "server.key")
         os.environ["CCXT_GATEWAY_SERVER_USE_SSL"] = "true"
         os.environ["CCXT_GATEWAY_SERVER_SSL_CERT"] = cert_file
         os.environ["CCXT_GATEWAY_SERVER_SSL_KEY"] = key_file
