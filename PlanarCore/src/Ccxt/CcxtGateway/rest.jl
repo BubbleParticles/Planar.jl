@@ -655,11 +655,8 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
         if isfile(logfile)
             loglines = readlines(logfile)
             last_lines = max(1, length(loglines) - 20)
-            @error "Gateway failed to start. Last 20 log lines:"
-            for l in loglines[last_lines:end]
-                @error "  $l"
-            end
-        end
+            err_msg = join(loglines[last_lines:end], "\n  ")
+            @error "Gateway failed to start. Last 20 log lines:\n  $err_msg"
         error("Failed to spawn ccxt-gateway within 10 seconds")
     end
 end
