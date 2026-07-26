@@ -227,49 +227,41 @@ function strategy!(src::Symbol, cfg::Config)
     path = find_path(file, cfg)
     parent = get(cfg.attrs, :parent_module, Main)
     @assert parent isa Module "loading: $parent is not symbol (module)"
+    # Project-based strategies: activate the project but use include()+using .$src
+    # (not `using $src`) to bypass Pkg resolution issues when the manifest is missing.
     mod = if !isdefined(parent, src)
         @eval parent begin
             try
-                    ok = true
-                    if $isproject
-                        @debug "loading: " strat = $project_file
-                        $Pkg.activate($project_file; io=Base.devnull)
+                    if $(isproject)
+                        @debug "loading: " strat = $(project_file)
+                        $Pkg.activate($(project_file); io=Base.devnull)
                         try
                             $Pkg.instantiate(; io=Base.devnull)
                         catch e
-                            @error "loading: failed instantiation" exception = e
-                            ok = false
+                            @warn "loading: instantiation failed, will try direct include" exception = e
                         end
                     end
-                    if ok
-                        if $isproject
-                            using $src
-                        else
-                            include($path)
-                            using .$src
+                    include($(path))
+                    using .$(src)
+                    if isinteractive() && isdefined(Main, :Revise)
+                        try
+                            Main.Revise.track($(src), $(path))
+                        catch e
+                            @warn "strategy: Revise tracking failed" _module=$(src) exception=e
                         end
-                        if isinteractive() && isdefined(Main, :Revise)
-                            try
-                                Main.Revise.track($src, $path)
-                            catch e
-                                @warn "strategy: Revise tracking failed" _module=$src exception=e
-                            end
-                        end
-                        $src
-                    else
-                        nothing
                     end
+                    $(src)
             catch e
-                @error "strategy loading: failed to load module" _module=$src exception=(e, catch_backtrace())
+                @error "strategy loading: failed to load module" _module=$(src) exception=(e, catch_backtrace())
                 rethrow(e)
             finally
-                if $isproject
-                    $Pkg.activate($prev_proj; io=Base.devnull)
+                if $(isproject)
+                    $Pkg.activate($(prev_proj); io=Base.devnull)
                 end
             end
         end
     else
-        @eval parent $src
+        @eval parent $(src)
     end
     isnothing(mod) && return nothing
     strategy!(mod, cfg)
@@ -441,6 +433,14 @@ end
 
 @doc """ Returns the default strategy (`BareStrat`). """
 strategy(; kwargs...) = strategy(:BareStrat; parent_module=Strategies, kwargs...)
+
+@doc """ Returns a strategy by name, defaulting to parent_module=Planar for non-BareStrat strategies. """
+function strategy(name::Symbol; parent_module=nothing, kwargs...)
+    if parent_module === nothing
+        parent_module = name === :BareStrat ? Strategies : getproperty(Main, :Planar)
+    end
+    return strategy(name, config_path(); parent_module=parent_module, kwargs...)
+end
 
 @doc """ Saves the state of a strategy.
 

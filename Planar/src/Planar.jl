@@ -97,6 +97,7 @@ module Planar
             using .pln.Engine.Instruments
             using .pln.Engine.Misc
             using .pln.Engine.TimeTicks
+            using .pln.Engine.TimeTicks: @tf_str
             using .pln.Engine.Lang
 
             using .st: freecash, setattr!, attr
@@ -121,8 +122,9 @@ module Planar
             using .ect: UpdateOrders, CancelOrders
 
             using .pln.Engine.LiveMode: asset_tasks, strategy_tasks, @retry
-
-            $(PlanarCore.Strategies).@interface
+            import .st: call!
+            using .st: assets, exchange
+            using .ect: call!
 
             const EXCID = ExchangeID(isdefined(@__MODULE__, :EXC) ? EXC : Symbol())
             if !isdefined(@__MODULE__, :MARGIN)
@@ -151,7 +153,7 @@ module Planar
         quote
             using PlanarCore.SimMode: SimMode as sm
             using PlanarOptim
-            using Metrics
+            using PlanarCore.Metrics
         end
     end
 

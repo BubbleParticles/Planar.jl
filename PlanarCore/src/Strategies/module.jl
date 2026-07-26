@@ -18,6 +18,7 @@ using ..Misc
 using ..Misc: DFT, IsolatedMargin, TimeTicks, Lang
 import ..Misc: reset!, Long, Short, attrs, call!, call!
 using ..TimeTicks
+using ..TimeTicks: @tf_str
 using ..Lang: @lget!
 using Pkg: Pkg
 
@@ -197,7 +198,7 @@ include("utils.jl")
 include("print.jl")
 
 export Strategy, strategy, strategy!, reset!, default!
-export @interface, id, assets, exchange, universe, throttle, marketsid, asset_bysym, symsdict
+export @interface, id, assets, exchange, universe, throttle, marketsid, asset_bysym, symsdict, @tf_str
 export StartStrategy, StopStrategy, LoadStrategy, ResetStrategy, WarmupPeriod, StrategyMarkets
 export SimStrategy, PaperStrategy, LiveStrategy, RTStrategy, IsolatedStrategy, CrossStrategy
 export attr, attrs, setattr!
