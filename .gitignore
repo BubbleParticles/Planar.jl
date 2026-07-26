@@ -81,3 +81,9 @@ node_modules
 # Ignore Python egg-info directories
 *.egg-info/
 .soulforge
+.qwen
+.codegraph
+.dirac-symbol-index
+.opencode
+.memory
+.smallcode
