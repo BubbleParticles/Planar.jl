@@ -38,12 +38,7 @@ function ccxt_balance_watcher(
     params["type"] = lowercase(string(balance_type(s)))
     _exc!(attrs, exc)
     attrs[:strategy] = s
-    attrs[:iswatch] = if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
-        # Force fetch mode when using stub CCXT to avoid websocket/watch pitfalls
-        false
-    else
-        @lget! s.attrs :is_watch_balance has(exc, :watchBalance)
-    end
+    attrs[:iswatch] = @lget! s.attrs :is_watch_balance has(exc, :watchBalance)
     attrs[:func_kwargs] = (; params, kwargs...)
     attrs[:interval] = interval
     watcher_type = Any

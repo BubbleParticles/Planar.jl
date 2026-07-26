@@ -89,14 +89,8 @@ end
 _do_test_exchanges() = begin
     @test test_exch()
     e = _exchange()
-    # Skip _exchange_pairs when using stub (has volume check issues with stub)
-    if get(ENV, "PLANAR_USE_STUB_CCXT", "") != "1"
-        _exchange_pairs(e)
-    end
-    # Skip sandbox tests when using stub (sandbox mode difference with stub)
-    if get(ENV, "PLANAR_USE_STUB_CCXT", "") != "1"
-        @test _exchange_sbox(e)
-    end
+    _exchange_pairs(e)
+    @test _exchange_sbox(e)
     try
         ExchangeTypes._closeall()
     catch

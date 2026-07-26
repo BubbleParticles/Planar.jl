@@ -240,11 +240,9 @@ PLANAR_TEST_EXCHANGE=phemex julia --project=PlanarDev PlanarDev/test/runtests.jl
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PLANAR_USE_STUB_CCXT` | "1" | Use stub exchange (set "0" for real) |
 | `PLANAR_TEST_EXCHANGE` | :binance | Primary exchange for tests |
 | `PLANAR_TEST_EXCHANGE_MM` | :binanceusdm | Margin/perpetual exchange |
 
-The stub programmatically supports any ccxt exchange by deriving characteristics from the exchange class.
 
 See [TESTING.md](TESTING.md) for comprehensive testing documentation.
 

@@ -47,12 +47,7 @@ function ccxt_positions_watcher(
     exc = st.exchange(s)
     check_timeout(exc, interval)
     haswpos = !isnothing(first(exc, :watchPositions))
-    iswatch = if get(ENV, "PLANAR_USE_STUB_CCXT", "") != ""
-        # Force fetch mode when using stub CCXT to avoid websocket/watch pitfalls
-        false
-    else
-        haswpos && @lget! s.attrs :is_watch_positions haswpos
-    end
+    iswatch = haswpos && @lget! s.attrs :is_watch_positions haswpos
     attrs = Dict{Symbol,Any}()
     attrs[:strategy] = s
     attrs[:kwargs] = kwargs
