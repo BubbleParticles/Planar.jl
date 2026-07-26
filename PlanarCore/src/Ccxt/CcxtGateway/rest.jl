@@ -299,10 +299,12 @@ function upgrade_ccxt()
     upgrade_ccxt(default_client())
 end
 
+const _gateway_use_ssl = Ref(true)  # set by _check_gateway_up or spawn_gateway
+_gateway_use_ssl_on_change() = (isassigned(_default_client) && (_default_client[] = GatewayClient(; use_ssl=_gateway_use_ssl[])))
 const _default_client = Ref{GatewayClient}()
 const _gateway_pid = Ref{Union{Int, Nothing}}(nothing)
-const _gateway_initialized = Ref(false)
 const _gateway_init_lock = ReentrantLock()
+const _gateway_initialized = Ref(false)
 
 function _check_gateway_up()
     # Check if tracked PID is alive AND responds to HTTPS
@@ -338,12 +340,20 @@ function _check_gateway_up()
                 end
             end
         end
-        # HTTPS ping only — the gateway must match the client's use_ssl=true default.
-        try
-            return ping(GatewayClient(; use_ssl=true, timeout=5.0))
-        catch
-            return false
+        # Try HTTPS first, then fall back to HTTP (gateway may be running without SSL).
+        # Set _gateway_use_ssl so default_client() creates the right client.
+        for (use_ssl, label) in [(true, "HTTPS"), (false, "HTTP")]
+            try
+                if ping(GatewayClient(; use_ssl=use_ssl, timeout=5.0))
+                    @debug "_check_gateway_up: $label ping succeeded"
+                    _gateway_use_ssl[] = use_ssl
+                    _gateway_use_ssl_on_change()
+                    return true
+                end
+            catch
+            end
         end
+        return false
     end
 end
 
@@ -371,7 +381,7 @@ const REST_GATEWAY_LOCKFILE = joinpath(REST_GATEWAY_DIR, "ccxt_gateway.lock")
 
 function default_client()
     if !isassigned(_default_client)
-        _default_client[] = GatewayClient()
+        _default_client[] = GatewayClient(; use_ssl=_gateway_use_ssl[])
     end
     _default_client[]
 end
@@ -598,9 +608,32 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
             end
             try rm(pidfile; force=true) catch end
         end
-        
-        # Kill whatever is on the gateway port (pre-existing HTTP gateway without pidfile)
-        _kill_process_on_port(DEFAULT_PORT)
+        # Before killing, check if a gateway is already running on the port
+        # (no pidfile and no tracked PID — orphaned from an earlier session)
+        for use_ssl in (true, false)
+            try
+                if ping(GatewayClient(; use_ssl=use_ssl, timeout=3.0))
+                    @debug "spawn_gateway: gateway already running on port $DEFAULT_PORT (SSL=$use_ssl)"
+                    _gateway_use_ssl[] = use_ssl
+                    _gateway_use_ssl_on_change()
+                    pid_str = try
+                        strip(readchomp(pipeline(`lsof -ti :$DEFAULT_PORT`; stderr=devnull)))
+                    catch
+                        ""
+                    end
+                    if !isempty(pid_str)
+                        pid = parse(Int, split(pid_str)[1])
+                        _gateway_pid[] = pid
+                        @debug "spawn_gateway: adopting existing PID $pid"
+                        return pid
+                    else
+                        @debug "spawn_gateway: could not determine PID, but gateway is alive — no-op"
+                        return 0
+                    end
+                end
+            catch
+            end
+        end
         
         # Find the daemon script
         @debug "spawn_gateway: locating daemon_gateway.py..."
