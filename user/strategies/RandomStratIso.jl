@@ -1,14 +1,16 @@
 module RandomStratIso
-using Planar
+
+using Planar: @strategyenv!, @contractsenv!
+using Statistics: mean
 
 const DESCRIPTION = "RandomStratIso"
 const EXC = :bybit
-const TF = tf"1m"
 
 @strategyenv!
 @contractsenv!
 # @optenv!
-using Statistics: mean
+
+const TF = tf"1m"
 
 function call!(s::S, ::ResetStrategy) end
 

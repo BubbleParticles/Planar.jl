@@ -8,6 +8,7 @@ using Random
 using PlanarCore.Stubs
 using PlanarCore.Misc
 using PlanarCore.Lang
+using PlanarCore: PlanarCore
 
 import PlanarCore.Data: stub!
 global s, ai, e
@@ -15,6 +16,12 @@ global s, ai, e
 function backtest_strat(sym; mode=Sim(), config_attrs=(;), kwargs...)
     @info "btstrat: newconfig"
     cfg = Config(sym; mode, kwargs...)
+    # Set parent_module based on strategy type (mirrors PlanarCore.Strategies.strategy() behavior)
+    if !haskey(cfg.attrs, :parent_module)
+        # BareStrat uses using ..Strategies so it needs parent=PlanarCore
+        # Non-BareStrat strategies use @strategyenv! which needs Planar in scope
+        cfg.attrs[:parent_module] = sym === :BareStrat ? PlanarCore : Planar
+    end
     for (k, v) in pairs(config_attrs)
         cfg.attrs[k] = v
     end

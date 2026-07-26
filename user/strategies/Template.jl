@@ -1,15 +1,15 @@
 module Template
-using Planar
 
-const DESCRIPTION = "Template"
-const EXC = Symbol()
-const MARGIN = NoMargin
-const TF = tf"1m"
+using Planar: @strategyenv!
 
 @strategyenv!
 # @contractsenv!
 # @optenv!
 
+const DESCRIPTION = "Template"
+const EXC = Symbol()
+const MARGIN = NoMargin
+const TF = tf"1m"
 function call!(s::SC, ::ResetStrategy) end
 
 function call!(_::SC, ::WarmupPeriod)
