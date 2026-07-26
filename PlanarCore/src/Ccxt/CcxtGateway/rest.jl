@@ -657,6 +657,7 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
             last_lines = max(1, length(loglines) - 20)
             err_msg = join(loglines[last_lines:end], "\n  ")
             @error "Gateway failed to start. Last 20 log lines:\n  $err_msg"
+        end
         error("Failed to spawn ccxt-gateway within 10 seconds")
     end
 end
