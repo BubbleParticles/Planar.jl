@@ -1,14 +1,16 @@
 module Example
-using Planar
+
+using Planar: @strategyenv!, @optenv!
 
 const DESCRIPTION = "Example"
 const EXC = :phemex
-const TF = tf"1m"
 
 @strategyenv!
-@optenv!
+# @optenv!
 
 include("common.jl")
+
+const TF = tf"1m"
 
 call!(s::SC, ::ResetStrategy) = begin
     skip_watcher = attr(s, :skip_watcher, false)
