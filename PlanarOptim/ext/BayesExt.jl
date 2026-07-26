@@ -1,6 +1,6 @@
 module BayesExt
-using Opt
-using Opt:
+using PlanarOptim
+using PlanarOptim:
     running!,
     stopcall!,
     isrunning,
@@ -8,13 +8,12 @@ using Opt:
     define_backtest_func,
     define_opt_func,
     ctxsteps,
-    objectives,
-    SimMode
-using .SimMode: start!, SimMode as sm, call!
-using .SimMode.Executors: st, Instances, OptSetup, OptRun, OptScore, Context
-using .SimMode.Misc.Lang: @preset, @precomp
-using .SimMode.TimeTicks
-using .SimMode.Misc
+    objectives
+using PlanarCore.SimMode: SimMode, start!, SimMode as sm, call!
+using PlanarCore.SimMode.Executors: st, Instances, OptSetup, OptRun, OptScore, Context
+using PlanarCore.SimMode.TimeTicks
+using PlanarCore.SimMode.Misc
+using PlanarCore.SimMode.Misc.Lang: @preset, @precomp
 using BayesianOptim
 using BayesianOptim.GaussianProcesses
 using .GaussianProcesses.Distributions
@@ -123,9 +122,9 @@ end
 
 export boptimize!
 
-if occursin("Opt", get(ENV, "JULIA_PRECOMP", ""))
+if occursin("PlanarOptim", get(ENV, "JULIA_PRECOMP", ""))
     @preset begin
-        s = Opt._precomp_strat(BayesExt)
+        s = PlanarOptim._precomp_strat(BayesExt)
 
         @precomp boptimize!(s, maxiterations=10)
     end
