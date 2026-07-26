@@ -354,7 +354,6 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 
 40. **`_ensure_ohlcv!` may create a `CcxtOHLCVTickerVal` watcher whose view stays empty even after the buffer populates**: The `_process!` for `CcxtOHLCVTickerVal` has warmup/pending logic that delays processing until conditions are met. If the source buffer never triggers the right pending check, the view remains `DataFrame()` forever while the buffer grows. Debugging tip: inspect `w.state.view_keys` — if `String[]`, no view entry was ever created.
 
-41. **Stub ccxt has zero markets, causing construction failures in watchers that call `exchange.markets`**: With `PLANAR_USE_STUB_CCXT=1`, examples `02_ohlcv_trades` and `03_ohlcv_candles` fail with `"Pair BTC/USDT not in exchange markets"`. Always verify watcher examples against a real CcxtGateway with market data, not just the stub.
 
 42. **Same-signature function duplicates in the same module produce no warnings**: When moving a function to a shared file (e.g., `_start_gateway_exchange` into `utils.jl`), stale copies remaining in other files compile silently — Julia only warns about method overwriting across different modules. Grep for the function name across all `.jl` files in the package after moving it and remove every duplicate.
 

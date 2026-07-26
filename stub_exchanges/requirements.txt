@@ -1,3 +1,0 @@
-ccxt
-fastapi
-uvicorn
