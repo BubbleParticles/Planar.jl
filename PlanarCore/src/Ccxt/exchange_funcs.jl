@@ -179,7 +179,14 @@ function ccxt_exchange_names()
         exchanges = CcxtGateway.fetch_exchange_names(client)
         return exchanges isa AbstractVector ? [string(x) for x in exchanges] : String[]
     catch
-        []
+        # Fall back to non-SSL (gateway may be running without SSL)
+        try
+            client = CcxtGateway.GatewayClient(; use_ssl=false, timeout=5.0)
+            exchanges = CcxtGateway.fetch_exchange_names(client)
+            return exchanges isa AbstractVector ? [string(x) for x in exchanges] : String[]
+        catch
+            []
+        end
     end
 end
 

@@ -378,10 +378,17 @@ end
 const REST_GATEWAY_DIR = _rest_gateway_dir()
 const REST_GATEWAY_PIDFILE = joinpath(REST_GATEWAY_DIR, "ccxt_gateway.pid")
 const REST_GATEWAY_LOCKFILE = joinpath(REST_GATEWAY_DIR, "ccxt_gateway.lock")
-
 function default_client()
     if !isassigned(_default_client)
+        _ensure_gateway_running()
         _default_client[] = GatewayClient(; use_ssl=_gateway_use_ssl[])
+    else
+        # Gateway may have been started/SSL-detected after precompilation cached the client.
+        # Re-check SSL setting and invalidate if stale.
+        _ensure_gateway_running()
+        if _default_client[].use_ssl != _gateway_use_ssl[]
+            _default_client[] = GatewayClient(; use_ssl=_gateway_use_ssl[])
+        end
     end
     _default_client[]
 end
