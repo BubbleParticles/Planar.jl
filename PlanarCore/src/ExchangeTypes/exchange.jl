@@ -81,52 +81,49 @@ function Exchange(sym::Symbol; account="", kwargs...)
     id = ExchangeID{sym}()
     name = string(sym)
     
-    # Auto-start gateway if not running
-    client = CcxtGateway.GatewayClient(; timeout=60.0)
-    if Symbol(name) ∈ ExchangeTypes._ccxt_exchange_set
-        try
-            if !CcxtGateway.ping(client)
-                if Base.generating_output()
-                    @debug "Precompilation: skipping gateway spawn"
-                else
-                    @debug "Gateway not responding, spawning..."
-                    try
-                        CcxtGateway.spawn_gateway()
-                    catch
-                        @debug "spawn_gateway failed (may already be running)"
-                    end
-                    sleep(3)
-                end
-            end
-            resp = CcxtGateway.start_exchange(client, name)
-            if resp isa Dict
-                status = get(resp, "status", "unknown")
-                if status == "already_started"
-                    @debug "Exchange $name already running on gateway"
-                elseif status == "success"
-                    @debug "Exchange $name started on gateway"
-                else
-                    @warn "Exchange $name start response: $resp"
-                end
-            end
-            # Quick poll: wait up to 5s for subprocess to be ready
-            for attempt in 1:5
+    # Auto-start gateway if not running — use default_client which handles SSL detection
+    client = default_client()
+    try
+        if !CcxtGateway.ping(client)
+            if Base.generating_output()
+                @debug "Precompilation: skipping gateway spawn"
+            else
+                @debug "Gateway not responding, spawning..."
                 try
-                    info = CcxtGateway.exchange_info(client, name)
-                    if info isa Union{Dict, JSON3.Object} && something(get(info, "running", false), false) === true
-                        break
-                    end
+                    CcxtGateway.spawn_gateway()
+                    # After spawn, reconnect client (SSL may have been auto-detected)
+                    client = default_client()
                 catch
+                    @debug "spawn_gateway failed (may already be running)"
                 end
-                sleep(1)
+                sleep(3)
             end
+        end
+        resp = CcxtGateway.start_exchange(client, name)
+        if resp isa Dict
+            status = get(resp, "status", "unknown")
+            if status == "already_started"
+                @debug "Exchange $name already running on gateway"
+            elseif status == "success"
+                @debug "Exchange $name started on gateway"
+            else
+                @warn "Exchange $name start response: $resp"
+            end
+        end
+        # Quick poll: wait up to 5s for subprocess to be ready
+        for attempt in 1:5
+            try
+                info = CcxtGateway.exchange_info(client, name)
+                if info isa Union{Dict, JSON3.Object} && something(get(info, "running", false), false) === true
+                    break
+                end
+            catch
+            end
+            sleep(1)
+        end
     catch e
         @warn "Failed to start exchange $name on gateway: $e"
     end
-    else
-        @debug "Exchange $name not in CCXT exchange set, skipping gateway init"
-    end
-    
     has_sym = Dict{Symbol,Any}()
     tfs = OrderedSet{String}()
     mkt_list = String[]
