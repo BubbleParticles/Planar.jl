@@ -1,7 +1,7 @@
 using Statistics: mean, std, cov
-using ..Strategies.Data.DataFrames: DataFrame
-using ..Strategies: asset_bysym, DateTime
-using ..Strategies.Lang: @lget!
+using PlanarCore.Strategies.Data.DataFrames: DataFrame
+using PlanarCore.Strategies: asset_bysym, DateTime
+using PlanarCore.Lang: @lget!
 
 # --- Pairs Trading State and Functions ---
 

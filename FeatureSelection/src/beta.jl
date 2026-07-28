@@ -1,14 +1,14 @@
 using StatsBase: cov, var
 using GLM
 using Statistics: mean
-using ..Strategies: Strategies as st
-using .st.Misc: Option
-using .st.Data: Data as da, DataFrame
-using .da.DataFrames: DataFrame, metadata!, deletemetadata!, names, metadata
-using .st: TimeFrame, DFT, @tf_str
-using .st.coll: _flatten_noempty!, raw, flatten
-using .st.Exchanges: tickers
-using ..Processing.Alignments: trim!, empty_unaligned!
+using PlanarCore.Strategies: Strategies as st
+using PlanarCore.Strategies.Misc: Option
+using PlanarCore.Strategies.Data: Data as da, DataFrame
+using PlanarCore.Strategies.Data.DataFrames: DataFrame, metadata!, deletemetadata!, names, metadata
+using PlanarCore.Strategies: TimeFrame, DFT, @tf_str
+using PlanarCore.Strategies.coll: _flatten_noempty!, raw, flatten
+using PlanarCore.Strategies.Exchanges: tickers
+using PlanarCore.Processing.Alignments: trim!, empty_unaligned!
 using GLM: @formula
 using LinearAlgebra: diag
 

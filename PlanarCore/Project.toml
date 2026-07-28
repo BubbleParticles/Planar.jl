@@ -18,6 +18,7 @@ Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 EzXML = "8f5d6c58-4d21-5cfd-889c-e3ad7ee6a615"
 FileWatching = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
+FeatureSelection = "b3c4d5e6-f7a8-9012-bcde-f3a4b5c6d7e8"
 FunctionalCollections = "de31a74c-ac4f-5751-b3fd-e18cd04993ca"
 GLM = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
 HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
@@ -52,6 +53,7 @@ Zarr = "0a941bbe-ad1d-11e8-39d9-ab76183a1d99"
 ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 
 [sources]
+FeatureSelection = {path = "/Planar.jl/FeatureSelection"}
 
 [compat]
 julia = "1.12"

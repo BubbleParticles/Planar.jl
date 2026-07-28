@@ -7,7 +7,6 @@ using Test
     include("ExchangeTypes/runtests.jl")
     include("Exchanges/runtests.jl")
     include("Executors/runtests.jl")
-    include("FeatureSelection/runtests.jl")
     include("Fetch/runtests.jl")
     include("Instances/runtests.jl")
     include("Instruments/runtests.jl")

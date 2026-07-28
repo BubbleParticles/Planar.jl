@@ -1,10 +1,20 @@
 module OnlineCrossCorr
 
-using ...Strategies: Strategies as st, DFT, DateTime, @lget!, Option
-using ..FeatureSelection: center_data, ratio!, lagsbytf, tickers, raw, metadata, DataFrame, roc_to_ratio
-using .st.Data.DataFrames: DataFrame, select!, metadata!
+using PlanarCore.Strategies: Strategies as st
+using PlanarCore.Strategies.Misc: DFT, DateTime, @lget!, Option
+using PlanarCore.Strategies.Data: Data as da
+using PlanarCore.Strategies.Data.DataFrames: DataFrame, select!, metadata!, metadata, names, nrow
+using PlanarCore.Strategies: TimeFrame, @tf_str
+using PlanarCore.Strategies.coll: _flatten_noempty!, raw, flatten
+using PlanarCore.Strategies.Exchanges: tickers
+using PlanarCore.Processing.Alignments: trim!, empty_unaligned!
+using PlanarCore.TimeTicks
 using OnlineTechnicalIndicators: ROC, OnlineTechnicalIndicators as oti
+using OnlineStatsBase: OnlineStat, value, nobs, merge!, CircBuff, EqualWeight
 using StatsBase: crosscor
+using DataStructures: BinaryHeap, push!, peek, pop!, isempty
+import OnlineStatsBase: value, fit!
+
 export OnlineCrossCorrelation, fit!, value, crosscorr_assets_online
 
 # Struct to cache reusable containers for crosscorr_assets_online

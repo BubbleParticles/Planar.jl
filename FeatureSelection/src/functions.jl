@@ -4,9 +4,9 @@ using Distributions: Normal, cdf
 using LinearAlgebra: eigen, Symmetric
 using Distances: pairwise, Euclidean
 using StatsBase: mode
-using ..Strategies: asset_bysym
-using ..Strategies: DateTime
-using ..Strategies.Lang: @lget!
+using PlanarCore.Strategies: asset_bysym
+using PlanarCore.Strategies: DateTime
+using PlanarCore.Lang: @lget!
 using StatsBase: StatsBase
 
 function sort_col_byrowsum!(df)

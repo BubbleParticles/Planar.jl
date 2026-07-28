@@ -1,11 +1,12 @@
 using Test
-using .fs.da.DataFrames
-using .fs.TimeTicks: TimeFrame, @tf_str, DateRange
-using .fs: center_data, lagsbytf
+using DataFrames
+using PlanarCore.TimeTicks: TimeFrame, @tf_str, DateRange, dt, @dt_str
+using FeatureSelection: center_data, lagsbytf, DFT
+
 @testset "crosscorr.jl tests" failfast=true begin
     @testset "lagsbytf function" begin
         # Test different timeframes
-        @test lagsbytf(tf"1m") == [1, 5, 15, 60, 60*4, 60*8, 60*12]
+        @test lagsbytf(tf"1min") == [1, 5, 15, 60, 60*4, 60*8, 60*12]
         @test lagsbytf(tf"1h") == [1, 4, 8, 12, 24]
         @test lagsbytf(tf"8h") == [1, 2, 3, 6, 12]
         @test lagsbytf(tf"1d") == [1, 2, 3, 5, 7]
@@ -16,9 +17,9 @@ using .fs: center_data, lagsbytf
     
     @testset "center_data function" begin
         # Create test data
-        timestamps = DateRange(dt"2020-", dt"2020-01-02", tf"1m") |> collect
+        timestamps = DateRange(dt"2020-", dt"2020-01-02", tf"1min") |> collect
         data = Dict(
-            tf"1m" => [
+            tf"1min" => [
                 (df = DataFrame(close=1.0:1440.0, timestamp=timestamps); 
                  metadata!(df, "asset_instance", "TEST1", style=:note); df),
                 (df = DataFrame(close=1.0:1440.0, timestamp=timestamps); 
@@ -27,7 +28,7 @@ using .fs: center_data, lagsbytf
         )
         
         # Test centering data
-        centered_data, vecs = center_data(data, tf"1m")
+        centered_data, vecs = center_data(data, tf"1min")
         
         # Check output types
         @test centered_data isa Dict{<:TimeFrame,Vector{DataFrame}}
@@ -38,7 +39,7 @@ using .fs: center_data, lagsbytf
         @test size(vecs, 2) == 2  # 2 assets
         
         # Check metadata preservation
-        for df in centered_data[tf"1m"]
+        for df in centered_data[tf"1min"]
             @test haskey(metadata(df), "asset_instance")
         end
     end
