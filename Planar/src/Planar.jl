@@ -19,6 +19,7 @@ module Planar
     using PlanarCore.ExchangeTypes: ExchangeID
     using PlanarCore.TimeTicks: @tf_str
     using PlanarCore.Misc: NoMargin, Isolated, MarginMode
+    using PlanarCore.Exchanges: Exchanges
 
     function _doinit()
         @debug "Initializing LMDB zarr instance..."

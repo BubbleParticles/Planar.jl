@@ -1,6 +1,17 @@
-include("env_scraper.jl")
 using Test
 
+# DBnomics test requires the Scrapers project environment
+const HAS_SCRAPERS = let
+    try
+        include("env_scraper.jl")
+        true
+    catch e
+        @warn "Skipping DBnomics tests: Scrapers project not available ($e)"
+        false
+    end
+end
+
+# DBnomics.jl vendor package may not be available
 const HAS_DBNOMICS = let
     try
         push!(LOAD_PATH, "/home/fra/dev/Planar.jl/vendor/DBnomics.jl")
@@ -11,14 +22,17 @@ const HAS_DBNOMICS = let
     end
 end
 
-@eval using PlanarDev.Planar.Engine.Data: DataFrames
-
 hascol(df, col) = begin
     ns = names(df)
     col in ns || string(col) in ns
 end
 
 function test_dbnomics()
+    if !HAS_SCRAPERS
+        @warn "Skipping DBnomics tests: Scrapers environment not available"
+        return
+    end
+
     @testset "DBNomics Tests" begin
         @testset "DBNomics Scraper" begin
             if isnothing(Base.find_package("DBnomics"))
@@ -62,7 +76,6 @@ function test_dbnomics()
                 @test DataFrames.nrow(df2) >= DataFrames.nrow(df)
             catch
                 @warn "DBnomics API call failed"
-                @test true
             end
         end
     end

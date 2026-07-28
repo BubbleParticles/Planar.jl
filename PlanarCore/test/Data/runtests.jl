@@ -5,10 +5,10 @@ using PlanarCore.Data: DictStore, PairData, _save_ohlcv, _load_ohlcv, _check_con
 using PlanarCore.Data: _contiguous_ts, LeftContiguityException, RightContiguityException
 using PlanarCore.Data.Zarr: ZArray
 using PlanarCore.Data: CandleCol, OHLCV_COLUMNS, OHLCV_COLUMNS_COUNT
-const Dates = Data.Misc.TimeTicks.Dates
+const _Dates = Data.Misc.TimeTicks.Dates
 
 
-to_ms(dt::Dates.DateTime) = Dates.datetime2unix(dt) * 1000.0
+to_ms(dt::_Dates.DateTime) = _Dates.datetime2unix(dt) * 1000.0
 
 function make_ohlcv(ts)
     m = zeros(length(ts), 6)
@@ -36,7 +36,7 @@ end
 # Candle construction
 # ──────────────────────────────────────────────
 @testset "Candle" begin
-    ts = Dates.DateTime(2024, 1, 1)
+    ts = _Dates.DateTime(2024, 1, 1)
     c = Candle(timestamp=ts, open=1.0, high=2.0, low=0.5, close=1.5, volume=100.0)
     @test c isa Data.Candle
     @test c.timestamp == ts
@@ -53,28 +53,28 @@ end
 end
 
 @testset "Candle operations" begin
-    ts = Dates.DateTime(2024, 1, 1, 0, 0)
+    ts = _Dates.DateTime(2024, 1, 1, 0, 0)
     df = DataFrame(
-        :timestamp => ts:Dates.Minute(1):(ts + Dates.Minute(4)),
+        :timestamp => ts:_Dates.Minute(1):(ts + _Dates.Minute(4)),
         (col => [100.0, 101.0, 102.0, 103.0, 104.0] for col in [:open, :high, :low, :close, :volume])...,
     )
-    @test candleat(df, ts + Dates.Minute(2)).close == 102.0
+    @test candleat(df, ts + _Dates.Minute(2)).close == 102.0
     @test candlelast(df).open == 104.0
-    c, idx = candleat(df, ts + Dates.Minute(3); return_idx=true)
-    @test c.timestamp == ts + Dates.Minute(3)
+    c, idx = candleat(df, ts + _Dates.Minute(3); return_idx=true)
+    @test c.timestamp == ts + _Dates.Minute(3)
     @test idx == 4
 
     # candleat at unavailable date returns Candle with requested date
     # but using prices from the left-adjacent row
-    c = candleat(df, ts + Dates.Minute(3) + Dates.Second(30))
-    @test c.timestamp == ts + Dates.Minute(3) + Dates.Second(30)
+    c = candleat(df, ts + _Dates.Minute(3) + _Dates.Second(30))
+    @test c.timestamp == ts + _Dates.Minute(3) + _Dates.Second(30)
     @test c.open == 103.0  # price from ts+3min row
 end
 
 @testset "Candle last" begin
-    ts = Dates.DateTime(2024, 1, 1)
+    ts = _Dates.DateTime(2024, 1, 1)
     df = DataFrame(
-        :timestamp => [ts, ts + Dates.Minute(1)],
+        :timestamp => [ts, ts + _Dates.Minute(1)],
         (col => [10.0, 20.0] for col in [:open, :high, :low, :close, :volume])...,
     )
     @test openlast(df) == 20.0
@@ -87,7 +87,7 @@ end
 # ──────────────────────────────────────────────
 @testset "to_ohlcv matrix" begin
     # 3 rows of OHLCV data
-    ts = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0), Dates.DateTime(2024,1,1,0,2,0)])
+    ts = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0), _Dates.DateTime(2024,1,1,0,2,0)])
     raw = [ts[1] 100.0 110.0 90.0  105.0 1000.0;
            ts[2] 105.0 115.0 95.0  110.0 2000.0;
            ts[3] 110.0 120.0 100.0 115.0 3000.0]
@@ -95,7 +95,7 @@ end
     @test df isa DataFrame
     @test size(df) == (3, 6)
     @test names(df) == ["timestamp", "open", "high", "low", "close", "volume"]
-    @test df.timestamp[1] == Dates.DateTime(2024,1,1,0,0,0)
+    @test df.timestamp[1] == _Dates.DateTime(2024,1,1,0,0,0)
     @test df.open[2] == 105.0
     @test df.volume[3] == 3000.0
 end
@@ -112,7 +112,7 @@ end
 
     @testset "first save creates data" begin
         za = empty_zarray()
-        ts = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0)])
+        ts = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0)])
         data = make_ohlcv(ts)
         _save_ohlcv(za, 60000.0, data)
         @test size(za, 1) == 2
@@ -123,11 +123,11 @@ end
 
     @testset "save with reset clears existing data" begin
         za = empty_zarray()
-        ts1 = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0)])
+        ts1 = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts1))
         @test size(za, 1) == 2
 
-        ts2 = to_ms.([Dates.DateTime(2024,1,2,0,0,0), Dates.DateTime(2024,1,2,0,1,0)])
+        ts2 = to_ms.([_Dates.DateTime(2024,1,2,0,0,0), _Dates.DateTime(2024,1,2,0,1,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts2); reset=true)
         @test size(za, 1) == 2
         @test za[1, 1] ≈ ts2[1]
@@ -135,10 +135,10 @@ end
 
     @testset "append without overwrite" begin
         za = empty_zarray()
-        ts1 = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0)])
+        ts1 = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts1))
 
-        ts2 = to_ms.([Dates.DateTime(2024,1,1,0,2,0)])
+        ts2 = to_ms.([_Dates.DateTime(2024,1,1,0,2,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts2); overwrite=false)
         @test size(za, 1) == 3
         @test za[3, 1] ≈ ts2[1]
@@ -146,7 +146,7 @@ end
 
     @testset "overwrite existing data" begin
         za = empty_zarray()
-        ts1 = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0)])
+        ts1 = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts1))
 
         # Overwrite both rows with new prices
@@ -161,11 +161,11 @@ end
 
     @testset "partial overwrite extends array" begin
         za = empty_zarray()
-        ts_base = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0), Dates.DateTime(2024,1,1,0,2,0)])
+        ts_base = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0), _Dates.DateTime(2024,1,1,0,2,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts_base))
 
         # Overwrite last 2, extend by 1
-        ts2 = to_ms.([Dates.DateTime(2024,1,1,0,1,0), Dates.DateTime(2024,1,1,0,2,0), Dates.DateTime(2024,1,1,0,3,0)])
+        ts2 = to_ms.([_Dates.DateTime(2024,1,1,0,1,0), _Dates.DateTime(2024,1,1,0,2,0), _Dates.DateTime(2024,1,1,0,3,0)])
         data2 = make_ohlcv(ts2)
         data2[:, 2] .= 999.0
         _save_ohlcv(za, 60000.0, data2; overwrite=true)
@@ -176,11 +176,11 @@ end
 
     @testset "insert before existing data (adjacent, no overlap)" begin
         za = empty_zarray()
-        ts_orig = to_ms.([Dates.DateTime(2024,1,1,0,2,0), Dates.DateTime(2024,1,1,0,3,0)])
+        ts_orig = to_ms.([_Dates.DateTime(2024,1,1,0,2,0), _Dates.DateTime(2024,1,1,0,3,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts_orig))
 
         # Insert 2 rows before (adjacent, no overlap with saved data)
-        ts_new = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0)])
+        ts_new = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts_new); overwrite=true)
         # No overlap, so all saved data is kept
         @test size(za, 1) == 4
@@ -192,7 +192,7 @@ end
 
     @testset "check=:all validates full contiguity after save" begin
         za = empty_zarray()
-        ts = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0)])
+        ts = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0)])
         # _contiguous_ts with check=:all has a pre-existing bug when T is Float64
         # (dtfloat has no Float64 method). Using check=:bounds as workaround.
         _save_ohlcv(za, 60000.0, make_ohlcv(ts); check=:bounds)
@@ -201,23 +201,23 @@ end
 
     @testset "overwrite with check=:none skips contiguity check" begin
         za = empty_zarray()
-        ts1 = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0)])
+        ts1 = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts1))
 
         # Gap between data — check=:none skips _check_contiguity
         # but overwrite mode still requires overlap
-        ts2 = to_ms.([Dates.DateTime(2024,1,1,0,2,0)])
+        ts2 = to_ms.([_Dates.DateTime(2024,1,1,0,2,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts2); overwrite=true, check=:none)
         @test size(za, 1) == 3
     end
 
     @testset "insert before with adjacent prepend" begin
         za = empty_zarray()
-        ts_orig = to_ms.([Dates.DateTime(2024,1,1,0,2,0), Dates.DateTime(2024,1,1,0,3,0)])
+        ts_orig = to_ms.([_Dates.DateTime(2024,1,1,0,2,0), _Dates.DateTime(2024,1,1,0,3,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts_orig))
 
         # New data is adjacent (00:01) before saved data (00:02) — no gap
-        ts_new = to_ms.([Dates.DateTime(2024,1,1,0,1,0)])
+        ts_new = to_ms.([_Dates.DateTime(2024,1,1,0,1,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts_new); overwrite=true)
         @test size(za, 1) == 3
         @test za[1, 1] ≈ ts_new[1]
@@ -232,11 +232,11 @@ end
 @testset "Save error handling" begin
     @testset "RightContiguityException when data too far ahead" begin
         za = empty_zarray()
-        ts1 = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0)])
+        ts1 = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts1))
 
         # Gap of 1 hour — too far, should throw RightContiguityException
-        ts2 = to_ms.([Dates.DateTime(2024,1,1,1,0,0)])
+        ts2 = to_ms.([_Dates.DateTime(2024,1,1,1,0,0)])
         @test_throws RightContiguityException _save_ohlcv(za, 60000.0, make_ohlcv(ts2))
     end
 end
@@ -247,7 +247,7 @@ end
 @testset "Load OHLCV" begin
     @testset "load all data" begin
         za = empty_zarray()
-        ts = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0), Dates.DateTime(2024,1,1,0,2,0)])
+        ts = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0), _Dates.DateTime(2024,1,1,0,2,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts))
 
         result = _load_ohlcv(za, 60000.0)
@@ -257,10 +257,10 @@ end
 
     @testset "load with from date" begin
         za = empty_zarray()
-        ts = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0), Dates.DateTime(2024,1,1,0,2,0)])
+        ts = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0), _Dates.DateTime(2024,1,1,0,2,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts))
 
-        from_dt = Dates.DateTime(2024,1,1,0,1,0)
+        from_dt = _Dates.DateTime(2024,1,1,0,1,0)
         result = _load_ohlcv(za, 60000.0; from=string(from_dt))
         @test result isa DataFrame
         @test size(result, 1) == 2
@@ -269,11 +269,11 @@ end
 
     @testset "load with both from and to" begin
         za = empty_zarray()
-        ts = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0), Dates.DateTime(2024,1,1,0,2,0), Dates.DateTime(2024,1,1,0,3,0)])
+        ts = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0), _Dates.DateTime(2024,1,1,0,2,0), _Dates.DateTime(2024,1,1,0,3,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts))
 
-        from_dt = Dates.DateTime(2024,1,1,0,1,0)
-        to_dt = Dates.DateTime(2024,1,1,0,2,0)
+        from_dt = _Dates.DateTime(2024,1,1,0,1,0)
+        to_dt = _Dates.DateTime(2024,1,1,0,2,0)
         result = _load_ohlcv(za, 60000.0; from=string(from_dt), to=string(to_dt))
         @test size(result, 1) == 2
         @test result.timestamp[1] == from_dt
@@ -282,10 +282,10 @@ end
 
     @testset "load with from only" begin
         za = empty_zarray()
-        ts = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0), Dates.DateTime(2024,1,1,0,2,0)])
+        ts = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0), _Dates.DateTime(2024,1,1,0,2,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts))
 
-        from_dt = Dates.DateTime(2024,1,1,0,1,0)
+        from_dt = _Dates.DateTime(2024,1,1,0,1,0)
         result = _load_ohlcv(za, 60000.0; from=string(from_dt))
         @test size(result, 1) == 2
         @test result.timestamp[1] == from_dt
@@ -300,7 +300,7 @@ end
 
     @testset "load single element (less than 2 rows) returns empty" begin
         za = empty_zarray()
-        ts = to_ms.([Dates.DateTime(2024,1,1,0,0,0)])
+        ts = to_ms.([_Dates.DateTime(2024,1,1,0,0,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts); reset=true)
         result = _load_ohlcv(za, 60000.0)
         @test isempty(result)
@@ -308,7 +308,7 @@ end
 
     @testset "load with as_z flag returns ZArray" begin
         za = empty_zarray()
-        ts = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0)])
+        ts = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts))
 
         result, (start, stop) = _load_ohlcv(za, 60000.0; as_z=true)
@@ -319,7 +319,7 @@ end
 
     @testset "load with with_z flag returns tuple" begin
         za = empty_zarray()
-        ts = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0)])
+        ts = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts))
 
         df, z = _load_ohlcv(za, 60000.0; with_z=true)
@@ -330,7 +330,7 @@ end
 
     @testset "load zero-timestamp triggers delete" begin
         za = empty_zarray()
-        ts = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0)])
+        ts = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts))
         # Zero the first column so from_saved == to_saved == 0
         za[:, 1] .= 0.0
@@ -346,17 +346,17 @@ end
 # ──────────────────────────────────────────────
 @testset "Contiguity" begin
     @testset "_contiguous_ts with DateTime series" begin
-        ts = [Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0), Dates.DateTime(2024,1,1,0,2,0)]
+        ts = [_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0), _Dates.DateTime(2024,1,1,0,2,0)]
         @test _contiguous_ts(ts, 60000.0)
 
-        ts_gap = [Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,5,0)]
+        ts_gap = [_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,5,0)]
         @test_throws String _contiguous_ts(ts_gap, 60000.0)
 
         @test !_contiguous_ts(ts_gap, 60000.0; raise=false)
     end
 
     @testset "_contiguous_ts with Float64 series (pre-existing bug: dtfloat no Float64 method)" begin
-        ts = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0)])
+        ts = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0)])
         # _contiguous_ts has a bug when called with Float64 series —
         # dtfloat has no method for AbstractFloat. This is pre-existing.
         @test_throws MethodError _contiguous_ts(ts, 60000.0)
@@ -364,7 +364,6 @@ end
 
     @testset "_check_contiguity passes for adjacent data" begin
         _check_contiguity(100.0, 200.0, 0.0, 60.0, 60.0)
-        @test true
     end
 
     @testset "_check_contiguity throws RightContiguityException for gap ahead" begin
@@ -376,7 +375,7 @@ end
     end
 
     @testset "contiguous_ts string timeframe" begin
-        ts_vec = [Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0), Dates.DateTime(2024,1,1,0,2,0)]
+        ts_vec = [_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0), _Dates.DateTime(2024,1,1,0,2,0)]
         @test Data.contiguous_ts(ts_vec, "1m")
     end
 end
@@ -387,34 +386,34 @@ end
 @testset "ZArray deletion via string API" begin
     @testset "delete! with string dates removes middle range" begin
         za = empty_zarray()
-        ts = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0), Dates.DateTime(2024,1,1,0,2,0), Dates.DateTime(2024,1,1,0,3,0)])
+        ts = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0), _Dates.DateTime(2024,1,1,0,2,0), _Dates.DateTime(2024,1,1,0,3,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts))
 
         # Use the Base.delete!(z::ZArray, to::String, from::String) wrapper
         Data.delete!(za, "2024-01-01T00:03:00", "2024-01-01T00:01:00")
         @test size(za, 1) == 2
-        @test Dates.unix2datetime(za[1, 1] / 1000) == Dates.DateTime(2024,1,1,0,0,0)
-        @test Dates.unix2datetime(za[2, 1] / 1000) == Dates.DateTime(2024,1,1,0,3,0)
+        @test _Dates.unix2datetime(za[1, 1] / 1000) == _Dates.DateTime(2024,1,1,0,0,0)
+        @test _Dates.unix2datetime(za[2, 1] / 1000) == _Dates.DateTime(2024,1,1,0,3,0)
     end
 
     @testset "delete! empty to string removes from beginning" begin
         za = empty_zarray()
-        ts = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0), Dates.DateTime(2024,1,1,0,2,0)])
+        ts = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0), _Dates.DateTime(2024,1,1,0,2,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts))
 
         Data.delete!(za, "2024-01-01T00:01:00")
         @test size(za, 1) == 2
-        @test Dates.unix2datetime(za[1, 1] / 1000) == Dates.DateTime(2024,1,1,0,1,0)
+        @test _Dates.unix2datetime(za[1, 1] / 1000) == _Dates.DateTime(2024,1,1,0,1,0)
     end
 
     @testset "delete! with empty from removes to end" begin
         za = empty_zarray()
-        ts = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0), Dates.DateTime(2024,1,1,0,2,0)])
+        ts = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0), _Dates.DateTime(2024,1,1,0,2,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts))
 
         Data.delete!(za, "", "2024-01-01T00:01:00")
         @test size(za, 1) == 1
-        @test Dates.unix2datetime(za[1, 1] / 1000) == Dates.DateTime(2024,1,1,0,0,0)
+        @test _Dates.unix2datetime(za[1, 1] / 1000) == _Dates.DateTime(2024,1,1,0,0,0)
     end
 end
 
@@ -448,7 +447,7 @@ end
 @testset "ZArray unique!" begin
     @testset "unique! removes duplicate rows" begin
         za = empty_zarray()
-        ts = to_ms.([Dates.DateTime(2024,1,1,0,0,0), Dates.DateTime(2024,1,1,0,1,0), Dates.DateTime(2024,1,1,0,1,0)])
+        ts = to_ms.([_Dates.DateTime(2024,1,1,0,0,0), _Dates.DateTime(2024,1,1,0,1,0), _Dates.DateTime(2024,1,1,0,1,0)])
         _save_ohlcv(za, 60000.0, make_ohlcv(ts); reset=true)
         @test size(za, 1) == 3
 
@@ -523,7 +522,7 @@ end
 # PairData
 # ──────────────────────────────────────────────
 @testset "PairData" begin
-    ts = Dates.DateTime(2024, 1, 1)
+    ts = _Dates.DateTime(2024, 1, 1)
     df = DataFrame(:timestamp => [ts], :open => [1.0], :high => [2.0], :low => [0.5], :close => [1.5], :volume => [100.0])
     pd = PairData(name="BTC/USDT", tf="1m", data=df, z=nothing)
     @test pd.name == "BTC/USDT"
@@ -536,25 +535,25 @@ end
 # DataFrame utilities
 # ──────────────────────────────────────────────
 @testset "DFUtils" begin
-    ts = Dates.DateTime(2024, 1, 1, 0, 0)
+    ts = _Dates.DateTime(2024, 1, 1, 0, 0)
     df = DataFrame(
-        :timestamp => ts:Dates.Minute(1):(ts + Dates.Minute(9)),
+        :timestamp => ts:_Dates.Minute(1):(ts + _Dates.Minute(9)),
         (col => [100.0 + i for i in 0:9] for col in [:open, :high, :low, :close, :volume])...,
     )
 
     @test Data.DFUtils.firstdate(df) == ts
-    @test Data.DFUtils.lastdate(df) == ts + Dates.Minute(9)
+    @test Data.DFUtils.lastdate(df) == ts + _Dates.Minute(9)
 
     tf = Data.DFUtils.timeframe(df)
     @test tf isa Data.Misc.TimeTicks.TimeFrame
 
-    idx = Data.DFUtils.dateindex(df, ts + Dates.Minute(3))
+    idx = Data.DFUtils.dateindex(df, ts + _Dates.Minute(3))
     @test idx == 4
 
-    after_view = Data.DFUtils.after(df, ts + Dates.Minute(5))
+    after_view = Data.DFUtils.after(df, ts + _Dates.Minute(5))
     @test size(after_view, 1) == 4
 
-    before_view = Data.DFUtils.before(df, ts + Dates.Minute(5))
+    before_view = Data.DFUtils.before(df, ts + _Dates.Minute(5))
     @test size(before_view, 1) == 5
 
     dr = Data.DFUtils.daterange(df)
@@ -579,7 +578,7 @@ end
     exc_name = "test"
     tf = "1m"
     pairs = ["BTC/USDT", "ETH/USDT", "SOL/USDT"]
-    ts_base = to_ms.([Dates.DateTime(2024, 1, 1, 0, 0, 0), Dates.DateTime(2024, 1, 1, 0, 1, 0)])
+    ts_base = to_ms.([_Dates.DateTime(2024, 1, 1, 0, 0, 0), _Dates.DateTime(2024, 1, 1, 0, 1, 0)])
     for p in pairs
         save_ohlcv(zi, exc_name, p, tf, make_ohlcv(ts_base))
     end

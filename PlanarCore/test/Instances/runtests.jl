@@ -10,11 +10,11 @@ using PlanarCore.Instances.Data: DataFrame
 using PlanarCore.Instances.Misc: NoMargin, Isolated, Cross, DFT, Long, Short, WithMargin, IsolatedHedged, CrossHedged, CrossMargin, Hedged, NotHedged, opposite
 using Test
 
-const Dates = Instances.TimeTicks.Dates
+const _Dates = Instances.TimeTicks.Dates
 const HTTP = Instances.Exchanges.ExchangeTypes.CcxtGateway.HTTP
 const JSON3 = Instances.Exchanges.ExchangeTypes.JSON3
 
-const date = Dates.now()
+const date = _Dates.now()
 
 # ── Setup mock HTTP ──────────────────────────────────────────
 const _mock_sandbox = Dict{String,Bool}()
@@ -423,7 +423,7 @@ end
     @test Instances.leverage(po) == 5.0
 
     # timestamp!
-    dt = Dates.now()
+    dt = _Dates.now()
     Instances.timestamp!(po, dt)
     @test Instances.timestamp(po) == dt
 

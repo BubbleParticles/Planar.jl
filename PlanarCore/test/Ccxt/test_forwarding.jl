@@ -3,7 +3,7 @@ using Test
 using JSON3
 
 # Include the actual types.jl
-include("../../../Ccxt/src/CcxtGateway/types.jl")
+include("../../src/Ccxt/CcxtGateway/types.jl")
 
 @testset "CcxtGateway.Types - Minimal (correct approach)" begin
     @testset "GatewayResponse" begin

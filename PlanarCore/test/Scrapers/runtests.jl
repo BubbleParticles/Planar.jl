@@ -8,7 +8,7 @@ using PlanarCore.Scrapers: csvtodf, timestamp!, _tempdir, WORKERS, TF, SEM, HTTP
 using PlanarCore.Instruments: Asset, AbstractAsset, bc, qc, @a_str
 using PlanarCore.Data.DataFrames: DataFrame
 
-const Dates = Scrapers.Misc.TimeTicks.Dates
+const _Dates = Scrapers.Misc.TimeTicks.Dates
 using PlanarCore.Scrapers.Misc.TimeTicks
 import PlanarCore.Scrapers.CodecZlib: ZlibCompressor, ZlibDecompressor
 
@@ -96,8 +96,8 @@ import PlanarCore.Scrapers.CodecZlib: ZlibCompressor, ZlibDecompressor
     @testset "timestamp!" begin
         df = DataFrame(timestamp=[1704067200, 1704067260], open=[100.0, 101.0])
         result = timestamp!(df)
-        @test result.timestamp[1] == Dates.DateTime(2024, 1, 1, 0, 0)
-        @test result.timestamp[2] == Dates.DateTime(2024, 1, 1, 0, 1)
+        @test result.timestamp[1] == _Dates.DateTime(2024, 1, 1, 0, 0)
+        @test result.timestamp[2] == _Dates.DateTime(2024, 1, 1, 0, 1)
     end
 
     @testset "@fromassets macro exported" begin

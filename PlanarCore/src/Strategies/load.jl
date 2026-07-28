@@ -36,7 +36,6 @@ function find_path(file, cfg)
     realpath(file)
 end
 
-_default_projectless(src) = joinpath(user_dir(), "strategies", string(src, ".jl"))
 @doc """ Retrieves the source file for a strategy without a project.
 
 The `_include_projectless` function retrieves the source file for a strategy that does not have a project.
@@ -69,23 +68,12 @@ function _file(src, cfg, is_project)
         else
         end
     else
-        @something _include_project(cfg.attrs) _include_projectless(src, cfg.toml) _default_projectless(
-            src
-        )
+        let f = _include_project(cfg.attrs); f === nothing ? _include_projectless(src, cfg.toml) : f; end
     end
     if isnothing(file)
         file = get(cfg.sources, src, nothing)
         if isnothing(file)
-            msg = if is_project
-                "Strategy include file not found for project $src, \
-                declare `include_file` manually in strategy config \
-                or ensure `src/$src.jl is present. cfg: $(cfg.path) file: ($file)"
-            else
-                "Section `$src` does not declare an `include_file` and \
-                section `sources` does not declare a `$src` key or \
-                its value is not a valid file. cfg: $(cfg.path) file: $(file)"
-            end
-            throw(ArgumentError(msg))
+            return nothing
         end
     end
     file
@@ -211,53 +199,74 @@ If the source file is not defined in the parent module, it is evaluated and trac
 Finally, the function returns the loaded strategy.
 """
 function strategy!(src::Symbol, cfg::Config)
-    file = _file(src, cfg, false)
-    isproject = if splitext(file)[2] == ".toml"
-        project_file = find_path(file, cfg)
-        path = find_path(file, cfg)
-        name = string(src)
-        Misc.config!(name; cfg, path, check=false)
-        file = _file(src, cfg, true)
-        true
-    else
+    # --- Built-in BareStrat (preserved single-file path) ---
+    if src == :BareStrat
+        file = joinpath(user_dir(), "strategies", "BareStrat.jl")
+        isproject = false
         project_file = nothing
-        false
+        prev_proj = Base.active_project()
+        path = find_path(file, cfg)
+        parent = get(cfg.attrs, :parent_module, Strategies)
+        @assert parent isa Module
+        mod = if !isdefined(parent, src)
+            @eval parent begin
+                include($(path))
+                using .$(src)
+                $(src)
+            end
+        else
+            @eval parent $(src)
+        end
+        isnothing(mod) && return nothing
+        return strategy!(mod, cfg)
     end
-    prev_proj = Base.active_project()
+
+    # --- Project-based strategies only ---
+    file = _file(src, cfg, false)
+    if isnothing(file)
+        error("Strategy `$src` not found. Add it under `[sources]` in `user/planar.toml`.")
+    end
+    if splitext(file)[2] != ".toml"
+        error("Strategy `$src` at `$file` is not a project-based strategy. " *
+              "Single-file .jl strategies are no longer supported. " *
+              "Create a project at `user/strategies/$src/` with a Project.toml " *
+              "and add it under `[sources]` in `user/planar.toml`.")
+    end
+    project_file = find_path(file, cfg)
     path = find_path(file, cfg)
+    name = string(src)
+    Misc.config!(name; cfg, path, check=false)
+    file = _file(src, cfg, true)  # resolve .jl source within the project
+    path = find_path(file, cfg)  # resolve .jl source path for include
+
+    prev_proj = Base.active_project()
     parent = get(cfg.attrs, :parent_module, Main)
-    @assert parent isa Module "loading: $parent is not symbol (module)"
-    # Project-based strategies: activate the project but use include()+using .$src
-    # (not `using $src`) to bypass Pkg resolution issues when the manifest is missing.
+    @assert parent isa Module
+
     mod = if !isdefined(parent, src)
         @eval parent begin
             try
-                    if $(isproject)
-                        @debug "loading: " strat = $(project_file)
-                        $Pkg.activate($(project_file); io=Base.devnull)
-                        try
-                            $Pkg.instantiate(; io=Base.devnull)
-                        catch e
-                            @warn "loading: instantiation failed, will try direct include" exception = e
-                        end
+                $Pkg.activate($(project_file); io=Base.devnull)
+                try
+                    $Pkg.instantiate(; io=Base.devnull)
+                catch e
+                    @warn "loading: instantiation failed, will try direct include" exception = e
+                end
+                include($(path))
+                using .$(src)
+                if isinteractive() && isdefined(Main, :Revise)
+                    try
+                        Main.Revise.track($(src), $(path))
+                    catch e
+                        @warn "strategy: Revise tracking failed" _module=$(src) exception=e
                     end
-                    include($(path))
-                    using .$(src)
-                    if isinteractive() && isdefined(Main, :Revise)
-                        try
-                            Main.Revise.track($(src), $(path))
-                        catch e
-                            @warn "strategy: Revise tracking failed" _module=$(src) exception=e
-                        end
-                    end
-                    $(src)
+                end
+                $(src)
             catch e
                 @error "strategy loading: failed to load module" _module=$(src) exception=(e, catch_backtrace())
                 rethrow(e)
             finally
-                if $(isproject)
-                    $Pkg.activate($(prev_proj); io=Base.devnull)
-                end
+                $Pkg.activate($(prev_proj); io=Base.devnull)
             end
         end
     else

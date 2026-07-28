@@ -11,7 +11,7 @@ using PlanarCore.Watchers.Misc: ConcurrentCollections
 import PlanarCore.Watchers: _fetch!, _init!, _load!, _flush!, _process!, _get, _push!, _pop!, _start!, _stop!, _delete!
 using PlanarCore.Watchers: isstale, isstarted, isstopped, pushnew!, pushstart!, buffer, watcher, lastdate
 
-const Dates = Watchers.Misc.TimeTicks.Dates
+const _Dates = Watchers.Misc.TimeTicks.Dates
 using PlanarCore.Watchers.Misc.TimeTicks
 using PlanarCore.Watchers.Misc: rangebetween
 using PlanarCore.Watchers.Data: empty_ohlcv
@@ -55,7 +55,7 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         @test length(w) == 0
         @test isstopped(w)
         @test !isstarted(w)
-        @test lastdate(w) == Dates.typemin(DateTime)
+        @test lastdate(w) == _Dates.typemin(DateTime)
         @test w.attempts == 0
 
         # Clean up
@@ -133,7 +133,7 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         @test isstale(w)
 
         w.attempts = 0
-        w.last_fetch = now() - Dates.Hour(2)
+        w.last_fetch = now() - _Dates.Hour(2)
         @test isstale(w)
 
         Watchers.close(w; doflush=false)
@@ -142,7 +142,6 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
     @testset "_check_flush_interval" begin
         _check_flush_interval(Millisecond(60000), Millisecond(1000), 10)
         _check_flush_interval(Millisecond(60000), Millisecond(1000), 1)
-        @test true
     end
 
     @testset "_notimpl throws" begin
@@ -183,47 +182,54 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
     end
 
     @testset "Specific watcher constructors" begin
-        # Test cg_ticker_watcher constructor
         @testset "cg_ticker_watcher" begin
-            # Just test that the constructor doesn't error with mock implementation
-            # We can't test the actual fetch without CoinGecko API
-            @test true  # Placeholder - full test would need mocking
+            @test isdefined(Watchers.WatchersImpls, :CgTickerVal)
+            @test isdefined(Watchers.WatchersImpls, :cg_ticker_watcher)
         end
 
         @testset "cg_derivatives_watcher" begin
-            @test true
+            @test isdefined(Watchers.WatchersImpls, :CgDerivativesVal)
+            @test isdefined(Watchers.WatchersImpls, :cg_derivatives_watcher)
         end
 
         @testset "cp_markets_watcher" begin
-            @test true
+            @test isdefined(Watchers.WatchersImpls, :CpMarketsVal)
+            @test isdefined(Watchers.WatchersImpls, :cp_markets_watcher)
         end
 
         @testset "cp_twitter_watcher" begin
-            @test true
+            @test isdefined(Watchers.WatchersImpls, :CpTwitterVal)
+            @test isdefined(Watchers.WatchersImpls, :cp_twitter_watcher)
         end
 
         @testset "ccxt_tickers_watcher" begin
-            @test true
+            @test isdefined(Watchers.WatchersImpls, :CcxtTickerVal)
+            @test isdefined(Watchers, :ccxt_tickers_watcher)
         end
 
         @testset "ccxt_ohlcv_watcher" begin
-            @test true
+            @test isdefined(Watchers.WatchersImpls, :CcxtOHLCVVal)
+            @test isdefined(Watchers, :ccxt_ohlcv_watcher)
         end
 
         @testset "ccxt_ohlcv_tickers_watcher" begin
-            @test true
+            @test isdefined(Watchers.WatchersImpls, :CcxtOHLCVTickerVal)
+            @test isdefined(Watchers.WatchersImpls, :ccxt_ohlcv_tickers_watcher)
         end
 
         @testset "ccxt_ohlcv_candles_watcher" begin
-            @test true
+            @test isdefined(Watchers.WatchersImpls, :CcxtOHLCVCandlesVal)
+            @test isdefined(Watchers, :ccxt_ohlcv_candles_watcher)
         end
 
         @testset "ccxt_orderbook_watcher" begin
-            @test true
+            @test isdefined(Watchers.WatchersImpls, :CcxtOrderBookVal)
+            @test isdefined(Watchers, :ccxt_orderbook_watcher)
         end
 
         @testset "ccxt_average_ohlcv_watcher" begin
-            @test true
+            @test isdefined(Watchers.WatchersImpls, :CcxtAverageOHLCVVal)
+            @test isdefined(Watchers.WatchersImpls, :ccxt_average_ohlcv_watcher)
         end
     end
 
@@ -560,7 +566,7 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
 
     @testset "rangebetween strict=false with duplicates" begin
         now_ts = now()
-        from = now_ts - Dates.Minute(10)
+        from = now_ts - _Dates.Minute(10)
         to = now_ts
 
         # For UNIQUE values, strict=true and strict=false behave identically
@@ -568,12 +574,12 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         # are DUPLICATE timestamps, which can happen when vcat merges
         # upsampled data with directly-fetched last-mile candles.
         ts = DateTime[
-            from - Dates.Minute(1),   # 1: before range
+            from - _Dates.Minute(1),   # 1: before range
             from, from,               # 2:3 — duplicate at left boundary
-            from + Dates.Minute(1),   # 4
-            from + Dates.Minute(5),   # 5
+            from + _Dates.Minute(1),   # 4
+            from + _Dates.Minute(5),   # 5
             to, to, to,               # 6:7:8 — duplicate at right boundary
-            to + Dates.Minute(1),     # 9: after range
+            to + _Dates.Minute(1),     # 9: after range
         ]
 
         # strict=true — excludes ALL elements equal to boundary
@@ -1079,16 +1085,16 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         w[Symbol("symstates")] = Dict(sym => TickerWatcherSymbolState2(; sym) for sym in syms)
         w[Symbol("sem")] = Base.Semaphore(1)
         view = w.view
-        M = TimeTicks.apply(tf, TimeTicks.now()) - Dates.Minute(2)
+        M = TimeTicks.apply(tf, TimeTicks.now()) - _Dates.Minute(2)
         df0 = empty_ohlcv()
         for i in 2:-1:1
-            push!(df0, (timestamp = M - Dates.Minute(i), open=Float64(100+i), high=Float64(101+i), low=Float64(99+i), close=Float64(100+i), volume=Float64(10)))
+            push!(df0, (timestamp = M - _Dates.Minute(i), open=Float64(100+i), high=Float64(101+i), low=Float64(99+i), close=Float64(100+i), volume=Float64(10)))
         end
         view["BTC/USDT"] = df0
         state = w[Symbol("symstates")]["BTC/USDT"]
 
         mk_ticker(ts_dt, price, vol) = begin
-            ts_ms = Int(floor(Dates.datetime2unix(ts_dt) * 1000))
+            ts_ms = Int(floor(_Dates.datetime2unix(ts_dt) * 1000))
             d = Dict{String,Any}(
                 "symbol" => "BTC/USDT", "timestamp" => ts_ms,
                 "open" => price, "high" => price, "low" => price, "close" => price,
@@ -1102,11 +1108,11 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         end
 
         # Fresh state: temp candle timestamp is the epoch sentinel.
-        @test state.temp.timestamp == Dates.DateTime(0)
+        @test state.temp.timestamp == _Dates.DateTime(0)
 
         # A ticker with a null `last` must NOT throw and must NOT mutate state/view.
         _update_sym_ohlcv(w, mk_ticker(M, nothing, 100.0), M)
-        @test state.temp.timestamp == Dates.DateTime(0)
+        @test state.temp.timestamp == _Dates.DateTime(0)
         @test size(view["BTC/USDT"], 1) == 2
 
         # A valid ticker initializes the temp candle without throwing.
@@ -1116,7 +1122,7 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         @test size(view["BTC/USDT"], 1) == 2
 
         # A null `last` arriving at a later timestamp must also be skipped safely.
-        _update_sym_ohlcv(w, mk_ticker(M + Dates.Minute(1), nothing, 100.0), M + Dates.Minute(1))
+        _update_sym_ohlcv(w, mk_ticker(M + _Dates.Minute(1), nothing, 100.0), M + _Dates.Minute(1))
         @test state.temp.timestamp == M
         @test size(view["BTC/USDT"], 1) == 2
     end
@@ -1135,9 +1141,9 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         w[Symbol("symstates")] = Dict(sym => TickerWatcherSymbolState2(; sym) for sym in syms)
         w[Symbol("sem")] = Base.Semaphore(1)
         # Intentionally do NOT preload w.view — simulates history preload failing.
-        M = TimeTicks.apply(tf, TimeTicks.now()) - Dates.Minute(2)
+        M = TimeTicks.apply(tf, TimeTicks.now()) - _Dates.Minute(2)
         mk_ticker(ts_dt, price, vol) = begin
-            ts_ms = Int(floor(Dates.datetime2unix(ts_dt) * 1000))
+            ts_ms = Int(floor(_Dates.datetime2unix(ts_dt) * 1000))
             d = Dict{String,Any}(
                 "symbol" => "BTC/USDT", "timestamp" => ts_ms,
                 "open" => price, "high" => price, "low" => price, "close" => price,
@@ -1153,7 +1159,7 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         # empty view this must seed (not drop) the candle.
         _update_sym_ohlcv(w, mk_ticker(M, 110.0, 100.0), M)
         @test !haskey(w.view, "BTC/USDT") || isempty(w.view["BTC/USDT"])
-        _update_sym_ohlcv(w, mk_ticker(M + Dates.Minute(1), 111.0, 110.0), M + Dates.Minute(1))
+        _update_sym_ohlcv(w, mk_ticker(M + _Dates.Minute(1), 111.0, 110.0), M + _Dates.Minute(1))
         @test haskey(w.view, "BTC/USDT")
         @test size(w.view["BTC/USDT"], 1) == 1
         @test w.view["BTC/USDT"][1, :timestamp] == M
@@ -1178,20 +1184,20 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         state.loaded = true  # skip init-guard fetch
 
         # Seed pre-gap data ending at Mlast.
-        M = TimeTicks.apply(tf, TimeTicks.now()) - Dates.Hour(2) - Dates.Minute(2)
+        M = TimeTicks.apply(tf, TimeTicks.now()) - _Dates.Hour(2) - _Dates.Minute(2)
         df0 = empty_ohlcv()
         for i in 18:-1:1
-            ts = M - Dates.Minute(i)
+            ts = M - _Dates.Minute(i)
             push!(df0, (timestamp = ts, open=Float64(62000+i), high=Float64(62100+i),
                         low=Float64(61900+i), close=Float64(62000+i), volume=1.0))
         end
         Mlast = lastdate(df0)
         w.view["BTC/USDT"] = df0
         @test size(df0, 1) == 18
-        @test Mlast == M - Dates.Minute(1)
+        @test Mlast == M - _Dates.Minute(1)
 
         mk_ticker(ts_dt, price, vol) = begin
-            ts_ms = Int(floor(Dates.datetime2unix(ts_dt) * 1000))
+            ts_ms = Int(floor(_Dates.datetime2unix(ts_dt) * 1000))
             d = Dict{String,Any}(
                 "symbol" => "BTC/USDT", "timestamp" => ts_ms,
                 "open" => price, "high" => price, "low" => price, "close" => price,
@@ -1206,8 +1212,8 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
 
         # Simulate the 2h gap: the stale-check (::Nothing) overload advances
         # temp_candle without real tickers (ticks=0).
-        gap_end = Mlast + Dates.Hour(2)
-        gap_times = [Mlast + Dates.Minute(5) * i for i in 1:24]
+        gap_end = Mlast + _Dates.Hour(2)
+        gap_times = [Mlast + _Dates.Minute(5) * i for i in 1:24]
         for gt in gap_times
             _update_sym_ohlcv(w, nothing, gt, "BTC/USDT")
         end
@@ -1215,8 +1221,8 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
 
         # Resume: WS reconnects. First tickers are stale/flat (last = 63133.2).
         r41 = gap_end
-        r42 = r41 + Dates.Minute(1)
-        r43 = r42 + Dates.Minute(1)
+        r42 = r41 + _Dates.Minute(1)
+        r43 = r42 + _Dates.Minute(1)
         _update_sym_ohlcv(w, mk_ticker(r41, 63133.2, 1.0), r41)
         _update_sym_ohlcv(w, mk_ticker(r42, 63133.2, 1.1), r42)
         _update_sym_ohlcv(w, mk_ticker(r43, 62600.0, 2.0), r43)
@@ -1235,7 +1241,7 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         # Gap is honest: first post-gap candle is well after Mlast.
         post = ts[findall(>(Mlast), ts)]
         @test !isempty(post)
-        @test minimum(post) - Mlast > Dates.Minute(1)
+        @test minimum(post) - Mlast > _Dates.Minute(1)
         # All three resume candles are pushed (18 seed + 2 flat + 0 non-flat in view);
         # r43 stays in temp_candle waiting for the next ticker boundary.
         @test size(df, 1) == 20
@@ -1257,10 +1263,10 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         w[:checks] = Val(:on)  # enforce contiguity so a gap would otherwise throw
 
         # History with a 2-minute gap (missing the 16:01 candle).
-        t0 = TimeTicks.apply(tf, TimeTicks.now()) - Dates.Hour(2)
+        t0 = TimeTicks.apply(tf, TimeTicks.now()) - _Dates.Hour(2)
         df = empty_ohlcv()
         push!(df, (timestamp=t0, open=100.0, high=101.0, low=99.0, close=100.0, volume=10.0))
-        push!(df, (timestamp=t0 + Dates.Minute(2), open=100.0, high=101.0, low=99.0, close=100.0, volume=10.0))
+        push!(df, (timestamp=t0 + _Dates.Minute(2), open=100.0, high=101.0, low=99.0, close=100.0, volume=10.0))
         w.view["BTC/USDT"] = df
 
         # The strict check DOES throw on this gap — that was the old (broken) behavior.
@@ -1281,20 +1287,20 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         # _dedup_view! must drop the duplicate so the view keeps the unique-timestamp
         # invariant (Lesson 17) — downstream processing breaks on dup timestamps.
         df = empty_ohlcv()
-        t0 = TimeTicks.apply(tf"1m", TimeTicks.now()) - Dates.Hour(1)
+        t0 = TimeTicks.apply(tf"1m", TimeTicks.now()) - _Dates.Hour(1)
         push!(df, (timestamp=t0, open=100.0, high=101.0, low=99.0, close=100.0, volume=1.0))
-        push!(df, (timestamp=t0 + Dates.Minute(1), open=101.0, high=102.0, low=100.0, close=101.0, volume=1.0))
-        push!(df, (timestamp=t0 + Dates.Minute(1), open=200.0, high=201.0, low=199.0, close=200.0, volume=2.0))  # dup ts with row above
-        push!(df, (timestamp=t0 + Dates.Minute(2), open=102.0, high=103.0, low=101.0, close=102.0, volume=1.0))
+        push!(df, (timestamp=t0 + _Dates.Minute(1), open=101.0, high=102.0, low=100.0, close=101.0, volume=1.0))
+        push!(df, (timestamp=t0 + _Dates.Minute(1), open=200.0, high=201.0, low=199.0, close=200.0, volume=2.0))  # dup ts with row above
+        push!(df, (timestamp=t0 + _Dates.Minute(2), open=102.0, high=103.0, low=101.0, close=102.0, volume=1.0))
         @test size(df, 1) == 4
         ts_before = df[:, :timestamp]
-        @test count(==(t0 + Dates.Minute(1)), ts_before) == 2
+        @test count(==(t0 + _Dates.Minute(1)), ts_before) == 2
         _dedup_view!(df)
         @test size(df, 1) == 3
         ts_after = df[:, :timestamp]
         @test all(count(==(t), ts_after) == 1 for t in ts_after)
         # order preserved, dup row removed
-        @test ts_after == [t0, t0 + Dates.Minute(1), t0 + Dates.Minute(2)]
+        @test ts_after == [t0, t0 + _Dates.Minute(1), t0 + _Dates.Minute(2)]
         # no dup timestamps anywhere
         @test length(unique(ts_after)) == length(ts_after)
     end

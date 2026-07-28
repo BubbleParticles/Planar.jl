@@ -124,3 +124,15 @@ isshort(o::ShortTrade) = true
 ispos(pos::PositionSide, t::Trade) = positionside(t) == pos
 @doc "Get the fees of a trade."
 fees(t::Trade) = getfield(t, :fees) + getfield(t, :fees_base) * getfield(t, :price)
+@doc "Get the price of a trade."
+price(t::Trade) = getfield(t, :price)
+@doc "Get the size (quote currency flow) of a trade."
+size(t::Trade) = getfield(t, :size)
+@doc "Get the amount (base currency flow) of a trade."
+amount(t::Trade) = getfield(t, :amount)
+@doc "Get the base currency fees of a trade."
+fees_base(t::Trade) = getfield(t, :fees_base)
+@doc "Get the order fees (alias for fees)."
+order_fees(t::Trade) = fees(t)
+@doc "Get the absolute size of a trade."
+abssize(t::Trade) = abs(size(t))

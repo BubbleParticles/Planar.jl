@@ -81,15 +81,16 @@ function _cur(exc, sym)
                 # Slow path: fresh fetch from exchange API
                 @debug "currencies empty, trying fetchCurrencies for $(exc.id)"
                 fetched = call_exchange(client, name, "fetchCurrencies")
-                fetched isa AbstractDict ? fetched : nothing
+                fetched isa AbstractDict ? fetched : Dict{String,Any}()
             end
         catch e
             @debug "Failed to fetch currencies for $(exc.id): $e"
-            nothing
+            Dict{String,Any}()
         end
         v
     end
-    curs === nothing ? nothing : get(Dict(pairs(curs)), sym_str, nothing)
+    # curs is now always a dict (possibly empty) — look up the currency symbol
+    sym_str in keys(curs) ? curs[sym_str] : nothing
 end
 
 @doc "A `CurrencyCash` contextualizes a `Cash` instance w.r.t. an exchange.

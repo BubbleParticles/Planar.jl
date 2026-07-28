@@ -150,11 +150,9 @@ function test_memory_usage()
         @test data isa Dict{String,Any}
     end
     
-    # Force garbage collection
-    GC.gc()
     
     # Test passes if we can make the requests without errors
-    @test true
+    @test GC.gc() === nothing
     
     return true
 end

@@ -907,8 +907,7 @@ function test_memory_usage()
         data = fred.observations("GDPC1"; limit=1000, frequency="q")
         @test data isa Dict{String,Any}
     end
-    GC.gc()
-    @test true
+    @test GC.gc() === nothing
     return true
 end
 

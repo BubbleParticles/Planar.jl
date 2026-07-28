@@ -11,7 +11,11 @@ import ..Data: stub!
 using CSV: CSV as CSV
 using Pkg: Pkg
 
-const PROJECT_PATH = dirname(@something Base.ACTIVE_PROJECT[] Pkg.project().path)
+const PROJECT_PATH = try
+    @something Base.ACTIVE_PROJECT[] Pkg.project().path
+catch
+    pkgdir(@__MODULE__)
+end
 const OHLCV_FILE_PATH = joinpath(PROJECT_PATH, "test", "stubs", "ohlcv.csv")
 
 include("stub_strategy.jl")
