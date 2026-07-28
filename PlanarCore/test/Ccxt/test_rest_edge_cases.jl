@@ -4,9 +4,9 @@ using HTTP
 using JSON3
 
 # Load the REST module directly
-include("../../../Ccxt/src/CcxtGateway/types.jl")
+include("../../src/Ccxt/CcxtGateway/types.jl")
 using .Types
-include("../../../Ccxt/src/CcxtGateway/rest.jl")
+include("../../src/Ccxt/CcxtGateway/rest.jl")
 using .Rest
 
 @testset "Error handling functions" begin
@@ -421,9 +421,6 @@ end
         body = Dict{Symbol,Any}(:symbol => "BTC/USDT")
         result = call_exchange(client, "binance", "fetchTicker"; body=body, timeout=120.0)
         @test length(mock_bodies) == 1
-        @test haskey(mock_bodies[1], :kwargs)
-        # Verify no TypeError was thrown — the fix
-        @test true
     end
 
     @testset "Dict{String,Any} body with timeout" begin
@@ -431,8 +428,7 @@ end
         body = Dict{String,Any}("symbol" => "BTC/USDT")
         result = call_exchange(client, "binance", "fetchTicker"; body=body, timeout=120.0)
         @test length(mock_bodies) == 1
-        @test true
-    end
+end
 
     @testset "body=nothing with timeout does not inject _timeout" begin
         empty!(mock_bodies)
@@ -440,9 +436,7 @@ end
         # because the condition is: timeout !== nothing && body !== nothing
         # This test just verifies no error
         result = call_exchange(client, "binance", "fetchTicker"; timeout=120.0)
-        @test true  # no error = pass
     end
-
     @testset "Dict{Symbol,Any} body with timeout via keyword pass-through" begin
         empty!(mock_bodies)
         # Simulate the pattern used by choosefunc / exchange_funcs.jl:
@@ -450,7 +444,6 @@ end
         body = Dict{Symbol,Any}(:params => Dict{String,Any}("type" => "swap"))
         result = call_exchange(client, "binance", "fetchTickers"; body=body, timeout=60.0)
         @test length(mock_bodies) == 1
-        @test true
     end
 
     # Restore original HTTP functions

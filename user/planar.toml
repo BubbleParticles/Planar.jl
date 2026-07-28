@@ -1,11 +1,5 @@
-[Example]
-include_file = "strategies/Example.jl"
-
 [BareStrat]
 include_file = "strategies/BareStrat.jl"
-
-[RandomStratIso]
-include_file = "strategies/RandomStratIso.jl"
 
 [binance]
 leveraged = "from"
@@ -19,6 +13,8 @@ futures = false
 futures = true
 
 [sources]
+Example = "strategies/Example/Project.toml"
+RandomStratIso = "strategies/RandomStratIso/Project.toml"
 MarginStrat = "strategies/MarginStrat/Project.toml"
 BBWithOpt = "strategies/BBWithOpt/Project.toml"
 BollingerBands = "strategies/BollingerBands/Project.toml"

@@ -1,5 +1,4 @@
 module DBNomicsData
-
 using DBnomics
 using ..Data.DataFrames
 using ..Pbar

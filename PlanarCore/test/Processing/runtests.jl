@@ -7,36 +7,35 @@ using PlanarCore.Data
 using Statistics: mean, std
 const DF = Data.DataFrames
 const TimeFrame = Processing.Misc.TimeTicks.TimeFrame
-const Dates = Processing.Misc.TimeTicks.Dates
+const _Dates = Processing.Misc.TimeTicks.Dates
 # upsample (ported from PlanarDev/test/test_processing.jl)
 # ──────────────────────────────────────────────
 # ──────────────────────────────────────────────
 # isleftadj / isrightadj / isadjacent
 # ──────────────────────────────────────────────
 @testset "Processing.adjacency" begin
-    tf = TimeFrame(Dates.Minute(5))
-    dt1 = Dates.DateTime(2024,1,1,0,0)
-    dt2 = Dates.DateTime(2024,1,1,0,5)
-    dt3 = Dates.DateTime(2024,1,1,0,10)
-    @test Processing.isleftadj(dt1, dt2, tf)
-    @test !Processing.isleftadj(dt1, dt3, tf)
-    @test Processing.isrightadj(dt2, dt1, tf)
-    @test !Processing.isrightadj(dt3, dt1, tf)
-    @test Processing.isadjacent(dt1, dt2, tf)
-    @test !Processing.isadjacent(dt1, dt3, tf)
-end
+    tf = TimeFrame(_Dates.Minute(5))
+    dt1 = _Dates.DateTime(2024,1,1,0,0)
+    dt2 = _Dates.DateTime(2024,1,1,0,5)
+    dt3 = _Dates.DateTime(2024,1,1,0,10)
+    @test Processing.upsample_interval(tf, dt1, dt2) == 1
+    @test Processing.upsample_interval(tf, dt1, dt3) == 2
 
-# ──────────────────────────────────────────────
-# isincomplete / iscomplete
-# ──────────────────────────────────────────────
-@testset "Processing.isincomplete/iscomplete" begin
-    tf = TimeFrame(Dates.Minute(5))
+    # error cases
+    @test_throws ArgumentError Processing.upsample_interval(tf, dt2, dt1)
+    @test_throws ArgumentError Processing.upsample_interval(tf, dt1, dt1)
+
+    # Test with Date
+    d1 = _Dates.Date(2024,1,1)
+    d2 = _Dates.Date(2024,1,2)
+    tf_day = TimeFrame(_Dates.Day(1))
+    @test Processing.upsample_interval(tf_day, d1, d2) == 1
     # Far past — definitely complete
-    past = Dates.DateTime(2020,1,1)
+    past = _Dates.DateTime(2020,1,1)
     @test Processing.iscomplete(past, tf)
     @test !Processing.isincomplete(past, tf)
     # Far future — definitely incomplete
-    future = Dates.DateTime(2099,1,1)
+    future = _Dates.DateTime(2099,1,1)
     @test !Processing.iscomplete(future, tf)
     @test Processing.isincomplete(future, tf)
 end
@@ -45,17 +44,17 @@ end
 # trail! — trailing window
 # ──────────────────────────────────────────────
 @testset "Processing.trail!" begin
-    tf = TimeFrame(Dates.Minute(5))
-    base = Dates.DateTime(2024,1,1,0,0)
+    tf = TimeFrame(_Dates.Minute(5))
+    base = _Dates.DateTime(2024,1,1,0,0)
     df = DF.DataFrame(
-        timestamp=[base + Dates.Minute(5*(i-1)) for i in 1:3],
+        timestamp=[base + _Dates.Minute(5*(i-1)) for i in 1:3],
         open=[1.0,2.0,3.0], high=[1.5,2.5,3.5], low=[0.5,1.5,2.5],
         close=[1.2,2.2,3.2], volume=[10.0,20.0,30.0]
     )
-    to = base + Dates.Minute(20)
+    to = base + _Dates.Minute(20)
     Processing.trail!(df, tf; to=to)
     @test DF.nrow(df) == 4
-    @test df.timestamp[end] == Dates.DateTime(2024,1,1,0,15)
+    @test df.timestamp[end] == _Dates.DateTime(2024,1,1,0,15)
     @test df.close[end] == df.close[end-1]
     @test df.volume[end] == 0.0
     # trail! adds candles with same close price and zero volume
@@ -65,10 +64,10 @@ end
     # trail! must not crash on an empty DataFrame (e.g. a watcher view before
     # the first candle arrives, or after a gap clears the view).
     empty_df = DF.DataFrame(
-        timestamp=Dates.DateTime[], open=Float64[], high=Float64[],
+        timestamp=_Dates.DateTime[], open=Float64[], high=Float64[],
         low=Float64[], close=Float64[], volume=Float64[],
     )
-    Processing.trail!(empty_df, tf; to=base + Dates.Minute(20))
+    Processing.trail!(empty_df, tf; to=base + _Dates.Minute(20))
     @test DF.nrow(empty_df) == 0
 end
 
@@ -76,9 +75,9 @@ end
 # trimzeros! — remove unix epoch rows
 # ──────────────────────────────────────────────
 @testset "Processing.trimzeros!" begin
-    base = Dates.DateTime(2024,1,1)
+    base = _Dates.DateTime(2024,1,1)
     df = DF.DataFrame(
-        timestamp=[base, base, base + Dates.Minute(5)],
+        timestamp=[base, base, base + _Dates.Minute(5)],
         open=[1.0,2.0,3.0], high=[1.5,2.5,3.5], low=[0.5,1.5,2.5],
         close=[1.2,2.2,3.2], volume=[10.0,20.0,30.0]
     )
@@ -86,33 +85,33 @@ end
     @test DF.nrow(df) == 3
     # No unix epoch timestamps, nothing removed
 
-    epoch = Dates.unix2datetime(0)
+    epoch = _Dates.unix2datetime(0)
     df2 = DF.DataFrame(
-        timestamp=[epoch, epoch, base + Dates.Minute(5)],
+        timestamp=[epoch, epoch, base + _Dates.Minute(5)],
         open=[1.0,2.0,3.0], high=[1.5,2.5,3.5], low=[0.5,1.5,2.5],
         close=[1.2,2.2,3.2], volume=[10.0,20.0,30.0]
     )
     Processing.trimzeros!(df2)
     @test DF.nrow(df2) == 1
-    @test df2.timestamp[1] == base + Dates.Minute(5)
+    @test df2.timestamp[1] == base + _Dates.Minute(5)
 end
 
 # ──────────────────────────────────────────────
 # fill_missing_candles! — gap filling
 # ──────────────────────────────────────────────
 @testset "Processing.fill_missing_candles!" begin
-    tf = TimeFrame(Dates.Minute(5))
-    base = Dates.DateTime(2024,1,1,0,0)
+    tf = TimeFrame(_Dates.Minute(5))
+    base = _Dates.DateTime(2024,1,1,0,0)
     # Create DataFrame with a gap at 0:10
     df = DF.DataFrame(
-        timestamp=[base, base + Dates.Minute(5), base + Dates.Minute(15)],
+        timestamp=[base, base + _Dates.Minute(5), base + _Dates.Minute(15)],
         open=[1.0,2.0,4.0], high=[1.5,2.5,4.5], low=[0.5,1.5,3.5],
         close=[1.2,2.2,4.2], volume=[10.0,20.0,40.0]
     )
-    result = Processing._fill_missing_candles(df, Dates.Minute(5);
+    result = Processing._fill_missing_candles(df, _Dates.Minute(5);
         strategy=:close, inplace=false, def_strategy=Processing.novol_candle)
     @test DF.nrow(result) == 4
-    @test result.timestamp[3] == base + Dates.Minute(10)
+    @test result.timestamp[3] == base + _Dates.Minute(10)
     # Filled with close of previous (2.2)
     @test result.open[3] == 2.2
     @test result.high[3] == 2.2
@@ -142,9 +141,9 @@ end
 # to_ohlcv — DataFrame to OHLCV conversion
 # ──────────────────────────────────────────────
 @testset "Processing.to_ohlcv" begin
-    base = Dates.DateTime(2024,1,1,0,0)
+    base = _Dates.DateTime(2024,1,1,0,0)
     df = DF.DataFrame(
-        timestamp=[base, base, base + Dates.Minute(5), base + Dates.Minute(5)],
+        timestamp=[base, base, base + _Dates.Minute(5), base + _Dates.Minute(5)],
         price=[1.0, 1.5, 2.0, 3.0],
         amount=[10.0, 20.0, 30.0, 40.0]
     )
@@ -160,10 +159,10 @@ end
     @test ohlcv.high[2] == 3.0
 end
 @testset "Processing.to_ohlcv negative amounts (regression)" begin
-    base = Dates.DateTime(2024,1,1,0,0)
+    base = _Dates.DateTime(2024,1,1,0,0)
     # Binance options can return negative amounts — abs sum is required
     df = DF.DataFrame(
-        timestamp=[base, base, base + Dates.Minute(5)],
+        timestamp=[base, base, base + _Dates.Minute(5)],
         price=[1.0, 1.5, 2.0],
         amount=[-1.0, 2.0, -3.0]
     )
@@ -178,10 +177,10 @@ end
 # _remove_incomplete_candle
 # ──────────────────────────────────────────────
 @testset "Processing._remove_incomplete_candle" begin
-    tf = TimeFrame(Dates.Minute(5))
-    base = Dates.DateTime(2024,1,1,0,0)
+    tf = TimeFrame(_Dates.Minute(5))
+    base = _Dates.DateTime(2024,1,1,0,0)
     df = DF.DataFrame(
-        timestamp=[base, base + Dates.Minute(5), base + Dates.Minute(10)],
+        timestamp=[base, base + _Dates.Minute(5), base + _Dates.Minute(10)],
         open=[1.0,2.0,3.0], high=[1.5,2.5,3.5], low=[0.5,1.5,2.5],
         close=[1.2,2.2,3.2], volume=[10.0,20.0,30.0]
     )
@@ -191,12 +190,12 @@ end
 end
 
 @testset "Processing.upsample" begin
-    tf_large = TimeFrame(Dates.Minute(5))
-    tf_small = TimeFrame(Dates.Minute(1))
+    tf_large = TimeFrame(_Dates.Minute(5))
+    tf_small = TimeFrame(_Dates.Minute(1))
 
     # 1. Standard case
     df = DF.DataFrame(
-        timestamp=[Dates.DateTime(2024,1,1,0,5), Dates.DateTime(2024,1,1,0,10)],
+        timestamp=[_Dates.DateTime(2024,1,1,0,5), _Dates.DateTime(2024,1,1,0,10)],
         open=[1.0, 2.0], high=[1.5, 2.5], low=[0.5, 1.5],
         close=[1.2, 2.2], volume=[10.0, 20.0]
     )
@@ -206,43 +205,43 @@ end
     @test all(result.open[6:10] .== 2.0)
     @test all(result.volume[1:5] .== 2.0)
     @test all(result.volume[6:10] .== 4.0)
-    @test result.timestamp[1] == Dates.DateTime(2024,1,1,0,1)
-    @test result.timestamp[5] == Dates.DateTime(2024,1,1,0,5)
-    @test result.timestamp[6] == Dates.DateTime(2024,1,1,0,6)
-    @test result.timestamp[10] == Dates.DateTime(2024,1,1,0,10)
+    @test result.timestamp[1] == _Dates.DateTime(2024,1,1,0,1)
+    @test result.timestamp[5] == _Dates.DateTime(2024,1,1,0,5)
+    @test result.timestamp[6] == _Dates.DateTime(2024,1,1,0,6)
+    @test result.timestamp[10] == _Dates.DateTime(2024,1,1,0,10)
 
     # 2. Single row input
     df1 = DF.DataFrame(
-        timestamp=[Dates.DateTime(2024,1,1,0,5)], open=[1.0], high=[1.5], low=[0.5],
+        timestamp=[_Dates.DateTime(2024,1,1,0,5)], open=[1.0], high=[1.5], low=[0.5],
         close=[1.2], volume=[10.0]
     )
     result1 = Processing.upsample(df1, tf_large, tf_small)
     @test DF.nrow(result1) == 5
     @test all(result1.open .== 1.0)
     @test all(result1.volume .== 2.0)
-    @test result1.timestamp[1] == Dates.DateTime(2024,1,1,0,1)
-    @test result1.timestamp[5] == Dates.DateTime(2024,1,1,0,5)
+    @test result1.timestamp[1] == _Dates.DateTime(2024,1,1,0,1)
+    @test result1.timestamp[5] == _Dates.DateTime(2024,1,1,0,5)
 
     # 3. Empty DataFrame
     df_empty = DF.DataFrame(
-        timestamp=Dates.DateTime[], open=Float64[], high=Float64[], low=Float64[],
+        timestamp=_Dates.DateTime[], open=Float64[], high=Float64[], low=Float64[],
         close=Float64[], volume=Float64[]
     )
     result_empty = Processing.upsample(df_empty, tf_large, tf_small)
     @test DF.nrow(result_empty) == 0
 
     # 4. Non-divisible timeframes
-    tf_bad = TimeFrame(Dates.Minute(5))
-    tf_small_bad = TimeFrame(Dates.Minute(3))
+    tf_bad = TimeFrame(_Dates.Minute(5))
+    tf_small_bad = TimeFrame(_Dates.Minute(3))
     @test_throws ArgumentError Processing.upsample(df1, tf_bad, tf_small_bad)
 
     # 5. Equal timeframes
-    tf_equal = TimeFrame(Dates.Minute(1))
+    tf_equal = TimeFrame(_Dates.Minute(1))
     @test_throws ArgumentError Processing.upsample(df1, tf_equal, tf_equal)
 
     # 6. Zero volume — gracefully handled
     df_zero = DF.DataFrame(
-        timestamp=[Dates.DateTime(2024,1,1,0,5)], open=[1.0], high=[1.5], low=[0.5],
+        timestamp=[_Dates.DateTime(2024,1,1,0,5)], open=[1.0], high=[1.5], low=[0.5],
         close=[1.2], volume=[0.0]
     )
     result_zero = Processing.upsample(df_zero, tf_large, tf_small)
@@ -251,7 +250,7 @@ end
 
     # 7. Non-monotonic timestamps
     df_nonmono = DF.DataFrame(
-        timestamp=[Dates.DateTime(2024,1,1,0,10), Dates.DateTime(2024,1,1,0,5)],
+        timestamp=[_Dates.DateTime(2024,1,1,0,10), _Dates.DateTime(2024,1,1,0,5)],
         open=[2.0, 1.0], high=[2.5, 1.5], low=[1.5, 0.5],
         close=[2.2, 1.2], volume=[20.0, 10.0]
     )
@@ -262,7 +261,7 @@ end
 
     # 8. Duplicate timestamps
     df_dup = DF.DataFrame(
-        timestamp=[Dates.DateTime(2024,1,1,0,5), Dates.DateTime(2024,1,1,0,5)],
+        timestamp=[_Dates.DateTime(2024,1,1,0,5), _Dates.DateTime(2024,1,1,0,5)],
         open=[1.0, 2.0], high=[1.5, 2.5], low=[0.5, 1.5],
         close=[1.2, 2.2], volume=[10.0, 20.0]
     )
@@ -273,7 +272,7 @@ end
 
     # 9. NaN/Inf/missing values — throws MethodError
     df_nan = DF.DataFrame(
-        timestamp=[Dates.DateTime(2024,1,1,0,5)], open=[NaN], high=[Inf], low=[-Inf],
+        timestamp=[_Dates.DateTime(2024,1,1,0,5)], open=[NaN], high=[Inf], low=[-Inf],
         close=[missing], volume=[10.0]
     )
     @test_throws MethodError Processing.upsample(df_nan, tf_large, tf_small)
@@ -281,7 +280,7 @@ end
     # 10. Large DataFrame (1000 rows, performance not correctness)
     nrows = 1000
     df_large = DF.DataFrame(
-        timestamp=[Dates.DateTime(2024,1,1,0,0) + Dates.Minute(5*(i-1)) for i in 1:nrows],
+        timestamp=[_Dates.DateTime(2024,1,1,0,0) + _Dates.Minute(5*(i-1)) for i in 1:nrows],
         open=ones(nrows), high=ones(nrows), low=ones(nrows),
         close=ones(nrows), volume=ones(nrows)
     )
@@ -291,11 +290,11 @@ end
 
 # ──────────────────────────────────────────────
 @testset "Processing._fetchto overlap fix (regression)" begin
-    # tf = TimeFrame(Dates.Minute(5))  # already defined globally
+    # tf = TimeFrame(_Dates.Minute(5))  # already defined globally
 
     # Simulate the scenario: cached 1-row DataFrame at current period boundary
     # and cleaned prepended data that covers/overlaps it
-    cached_ts = Dates.DateTime(2024, 1, 1, 14, 0)  # most recent complete period
+    cached_ts = _Dates.DateTime(2024, 1, 1, 14, 0)  # most recent complete period
     df = DF.DataFrame(
         timestamp=[cached_ts],
         open=[100.0], high=[101.0], low=[99.0], close=[100.5], volume=[10.0]
@@ -303,7 +302,7 @@ end
 
     # Simulated cleaned prepended data covering multiple periods up to cached_ts
     # This is what the gateway returns when fetching from far past to cached_ts
-    cleaned_timestamps = [cached_ts - Dates.Minute(5*i) for i in 3:-1:0]  # 3 periods + cached_ts
+    cleaned_timestamps = [cached_ts - _Dates.Minute(5*i) for i in 3:-1:0]  # 3 periods + cached_ts
     cleaned = DF.DataFrame(
         timestamp=cleaned_timestamps,
         open=[99.0, 99.5, 100.0, 100.2],

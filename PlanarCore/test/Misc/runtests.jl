@@ -3,7 +3,7 @@ using PlanarCore.Misc
 using PlanarCore.Misc.TimeToLive: TTL, safettl, isexpired
 using PlanarCore.Misc.Sandbox: safereval
 using PlanarCore.Misc: drop, isstrictlysorted, roundfloat, toprecision, rangeafter, rangebefore, rangebetween, after, before, between, rewritekeys!, swapkeys, RightContiguityException, LeftContiguityException
-const Dates = Misc.TimeTicks.Dates
+const _Dates = Misc.TimeTicks.Dates
 
 # ──────────────────────────────────────────────
 # Constants
@@ -78,8 +78,10 @@ end
 # Exceptions
 # ──────────────────────────────────────────────
 @testset "Exceptions" begin
-    rce = RightContiguityException(Dates.DateTime(2024,1,1), Dates.DateTime(2024,1,2))
-    lce = LeftContiguityException(Dates.DateTime(2024,1,1), Dates.DateTime(2024,1,2))
+    rce = RightContiguityException(_Dates.DateTime(2024,1,1), _Dates.DateTime(2024,1,2))
+    lce = LeftContiguityException(_Dates.DateTime(2024,1,1), _Dates.DateTime(2024,1,2))
+    rce = RightContiguityException(_Dates.DateTime(2024,1,1), _Dates.DateTime(2024,1,2))
+    lce = LeftContiguityException(_Dates.DateTime(2024,1,1), _Dates.DateTime(2024,1,2))
     @test rce isa ContiguityException
     @test rce isa Exception
     @test lce isa Exception
@@ -367,7 +369,8 @@ end
 # TTL cache
 # ──────────────────────────────────────────────
 @testset "TTL basic" begin
-    ttl = TTL{String,Int}(Dates.Minute(60))
+    ttl = TTL{String,Int}(_Dates.Minute(60))
+    ttl = TTL{String,Int}(_Dates.Minute(60))
     ttl["a"] = 1
     ttl["b"] = 2
     @test ttl["a"] == 1
@@ -377,27 +380,31 @@ end
 end
 
 @testset "TTL not yet expired" begin
-    ttl = TTL{String,Int}(Dates.Hour(1))
+    ttl = TTL{String,Int}(_Dates.Hour(1))
+    ttl = TTL{String,Int}(_Dates.Hour(1))
     ttl["key"] = 42
     @test get(ttl, "key", -1) == 42
 end
 
 @testset "TTL get with default" begin
-    ttl = TTL{String,Int}(Dates.Hour(1))
+    ttl = TTL{String,Int}(_Dates.Hour(1))
+    ttl = TTL{String,Int}(_Dates.Hour(1))
     @test get(ttl, "nonexistent", -1) == -1
     ttl["x"] = 10
     @test get(ttl, "x", -1) == 10
 end
 
 @testset "TTL getkey" begin
-    ttl = TTL{String,Int}(Dates.Hour(1))
+    ttl = TTL{String,Int}(_Dates.Hour(1))
+    ttl = TTL{String,Int}(_Dates.Hour(1))
     @test getkey(ttl, "x", "default") == "default"
     ttl["x"] = 10
     @test getkey(ttl, "x", "default") == "x"
 end
 
 @testset "TTL delete!" begin
-    ttl = TTL{String,Int}(Dates.Hour(1))
+    ttl = TTL{String,Int}(_Dates.Hour(1))
+    ttl = TTL{String,Int}(_Dates.Hour(1))
     ttl["a"] = 1
     ttl["b"] = 2
     delete!(ttl, "a")
@@ -406,7 +413,8 @@ end
 end
 
 @testset "TTL empty!" begin
-    ttl = TTL{String,Int}(Dates.Hour(1))
+    ttl = TTL{String,Int}(_Dates.Hour(1))
+    ttl = TTL{String,Int}(_Dates.Hour(1))
     ttl["a"] = 1
     ttl["b"] = 2
     empty!(ttl)
@@ -414,19 +422,22 @@ end
 end
 
 @testset "TTL push!" begin
-    ttl = TTL{String,Int}(Dates.Hour(1))
+    ttl = TTL{String,Int}(_Dates.Hour(1))
+    ttl = TTL{String,Int}(_Dates.Hour(1))
     push!(ttl, "a" => 10)
     @test ttl["a"] == 10
 end
 
 @testset "TTL safettl" begin
-    sttl = safettl(String, Int, Dates.Minute(5))
+    sttl = safettl(String, Int, _Dates.Minute(5))
+    sttl = safettl(String, Int, _Dates.Minute(5))
     sttl["x"] = 99
     @test sttl["x"] == 99
 end
 
 @testset "TTL expired" begin
-    ttl = TTL{String,Int}(Dates.Millisecond(1))
+    ttl = TTL{String,Int}(_Dates.Millisecond(1))
+    ttl = TTL{String,Int}(_Dates.Millisecond(1))
     ttl["flash"] = 999
     sleep(0.01)
     @test get(ttl, "flash", -1) == -1
@@ -435,22 +446,27 @@ end
 
 @testset "TTL pop!" begin
     # empty dict returns nothing (no crash)
-    @test pop!(TTL{String,Int}(Dates.Hour(1))) === nothing
-    @test pop!(safettl(String, Int, Dates.Hour(1))) === nothing
+    @test pop!(TTL{String,Int}(_Dates.Hour(1))) === nothing
+    @test pop!(safettl(String, Int, _Dates.Hour(1))) === nothing
+    @test pop!(TTL{String,Int}(_Dates.Hour(1))) === nothing
+    @test pop!(safettl(String, Int, _Dates.Hour(1))) === nothing
     # single non-expired entry returns a Pair
-    ttl = TTL{String,Int}(Dates.Hour(1))
+    ttl = TTL{String,Int}(_Dates.Hour(1))
+    ttl = TTL{String,Int}(_Dates.Hour(1))
     ttl["a"] = 1
     @test pop!(ttl) == ("a" => 1)
     @test isempty(ttl.dict)
     # all-expired entry returns nothing (no StackOverflow / crash)
-    sttl = safettl(String, Int, Dates.Millisecond(1))
+    sttl = safettl(String, Int, _Dates.Millisecond(1))
+    sttl = safettl(String, Int, _Dates.Millisecond(1))
     sttl["x"] = 2
     sleep(0.01)
     @test pop!(sttl) === nothing
     # all-expired entries remain in the dict (pop! only removes valid entries)
     @test !isempty(sttl.dict)
     # ConcurrentDict-backed: valid entry pops
-    cttl = safettl(String, Int, Dates.Hour(1))
+    cttl = safettl(String, Int, _Dates.Hour(1))
+    cttl = safettl(String, Int, _Dates.Hour(1))
     cttl["b"] = 7
     @test pop!(cttl) == ("b" => 7)
 end

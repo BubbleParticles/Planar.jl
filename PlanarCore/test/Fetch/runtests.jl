@@ -5,7 +5,7 @@ using PlanarCore.Instances.Data.DataFrames: DataFrame
 using PlanarCore.TimeTicks
 
 const ExchangeTypes = PlanarCore.Exchanges.ExchangeTypes
-const Dates = TimeTicks.Dates
+const _Dates = TimeTicks.Dates
 const HTTP = ExchangeTypes.CcxtGateway.HTTP
 const JSON3 = ExchangeTypes.JSON3
 const ContiguityException = Exchanges.Misc.ContiguityException

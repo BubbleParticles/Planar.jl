@@ -2,7 +2,7 @@
 using Test
 using JSON3
 
-include("../../../Ccxt/src/CcxtGateway/websocket.jl")
+include("../../src/Ccxt/CcxtGateway/websocket.jl")
 using .WSClient
 
 @testset "GatewayWSClient edge cases" begin

@@ -14,8 +14,7 @@ using Planar.Engine.Misc.TimeTicks: @tf_str
     tf1 = tf"1m"
     tf2 = tf"5m"
     tf3 = tf"1h"
-    Engine._check_timeframes((tf1, tf2, tf3), tf1)
-    @test true
+    @test Engine._check_timeframes((tf1, tf2, tf3), tf1) === nothing
 end
 
 @testset "_check_timeframes invalid" begin
@@ -27,8 +26,7 @@ end
 @testset "_check_timeframes unsorted" begin
     tf1 = tf"1h"
     tf2 = tf"5m"
-    Engine._check_timeframes((tf1, tf2), tf2)
-    @test true
+    @test Engine._check_timeframes((tf1, tf2), tf2) === nothing
 end
 
 end # module EngineTests

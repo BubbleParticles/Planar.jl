@@ -21,7 +21,6 @@ using PlanarCore.Pbar
     @testset "pbclose! with pbar" begin
         Pbar._doinit()
         Pbar.pbclose!()
-        @test true
     end
 
     @testset "dorender" begin
@@ -34,14 +33,12 @@ using PlanarCore.Pbar
         Pbar._doinit()
         job = Pbar.Term.Progress.addjob!(Pbar.pbar[]; description="test", N=10)
         Pbar.complete!(Pbar.pbar[], job)
-        @test true
     end
 
     @testset "pbclose! two-arg" begin
         Pbar._doinit()
         job = Pbar.Term.Progress.addjob!(Pbar.pbar[]; description="test", N=10)
         Pbar.pbclose!(job)
-        @test true
     end
 
     @testset "RunningJob struct" begin

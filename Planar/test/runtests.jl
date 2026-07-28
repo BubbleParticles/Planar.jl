@@ -1,8 +1,9 @@
 using Test
 
-# Planar depends on Engine which has a pre-existing loading issue
-# (LiveMode requires Exchanges.Python from the old ccxt bridge).
-# If loading fails, skip all Planar-dependent tests.
+# Planar submodule tests (Engine, LiveMode, PaperMode, Remote) may fail if
+# their dependency graph (e.g. HTTP, JSON3) isn't fully resolved. If loading
+# fails, skip all Planar-dependent tests rather than exposing the pre-existing
+# dependency issue.
 let planar_loaded = false
     try
         @eval using Planar: Planar
