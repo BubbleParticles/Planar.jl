@@ -62,9 +62,12 @@ If the module is not already defined, it tries to activate the module's project 
 """
 function _activate_and_import(name, bind)
     proj_name = string(name)
-    @assert isfile(joinpath(proj_name, "Project.toml"))
+    # For FeatureSelection and other packages in the Planar.jl monorepo, look in parent dir of Planar.jl
+    base_dir = dirname(dirname(dirname(pathof(Planar))))  # /Planar.jl
+    proj_path = isfile(joinpath(proj_name, "Project.toml")) ? proj_name : joinpath(base_dir, proj_name)
+    @assert isfile(joinpath(proj_path, "Project.toml"))
     prev = Base.active_project()
-    Pkg.activate(proj_name, io=devnull)
+    Pkg.activate(proj_path, io=devnull)
     try
         module!(Symbol(name), Symbol(bind))
     finally

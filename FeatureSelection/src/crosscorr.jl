@@ -1,12 +1,12 @@
 using StatsBase: crosscor
-using ..Strategies: Strategies as st
-using .st.Misc: Option
-using .st.Data: Data as da
-using .da.DataFrames: DataFrame, innerjoin, outerjoin, metadata!, metadata, select!, names
-using .st: TimeFrame, DFT, @tf_str
-using .st.coll: _flatten_noempty!, raw
-using .st.Exchanges: tickers
-using ..Processing.Alignments: trim!, empty_unaligned!
+using PlanarCore.Strategies: Strategies as st
+using PlanarCore.Strategies.Misc: Option
+using PlanarCore.Strategies.Data: Data as da
+using PlanarCore.Strategies.Data.DataFrames: DataFrame, innerjoin, outerjoin, metadata!, metadata, select!, names
+using PlanarCore.Strategies: TimeFrame, DFT, @tf_str
+using PlanarCore.Strategies.coll: _flatten_noempty!, raw
+using PlanarCore.Strategies.Exchanges: tickers
+using PlanarCore.Processing.Alignments: trim!, empty_unaligned!
 using OnlineTechnicalIndicators: OnlineTechnicalIndicators as oti
 
 # Import specific indicators from OnlineTechnicalIndicators
@@ -45,7 +45,7 @@ function center_data(data::AbstractDict, tf=nothing; ratio_func=ratio!)
 end
 
 function lagsbytf(tf::TimeFrame)
-    if tf == tf"1m"
+    if tf == tf"1min"
         [1, 5, 15, 60, 60 * 4, 60 * 8, 60 * 12]
     elseif tf == tf"1h"
         [1, 4, 8, 12, 24]
