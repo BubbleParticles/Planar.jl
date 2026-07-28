@@ -20,7 +20,6 @@ module PlanarCore
     include("submodules/Stubs.jl")
     include("submodules/Watchers.jl")
     include("submodules/Scrapers.jl")
-    include("submodules/FeatureSelection.jl")
     include("submodules/Metrics.jl")
     include("submodules/Plotting.jl")
 end

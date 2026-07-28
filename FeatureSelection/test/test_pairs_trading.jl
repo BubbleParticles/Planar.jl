@@ -1,9 +1,12 @@
+using Test
+using Random
+using DataFrames
+using LinearAlgebra
+using Statistics
+using StatsBase: mode, countmap
+using FeatureSelection
+
 @testset "pairs_trading.jl tests" failfast=true begin
-    using .fs: pairs_trading_signals, ratio!, find_cointegrated_prices, detect_correlation_regime
-    using Random
-    using .fs.LinearAlgebra
-    using .fs.StatsBase: mode, countmap
-    
     @testset "pairs_trading_signals function" begin
         # Set random seed for reproducibility
         Random.seed!(123)
@@ -16,7 +19,7 @@
         
         # Generate signals
         lookback = 20
-        result = pairs_trading_signals((p1, p2), lookback)
+        result = FeatureSelection.pairs_trading_signals((p1, p2), lookback)
         
         # Test output structure
         @test result isa DataFrame
@@ -38,7 +41,7 @@
         @test all(x -> x in (-1, 0, 1), result.signal[lookback:end])
         
         # Test with custom zscore threshold
-        result_custom = pairs_trading_signals((p1, p2), lookback, zscore_threshold=1.0)
+        result_custom = FeatureSelection.pairs_trading_signals((p1, p2), lookback, zscore_threshold=1.0)
         @test all(x -> x in (-1, 0, 1), result_custom.signal[lookback:end])
         
         # More signals should be generated with lower threshold
@@ -62,7 +65,7 @@
         prices = Dict("A" => p1, "B" => p2, "C" => p3, "D" => p4)
         
         # Find cointegrated pairs
-        cointegrated = find_cointegrated_prices(prices, pvalue_threshold=0.05)
+        cointegrated = FeatureSelection.find_cointegrated_prices(prices, pvalue_threshold=0.05)
         
         # Check output structure
         @test cointegrated isa DataFrame
@@ -139,7 +142,7 @@
         end
         
         # Detect regimes
-        regimes = detect_correlation_regime(corr_matrices, window_size, n_regimes=n_regimes)
+        regimes = FeatureSelection.detect_correlation_regime(corr_matrices, window_size, n_regimes=n_regimes)
         
         # Basic output checks
         @test length(regimes) == n_matrices
@@ -150,8 +153,8 @@
         second_half = regimes[mid_point+1:end]
         
          # The dominant regime in each half should be different
-        mode1 = fs.StatsBase.mode(first_half)
-        mode2 = fs.StatsBase.mode(second_half)
+        mode1 = mode(first_half)
+        mode2 = mode(second_half)
         
         # Print some debug info
         println("First half regime distribution: ", countmap(first_half))
