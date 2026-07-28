@@ -36,9 +36,6 @@ function _out_as_input(inputs, data; elkey=nothing)
     end
 end
 
-@testset "GatewayClient" begin
-    @test true
-end
 
 @testset "build_url" begin
     base_url = "https://localhost:8000"

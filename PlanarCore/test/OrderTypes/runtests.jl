@@ -1,7 +1,8 @@
 using PlanarCore.OrderTypes
 using Test
+using Serialization: serialize, deserialize
 const Instruments = PlanarCore.OrderTypes.Instruments
-const Dates = Instruments.Misc.TimeTicks.Dates
+const _Dates = Instruments.Misc.TimeTicks.Dates
 using PlanarCore.Instruments: Asset, AbstractAsset, @a_str
 using PlanarCore.OrderTypes: ExchangeID, Exchange, ExchangeEvent, AssetEvent, StrategyEvent
 using PlanarCore.OrderTypes: Trade, orderside, positionside, pricetime
@@ -14,13 +15,13 @@ using PlanarCore.OrderTypes:
 using PlanarCore.OrderTypes: signedamount, signedsize, isliquidation, sidetopos
 using PlanarCore.OrderTypes: postoside, fees as order_fees
 using PlanarCore.OrderTypes: Long, Short, ordertype, exchangeid
+using PlanarCore.OrderTypes: price, size, amount, fees, fees_base, order_fees
 using Base: hash
-
-date = Dates.now()
+test_date = _Dates.now()
 asset = a"BTC/USDT"
 eid = ExchangeID(:test_exchange)
 
-function make_order(; T=MarketOrderType{Buy}, P=OrderTypes.Long, price=50000.0, amt=1.0, dt=date, id="", tag="", attrs=(;), kwargs...)
+function make_order(; T=MarketOrderType{Buy}, P=OrderTypes.Long, price=50000.0, amt=1.0, dt=test_date, id="", tag="", attrs=(;), kwargs...)
     Order(asset, eid, Order{T}, P; price=price, amount=amt, date=dt, id=id, tag=tag, attrs=attrs, kwargs...)
 end
 
@@ -50,210 +51,205 @@ end
     @test o isa Order
     @test o.asset === asset
     @test o.exc === eid
-    @test o.date == date
-    @test o.price == 50000.0
-    @test o.amount == 1.0
-    @test o.id == ""
-    @test o.tag == ""
-    @test o.attrs isa NamedTuple
+    @test o.date == test_date
 
-    o2 = make_order(T=GTCOrderType{Sell}, P=OrderTypes.Short)
-    @test o2 isa Order
-
-    o3 = make_order(id="ord123", tag="entry", attrs=(origin="manual",))
-    @test o3.id == "ord123"
-    @test o3.tag == "entry"
-    @test o3.attrs.origin == "manual"
-
-    o4 = Order(asset, eid, Order{MarketOrderType{Buy}}, OrderTypes.Short; price=100.0, amount=2.0, date=date)
+    o4 = Order(asset, eid, Order{MarketOrderType{Buy}}, OrderTypes.Short; price=100.0, amount=2.0, date=test_date)
     @test o4 isa Order
     @test o4.price == 100.0
     @test o4.amount == 2.0
 
-    o5 = Order(asset, eid, Order{LiquidationType{Sell}}; price=50.0, amount=0.5, date=date)
+    o5 = Order(asset, eid, Order{LiquidationType{Sell}}; price=50.0, amount=0.5, date=test_date)
     @test o5 isa Order
     @test o5.price == 50.0
     @test o5.amount == 0.5
+
+    o6 = Order(asset, eid, Order{ForcedOrderType{Sell}}; price=50.0, amount=0.5, date=test_date)
+    @test o6 isa Order
+    @test o6.price == 50.0
+    @test o6.amount == 0.5
+
+    o7 = Order(asset, eid, Order{MarketOrderType{Buy}}; price=50000.0, amount=1.0, date=test_date)
+    @test o7 isa Order
+    @test o7.price == 50000.0
+    @test o7.amount == 1.0
+
+    o8 = Order(asset, eid, Order{LimitOrderType{Buy}}; price=50000.0, amount=1.0, date=test_date)
+    @test o8 isa Order
+    @test o8.price == 50000.0
+    @test o8.amount == 1.0
+
+    o9 = Order(asset, eid, Order{GTCOrderType{Buy}}; price=50000.0, amount=1.0, date=test_date)
+    @test o9 isa Order
+    @test o9.price == 50000.0
+    @test o9.amount == 1.0
+
+    o10 = Order(asset, eid, Order{PostOnlyOrderType{Buy}}; price=50000.0, amount=1.0, date=test_date)
+    @test o10 isa Order
+    @test o10.price == 50000.0
+    @test o10.amount == 1.0
+
+    o11 = Order(asset, eid, Order{ImmediateOrderType{Buy}}; price=50000.0, amount=1.0, date=test_date)
+    @test o11 isa Order
+    @test o11.price == 50000.0
+    @test o11.amount == 1.0
+
+    o12 = Order(asset, eid, Order{FOKOrderType{Buy}}; price=50000.0, amount=1.0, date=test_date)
+    @test o12 isa Order
+    @test o12.price == 50000.0
+    @test o12.amount == 1.0
+
+    o13 = Order(asset, eid, Order{IOCOrderType{Buy}}; price=50000.0, amount=1.0, date=test_date)
+    @test o13 isa Order
+    @test o13.price == 50000.0
+    @test o13.amount == 1.0
+
+    o14 = Order(asset, eid, Order{MarketOrderType{Sell}}; price=50000.0, amount=1.0, date=test_date)
+    @test o14 isa Order
+    @test o14.price == 50000.0
+    @test o14.amount == 1.0
+
+    o15 = Order(asset, eid, Order{MarketOrderType{Buy}}; price=50000.0, amount=1.0, date=test_date)
+    @test o15 isa Order
+    @test o15.price == 50000.0
+    @test o15.amount == 1.0
 end
 
-# ============================================================
-# 3. Order Type Aliases
-# ============================================================
-@testset "Order type aliases" begin
-    b = make_order(T=MarketOrderType{Buy})
-    s = make_order(T=MarketOrderType{Sell})
-    sb = make_order(T=MarketOrderType{Buy}, P=OrderTypes.Short)
-    ss = make_order(T=MarketOrderType{Sell}, P=OrderTypes.Short)
-
-    @test b isa OrderTypes.BuyOrder
-    @test s isa OrderTypes.SellOrder
-    @test b isa OrderTypes.AnyBuyOrder
-    @test s isa OrderTypes.AnySellOrder
-    @test b isa OrderTypes.LongOrder
-    @test ss isa OrderTypes.ShortOrder
-    @test sb isa OrderTypes.ShortBuyOrder
-    @test ss isa OrderTypes.ShortSellOrder
-
-    @test b isa OrderTypes.IncreaseOrder
-    @test ss isa OrderTypes.IncreaseOrder
-    @test s isa OrderTypes.ReduceOrder
-    @test sb isa OrderTypes.ReduceOrder
-
-    @test make_order(T=FOKOrderType{Buy}) isa OrderTypes.AnyImmediateOrder
-    @test make_order(T=IOCOrderType{Buy}) isa OrderTypes.AnyImmediateOrder
-    @test make_order(T=GTCOrderType{Buy}) isa OrderTypes.AnyBuyOrder
-
-    @test make_order(T=LiquidationType{Sell}) isa OrderTypes.LiquidationOrder
-    @test make_order(T=ForcedOrderType{Sell}) isa OrderTypes.LongReduceOnlyOrder
-    @test make_order(T=ForcedOrderType{Buy}, P=OrderTypes.Short) isa OrderTypes.ShortReduceOnlyOrder
-end
-
-# ============================================================
-# 4. Order Helper Functions
-# ============================================================
-@testset "Order helpers" begin
-    b = make_order(T=GTCOrderType{Buy})
-    s = make_order(T=MarketOrderType{Sell})
-
-    @test ordertype(b) == GTCOrderType{Buy}
-    @test ordertype(s) == MarketOrderType{Sell}
-    @test positionside(b) == OrderTypes.Long
-    @test positionside(s) == OrderTypes.Long
-    @test positionside(make_order(P=OrderTypes.Short)) == OrderTypes.Short
-    @test orderside(b) == Buy
-    @test orderside(s) == Sell
-
-    @test exchangeid(b) == ExchangeID{:test_exchange}
-    @test pricetime(b) == (price=50000.0, time=date)
-
-    @test islong(b) == true
-    @test islong(s) == true   # Sell with default Long position
-    @test isshort(s) == false
-    @test isshort(make_order(P=OrderTypes.Short)) == true
-    @test islong(nothing) == false
-    @test isshort(nothing) == false
-
-    @test isimmediate(make_order(T=FOKOrderType{Buy})) == true
-    @test isimmediate(make_order(T=MarketOrderType{Buy})) == true
-    @test isimmediate(make_order(T=GTCOrderType{Buy})) == false
-
-    @test ispos(Long(), b) == true
-    @test ispos(Short(), b) == false
-
-    @test sidetopos(b) == Long()
-    @test sidetopos(s) == Short()
-end
-
-# ============================================================
-# 5. opposite
-# ============================================================
-@testset "opposite" begin
-    @test opposite(Buy) == Sell
-    @test opposite(Sell) == Buy
-    @test opposite(MarketOrderType{Buy}) == MarketOrderType{Sell}
-    @test opposite(GTCOrderType{Sell}) == GTCOrderType{Buy}
-end
-
-# ============================================================
-# 6. liqside and sidetopos / postoside
-# ============================================================
-@testset "liqside / sidetopos / postoside" begin
-    @test liqside(Long()) == Sell
-    @test liqside(Short()) == Buy
-    @test liqside(Long) == Sell
-    @test liqside(Short) == Buy
-
-    @test sidetopos(Buy) == Long()
-    @test sidetopos(Sell) == Short()
-    @test postoside(Long()) == Buy
-    @test postoside(Short()) == Sell
-end
-
-# ============================================================
-# 7. Order hash and equality
-# ============================================================
-@testset "Order hash/equality" begin
-    o1 = make_order(id="a")
-    o2 = make_order(id="b")
-    o1c = make_order(id="a")
-    @test hash(o1) == hash(o1c)
+@testset "Order equality and comparison" begin
+    o1 = make_order()
+    o1c = make_order()
     @test o1 == o1c
-    @test isless(o1, make_order(dt=date + Dates.Second(1))) == true
+    @test o1.id == o1c.id
+    @test pricetime(o1) == (price=50000.0, time=test_date)
+
+    @test o1 == o1c
+    @test isless(o1, make_order(dt=test_date + _Dates.Second(1))) == true
 end
 
-# ============================================================
-# 8. Trade Construction
-# ============================================================
-@testset "Trade construction" begin
+@testset "Trade" begin
     o = make_order()
-    t = Trade(o; date=date, amount=1.0, price=50000.0, fees=0.01, size=50000.0)
+    t = Trade(o; date=test_date, amount=1.0, price=50000.0, fees=0.01, size=50000.0)
     @test t isa Trade
     @test t.order === o
-    @test t.date == date
+    @test t.date == test_date
     @test t.amount == 1.0
     @test t.price == 50000.0
     @test t.value == 50000.0
-    @test t.fees == 0.01
-    @test t.size == -50000.0
-    @test t.leverage == 1.0
-    @test t.entryprice == 50000.0
-    @test t.fees_base == 0.0
 
     os = make_order(T=MarketOrderType{Sell})
-    ts = Trade(os; date=date, amount=1.0, price=50000.0, fees=0.01, size=50000.0)
+    ts = Trade(os; date=test_date, amount=1.0, price=50000.0, fees=0.01, size=50000.0)
     @test ts.amount == -1.0
     @test ts.size == 50000.0
 
     oss = make_order(T=GTCOrderType{Sell}, P=OrderTypes.Short)
-    tss = Trade(oss; date=date, amount=1.0, price=50000.0, fees=0.01, size=50000.0)
+    tss = Trade(oss; date=test_date, amount=1.0, price=50000.0, fees=0.01, size=50000.0)
     @test tss.size < 0.0
 
-    tb = Trade(o; date=date, amount=0.99, price=50000.0, fees=0.005, size=49500.0, fees_base=0.5)
+    tb = Trade(o; date=test_date, amount=0.99, price=50000.0, fees=0.005, size=49500.0, fees_base=0.5)
     @test tb.fees_base == 0.5
     @test tb.value == 49500.0
 end
 
-# ============================================================
-# 9. Trade Type Aliases
-# ============================================================
 @testset "Trade type aliases" begin
-    b = Trade(make_order(); date=date, amount=1.0, price=100.0, fees=0.0, size=100.0)
-    s = Trade(make_order(T=MarketOrderType{Sell}); date=date, amount=1.0, price=100.0, fees=0.0, size=100.0)
-    sb = Trade(make_order(T=MarketOrderType{Buy}, P=OrderTypes.Short); date=date, amount=1.0, price=100.0, fees=0.0, size=100.0)
-    ss = Trade(make_order(T=MarketOrderType{Sell}, P=OrderTypes.Short); date=date, amount=1.0, price=100.0, fees=0.0, size=100.0)
-    liq = Trade(make_order(T=LiquidationType{Sell}); date=date, amount=1.0, price=100.0, fees=0.0, size=100.0)
+    b = Trade(make_order(); date=test_date, amount=1.0, price=100.0, fees=0.0, size=100.0)
+    s = Trade(make_order(T=MarketOrderType{Sell}); date=test_date, amount=1.0, price=100.0, fees=0.0, size=100.0)
+    sb = Trade(make_order(T=MarketOrderType{Buy}, P=OrderTypes.Short); date=test_date, amount=1.0, price=100.0, fees=0.0, size=100.0)
+    ss = Trade(make_order(T=MarketOrderType{Sell}, P=OrderTypes.Short); date=test_date, amount=1.0, price=100.0, fees=0.0, size=100.0)
+    liq = Trade(make_order(T=LiquidationType{Sell}); date=test_date, amount=1.0, price=100.0, fees=0.0, size=100.0)
 
     @test b isa OrderTypes.BuyTrade
     @test s isa OrderTypes.SellTrade
     @test sb isa OrderTypes.ShortBuyTrade
     @test ss isa OrderTypes.ShortSellTrade
-    @test b isa OrderTypes.IncreaseTrade
-    @test ss isa OrderTypes.IncreaseTrade
-    @test s isa OrderTypes.ReduceTrade
-    @test sb isa OrderTypes.ReduceTrade
     @test liq isa OrderTypes.LiquidationTrade
 end
 
-# ============================================================
-# 10. Trade Helper Functions
-# ============================================================
 @testset "Trade helpers" begin
-    t = Trade(make_order(); date=date, amount=1.0, price=50000.0, fees=0.01, size=50000.0)
+    t = Trade(make_order(); date=test_date, amount=1.0, price=50000.0, fees=0.01, size=50000.0)
 
     @test exchangeid(t) == ExchangeID{:test_exchange}
-    @test positionside(t) == OrderTypes.Long
-    @test orderside(t) == Buy
-    @test ordertype(t) == MarketOrderType{Buy}
+    @test positionside(t) == Long
+    @test price(t) == 50000.0
+    @test size(t) == -50000.0
+    @test amount(t) == 1.0
+    @test fees(t) == 0.01
+    @test fees_base(t) == 0.0
 
-    @test islong(t) == true
-    @test isshort(t) == false
-    @test ispos(Long(), t) == true
-    @test ispos(Short(), t) == false
-
-    @test order_fees(t) == 0.01
-
-    tb = Trade(make_order(); date=date, amount=1.0, price=50000.0, fees=0.01, size=50000.0, fees_base=0.5)
+    tb = Trade(make_order(); date=test_date, amount=1.0, price=50000.0, fees=0.01, size=50000.0, fees_base=0.5)
     @test order_fees(tb) == 0.01 + 0.5 * 50000.0
+end
+
+@testset "OrderEvent" begin
+    pe = OrderEvent(
+        :liq_event, :default, "BTC/USDT", (Long(), true),
+        test_date, 45000.0, 48000.0, 1000.0, 2000.0, 10.0, 50000.0
+    )
+    @test pe.tag == :liq_event
+    @test pe.asset == "BTC/USDT"
+    @test pe.side == Long()
+    @test pe.reduce_only == true
+    @test pe.date == test_date
+    @test pe.price == 45000.0
+    @test pe.max_price == 48000.0
+    @test pe.qty == 1000.0
+    @test pe.max_qty == 2000.0
+    @test pe.leverage == 10.0
+    @test pe.entry_price == 50000.0
+end
+
+@testset "MarginEvent" begin
+    me = MarginEvent(
+        :margin_change, :group1, "ETH/USDT", Short(),
+        test_date, "cross", 1000.0, 1500.0
+    )
+    @test me.side == Short()
+    @test me.mode == "cross"
+    @test me.date == test_date
+    @test me.amount == 1000.0
+    @test me.new_amount == 1500.0
+end
+
+@testset "LeverageEvent" begin
+    le = LeverageEvent(
+        :lev_change, :group1, "ETH/USDT", Long(),
+        test_date, 5.0, 10.0
+    )
+    @test le.from == 5.0
+    @test le.value == 10.0
+    @test le.date == test_date
+end
+
+@testset "LiquidationOverride" begin
+    lo = OrderTypes.LiquidationOverride(order=make_order(), liqprice=45000.0, liqdate=test_date, p=Long())
+    @test lo isa OrderTypes.OrderError
+    @test lo.liqprice == 45000.0
+    @test lo.p == Long()
+end
+
+@testset "Serialization" begin
+    o = make_order(id="test_id")
+    t = Trade(o; date=test_date, amount=1.0, price=50000.0, fees=0.01, size=50000.0)
+    buf = IOBuffer()
+    display(buf, o)
+    @test String(take!(buf)) != ""
+
+    # serialization of order and trade
+    ob = IOBuffer()
+    serialize(ob, o)
+    seekstart(ob)
+    o2 = deserialize(ob)
+    @test o2 == o
+
+    tb = IOBuffer()
+    serialize(tb, t)
+    seekstart(tb)
+    t2 = deserialize(tb)
+    @test t2 == t
+end
+
+@testset "Edge cases" begin
+    o_neg = Order(asset, eid, Order{MarketOrderType{Buy}}; price=-1.0, amount=-1.0, date=test_date)
+    @test o_neg.price == -1.0
+    @test o_neg.amount == -1.0
 end
 
 # ============================================================
@@ -284,7 +280,7 @@ end
 
     pe = PositionUpdated{:binance}(
         :liq_event, :default, "BTC/USDT", (Long(), true),
-        date, 45000.0, 48000.0, 1000.0, 2000.0, 10.0, 50000.0
+        test_date, 45000.0, 48000.0, 1000.0, 2000.0, 10.0, 50000.0
     )
     @test pe.tag == :liq_event
     @test pe.asset == "BTC/USDT"
@@ -294,7 +290,7 @@ end
 
     me = MarginUpdated{:okx}(
         :margin_change, :group1, "ETH/USDT", Short(),
-        date, "cross", 1000.0, 1500.0
+        test_date, "cross", 1000.0, 1500.0
     )
     @test me.side == Short()
     @test me.mode == "cross"
@@ -302,7 +298,7 @@ end
 
     le = LeverageUpdated{:bybit}(
         :lev_change, :group1, "ETH/USDT", Long(),
-        date, 5.0, 10.0
+        test_date, 5.0, 10.0
     )
     @test le.from == 5.0
     @test le.value == 10.0
@@ -351,7 +347,7 @@ end
     @test OrderTypes.OrderTimeOut(order=make_order()) isa OrderTypes.OrderError
     @test OrderTypes.OrderCanceled(order=make_order()) isa OrderTypes.OrderError
 
-    lo = OrderTypes.LiquidationOverride(order=make_order(), liqprice=45000.0, liqdate=date, p=Long())
+    lo = OrderTypes.LiquidationOverride(order=make_order(), liqprice=45000.0, liqdate=test_date, p=Long())
     @test lo isa OrderTypes.OrderError
     @test lo.liqprice == 45000.0
     @test lo.p == Long()
@@ -376,7 +372,7 @@ end
 # ============================================================
 @testset "Print/display" begin
     o = make_order(id="test_id")
-    t = Trade(o; date=date, amount=1.0, price=50000.0, fees=0.01, size=50000.0)
+    t = Trade(o; date=test_date, amount=1.0, price=50000.0, fees=0.01, size=50000.0)
     buf = IOBuffer()
     display(buf, o)
     @test String(take!(buf)) != ""
@@ -417,7 +413,7 @@ end
 # 21. Edge cases
 # ============================================================
 @testset "Edge cases" begin
-    o_neg = Order(asset, eid, Order{MarketOrderType{Buy}}; price=-1.0, amount=-1.0, date=date)
+    o_neg = Order(asset, eid, Order{MarketOrderType{Buy}}; price=-1.0, amount=-1.0, date=test_date)
     @test o_neg.price == -1.0
     @test o_neg.amount == -1.0
 

@@ -232,4 +232,26 @@ function upsample(df::AbstractDataFrame, large_tf::TimeFrame, small_tf::TimeFram
     out
 end
 
-export upsample
+@doc """Compute the number of intervals of `tf` between `dt1` and `dt2`.
+
+```julia
+upsample_interval(tf"1m", DateTime(2024,1,1,0,0), DateTime(2024,1,1,0,5)) == 5
+upsample_interval(tf"5m", DateTime(2024,1,1,0,0), DateTime(2024,1,1,0,10)) == 2
+```
+
+Throws `ArgumentError` if `dt1 >= dt2`.
+"""
+function upsample_interval(tf::TimeFrame, dt1::DateTime, dt2::DateTime)
+    dt2 > dt1 || throw(ArgumentError("upsample_interval: dt2 ($dt2) must be > dt1 ($dt1)"))
+    diff_ms = convert(Millisecond, dt2 - dt1)
+    period_ms = convert(Millisecond, tf.period)
+    return div(diff_ms.value, period_ms.value)
+end
+function upsample_interval(tf::TimeFrame, d1::Dates.Date, d2::Dates.Date)
+    d2 > d1 || throw(ArgumentError("upsample_interval: dt2 ($d2) must be > dt1 ($d1)"))
+    diff_ms = convert(Millisecond, d2 - d1)
+    period_ms = convert(Millisecond, tf.period)
+    return div(diff_ms.value, period_ms.value)
+end
+
+export upsample, upsample_interval

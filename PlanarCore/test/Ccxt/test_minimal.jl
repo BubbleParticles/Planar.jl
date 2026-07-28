@@ -2,7 +2,7 @@
 using JSON3
 
 # Include the actual types.jl
-include("../../../Ccxt/src/CcxtGateway/types.jl")
+include("../../src/Ccxt/CcxtGateway/types.jl")
 
 using .Types
 

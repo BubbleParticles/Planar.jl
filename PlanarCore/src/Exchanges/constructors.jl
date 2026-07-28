@@ -446,6 +446,9 @@ function sandbox!(exc::Exchange; flag=!issandbox(exc), remove_keys=true)
     Base.generating_output() && return exckeys!(exc)
     name = string(exc.id)
     # ccxt parameter name for set_sandbox_mode varies: binance/okx/bybit use "enable", others use "enabled"
+    # Invalidate sandbox cache so the next issandbox call fetches fresh data
+    delete!(sandboxCache, exc.id)
+
     param_name = name in ("binance", "okx", "bybit", "mexc") ? "enable" : "enabled"
     success = try
         call_exchange(default_client(), name, "setSandboxMode", body=Dict(param_name => flag))
@@ -466,25 +469,27 @@ function sandbox!(exc::Exchange; flag=!issandbox(exc), remove_keys=true)
     else
         exckeys!(exc)
     end
-    nothing
 end
 
-@doc "Check if exchange is in sandbox mode via gateway."
+const sandboxCache = safettl(ExchangeID, Bool, Day(1); dict_type=Dict)
+
+
 function issandbox(exc::Exchange)
-    try
-        name = string(exc.id)
-        urls = call_exchange(default_client(), name, "urls")
-        if urls isa AbstractDict
-            urls_dict = Dict{String,Any}(string(k) => v for (k, v) in pairs(urls))
-            # Check for sandbox/testnet URLs
-            has_sandbox = haskey(urls_dict, "test") && urls_dict["test"] !== nothing
-            has_backup = haskey(urls_dict, "apiBackup") && urls_dict["apiBackup"] !== nothing
-            has_sandbox || has_backup
-        else
+    @lget! sandboxCache exc.id begin
+        try
+            name = string(exc.id)
+            urls = call_exchange(default_client(), name, "urls"; timeout=10.0)
+            if urls isa AbstractDict
+                urls_dict = Dict{String,Any}(string(k) => v for (k, v) in pairs(urls))
+                has_sandbox = haskey(urls_dict, "test") && urls_dict["test"] !== nothing
+                has_backup = haskey(urls_dict, "apiBackup") && urls_dict["apiBackup"] !== nothing
+                has_sandbox || has_backup
+            else
+                false
+            end
+        catch
             false
         end
-    catch
-        false
     end
 end
 

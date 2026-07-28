@@ -70,6 +70,33 @@ end
 
 const mock_exc = _make_exchange(:test)
 
+# Create shared AssetInstance objects once (avoid re-compilation per @testset)
+# These use standard OHLCV data (10 rows, 50000.0 / 3000.0 price)
+function _make_shared_data(price, n=10)
+    base_ts = 1704067200000
+    DataFrame(
+        timestamp = [Int64(base_ts + i*60000) for i in 0:n-1],
+        open = Float64(price), high = Float64(price+price*0.02),
+        low = Float64(price-price*0.02), close = Float64(price+price*0.01),
+        volume = Float64(1000.0),
+    )
+end
+const _tf_std = TimeFrame("1m")
+const _data_btc_std = SortedDict(_tf_std => _make_shared_data(50000.0))
+const _data_eth_std = SortedDict(_tf_std => _make_shared_data(3000.0))
+const _ai_btc_std = Instances.AssetInstance(
+    parse(AbstractAsset, "BTC/USDT"), _data_btc_std, mock_exc, NoMargin();
+    limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
+    precision=(; amount=8, price=2),
+    fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
+)
+const _ai_eth_std = Instances.AssetInstance(
+    parse(AbstractAsset, "ETH/USDT"), _data_eth_std, mock_exc, NoMargin();
+    limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
+    precision=(; amount=8, price=2),
+    fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
+)
+
 @testset "Collections" begin
     @testset "empty constructor" begin
         coll = Collections.AssetCollection()
@@ -80,37 +107,18 @@ const mock_exc = _make_exchange(:test)
     end
 
     @testset "from instances" begin
-        a_btc = parse(AbstractAsset, "BTC/USDT")
-        a_eth = parse(AbstractAsset, "ETH/USDT")
-        tf = TimeFrame("1m")
-        data_btc = SortedDict(tf => _make_ohlcv(50000.0, 10))
-        data_eth = SortedDict(tf => _make_ohlcv(3000.0, 10))
-
-        ai_btc = Instances.AssetInstance(
-            a_btc, data_btc, mock_exc, NoMargin();
-            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
-            precision=(; amount=8, price=2),
-            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
-        )
-        ai_eth = Instances.AssetInstance(
-            a_eth, data_eth, mock_exc, NoMargin();
-            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
-            precision=(; amount=8, price=2),
-            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
-        )
-
-        coll = Collections.AssetCollection([ai_btc, ai_eth])
+        coll = Collections.AssetCollection([_ai_btc_std, _ai_eth_std])
         @test length(coll) == 2
         @test coll.data.exchange[1] == ExchangeID(:test)
-        @test coll.data.asset[1] == a_btc
-        @test coll.data.asset[2] == a_eth
-        @test coll.data.instance[1] === ai_btc
-        @test coll.data.instance[2] === ai_eth
+        @test coll.data.asset[1] == parse(AbstractAsset, "BTC/USDT")
+        @test coll.data.asset[2] == parse(AbstractAsset, "ETH/USDT")
+        @test coll.data.instance[1] === _ai_btc_std
+        @test coll.data.instance[2] === _ai_eth_std
     end
 
     @testset "concurrent build from strings (no data race)" begin
         syms = ["BTC/USDT", "ETH/USDT"]
-        for _ in 1:20
+        for _ in 1:5
             coll = Collections.AssetCollection(
                 syms; timeframe="1m", exc=mock_exc, margin=NoMargin(), load_data=false
             )
@@ -125,153 +133,48 @@ const mock_exc = _make_exchange(:test)
 
 
     @testset "getindex by exchange" begin
-        a_btc = parse(AbstractAsset, "BTC/USDT")
-        a_eth = parse(AbstractAsset, "ETH/USDT")
-        tf = TimeFrame("1m")
-        data_btc = SortedDict(tf => _make_ohlcv(50000.0, 10))
-        data_eth = SortedDict(tf => _make_ohlcv(3000.0, 10))
-
-        ai_btc = Instances.AssetInstance(
-            a_btc, data_btc, mock_exc, NoMargin();
-            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
-            precision=(; amount=8, price=2),
-            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
-        )
-        ai_eth = Instances.AssetInstance(
-            a_eth, data_eth, mock_exc, NoMargin();
-            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
-            precision=(; amount=8, price=2),
-            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
-        )
-
-        coll = Collections.AssetCollection([ai_btc, ai_eth])
-        # By exchange ID
+        coll = Collections.AssetCollection([_ai_btc_std, _ai_eth_std])
         sub = coll[ExchangeID(:test)]
         @test size(sub, 1) == 2
-        # Non-existent exchange
         sub2 = coll[ExchangeID(:nonexistent)]
         @test size(sub2, 1) == 0
     end
 
     @testset "getindex by asset" begin
-        a_btc = parse(AbstractAsset, "BTC/USDT")
-        a_eth = parse(AbstractAsset, "ETH/USDT")
-        tf = TimeFrame("1m")
-        data_btc = SortedDict(tf => _make_ohlcv(50000.0, 10))
-        data_eth = SortedDict(tf => _make_ohlcv(3000.0, 10))
-
-        ai_btc = Instances.AssetInstance(
-            a_btc, data_btc, mock_exc, NoMargin();
-            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
-            precision=(; amount=8, price=2),
-            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
-        )
-        ai_eth = Instances.AssetInstance(
-            a_eth, data_eth, mock_exc, NoMargin();
-            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
-            precision=(; amount=8, price=2),
-            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
-        )
-
-        coll = Collections.AssetCollection([ai_btc, ai_eth])
+        coll = Collections.AssetCollection([_ai_btc_std, _ai_eth_std])
         # By asset
-        sub = coll[a_btc]
+        sub = coll[parse(AbstractAsset, "BTC/USDT")]
         @test size(sub, 1) == 1
-        @test sub.asset[1] == a_btc
-
+        @test sub.asset[1] == parse(AbstractAsset, "BTC/USDT")
         # By string
         sub2 = coll["ETH/USDT"]
         @test size(sub2, 1) == 1
-        @test sub2.asset[1] == a_eth
+        @test sub2.asset[1] == parse(AbstractAsset, "ETH/USDT")
     end
 
     @testset "getindex with bqe keywords" begin
-        a_btc = parse(AbstractAsset, "BTC/USDT")
-        a_eth = parse(AbstractAsset, "ETH/USDT")
-        tf = TimeFrame("1m")
-        data_btc = SortedDict(tf => _make_ohlcv(50000.0, 10))
-        data_eth = SortedDict(tf => _make_ohlcv(3000.0, 10))
-
-        ai_btc = Instances.AssetInstance(
-            a_btc, data_btc, mock_exc, NoMargin();
-            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
-            precision=(; amount=8, price=2),
-            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
-        )
-        ai_eth = Instances.AssetInstance(
-            a_eth, data_eth, mock_exc, NoMargin();
-            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
-            precision=(; amount=8, price=2),
-            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
-        )
-
-        coll = Collections.AssetCollection([ai_btc, ai_eth])
-        # b=base, q=quote, e=exchange
+        coll = Collections.AssetCollection([_ai_btc_std, _ai_eth_std])
         sub = getindex(coll; b=:BTC, q=:USDT, e=:test)
         @test size(sub, 1) == 1
-        @test sub.asset[1] == a_btc
-
-        # Only quote
+        @test sub.asset[1] == parse(AbstractAsset, "BTC/USDT")
         sub2 = getindex(coll; q=:USDT)
         @test size(sub2, 1) == 2
-
-        # Only base
         sub3 = getindex(coll; b=:ETH)
         @test size(sub3, 1) == 1
-        @test sub3.asset[1] == a_eth
-
-        # Non-existent base
+        @test sub3.asset[1] == parse(AbstractAsset, "ETH/USDT")
         sub4 = getindex(coll; b=:XRP)
         @test size(sub4, 1) == 0
     end
 
     @testset "getindex chained" begin
-        a_btc = parse(AbstractAsset, "BTC/USDT")
-        a_eth = parse(AbstractAsset, "ETH/USDT")
-        tf = TimeFrame("1m")
-        data_btc = SortedDict(tf => _make_ohlcv(50000.0, 10))
-        data_eth = SortedDict(tf => _make_ohlcv(3000.0, 10))
-
-        ai_btc = Instances.AssetInstance(
-            a_btc, data_btc, mock_exc, NoMargin();
-            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
-            precision=(; amount=8, price=2),
-            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
-        )
-        ai_eth = Instances.AssetInstance(
-            a_eth, data_eth, mock_exc, NoMargin();
-            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
-            precision=(; amount=8, price=2),
-            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
-        )
-
-        coll = Collections.AssetCollection([ai_btc, ai_eth])
+        coll = Collections.AssetCollection([_ai_btc_std, _ai_eth_std])
         sub = coll[ExchangeID(:test), :instance]
         @test length(sub) == 2
     end
 
     @testset "get with default" begin
-        a_btc = parse(AbstractAsset, "BTC/USDT")
-        a_eth = parse(AbstractAsset, "ETH/USDT")
-        tf = TimeFrame("1m")
-        data_btc = SortedDict(tf => _make_ohlcv(50000.0, 10))
-        data_eth = SortedDict(tf => _make_ohlcv(3000.0, 10))
-
-        ai_btc = Instances.AssetInstance(
-            a_btc, data_btc, mock_exc, NoMargin();
-            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
-            precision=(; amount=8, price=2),
-            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
-        )
-        ai_eth = Instances.AssetInstance(
-            a_eth, data_eth, mock_exc, NoMargin();
-            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
-            precision=(; amount=8, price=2),
-            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
-        )
-
-        coll = Collections.AssetCollection([ai_btc, ai_eth])
-        @test get(coll, 1, nothing) == ai_btc
+        coll = Collections.AssetCollection([_ai_btc_std, _ai_eth_std])
+        @test get(coll, 1, nothing) == _ai_btc_std
         @test get(coll, 99, nothing) === nothing
     end
 

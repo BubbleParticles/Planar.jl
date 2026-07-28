@@ -1,7 +1,37 @@
 using Test
 using PlanarCore.ExchangeTypes
-using PlanarCore.Ccxt.CcxtGateway: call_exchange, default_client, ping
+using PlanarCore.Ccxt.CcxtGateway: call_exchange, default_client, ping, Rest
+using PlanarCore.ExchangeTypes.CcxtGateway: HTTP, JSON3
 
+function _mock_get(url; kwargs...)
+    if occursin("/has", url)
+        HTTP.Response(200, JSON3.write(Dict("result" => Dict("fetchTicker" => true), "error" => nothing, "error_code" => nothing)))
+    elseif occursin("/timeframes", url)
+        HTTP.Response(200, JSON3.write(Dict("result" => Dict("1m" => nothing), "error" => nothing, "error_code" => nothing)))
+    elseif occursin("/fees", url)
+        HTTP.Response(200, JSON3.write(Dict("result" => Dict("trading" => Dict()), "error" => nothing, "error_code" => nothing)))
+    elseif occursin("/precisionMode", url)
+        HTTP.Response(200, JSON3.write(Dict("result" => 2, "error" => nothing, "error_code" => nothing)))
+    elseif occursin("/get_propertynames", url)
+        HTTP.Response(200, JSON3.write(Dict("result" => ["fetchTicker", "fetchOHLCV"], "error" => nothing, "error_code" => nothing)))
+    elseif occursin("/markets", url)
+        HTTP.Response(200, JSON3.write(Dict("result" => Dict("BTC/USDT" => Dict("id" => "BTC/USDT", "type" => "spot", "base" => "BTC", "quote" => "USDT")), "error" => nothing, "error_code" => nothing)))
+    elseif occursin("/ping", url)
+        HTTP.Response(200, JSON3.write(Dict("result" => "pong", "error" => nothing, "error_code" => nothing)))
+    elseif occursin("/exchanges/", url)
+        HTTP.Response(200, JSON3.write(Dict("result" => Dict("running" => true), "error" => nothing, "error_code" => nothing)))
+    else
+        error("Unexpected GET: $url")
+    end
+end
+
+function _mock_post(url; kwargs...)
+    if occursin("/fetchOHLCV", url)
+        HTTP.Response(200, JSON3.write(Dict("error" => "not supported", "result" => nothing)))
+    else
+        HTTP.Response(200, JSON3.write(Dict("status" => "success", "result" => Dict("running" => true), "error" => nothing, "error_code" => nothing)))
+    end
+end
 # ──────────────────────────────────────────────
 # ExchangeID
 # ──────────────────────────────────────────────

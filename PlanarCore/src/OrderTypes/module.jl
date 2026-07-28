@@ -353,6 +353,9 @@ export event!,
     PositionUpdated,
     MarginUpdated,
     LeverageUpdated,
+    OrderEvent,
+    MarginEvent,
+    LeverageEvent,
     BalanceUpdated,
     OHLCVUpdated
 export fees

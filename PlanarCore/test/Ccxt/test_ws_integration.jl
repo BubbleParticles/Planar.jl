@@ -1,22 +1,15 @@
 # WebSocket integration tests for CcxtGateway
 # These tests require the ccxt-gateway to be running with a live exchange.
-# Run with: RUN_INTEGRATION_TESTS=true julia --project=Ccxt -e 'include("test/test_ws_integration.jl")'
+# Run with: RUN_INTEGRATION_TESTS=true julia --project=PlanarDev -e 'include("PlanarCore/test/Ccxt/test_ws_integration.jl")'
 using Test
 using JSON3
-using HTTP
+using PlanarCore
+using PlanarCore.Ccxt
+using PlanarCore.Ccxt.CcxtGateway: GatewayWSClient, GatewayClient, connect!, is_connected, send_subscribe, send_unsubscribe, disconnect!, ping, fetch_exchange_has, exchange_ready, start_exchange, stop_exchange
 
 function run_ws_integration_tests()
-    try
-        using Ccxt
-        using .CcxtGateway
-        using .CcxtGateway.Rest
-    catch e
-        println("Skipping WS integration tests - Ccxt not available: $e")
-        return
-    end
-
     # --- Gateway health check ---
-    if !CcxtGateway.ping()
+    if !ping()
         println("Skipping WS integration tests - gateway not running")
         return
     end
@@ -29,7 +22,7 @@ function run_ws_integration_tests()
 
         # --- Start exchange subprocess ---
         @testset "Start exchange" begin
-            result = CcxtGateway.start_exchange(exchange_id)
+            result = start_exchange(exchange_id)
             @test result isa Dict
             @test get(result, "status", "") in ("started", "already_started")
             println("Exchange started: $(get(result, "status", "unknown"))")
@@ -39,12 +32,12 @@ function run_ws_integration_tests()
         ready = false
         for i in 1:20  # up to 20s
             sleep(1)
-            if CcxtGateway.exchange_ready(exchange_id) || CcxtGateway.ping() == false
+            if exchange_ready(exchange_id) || ping() == false
                 sleep(1)
             end
-            if CcxtGateway.exchange_ready(exchange_id)
+            if exchange_ready(exchange_id)
                 ready = true
-                println("Exchange ready after ${i}s")
+                println("Exchange ready after $(i)s")
                 break
             end
         end
@@ -52,7 +45,7 @@ function run_ws_integration_tests()
 
         # --- Verify exchange has WS method support ---
         @testset "Exchange has watchOHLCVForSymbols" begin
-            has_result = CcxtGateway.fetch_exchange_has(exchange_id)
+            has_result = fetch_exchange_has(exchange_id)
             @test has_result isa Dict
             if get(has_result, "watchOHLCVForSymbols", false) == true
                 println("Exchange supports watchOHLCVForSymbols")
@@ -66,16 +59,16 @@ function run_ws_integration_tests()
 
         # --- Connect WebSocket ---
         @testset "WS connect and subscribe with symbolsAndTimeframes" begin
-            ws_client = CcxtGateway.GatewayWSClient()
-            connected = CcxtGateway.connect!(ws_client)
+            ws_client = GatewayWSClient()
+            connected = connect!(ws_client)
             @test connected == true
-            @test CcxtGateway.is_connected(ws_client) == true
+            @test is_connected(ws_client) == true
             println("WS connected")
 
             # Subscribe using the CORRECT parameter format: symbolsAndTimeframes
             # ccxt's watch_ohlcv_for_symbols expects a list of [symbol, timeframe] pairs
             received_updates = Channel{Dict}(32)
-            sub_id = CcxtGateway.send_subscribe(
+            sub_id = send_subscribe(
                 ws_client, exchange_id, "watchOHLCVForSymbols";
                 params=Dict{String, Any}(
                     "symbolsAndTimeframes" => [[symbol, tf]],
@@ -143,16 +136,16 @@ function run_ws_integration_tests()
             if isopen(received_updates)
                 close(received_updates)
             end
-            CcxtGateway.send_unsubscribe(ws_client, sub_id)
-            CcxtGateway.disconnect!(ws_client)
-            @test CcxtGateway.is_connected(ws_client) == false
+            send_unsubscribe(ws_client, sub_id)
+            disconnect!(ws_client)
+            @test is_connected(ws_client) == false
             println("WS disconnected")
         end
     end
 
     # --- Stop exchange ---
     try
-        CcxtGateway.stop_exchange(exchange_id)
+        stop_exchange(exchange_id)
         println("Exchange stopped")
     catch e
         println("Error stopping exchange: $e")
@@ -161,6 +154,3 @@ function run_ws_integration_tests()
     println("\nWS integration tests completed!")
 end
 
-if !isdefined(Main, :RUN_TESTS_VIA_RUNNER)
-    run_ws_integration_tests()
-end

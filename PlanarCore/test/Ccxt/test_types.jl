@@ -2,7 +2,7 @@
 using Test
 using JSON3
 
-include("../../../Ccxt/src/CcxtGateway/types.jl")
+include("../../src/Ccxt/CcxtGateway/types.jl")
 using .Types
 
 @testset "GatewayResponse" begin

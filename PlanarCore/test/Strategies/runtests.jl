@@ -226,7 +226,6 @@ end
         lock(s)
         @test Strategies.cash(s) == 10000.0
         unlock(s)
-        @test true  # reached without error
     end
 
     @testset "internal helpers" begin
@@ -247,7 +246,6 @@ end
 
         # sizehint! on strategy (no-op smoke test)
         Strategies.sizehint!(s)
-        @test true
 
         # sizehint! inner loops with non-empty buyorders/sellorders
         E = typeof(mock_exc.id)

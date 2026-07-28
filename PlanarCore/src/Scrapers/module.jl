@@ -41,4 +41,9 @@ end
 include("utils.jl")
 include("bybit.jl")
 include("binance.jl")
-try; include("DBNomics.jl"); catch e; @warn "DBNomics not available: $(sprint(showerror, e))"; end
+try
+    @eval using DBnomics
+    include("DBNomics.jl")
+catch e
+    @warn "DBnomics not available - DBNomicsData module disabled: $(sprint(showerror, e))"
+end
