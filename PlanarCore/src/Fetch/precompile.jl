@@ -1,7 +1,7 @@
 using ..Misc.Lang: PrecompileTools, @preset, @precomp
 
 @preset let
-    pair = "BTC/USDT"
+    pair = first(DEFAULT_ASSETS)
     using .Data: zinstance
     using Exchanges.ExchangeTypes: _closeall
     tmp_zi = zinstance(mktempdir())

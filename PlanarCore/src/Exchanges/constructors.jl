@@ -328,7 +328,7 @@ end
 
 $(TYPEDSIGNATURES)
 """
-function filter_markets(exc; min_volume=10e4, quot="USDT", sep='/', type=:spot)
+function filter_markets(exc; min_volume=10e4, quot=string(QUOTE_CURRENCY), sep='/', type=:spot)
     markets = exc.markets
     @tickers! type
     f_markets = Dict()

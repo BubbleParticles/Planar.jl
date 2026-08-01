@@ -134,7 +134,7 @@ $(FIELDS)
     "Exchange sandbox mode flag"
     sandbox::Bool = true
     "The quote currency for the strategy cash."
-    qc::Symbol = :USDT
+    qc::Symbol = QUOTE_CURRENCY
     "Configures the margin mode of the strategy (`NoMargin`, `Isolated` or `Cross`)"
     margin::Option{MarginMode} = nothing
     "The default leverage that should be used when opening position with margin mode."

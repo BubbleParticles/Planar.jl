@@ -2,7 +2,7 @@ using Fetch
 using Fetch.Data
 using Fetch.Exchanges
 
-pair = "BTC/USDT"
+pair = first(DEFAULT_ASSETS)
 using .Data: zinstance
 using Exchanges.ExchangeTypes: _closeall
 tmp_zi = zinstance(mktempdir())

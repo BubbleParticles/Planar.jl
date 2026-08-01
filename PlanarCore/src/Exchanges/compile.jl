@@ -14,8 +14,8 @@ getexchange!(id; markets=:force)
 getexchange!(id; markets=:yes, sandbox=false)
 ExchangeTypes._closeall()
 emptycaches!()
-qc = "USDT"
-pair = "BTC/USDT"
+    qc = string(QUOTE_CURRENCY)
+    pair = first(DEFAULT_ASSETS)
 e = getexchange!(id; markets=:yes)
 futures(e)
 timestamp(e)
