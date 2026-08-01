@@ -1,5 +1,5 @@
 module DBNomicsData
-using DBnomics
+using ..DownloadTool: DBnomics
 using PlanarCore.Data.DataFrames
 using PlanarCore.Pbar
 using PlanarCore.Data: Cache as ca, zi, save_ohlcv, load_ohlcv
