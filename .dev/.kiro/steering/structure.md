@@ -38,7 +38,7 @@ The project follows a modular Julia package structure with each major component 
 - **`Plotting/`**: Visualization and charting capabilities
 - **`Watchers/`**: Market monitoring and alerting
 - **`Remote/`**: Remote control and communication (Telegram bot)
-- **`Scrapers/`**: Web scraping utilities for data collection
+- **`DownloadTool/`**: Web scraping utilities for data collection
 
 ## Configuration & User Files
 

@@ -1,4 +1,4 @@
-name = "Scrapers"
+name = "DownloadTool"
 uuid = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
 version = "0.1.0"
 authors = ["zbc"]

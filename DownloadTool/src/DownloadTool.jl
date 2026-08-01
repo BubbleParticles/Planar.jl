@@ -1,4 +1,4 @@
-module Scrapers
+module DownloadTool
     using PlanarCore
     using CSV, CodecZlib, EzXML, HTTP, URIs, ZipFile
     include("module.jl")

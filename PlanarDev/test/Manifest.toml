@@ -698,7 +698,7 @@ uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 version = "1.0.0"
 
 [[deps.PlanarDev]]
-deps = ["Pkg", "Planar", "PlanarCore", "Random", "Reexport", "Scrapers"]
+deps = ["Pkg", "Planar", "PlanarCore", "Random", "Reexport", "DownloadTool"]
 path = ".."
 uuid = "df15b565-ff7f-4c64-9bc8-38e9343ea891"
 version = "0.1.0"
@@ -834,13 +834,13 @@ version = "3.0.6"
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 version = "0.7.0"
 
-[[deps.Scrapers]]
+[[deps.DownloadTool]]
 deps = ["CSV", "CodecZlib", "EzXML", "HTTP", "PlanarCore", "URIs", "ZipFile"]
-path = "../../Scrapers"
+path = "../../DownloadTool"
 uuid = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
 version = "0.1.0"
 
-    [deps.Scrapers.weakdeps]
+    [deps.DownloadTool.weakdeps]
     DBnomics = "3114853a-1e9b-44f2-8156-91b1682c6b69"
 
 [[deps.SentinelArrays]]

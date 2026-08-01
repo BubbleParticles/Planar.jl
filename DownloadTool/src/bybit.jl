@@ -10,7 +10,7 @@ using PlanarCore.Data: DataFrame, zi
 using PlanarCore.Data: save_ohlcv, Cache as ca, load_ohlcv
 using PlanarCore.TimeTicks
 using PlanarCore.Lang
-using ..Scrapers:
+using ..DownloadTool:
     selectsyms,
     timeframe!,
     workers!,

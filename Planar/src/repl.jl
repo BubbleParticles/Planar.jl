@@ -83,8 +83,8 @@ analysis!() = module!(:StrategyStats, :sst)
 optim!() = _activate_and_import(:PlanarOptim, :opt)
 @doc """ Activates and Imports the `PlanarOptim` module (formerly PlanarInteractive). """
 interactive!() = _activate_and_import(:PlanarOptim, :plni)
-@doc """ Activates and Imports the `Scrapers` module. """
-scrape!() = _activate_and_import(:Scrapers, :scr)
+@doc """ Activates and Imports the `DownloadTool` module. """
+scrape!() = _activate_and_import(:DownloadTool, :scr)
 feats!() = _activate_and_import(:FeatureSelection, :feats)
 
 export optim!, metrics!, analysis!, interactive!, scrape!, feats!

@@ -5,7 +5,7 @@ using PlanarCore.Pbar
 using PlanarCore.Data: Cache as ca, zi, save_ohlcv, load_ohlcv
 using PlanarCore.TimeTicks
 using PlanarCore.Lang
-using ..Scrapers: selectsyms, timeframe!, workers!, WORKERS, TF, SEM, HTTP_PARAMS, mergechunks, dofetchfiles, _tempdir, @acquire, @fromassets
+using ..DownloadTool: selectsyms, timeframe!, workers!, WORKERS, TF, SEM, HTTP_PARAMS, mergechunks, dofetchfiles, _tempdir, @acquire, @fromassets
 using PlanarCore.Misc.DocStringExtensions
 
 const NAME = "DBNomics"

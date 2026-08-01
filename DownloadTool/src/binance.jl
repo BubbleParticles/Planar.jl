@@ -1,5 +1,5 @@
 module BinanceData
-using ..Scrapers:
+using ..DownloadTool:
     selectsyms,
     HTTP_PARAMS,
     WORKERS,
@@ -178,7 +178,7 @@ function fetch_ohlcv(::Any, file; out)
     nothing
 end
 
-using ..Scrapers: Scrapers as scr
+using ..DownloadTool: DownloadTool as scr
 @doc """ Fetches data for a specific symbol.
 
 $TYPEDSIGNATURES)

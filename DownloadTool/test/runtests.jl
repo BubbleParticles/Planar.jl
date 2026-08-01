@@ -1,10 +1,10 @@
-module ScrapersTests
+module DownloadToolTests
 
 using Test
 using PlanarCore
-using Scrapers
-using Scrapers: selectsyms, timeframe!, fromassets, swapfname!, workers!
-using Scrapers: csvtodf, timestamp!, _tempdir, WORKERS, TF, SEM, HTTP_PARAMS
+using DownloadTool
+using DownloadTool: selectsyms, timeframe!, fromassets, swapfname!, workers!
+using DownloadTool: csvtodf, timestamp!, _tempdir, WORKERS, TF, SEM, HTTP_PARAMS
 using PlanarCore.Instruments: Asset, AbstractAsset, bc, qc, @a_str
 using PlanarCore.Data.DataFrames: DataFrame
 
@@ -12,7 +12,7 @@ const _Dates = PlanarCore.TimeTicks.Dates
 using PlanarCore.TimeTicks
 import CodecZlib: ZlibCompressor, ZlibDecompressor
 
-@testset "Scrapers" begin
+@testset "DownloadTool" begin
     @testset "Constants" begin
         @test WORKERS[] == 4
         @test TF[] == tf"1m"
@@ -101,7 +101,7 @@ import CodecZlib: ZlibCompressor, ZlibDecompressor
     end
 
     @testset "@fromassets macro exported" begin
-        @test isdefined(Scrapers, Symbol("@fromassets"))
+        @test isdefined(DownloadTool, Symbol("@fromassets"))
     end
 
     @testset "trades_to_ohlcv basic" begin
@@ -111,7 +111,7 @@ import CodecZlib: ZlibCompressor, ZlibDecompressor
             price=[100.0, 101.0, 99.0],
             amount=[1.0, 2.0, 1.5],
         )
-        ohlcv = Scrapers.trades_to_ohlcv(df)
+        ohlcv = DownloadTool.trades_to_ohlcv(df)
         @test ohlcv isa DataFrame
         @test size(ohlcv, 1) >= 1
         @test hasproperty(ohlcv, :timestamp)
@@ -123,53 +123,53 @@ import CodecZlib: ZlibCompressor, ZlibDecompressor
     @testset "gzipdecode" begin
         original = "hello, world!"
         compressed = transcode(ZlibCompressor, codeunits(original))
-        decoded = Scrapers.gzipdecode(compressed)
+        decoded = DownloadTool.gzipdecode(compressed)
         @test String(decoded) == original
 
         empty_compressed = transcode(ZlibCompressor, UInt8[])
-        empty_decoded = Scrapers.gzipdecode(empty_compressed)
+        empty_decoded = DownloadTool.gzipdecode(empty_compressed)
         @test isempty(empty_decoded)
     end
 
     @testset "symfiles" begin
         links = ["file1.csv", "file2.csv", "file3.csv", "file4.csv"]
         # Without from: returns all
-        result = Scrapers.symfiles(links)
+        result = DownloadTool.symfiles(links)
         @test result == links
 
         # With from: returns from match + 1
-        result2 = Scrapers.symfiles(links; from="file2.csv")
+        result2 = DownloadTool.symfiles(links; from="file2.csv")
         @test result2 == ["file3.csv", "file4.csv"]
 
         # With by function (by is applied to result too)
-        result3 = Scrapers.symfiles(links; by=x -> uppercase(x), from="FILE2.CSV")
+        result3 = DownloadTool.symfiles(links; by=x -> uppercase(x), from="FILE2.CSV")
         @test result3 == ["FILE3.CSV", "FILE4.CSV"]
 
         # from at last index → nothing
-        result4 = Scrapers.symfiles(links; from="file4.csv")
+        result4 = DownloadTool.symfiles(links; from="file4.csv")
         @test result4 === nothing
 
         # from not found → returns all
-        result5 = Scrapers.symfiles(links; from="nonexistent.csv")
+        result5 = DownloadTool.symfiles(links; from="nonexistent.csv")
         @test result5 == links
     end
 
     @testset "workers! exists" begin
         # workers! has a pre-existing bug (SEM is const, not a Ref)
         # so we only verify the function exists
-        @test hasmethod(Scrapers.workers!, Tuple{Int})
+        @test hasmethod(DownloadTool.workers!, Tuple{Int})
     end
 
     @testset "selectsyms - symbol not found branch" begin
         all_syms = ["BTCUSDT", "ETHUSDT"]
         # "btc" is not in all_syms_set (case-sensitive), triggers @debug path
-        result = Scrapers.selectsyms(["btc", "NONEXISTENT"], all_syms; quote_currency="usdt", perps_only=false)
+        result = DownloadTool.selectsyms(["btc", "NONEXISTENT"], all_syms; quote_currency="usdt", perps_only=false)
         @test "BTCUSDT" in result
     end
 
     @testset "fromassets - different quote currencies assertion" begin
         assets = [a"BTC/USDT", a"ETH/EUR"]
-        @test_throws AssertionError Scrapers.fromassets(assets)
+        @test_throws AssertionError DownloadTool.fromassets(assets)
     end
 
     @testset "swapfname!" begin
@@ -188,9 +188,9 @@ import CodecZlib: ZlibCompressor, ZlibDecompressor
 
     @testset "@fromassets macro expansion" begin
         # Verify the macro is defined and callable
-        @test isdefined(Scrapers, Symbol("@fromassets"))
+        @test isdefined(DownloadTool, Symbol("@fromassets"))
         # Use macroexpand to check structure without evaluating
-        ex = macroexpand(Scrapers, :(Scrapers.@fromassets(:test_func)))
+        ex = macroexpand(DownloadTool, :(DownloadTool.@fromassets(:test_func)))
         @test ex isa Expr
         @test ex.head == :block
         # Should contain a function definition
@@ -205,19 +205,19 @@ import CodecZlib: ZlibCompressor, ZlibDecompressor
     end
 
     @testset "fetchfile exists" begin
-        @test hasmethod(Scrapers.fetchfile, Tuple{String})
-        @test isdefined(Scrapers, :fetchfile)
+        @test hasmethod(DownloadTool.fetchfile, Tuple{String})
+        @test isdefined(DownloadTool, :fetchfile)
     end
 end
 
 # ──────────────────────────────────────────────
-# Cli (merged into Scrapers)
+# Cli (merged into DownloadTool)
 # ──────────────────────────────────────────────
 @testset "Cli submodule" begin
-    @test isdefined(Scrapers, :Cli)
-    @test Scrapers.Cli isa Module
-    @test isdefined(Scrapers.Cli, :fetch)
-    @test isdefined(Scrapers.Cli, :resample_data)
+    @test isdefined(DownloadTool, :Cli)
+    @test DownloadTool.Cli isa Module
+    @test isdefined(DownloadTool.Cli, :fetch)
+    @test isdefined(DownloadTool.Cli, :resample_data)
 end
 
 end

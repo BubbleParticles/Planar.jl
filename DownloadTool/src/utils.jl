@@ -30,7 +30,7 @@ function selectsyms(syms, all_syms; quote_currency="usdt", perps_only=true)
     mysyms
 end
 
-@doc """ Adjusts the number of workers in the Scrapers module """
+@doc """ Adjusts the number of workers in the DownloadTool module """
 function workers!(n)
     prev = WORKERS[]
     WORKERS[] = n
