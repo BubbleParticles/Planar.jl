@@ -79,6 +79,10 @@ const ZERO = zero(DFT)
 @doc "Static `one(DFT)`"
 const ONE = one(DFT)
 @assert DEFAULT_FLOAT_TYPE isa DataType "$ENV must be edited within julia, before loading planar!"
+@doc "The default quote currency, configurable via \`PLANAR_QUOTE_CURRENCY\` env var."
+const QUOTE_CURRENCY = DEFAULT_QUOTE_CURRENCY = Symbol(get(ENV, "PLANAR_QUOTE_CURRENCY", "USDT"))
+@doc "The default asset pairs, configurable via \`PLANAR_DEFAULT_ASSETS\` env var (comma-separated)."
+const DEFAULT_ASSETS = DEFAULT_PAIRS = split(get(ENV, "PLANAR_DEFAULT_ASSETS", "BTC/USDT"), ",")
 @doc "The margin of error to use [`2eps`]."
 const ATOL = @something tryparse(DFT, get(ENV, "PLANAR_ATOL", "")) 10 * eps()
 
@@ -124,6 +128,7 @@ end
 include("exceptions.jl")
 
 export DFT, ATOL, ZERO, ONE
+export QUOTE_CURRENCY, DEFAULT_ASSETS
 export Iterable, StrOrVec, ContiguityException
 export ExecMode, execmode, ExecAction, Sim, Paper, Live
 export MarginMode, marginmode, Isolated, Cross

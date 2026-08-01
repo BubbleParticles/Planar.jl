@@ -270,7 +270,16 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 
 37. **Use `state.ticks` not `open==high==low==close` to detect stale candles in ticker-derived OHLCV**: A `open==high==low==close` filter is too aggressive — it skips legitimate one-ticker minutes where the market didn't move, creating unfillable gaps. Use `state.ticks == 0` instead: a candle with `state.ticks > 0` had at least one real ticker contribute to it and must be pushed even if flat. The `state.ticks` counter is reset to 0 at each new minute boundary and incremented by `_update_sym_ohlcv` for every real ticker. When `ticker=nothing` (stale-check path), `state.ticks` stays 0 and the candle is correctly skipped.
 
-38. **When refactoring algorithmic code, preserve the full formula in a comment before simplifying, and add a regression test targeting the invariant before deleting terms**: The `diff_volume!` refactor (`50e850f`) replaced `curr - prev + first_tf_candle_volume` with `curr_max - prev_base`, dropping the dropped-candle term. Three factors masked it: (a) multiple sources of volume-0 candles (stale artifacts, gap-fill, init guard) — fixing the noisier ones didn't eliminate the real bug; (b) no mathematical audit of the formula change; (c) no test checked the steady-state invariant (volume from the 24h rolling window when baseVolume is cached). Fix: write the old formula as a comment above the new one and add a test for the exact invariant before removing any term.
+39. **Parameterize hardcoded defaults via env vars, following the `PLANAR_FLOAT_TYPE` → `DFT` pattern**: When a hardcoded default (quote currency, asset pair, etc.) appears in multiple packages or precompile scripts, define it as a `const` in `PlanarCore/src/Misc/types.jl` alongside `DFT`/`DEFAULT_FLOAT_TYPE`, export it, and reference it everywhere the hardcoded value was used. Add the env var to `.envrc` as a commented example. This allows users to change defaults for tests, compilation, and strategy runs without editing source code.
+
+   Example pattern:
+   ```julia
+   # In PlanarCore/src/Misc/types.jl
+   const QUOTE_CURRENCY = DEFAULT_QUOTE_CURRENCY = Symbol(get(ENV, "PLANAR_QUOTE_CURRENCY", "USDT"))
+   const DEFAULT_ASSETS = DEFAULT_PAIRS = split(get(ENV, "PLANAR_DEFAULT_ASSETS", "BTC/USDT"), ",")
+   ```
+
+   Then update all downstream references: `Config.qc` defaults, `filter_markets` defaults, precompile/compile scripts, and `.envrc` documentation.
 
 ### Gotchas
 

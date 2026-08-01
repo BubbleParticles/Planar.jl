@@ -1,16 +1,27 @@
 using .Misc.Lang: wait, @preset, @precomp
 using .Misc: @skipoffline
+using ..Ccxt.CcxtGateway: default_client, spawn_gateway, start_exchange, exchange_ready
 
-@preset let
-    id = :okx
-    @precomp let
-        getexchange!(id; markets=:force)
-        getexchange!(id; markets=:yes, sandbox=false)
+@precomp let
+    id = :binanceusdm
+    # Start gateway during precompilation so markets can be loaded
+    if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
+        # Disable gateway idle shutdown during precompilation
+        set(ENV, "CCXT_GATEWAY_IDLE_TIMEOUT_MINUTES", "1000")
+    end
+    client = default_client()
+    if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
+        spawn_gateway()
+        start_exchange(client, string(id))
+        for _ in 1:60
+            exchange_ready(client, string(id)) && break
+            sleep(1)
+        end
     end
     ExchangeTypes._closeall()
     emptycaches!()
-    qc = "USDT"
-    pair = "BTC/USDT"
+    qc = string(QUOTE_CURRENCY)
+    pair = first(DEFAULT_ASSETS)
     e = getexchange!(id; markets=:yes)
     @precomp @skipoffline let
         futures(e)
@@ -28,5 +39,13 @@ using .Misc: @skipoffline
         market_fees(pair, e)
     end
     ExchangeTypes._closeall()
-    emptycaches!()
+    emptycaches!
+    # Shut down gateway after precompilation
+    try
+        using ..Ccxt.CcxtGateway.Rest: stop_gateway
+        stop_gateway()
+    catch
+    end
+    try rm(Ccxt.GATEWAY_PIDFILE; force=true) catch end
+    try rm(Ccxt.GATEWAY_LOCKFILE; force=true) catch end
 end
