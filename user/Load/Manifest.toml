@@ -504,7 +504,7 @@ uuid = "c1773ea8-8a7c-4b58-b57f-053be4f98df9"
 version = "0.1.0"
 
 [[deps.Load]]
-deps = ["Metrics", "PackageCompiler", "Planar", "PrecompileTools", "Scrapers", "Stubs"]
+deps = ["Metrics", "PackageCompiler", "Planar", "PrecompileTools", "DownloadTool", "Stubs"]
 path = "."
 uuid = "530aee93-9b5d-4423-8dbe-9bf7490b02fc"
 version = "0.1.0"
@@ -822,9 +822,9 @@ git-tree-sha1 = "c3b2323466378a2ba15bea4b2f73b081e022f473"
 uuid = "7e506255-f358-4e82-b7e4-beb19740aa63"
 version = "1.5.0"
 
-[[deps.Scrapers]]
+[[deps.DownloadTool]]
 deps = ["CSV", "CodecZlib", "DBnomics", "EzXML", "HTTP", "Instruments", "Processing", "URIs", "ZipFile"]
-path = "../../Scrapers"
+path = "../../DownloadTool"
 uuid = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
 version = "0.1.0"
 

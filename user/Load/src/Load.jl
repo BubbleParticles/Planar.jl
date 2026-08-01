@@ -4,7 +4,7 @@ using PrecompileTools
 @compile_workload begin
     using Planar
     using PlanarCore.Stubs
-    using Scrapers
+    using DownloadTool
     using Metrics
 end
 

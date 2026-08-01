@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "9fbbe632cc78f7f8cb8c9edd1b15822b531ca0f1"
+project_hash = "28afaaa52eb639108db957062fa14e369b0b6e9a"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "2d9c9a55f9c93e8887ad391fbae72f8ef55e1177"
@@ -838,13 +838,13 @@ version = "3.0.6"
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 version = "0.7.0"
 
-[[deps.Scrapers]]
+[[deps.DownloadTool]]
 deps = ["CSV", "CodecZlib", "Comonicon", "EzXML", "HTTP", "PlanarCore", "URIs", "ZipFile"]
 path = "."
 uuid = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
 version = "0.1.0"
 
-    [deps.Scrapers.weakdeps]
+    [deps.DownloadTool.weakdeps]
     DBnomics = "3114853a-1e9b-44f2-8156-91b1682c6b69"
 
 [[deps.Scratch]]

@@ -46,7 +46,7 @@ end
 
 function default_data_loader(load_func=nothing)
     @eval Main begin
-        using Scrapers: Scrapers as scr
+        using DownloadTool: DownloadTool as scr
         let f = @something $(load_func) scr.BinanceData.binanceload
             (pairs, qc; kwargs...) -> f(pairs; quote_currency=qc, kwargs...)
         end

@@ -48,7 +48,7 @@ The function replaces the OHLCV data of the assets in the `ac` collection with t
 
 Example:
 ```julia
-using Scrapers.BinanceData as bn
+using DownloadTool.BinanceData as bn
 using Strategies
 using Exchanges
 setexchange!(:binanceusdm)
