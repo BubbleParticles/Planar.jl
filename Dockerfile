@@ -57,11 +57,11 @@ ENV CI=true
 RUN $JULIA_CMD -e "import Pkg; Pkg.instantiate()"
 RUN $JULIA_CMD -e "using Planar"
 
-FROM planar-precomp AS planar-precomp-interactive
-ENV JULIA_PROJECT=/planar/PlanarInteractive
+FROM planar-precomp AS planar-precomp-optim
+ENV JULIA_PROJECT=/planar/PlanarOptim
 RUN JULIA_PROJECT= $JULIA_CMD -e "import Pkg; Pkg.add([\"Makie\", \"WGLMakie\"])"
 RUN $JULIA_CMD -e "import Pkg; Pkg.instantiate()"
-RUN $JULIA_CMD -e "using PlanarInteractive"
+RUN $JULIA_CMD -e "using PlanarOptim"
 
 
 FROM planar-precomp AS planar-sysimage
@@ -90,10 +90,10 @@ ENV JULIA_PROJECT=/planar/Planar
 RUN $JULIA_CMD --sysimage "/planar/Planar.so" -e "using Planar"
 CMD $JULIA_CMD --sysimage "/planar/Planar.so"
 
-FROM planar-precomp-interactive AS planar-sysimage-interactive
+FROM planar-precomp-optim AS planar-sysimage-optim
 USER root
 ENV CI=true
-ENV JULIA_PROJECT=/planar/PlanarInteractive
+ENV JULIA_PROJECT=/planar/PlanarOptim
 RUN apt-get install -y gcc g++
 ARG COMPILE_SCRIPT
 ARG NTHREADS=auto
@@ -109,8 +109,8 @@ RUN scripts/docker_compile.sh; \
     echo \"compiling with cpu target $JULIA_CPU_TARGET\"; \
     cat /tmp/compile.jl; \
     $JULIA_CMD -e \
-    'include(\"/tmp/compile.jl\"); compile(\"PlanarInteractive\"; cpu_target=\"$JULIA_CPU_TARGET\")'"; \
+    'include(\"/tmp/compile.jl\"); compile(\"PlanarOptim\"; cpu_target=\"$JULIA_CPU_TARGET\")'"; \
     rm -rf /tmp/compile.jl
 USER plnuser
-RUN $JULIA_CMD --sysimage "/planar/Planar.so" -e "using PlanarInteractive"
+RUN $JULIA_CMD --sysimage "/planar/Planar.so" -e "using PlanarOptim"
 CMD $JULIA_CMD --sysimage Planar.so

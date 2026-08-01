@@ -12,9 +12,13 @@ const HAS_SCRAPERS = let
 end
 
 # DBnomics.jl vendor package may not be available
+# DBnomics vendored in Scrapers
 const HAS_DBNOMICS = let
     try
-        push!(LOAD_PATH, "/home/fra/dev/Planar.jl/vendor/DBnomics.jl")
+        db_path = joinpath(@__DIR__, "..", "..", "Scrapers", "vendor", "DBnomics.jl")
+        if isdir(db_path)
+            pushfirst!(LOAD_PATH, db_path)
+        end
         @eval using DBnomics
         true
     catch

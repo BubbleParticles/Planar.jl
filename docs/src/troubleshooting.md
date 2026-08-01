@@ -39,7 +39,7 @@ Before diving into specific issues, try these common solutions:
 
 1. **Environment Check**: Ensure you're using the correct [Julia](https://julialang.org/) project
    ```bash
-   julia --project=Planar  # or PlanarInteractive
+   julia --project=Planar  # or PlanarOptim
    ```
 
 2. **Dependency Resolution**: Update and resolve all dependencies
@@ -76,7 +76,7 @@ Before diving into specific issues, try these common solutions:
 julia --project=./Planar
 
 # Alternative: For interactive features
-julia --project=./PlanarInteractive
+julia --project=./PlanarOptim
 
 # Check current project status
 julia> using Pkg; Pkg.status()

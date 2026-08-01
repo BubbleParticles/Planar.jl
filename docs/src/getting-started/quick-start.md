@@ -35,7 +35,7 @@ docker run -it --rm docker.io/psydyllic/planar-sysimage-interactive julia
 ```bash
 # Quick clone and run
 git clone --recurse-submodules https://github.com/psydyllic/Planar.jl
-cd Planar.jl && julia --project=PlanarInteractive
+cd Planar.jl && julia --project=PlanarOptim
 ```
 
 **Verification**: You should see the Julia REPL prompt `julia>`

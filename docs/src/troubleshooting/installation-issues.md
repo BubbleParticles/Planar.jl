@@ -52,7 +52,7 @@ mkdir -p user/logs user/keys
 # Set project environment
 export JULIA_PROJECT=Planar
 # or for interactive features
-export JULIA_PROJECT=PlanarInteractive
+export JULIA_PROJECT=PlanarOptim
 ```
 
 ## Configuration Issues

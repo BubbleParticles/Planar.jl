@@ -1,7 +1,7 @@
 ---
 name: audit-findings-to-agents-md
 description: "When an audit finds a bug that should have been prevented, record it as a gotcha/guideline in AGENTS.md and periodically de-duplicate/trim"
-condition: ["fix\\((?:Lang|TimeTicks|Misc|Instruments|Instances|Collections|OrderTypes|Ccxt|ExchangeTypes|Exchanges|Fetch|Watchers|Cli|Data|Processing|Strategies|Metrics|Pbar|Stubs|Opt|Plotting|Remote|Engine|Planar|PlanarDev|PlanarInteractive|Python|StrategyTools|StrategyStats|FeatureSelection|Scrapers)\\): .*", "Audit .* found .* bug", "root-cause fix"]
+condition: ["fix\\((?:Lang|TimeTicks|Misc|Instruments|Instances|Collections|OrderTypes|Ccxt|ExchangeTypes|Exchanges|Fetch|Watchers|Cli|Data|Processing|Strategies|Metrics|Pbar|Stubs|Opt|Plotting|Remote|Engine|Planar|PlanarDev|PlanarOptim|Python|StrategyTools|StrategyStats|FeatureSelection|Scrapers)\\): .*", "Audit .* found .* bug", "root-cause fix"]
 scope: "text"
 ---
 

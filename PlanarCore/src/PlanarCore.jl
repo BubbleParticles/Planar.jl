@@ -19,7 +19,5 @@ module PlanarCore
     include("submodules/SimMode.jl")
     include("submodules/Stubs.jl")
     include("submodules/Watchers.jl")
-    include("submodules/Scrapers.jl")
     include("submodules/Metrics.jl")
-    include("submodules/Plotting.jl")
 end
