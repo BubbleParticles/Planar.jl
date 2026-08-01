@@ -80,7 +80,7 @@ For comprehensive concept explanations with overview, key concepts, implementati
 ### Module References
 - Reference Planar modules using proper hierarchy: `Engine`, `Strategies`, `Exchanges`
 - Use `@environment!` macro examples for module loading
-- Include project activation: `julia --project=Planar` or `julia --project=PlanarInteractive`
+- Include project activation: `julia --project=Planar` or `julia --project=PlanarOptim`
 
 ### Configuration Examples
 - Show proper configuration setup with exchange and mode specification

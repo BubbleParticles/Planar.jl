@@ -139,12 +139,12 @@ Now let's test the strategy:
 ### Enable Detailed Debugging
 
 ```julia
-# Activate PlanarInteractive project
+# Activate PlanarOptim project
 import Pkg
-Pkg.activate("PlanarInteractive")
+Pkg.activate("PlanarOptim")
 
 try
-    using PlanarInteractive
+    using PlanarOptim
     @environment!
     
     # Enable debug logging to see every signal calculation
@@ -160,7 +160,7 @@ try
     println("Debug logging enabled for MyFirstStrategy")
     println("Strategy debugging commands ready to use")
 catch e
-    @warn "PlanarInteractive not available: $e"
+    @warn "PlanarOptim not available: $e"
 end
 ```
 
@@ -170,12 +170,12 @@ end
 
 #### 1. Check Indicator Values
 ```julia
-# Activate PlanarInteractive project
+# Activate PlanarOptim project
 import Pkg
-Pkg.activate("PlanarInteractive")
+Pkg.activate("PlanarOptim")
 
 try
-    using PlanarInteractive
+    using PlanarOptim
     @environment!
     
     # Example: Manually inspect indicator calculations
@@ -197,18 +197,18 @@ try
     # end
     
 catch e
-    @warn "PlanarInteractive not available: $e"
+    @warn "PlanarOptim not available: $e"
 end
 ```
 
 #### 2. Test Individual Conditions
 ```julia
-# Activate PlanarInteractive project
+# Activate PlanarOptim project
 import Pkg
-Pkg.activate("PlanarInteractive")
+Pkg.activate("PlanarOptim")
 
 try
-    using PlanarInteractive
+    using PlanarOptim
     @environment!
     
     # Example: Test your buy logic step by step
@@ -242,7 +242,7 @@ try
     # debug_buy_logic(s, ai, ats) where s is your strategy instance
     
 catch e
-    @warn "PlanarInteractive not available: $e"
+    @warn "PlanarOptim not available: $e"
 end
 
 # Test on recent data
@@ -253,12 +253,12 @@ debug_buy_logic(s, first(s.universe.assets), ai.data.timestamp[end-5])
 
 **Problem: No trades executed**
 ```julia
-# Activate PlanarInteractive project
+# Activate PlanarOptim project
 import Pkg
-Pkg.activate("PlanarInteractive")
+Pkg.activate("PlanarOptim")
 
 try
-    using PlanarInteractive
+    using PlanarOptim
     @environment!
     
     # Example: Check data sufficiency
@@ -286,7 +286,7 @@ try
     # end
     
 catch e
-    @warn "PlanarInteractive not available: $e"
+    @warn "PlanarOptim not available: $e"
 end
 ```
 

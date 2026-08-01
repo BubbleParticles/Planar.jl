@@ -6,7 +6,7 @@ The project follows a modular Julia package structure with each major component 
 
 ### Core Modules
 - **`Planar/`**: Main entry point and core module integration
-- **`PlanarInteractive/`**: Interactive features (plotting, optimization)
+- **`PlanarOptim/`**: Optimization, plotting, and interactive features (merged from PlanarOptim)
 - **`PlanarDev/`**: Development utilities and tools
 - **`Engine/`**: Core trading engine and fundamental abstractions
 

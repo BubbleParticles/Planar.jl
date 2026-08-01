@@ -65,8 +65,8 @@ using Planar
 
 # For interactive features (plotting, optimization)
 import Pkg
-Pkg.activate("PlanarInteractive")
-using PlanarInteractive
+Pkg.activate("PlanarOptim")
+using PlanarOptim
 @environment!
 ```
 
@@ -221,7 +221,7 @@ For detailed guidelines on writing testable documentation, see:
 ### Environment Variables
 Check and configure the environment variables in `.envrc`:
 ```bash
-export JULIA_PROJECT=Planar  # or PlanarInteractive
+export JULIA_PROJECT=Planar  # or PlanarOptim
 export JULIA_NUM_THREADS=auto
 # ... other variables
 ```

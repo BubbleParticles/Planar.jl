@@ -85,19 +85,15 @@ function Exchange(sym::Symbol; account="", kwargs...)
     client = default_client()
     try
         if !CcxtGateway.ping(client)
-            if Base.generating_output()
-                @debug "Precompilation: skipping gateway spawn"
-            else
-                @debug "Gateway not responding, spawning..."
-                try
-                    CcxtGateway.spawn_gateway()
-                    # After spawn, reconnect client (SSL may have been auto-detected)
-                    client = default_client()
-                catch
-                    @debug "spawn_gateway failed (may already be running)"
-                end
-                sleep(3)
+            @debug "Gateway not responding, spawning..."
+            try
+                CcxtGateway.spawn_gateway()
+                # After spawn, reconnect client (SSL may have been auto-detected)
+                client = default_client()
+            catch
+                @debug "spawn_gateway failed (may already be running)"
             end
+            sleep(3)
         end
         resp = CcxtGateway.start_exchange(client, name)
         if resp isa Dict

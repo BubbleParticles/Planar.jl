@@ -6,13 +6,11 @@ module Planar
     using PlanarCore.Misc: TYPEDSIGNATURES
     using Pkg: Pkg as Pkg
     using StrategyStats
-    using PlanarCore.Plotting
     # Logging macros used by strategy environment
     include("logmacros.jl")
     # Re-exports for backward compat
     include("repl.jl")
     include("strat.jl")
-    include("dev.jl")
     include("user.jl")
 
     # Missing imports and macros that used to be in module.jl
@@ -161,7 +159,4 @@ module Planar
     export ExchangeID, @tf_str, @strategyenv!, @contractsenv!, @optenv!, @environment!
     export Isolated, NoMargin, MarginMode
 
-    _activate_and_import(args...) = begin
-        # placeholder
-    end
 end

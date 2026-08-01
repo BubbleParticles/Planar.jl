@@ -39,7 +39,7 @@ function tag_repo(; major=nothing, minor=nothing, patch=nothing)
         doupdate=false,
         inst=false,
         precomp=false,
-        exclude=("test", "docs", "deps", ".conda", ".CondaPkg", ".git", "user", "PlanarInteractive", "Plotting"),
+        exclude=("test", "docs", "deps", ".conda", ".CondaPkg", ".git", "user", "PlanarOptim", "Plotting"),
         include=("PlanarDev/test",),
     )
     Pkg.activate("Planar")
