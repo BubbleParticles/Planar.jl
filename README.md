@@ -139,7 +139,7 @@ julia
 - Download and build dependencies:
 ```julia
 ] instantiate
-using Planar  # or PlanarInteractive for plotting and optimization
+using Planar  # or PlanarOptim for plotting and optimization
 ```
 
 julia --project=PlanarDev/ -e 'import Pkg; Pkg.instantiate(); Pkg.test()'

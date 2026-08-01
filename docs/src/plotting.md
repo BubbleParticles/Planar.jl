@@ -237,10 +237,9 @@ GLMakie provides the best performance for desktop applications with full GPU acc
 #### Multi-Monitor Support
 
 ```julia
-# Activate PlanarInteractive project for plotting features
+# Activate PlanarOptim project for plotting features
 import Pkg
-Pkg.activate("PlanarInteractive")
-
+Pkg.activate("PlanarOptim")
 try
     using GLMakie
     

@@ -8,7 +8,7 @@ inclusion: always
 - **Persistent sessions**: Always use a single Julia REPL session and reuse it instead of spawning new processes
 - **Project activation**: Start with correct project environment:
   - `julia --project=Planar` for core functionality
-  - `julia --project=PlanarInteractive` for plotting/optimization features
+  - `julia --project=PlanarOptim` for plotting/optimization features (formerly PlanarOptim)
 - **Environment loading**: Use `@environment!` macro to load Planar modules into scope
 - **Session recovery**: If REPL becomes unresponsive, restart and re-activate project environment
 

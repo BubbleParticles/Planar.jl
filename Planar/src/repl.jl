@@ -5,7 +5,7 @@ macro in_repl()
         @eval begin
             Misc.clearpypath!()
             sst = StrategyStats
-            using Plotting: plotone, @plotone
+            using PlanarOptim.Plotting: plotone, @plotone
             using Misc: config, @margin!, @margin!!
         end
         exc = setexchange!(:kucoin)
@@ -13,7 +13,7 @@ macro in_repl()
 end
 
 function analyze!()
-    @eval using StrategyStats, Plotting
+    @eval using StrategyStats, PlanarOptim.Plotting
 end
 
 function user!()
@@ -75,18 +75,16 @@ function _activate_and_import(name, bind)
     end
 end
 
-@doc """ Activates and imports the `Plotting` module. """
-plots!() = _activate_and_import(:Plotting, :plo)
 @doc """ Imports the `Metrics` module. """
 metrics!() = module!(:Metrics, :ss)
 @doc """ Imports the `StrategyStats` module. """
 analysis!() = module!(:StrategyStats, :sst)
 @doc """ Activates and Imports the `PlanarOptim` module. """
 optim!() = _activate_and_import(:PlanarOptim, :opt)
-@doc """ Activates and Imports the `PlanarInteractive` module. """
-interactive!() = _activate_and_import(:PlanarInteractive, :plni)
+@doc """ Activates and Imports the `PlanarOptim` module (formerly PlanarInteractive). """
+interactive!() = _activate_and_import(:PlanarOptim, :plni)
 @doc """ Activates and Imports the `Scrapers` module. """
 scrape!() = _activate_and_import(:Scrapers, :scr)
 feats!() = _activate_and_import(:FeatureSelection, :feats)
 
-export plots!, optim!, metrics!, analysis!, interactive!, scrape!, feats!
+export optim!, metrics!, analysis!, interactive!, scrape!, feats!

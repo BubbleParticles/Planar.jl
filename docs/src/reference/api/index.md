@@ -40,12 +40,12 @@ This section provides comprehensive documentation for all Planar.jl modules and 
 Most Planar functions follow these common patterns:
 
 ```julia
-# Activate PlanarInteractive project
+# Activate PlanarOptim project
 import Pkg
-Pkg.activate("PlanarInteractive")
+Pkg.activate("PlanarOptim")
 
 try
-    using PlanarInteractive
+    using PlanarOptim
     @environment!
 
     # Example API usage patterns
@@ -66,7 +66,7 @@ try
     # Note: Real usage requires proper strategy configuration
     
 catch e
-    @warn "PlanarInteractive not available: $e"
+    @warn "PlanarOptim not available: $e"
 end
 ```
 

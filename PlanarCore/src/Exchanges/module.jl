@@ -20,3 +20,7 @@ export islist, isdict
 
 using Reexport
 @reexport using ..ExchangeTypes
+
+if occursin("Exchanges", get(ENV, "JULIA_PRECOMP", ""))
+    include("precompile.jl")
+end

@@ -110,7 +110,8 @@ struct AssetInstance{T<:AbstractAsset,E<:ExchangeID,M<:MarginMode} <: AbstractIn
         end
         lastpos = Vector{Option{Position{<:PositionSide,E,M}}}()
         push!(lastpos, nothing)
-        if !(ispercentage(e.markets[raw(a)]))
+        mkt = get(e.markets, raw(a), nothing)
+        if mkt !== nothing && !(ispercentage(mkt))
             @warn "Exchange uses fixed amount fees, fees calculation will not match!"
         end
         new{A,E,M}(

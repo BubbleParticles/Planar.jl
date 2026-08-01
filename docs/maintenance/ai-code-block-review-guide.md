@@ -26,7 +26,7 @@ For each documentation file containing code blocks:
 ### 2. Consistency Checks
 
 #### Import and Setup Patterns
-- **Standard imports**: Verify consistent use of `using Planar` vs `using PlanarInteractive`
+- **Standard imports**: Verify consistent use of `using Planar` vs `using PlanarOptim`
 - **Project activation**: Check for proper project setup patterns
 - **Environment loading**: Ensure `@environment!` macro usage is consistent
 
@@ -35,7 +35,7 @@ For each documentation file containing code blocks:
 using Planar
 
 # Preferred pattern for interactive examples
-using PlanarInteractive
+using PlanarOptim
 @environment!
 ```
 
@@ -154,7 +154,7 @@ When reporting issues, use this format:
 - **Core modules**: Engine, Strategies, Exchanges, Executors
 - **Data modules**: Data, Fetch, Processing, Metrics
 - **Utility modules**: Collections, Misc, Lang, TimeTicks
-- **Interactive modules**: Plotting, Opt, PlanarInteractive
+- **Interactive modules**: Plotting, Opt, PlanarOptim
 
 ### Configuration Patterns
 - **User directory**: Examples should reference `user/` directory structure

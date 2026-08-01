@@ -12,7 +12,7 @@ Planar follows a modular architecture with clear separation of concerns:
 ┌─────────────────────────────────────────────────────────────┐
 │                    User Interface Layer                     │
 ├─────────────────────────────────────────────────────────────┤
-│  Planar.jl (Main)  │  PlanarInteractive.jl  │  CLI Tools   │
+│  Planar.jl (Main)  │  PlanarOptim.jl   │  CLI Tools   │
 ├─────────────────────────────────────────────────────────────┤
 │                    Strategy Layer                           │
 ├─────────────────────────────────────────────────────────────┤
@@ -91,7 +91,7 @@ graph TD
     
     M --> N[ExchangeTypes.jl]
     
-    O[PlanarInteractive.jl] --> A
+    O[PlanarOptim.jl] --> A
     O --> P[Plotting.jl]
     O --> Q[Opt.jl]
 ```

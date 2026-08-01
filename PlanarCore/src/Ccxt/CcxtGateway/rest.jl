@@ -359,13 +359,12 @@ end
 
 function _ensure_gateway_running()
     get(ENV, "CCXT_GATEWAY_DISABLE", "") == "true" && return nothing
-    Base.generating_output() && return nothing
     _gateway_initialized[] && return nothing
     lock(_gateway_init_lock) do
         _gateway_initialized[] && return nothing
         if !_check_gateway_up()
             spawn_gateway()
-            _check_gateway_up() || return nothing
+            _check_gateway_up() || error("Failed to start ccxt-gateway")
         end
         _gateway_initialized[] = true
     end
@@ -657,9 +656,14 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
         # Run the daemon script — capture output so user can see errors
         @debug "spawn_gateway: truncating gateway log..."
         try open("/tmp/gateway.log", "w") do f; end catch end
-        @debug "spawn_gateway: running: $python_cmd $daemon_script"
-        run(pipeline(`$python_cmd $daemon_script`, stdout="/tmp/gateway.log", stderr="/tmp/gateway.log"), wait=false)
-        @debug "spawn_gateway: daemon process launched"
+        # Pass idle timeout env to gateway subprocess
+        if haskey(ENV, "CCXT_GATEWAY_IDLE_TIMEOUT_MINUTES")
+            withenv("CCXT_GATEWAY_IDLE_TIMEOUT_MINUTES" => ENV["CCXT_GATEWAY_IDLE_TIMEOUT_MINUTES"]) do
+                run(pipeline(`$python_cmd $daemon_script`, stdout="/tmp/gateway.log", stderr="/tmp/gateway.log"), wait=false)
+            end
+        else
+            run(pipeline(`$python_cmd $daemon_script`, stdout="/tmp/gateway.log", stderr="/tmp/gateway.log"), wait=false)
+        end
         
         # Wait for pidfile AND gateway responsiveness
         pidfile = REST_GATEWAY_PIDFILE
@@ -680,9 +684,13 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
                 pid = parse(Int, pid_str)
                 _gateway_pid[] = pid
                 @debug "spawn: attempt $attempt, pidfile found (PID $pid)"
-                # HTTPS ping only — new gateway starts with SSL
-                if ping(GatewayClient(; use_ssl=true, timeout=5.0))
-                    return pid
+                # Try HTTPS first, then HTTP
+                for use_ssl in (true, false)
+                    if ping(GatewayClient(; use_ssl=use_ssl, timeout=5.0))
+                        _gateway_use_ssl[] = use_ssl
+                        _gateway_use_ssl_on_change()
+                        return pid
+                    end
                 end
                 @debug "spawn: PID $pid exists but gateway not responding yet"
             else
@@ -701,7 +709,6 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
         error("Failed to spawn ccxt-gateway within 10 seconds")
     end
 end
-
 function stop_gateway()
     # Try graceful shutdown via HTTP endpoint first (works across containers)
     try
@@ -722,6 +729,7 @@ function stop_gateway()
         end
         _gateway_pid[] = nothing
     end
+    _gateway_initialized[] = false
     empty!(_started_exchanges)
 end
 

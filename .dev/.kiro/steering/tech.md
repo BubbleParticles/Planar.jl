@@ -39,7 +39,7 @@ direnv allow
 # Start Julia with project
 julia --project=Planar
 # or for interactive features
-julia --project=PlanarInteractive
+julia --project=PlanarOptim
 ```
 
 ### Package Management
@@ -50,7 +50,7 @@ julia --project=PlanarInteractive
 # Load main module
 using Planar
 # or with plotting/optimization
-using PlanarInteractive
+using PlanarOptim
 ```
 
 ### Docker Usage
@@ -66,7 +66,7 @@ scripts/build.sh
 ```
 
 ### Environment Variables
-- `JULIA_PROJECT`: Set to Planar or PlanarInteractive
+- `JULIA_PROJECT`: Set to Planar or PlanarOptim
 - `JULIA_NUM_THREADS`: CPU thread count (default: nproc-2)
 - `JULIA_CONDAPKG_ENV`: Python environment path
 - `PLANAR_LIQUIDATION_BUFFER`: Risk management buffer (default: 0.02)

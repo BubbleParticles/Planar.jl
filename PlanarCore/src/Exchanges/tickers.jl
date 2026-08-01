@@ -340,7 +340,7 @@ $(TYPEDSIGNATURES)
 function market_fees(pair, exc; only_taker=nothing)
     mkt = get(exc.markets, pair, nothing)
     if mkt === nothing
-        return (0.01, 0.01)
+        return (; taker=0.01, maker=0.01, min=0.01, max=0.01)
     end
     taker = get(mkt, "taker", nothing)
     if taker === nothing
