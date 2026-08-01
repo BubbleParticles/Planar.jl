@@ -3,11 +3,11 @@ using HTTP
 using URIs
 using JSON3
 using ..Watchers
-using ..Lang: Option, @kget!
-using ..Misc: Config
-using ..Misc.TimeToLive: safettl
-using ..TimeTicks
-using ..TimeTicks: timestamp
+using PlanarCore.Lang: Option, @kget!
+using PlanarCore.Misc: Config
+using PlanarCore.Misc.TimeToLive: safettl
+using PlanarCore.TimeTicks
+using PlanarCore.TimeTicks: timestamp
 using ..Watchers: jsontodict
 
 const API_URL = "https://api.stlouisfed.org/fred"

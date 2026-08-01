@@ -16,10 +16,10 @@ using PlanarCore.Executors.Instruments: cnum
 import PlanarCore.Executors: call!
 import PlanarCore.Misc: start!, stop!
 using PlanarCore.Misc.DocStringExtensions
-using PlanarCore.Watchers: Watchers
+using Planar.Watchers: Watchers
 const Rocket = Watchers.Rocket
 using PlanarCore.Exchanges.Ccxt: CcxtGateway, default_client, call_exchange, _multifunc, exchange_has
-using PlanarCore.Watchers.WatchersImpls: maybe_backoff!
+using Planar.Watchers.WatchersImpls: maybe_backoff!
 
 include("utils.jl")
 include("caching.jl")

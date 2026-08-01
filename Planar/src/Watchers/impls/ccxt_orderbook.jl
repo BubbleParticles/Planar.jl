@@ -1,6 +1,6 @@
-using ..Fetch: OrderBookLevel, L1, L2, L3
-using ..Ccxt: CcxtGateway, default_client, call_exchange
-using ..Fetch.Exchanges.ExchangeTypes: _supports_ws_method
+using PlanarCore.Fetch: OrderBookLevel, L1, L2, L3
+using PlanarCore.Ccxt: CcxtGateway, default_client, call_exchange
+using PlanarCore.Fetch.Exchanges.ExchangeTypes: _supports_ws_method
 
 const CcxtOrderBookVal = Val{:ccxt_order_book}
 

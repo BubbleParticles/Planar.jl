@@ -4,7 +4,7 @@ using .Executors: hasorders, update_leverage!
 using .st: exchange
 using .Executors.Instances: raw
 using .OrderTypes: isimmediate
-using PlanarCore.Watchers: fetch!
+using Planar.Watchers: fetch!
 import .Executors: call!
 
 @doc """ Updates leverage or places an order in a live trading strategy.

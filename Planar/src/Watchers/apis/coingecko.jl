@@ -3,12 +3,12 @@ using HTTP
 using URIs
 using JSON3
 using ..Watchers
-using ..Lang: @kget!, Option
-using ..Misc
-using ..Misc.TimeToLive
-using ..TimeTicks
-using ..TimeTicks: timestamp
-using ..Fetch.Instruments
+using PlanarCore.Lang: @kget!, Option
+using PlanarCore.Misc
+using PlanarCore.Misc.TimeToLive
+using PlanarCore.TimeTicks
+using PlanarCore.TimeTicks: timestamp
+using PlanarCore.Fetch.Instruments
 using ..Watchers: jsontodict
 using .Instruments.Derivatives
 

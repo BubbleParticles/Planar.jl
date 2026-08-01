@@ -210,4 +210,14 @@ import CodecZlib: ZlibCompressor, ZlibDecompressor
     end
 end
 
+# ──────────────────────────────────────────────
+# Cli (merged into Scrapers)
+# ──────────────────────────────────────────────
+@testset "Cli submodule" begin
+    @test isdefined(Scrapers, :Cli)
+    @test Scrapers.Cli isa Module
+    @test isdefined(Scrapers.Cli, :fetch)
+    @test isdefined(Scrapers.Cli, :resample_data)
+end
+
 end

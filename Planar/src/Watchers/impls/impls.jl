@@ -1,9 +1,9 @@
 module WatchersImpls
-using ..Lang: @lget!, @kget!, fromdict, Option, @k_str
-using ..Lang: @statickeys!, @setkey!
-using ..TimeTicks
-using ..TimeTicks: now   # must come after other using to re-establish now = TimeTicks.now (UTC)
-using ..Misc
+using PlanarCore.Lang: @lget!, @kget!, fromdict, Option, @k_str
+using PlanarCore.Lang: @statickeys!, @setkey!
+using PlanarCore.TimeTicks
+using PlanarCore.TimeTicks: now   # must come after other using to re-establish now = TimeTicks.now (UTC)
+using PlanarCore.Misc
 using ..Watchers
 import ..Watchers:
     _fetch!,
@@ -17,10 +17,10 @@ import ..Watchers:
     _start!,
     _stop!,
     _delete!
-using ..Data
-using ..Data.DFUtils: appendmax!, prependmax!, pushmax!
-using ..Data.DataFrames
-using ..Fetch.Processing
+using PlanarCore.Data
+using PlanarCore.Data.DFUtils: appendmax!, prependmax!, pushmax!
+using PlanarCore.Data.DataFrames
+using PlanarCore.Fetch.Processing
 using Base: Semaphore
 using ..CoinGecko: CoinGecko as cg
 using ..CoinPaprika: CoinPaprika as cp

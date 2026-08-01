@@ -6,6 +6,7 @@ authors = ["zbc"]
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CodecZlib = "944b1d66-785c-5afd-91f1-9de20f533193"
+Comonicon = "863f3e99-da2a-4334-8734-de3dacbe5542"
 HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 EzXML = "8f5d6c58-4d21-5cfd-889c-e3ad7ee6a615"
 PlanarCore = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"

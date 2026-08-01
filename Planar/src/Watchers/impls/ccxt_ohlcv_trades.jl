@@ -1,9 +1,9 @@
-using ..Data: Candle
-using ..Fetch.Exchanges
-using ..Misc: Iterable
-using ..Fetch.Processing.TradesOHLCV
-using ..Fetch.Processing: trail!
-using ..Misc: sleep_pad
+using PlanarCore.Data: Candle
+using PlanarCore.Fetch.Exchanges
+using PlanarCore.Misc: Iterable
+using PlanarCore.Fetch.Processing.TradesOHLCV
+using PlanarCore.Fetch.Processing: trail!
+using PlanarCore.Misc: sleep_pad
 
 const CcxtOHLCVVal = Val{:ccxt_ohlcv}
 

@@ -1,6 +1,6 @@
-using PlanarCore.Watchers
-using PlanarCore.Watchers: default_init, _buffer_lock
-using PlanarCore.Watchers.WatchersImpls: _tfunc!, _tfunc, _exc!, _exc, _lastpushed!, _lastpushed
+using Planar.Watchers
+using Planar.Watchers: default_init, _buffer_lock
+using Planar.Watchers.WatchersImpls: _tfunc!, _tfunc, _exc!, _exc, _lastpushed!, _lastpushed
 @watcher_interface!
 using ...PaperMode: sleep_pad
 using PlanarCore.Exchanges: check_timeout, current_account

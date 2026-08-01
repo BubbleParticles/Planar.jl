@@ -1,6 +1,6 @@
-using PlanarCore.Watchers
-using PlanarCore.Watchers: default_init
-using PlanarCore.Watchers.WatchersImpls:
+using Planar.Watchers
+using Planar.Watchers: default_init
+using Planar.Watchers.WatchersImpls:
     _tfunc!,
     _tfunc,
     _exc!,

@@ -1,18 +1,14 @@
-using ..Fetch: Fetch
-using ..Fetch.Data
-using ..Fetch.Misc
-using ..Ccxt
-using ..Data: rangeafter
-using ..Data.DataStructures: CircularBuffer
-using ..Data.DataFrames: DataFrame
-using ..Misc
-using ..Misc.TimeTicks
-using ..Misc.Lang: Option, safewait, safenotify, @lget!, Lang
-using ..Misc: after, truncate_file
-using Base.Threads: @spawn
-using JSON3
-import Rocket
-using ..Misc.TimeTicks: now   # re-establish now = TimeTicks.now (UTC) after all other using
+using PlanarCore.Fetch: Fetch
+using PlanarCore.Fetch.Data
+using PlanarCore.Fetch.Misc
+using PlanarCore.Ccxt
+using PlanarCore.Data: rangeafter
+using PlanarCore.Data.DataStructures: CircularBuffer
+using PlanarCore.Data.DataFrames: DataFrame
+using PlanarCore.Misc
+using PlanarCore.Misc.TimeTicks
+using PlanarCore.Misc.Lang: Option, safewait, safenotify, @lget!, Lang
+using PlanarCore.Misc: after, truncate_file
 
 @doc """ Attempts to fetch data for a watcher
 

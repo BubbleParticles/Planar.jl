@@ -3,8 +3,8 @@ using ..Watchers
 using HTTP
 using URIs
 using JSON3
-using ..Misc: Config, config, queryfromstruct
-using ..Lang: Option
+using PlanarCore.Misc: Config, config, queryfromstruct
+using PlanarCore.Lang: Option
 
 const API_HEADER = "X-CMC_PRO_API_KEY"
 const API_URL = "https://pro-api.coinmarketcap.com"

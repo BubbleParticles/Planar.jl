@@ -2,22 +2,22 @@ module WatchersTests
 
 using Test
 using PlanarCore
-using PlanarCore.Watchers
-using PlanarCore.Watchers: HasFunction, Interval, Capacity, Beacon, BufferEntry, Exec
-using PlanarCore.Watchers.Fetch.Exchanges: Exchange
-import PlanarCore.Watchers.Rocket
-using PlanarCore.Watchers: _check_flush_interval, _notimpl, WATCHERS, logerror, lasterror, errors
-using PlanarCore.Watchers.Misc: ConcurrentCollections
-import PlanarCore.Watchers: _fetch!, _init!, _load!, _flush!, _process!, _get, _push!, _pop!, _start!, _stop!, _delete!
-using PlanarCore.Watchers: isstale, isstarted, isstopped, pushnew!, pushstart!, buffer, watcher, lastdate
+using Planar.Watchers
+using Planar.Watchers: HasFunction, Interval, Capacity, Beacon, BufferEntry, Exec
+using Planar.Watchers.Fetch.Exchanges: Exchange
+import Planar.Watchers.Rocket
+using Planar.Watchers: _check_flush_interval, _notimpl, WATCHERS, logerror, lasterror, errors
+using Planar.Watchers.Misc: ConcurrentCollections
+import Planar.Watchers: _fetch!, _init!, _load!, _flush!, _process!, _get, _push!, _pop!, _start!, _stop!, _delete!
+using Planar.Watchers: isstale, isstarted, isstopped, pushnew!, pushstart!, buffer, watcher, lastdate
 
 const _Dates = Watchers.Misc.TimeTicks.Dates
-using PlanarCore.Watchers.Misc.TimeTicks
-using PlanarCore.Watchers.Misc: rangebetween
-using PlanarCore.Watchers.Data: empty_ohlcv
-using PlanarCore.Watchers.WatchersImpls: CcxtTicker, TempCandle, TickerWatcherSymbolState2, CandleWatcherSymbolState4, WatcherHandler2
-using PlanarCore.Watchers.WatchersImpls: _parse_ticker_snapshot, sym_procstate!, default_load_timeframe, _update_sym_ohlcv, ccxt_ohlcv_tickers_watcher, Warmed, TempCandle, TickerWatcherSymbolState2, CandleWatcherSymbolState4, WatcherHandler2, _do_check_contig, _ensure_ohlcv_check_contig!, _dedup_view!
-using PlanarCore.Watchers.Ccxt
+using Planar.Watchers.Misc.TimeTicks
+using Planar.Watchers.Misc: rangebetween
+using Planar.Watchers.Data: empty_ohlcv
+using Planar.Watchers.WatchersImpls: CcxtTicker, TempCandle, TickerWatcherSymbolState2, CandleWatcherSymbolState4, WatcherHandler2
+using Planar.Watchers.WatchersImpls: _parse_ticker_snapshot, sym_procstate!, default_load_timeframe, _update_sym_ohlcv, ccxt_ohlcv_tickers_watcher, Warmed, TempCandle, TickerWatcherSymbolState2, CandleWatcherSymbolState4, WatcherHandler2, _do_check_contig, _ensure_ohlcv_check_contig!, _dedup_view!
+using Planar.Watchers.Ccxt
 using PlanarCore.Ccxt.CcxtGateway: ping, start_exchange, stop_exchange, exchange_ready
 
 # Define watcher methods for test watcher type

@@ -3,10 +3,10 @@ using ..Watchers
 using HTTP
 using URIs
 using JSON3
-using ..Data: Candle
-using ..Misc: Config, config, queryfromstruct
-using ..Lang: Option, @kget!
-using ..TimeTicks
+using PlanarCore.Data: Candle
+using PlanarCore.Misc: Config, config, queryfromstruct
+using PlanarCore.Lang: Option, @kget!
+using PlanarCore.TimeTicks
 using ..Watchers: jsontodict
 
 API_URL = "https://api.coinpaprika.com/"

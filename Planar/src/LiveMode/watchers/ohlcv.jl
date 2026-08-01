@@ -1,6 +1,6 @@
-using PlanarCore.Watchers.WatchersImpls:
+using Planar.Watchers.WatchersImpls:
     ccxt_ohlcv_watcher, ccxt_ohlcv_tickers_watcher, ccxt_ohlcv_candles_watcher, ccxt_average_ohlcv_watcher
-import PlanarCore.Watchers.WatchersImpls: cached_ohlcv!
+import Planar.Watchers.WatchersImpls: cached_ohlcv!
 using .st: logpath
 using .Data: DataFrame, propagate_ohlcv!
 

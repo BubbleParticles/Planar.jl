@@ -3,7 +3,7 @@
 # environment with Watchers, Scrapers, and WGLMakie rendering.
 
 using Planar
-using PlanarCore.Watchers
+using Planar.Watchers
 using Scrapers
 
 # Re-export key modules so they're available in the user's scope
