@@ -1,7 +1,7 @@
 using .Lang: @preset, @precomp
 
 @preset let
-    a = Instruments.parse(Asset, "BTC/USDT")
+    pair = first(DEFAULT_ASSETS)
     e = ExchangeID(:bybit)
     date = dt"2020-01-"
     for T in (MarketOrderType, GTCOrderType, IOCOrderType, FOKOrderType), S in (Buy, Sell)
