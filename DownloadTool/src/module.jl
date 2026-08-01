@@ -18,20 +18,20 @@ using PlanarCore.Data.DFUtils: lastdate, firstdate
 using PlanarCore.Data.DataFrames
 using PlanarCore.Pbar
 
-@doc "Controls the number of workers used by the Scrapers module to download chunks (1 chunk == 1 request).
+@doc "Controls the number of workers used by the DownloadTool module to download chunks (1 chunk == 1 request).
 See also [`SEM`](@ref)
 "
 const WORKERS = Ref(4)
-@doc "The time frame used by the Scrapers module."
+@doc "The time frame used by the DownloadTool module."
 const TF = Ref(tf"1m")
 @doc "A samaphore for parallel downloads. Controls how many symbols are downloaded in parallel.
 When downloading archives from scratch use more [`WORKERS`](@ref) and smaller `sem_size`, when updating use larer `sem_size` and fewer workers.
 "
 const SEM = Base.Semaphore(3)
 
-@doc "Default HTTP parameters used by the Scrapers module."
+@doc "Default HTTP parameters used by the DownloadTool module."
 const DEFAULT_HTTP_PARAMS = (; connect_timeout=30)
-@doc "Active HTTP parameters used by the Scrapers module."
+@doc "Active HTTP parameters used by the DownloadTool module."
 const HTTP_PARAMS = LittleDict{Symbol, Any}(:connect_timeout => 30)
 
 function _doinit()

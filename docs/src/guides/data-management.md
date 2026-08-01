@@ -8,7 +8,7 @@ This comprehensive guide covers Planar's [data management](../guides/data-manage
 
 - **[Storage Architecture](#Storage-Architecture)** - Understanding Zarr and LMDB backends
 - **[Data Collection Methods](#Data-Collection-Methods)** - Overview of collection approaches
-- **[Historical Data](#Historical-Data-Collection)** - Using Scrapers for bulk data collection
+- **[Historical Data](#Historical-Data-Collection)** - Using DownloadTool for bulk data collection
 - **[Real-Time Data](#Real-Time-Data-Fetching)** - Fetching live data from [exchanges](../exchanges.md)
 - **[Live Streaming](#Live-Data-Streaming)** - Continuous data monitoring with Watchers
 - **[Custom Data Sources](#Custom-Data-Sources)** - Integrating your own data
@@ -77,13 +77,13 @@ Planar provides multiple methods for collecting market data, each optimized for 
 
 | Method | Use Case | Speed | Data Range | Rate Limits |
 |--------|----------|-------|------------|-------------|
-| **Scrapers** | Historical bulk data | Fast | Months/Years | None |
+| **DownloadTool** | Historical bulk data | Fast | Months/Years | None |
 | **Fetch** | Recent data, gap filling | Medium | Days/Weeks | High |
 | **Watchers** | Real-time streaming | Real-time | Live only | Low |
 
 ### Choosing the Right Method
 
-- **Use Scrapers** for initial historical data collection and [backtesting](../guides/execution-modes.md#simulationmode) datasets
+- **Use DownloadTool** for initial historical data collection and [backtesting](../guides/execution-modes.md#simulationmode) datasets
 - **Use Fetch** for recent data updates and filling gaps in historical data
 - **Use Watchers** for [live trading](../guides/execution-modes.md#live-mode) and real-time analysis
 
@@ -91,7 +91,7 @@ Planar provides multiple methods for collecting market data, each optimized for 
 ##
  Historical Data Collection
 
-The Scrapers module provides access to historical data archives from major exchanges, offering the most efficient method for obtaining large amounts of historical data.
+The DownloadTool module provides access to historical data archives from major exchanges, offering the most efficient method for obtaining large amounts of historical data.
 
 **Supported Exchanges**: Binance and Bybit archives
 
@@ -107,7 +107,7 @@ The Scrapers module provides access to historical data archives from major excha
 ### Error Handling and Data Validation
 
 
-### Bybit Scrapers
+### Bybit DownloadTool
 
 
 !!! warning "Download Caching"

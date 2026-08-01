@@ -7,7 +7,7 @@ The Data module provides comprehensive storage and management of [OHLCV](guides/
 ## Quick Navigation
 
 - **[Storage Architecture](#Storage-Architecture)** - Understanding Zarr and LMDB backends
-- **[Historical Data](#Historical-Data-with-Scrapers)** - Using Scrapers for bulk data collection
+- **[Historical Data](#Historical-Data-with-DownloadTool)** - Using DownloadTool for bulk data collection
 - **[Real-Time Data](#Real-Time-Data-with-Fetch)** - Fetching live data from exchanges
 - **[Live Streaming](#Live-Data-Streaming-with-Watchers)** - Continuous data monitoring
 
@@ -72,9 +72,9 @@ ZarrInstance/
 
 Planar provides multiple methods for collecting market data, each optimized for different use cases:
 
-## Historical Data with Scrapers
+## Historical Data with DownloadTool
 
-The Scrapers module provides access to historical data archives from major exchanges, offering the most efficient method for obtaining large amounts of historical data.
+The DownloadTool module provides access to historical data archives from major exchanges, offering the most efficient method for obtaining large amounts of historical data.
 
 **Supported Exchanges**: Binance and Bybit archives
 

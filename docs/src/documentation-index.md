@@ -18,7 +18,7 @@ This comprehensive index helps you quickly find information across all Planar do
 
 ### Data Management
 - **Storage** - [Zarr Backend](data.md#zarr-backend), [LMDB](data.md#storage-architecture), [Organization](data.md#data-organization)
-- **Historical Data** - [Scrapers](data.md#historical-data-with-scrapers), [Binance Archives](data.md#basic-scraper-usage)
+- **Historical Data** - [DownloadTool](data.md#historical-data-with-scrapers), [Binance Archives](data.md#basic-scraper-usage)
 - **Real-time Data** - [Fetch Module](data.md#real-time-data-with-fetch), [Rate Limits](data.md#rate-limit-management)
 - **Live Streaming** - [Watchers](data.md#live-data-streaming-with-watchers), [OHLCV Tickers](data.md#ohlcv-ticker-watcher)
 

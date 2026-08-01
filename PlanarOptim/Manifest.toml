@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "3b06c102856b5a556514c7061bc3162696b93abb"
+project_hash = "6f19ddd4798ad0e18e5337476efa9319d093c5a2"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "0a81a018463de6c3f4f2c9360121c562e5add9e4"
@@ -277,12 +277,6 @@ git-tree-sha1 = "34d9873079e4cb3d0c62926a225136824677073f"
 uuid = "55437552-ac27-4d47-9aa3-63184e8fd398"
 version = "1.0.0"
 
-[[deps.Clustering]]
-deps = ["Distances", "LinearAlgebra", "NearestNeighbors", "Printf", "Random", "SparseArrays", "Statistics", "StatsBase"]
-git-tree-sha1 = "3e22db924e2945282e70c33b75d4dde8bfa44c94"
-uuid = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
-version = "0.15.8"
-
 [[deps.CodeTracking]]
 deps = ["InteractiveUtils", "REPL", "UUIDs"]
 git-tree-sha1 = "cfb7a2e89e245a9d5016b70323db412b3a7438d5"
@@ -362,6 +356,12 @@ git-tree-sha1 = "cde75cb34c9ee07b4c37981b0f32378d0dc19ffe"
 uuid = "f70d9fcc-98c5-4d4a-abd7-e4cdeebd8ca8"
 version = "1.1.1"
 
+[[deps.Comonicon]]
+deps = ["Configurations", "ExproniconLite", "Libdl", "Logging", "Markdown", "OrderedCollections", "PackageCompiler", "Pkg", "REPL", "Scratch", "TOML", "UUIDs"]
+git-tree-sha1 = "dedac9d02fdccd2948eda1d2ed6f0c2f9f9f00f4"
+uuid = "863f3e99-da2a-4334-8734-de3dacbe5542"
+version = "1.0.8"
+
 [[deps.Compat]]
 deps = ["TOML", "UUIDs"]
 git-tree-sha1 = "9d8a54ce4b17aa5bdce0ea5c34bc5e7c340d16ad"
@@ -407,6 +407,12 @@ deps = ["Serialization", "Sockets"]
 git-tree-sha1 = "21d088c496ea22914fe80906eb5bce65755e5ec8"
 uuid = "f0e56b4a-5159-44fe-b623-3e5288b988bb"
 version = "2.5.1"
+
+[[deps.Configurations]]
+deps = ["ExproniconLite", "OrderedCollections", "TOML"]
+git-tree-sha1 = "4358750bb58a3caefd5f37a4a0c5bfdbbf075252"
+uuid = "5218b696-f38b-4ac9-8b61-a12ec717816d"
+version = "0.17.6"
 
 [[deps.ConsoleProgressMonitor]]
 deps = ["Logging", "ProgressMeter"]
@@ -551,17 +557,6 @@ git-tree-sha1 = "9903195c34a488c5265d9a105f39718b7a2b3568"
 uuid = "3c3547ce-8d99-4f5e-a174-61eb10b00ae3"
 version = "0.4.22"
 
-[[deps.Distances]]
-deps = ["LinearAlgebra", "Statistics", "StatsAPI"]
-git-tree-sha1 = "c7e3a542b999843086e2f29dac96a618c105be1d"
-uuid = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"
-version = "0.10.12"
-weakdeps = ["ChainRulesCore", "SparseArrays"]
-
-    [deps.Distances.extensions]
-    DistancesChainRulesCoreExt = "ChainRulesCore"
-    DistancesSparseArraysExt = "SparseArrays"
-
 [[deps.Distributed]]
 deps = ["Random", "Serialization", "Sockets"]
 uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
@@ -600,6 +595,15 @@ weakdeps = ["Makie", "Random"]
     [deps.DomainSets.extensions]
     DomainSetsMakieExt = "Makie"
     DomainSetsRandomExt = "Random"
+
+[[deps.DownloadTool]]
+deps = ["CSV", "CodecZlib", "Comonicon", "EzXML", "HTTP", "PlanarCore", "URIs", "ZipFile"]
+path = "../DownloadTool"
+uuid = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
+version = "0.1.0"
+
+    [deps.DownloadTool.weakdeps]
+    DBnomics = "3114853a-1e9b-44f2-8156-91b1682c6b69"
 
 [[deps.Downloads]]
 deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
@@ -685,12 +689,6 @@ version = "0.3.1"
 git-tree-sha1 = "acebe244d53ee1b461970f8910c235b259e772ef"
 uuid = "9aa1b823-49e4-5ca5-8b0f-3971ec8bab6a"
 version = "0.3.2"
-
-[[deps.FeatureSelection]]
-deps = ["Clustering", "DataFrames", "DataStructures", "Distances", "Distributions", "GLM", "LinearAlgebra", "OnlineStats", "OnlineStatsBase", "OnlineTechnicalIndicators", "PlanarCore", "Statistics", "StatsBase", "TimeFrames"]
-path = "../FeatureSelection"
-uuid = "b3c4d5e6-f7a8-9012-bcde-f3a4b5c6d7e8"
-version = "0.1.0"
 
 [[deps.FileIO]]
 deps = ["Pkg", "Requires", "UUIDs"]
@@ -852,12 +850,6 @@ deps = ["Random"]
 uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
 version = "1.11.0"
 
-[[deps.GLM]]
-deps = ["Distributions", "LinearAlgebra", "LogExpFunctions", "Printf", "Reexport", "SparseArrays", "SpecialFunctions", "Statistics", "StatsAPI", "StatsBase", "StatsModels"]
-git-tree-sha1 = "c963639ae5b9aab54f543bdc7504f42f59880bec"
-uuid = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
-version = "1.9.5"
-
 [[deps.GPUArraysCore]]
 deps = ["Adapt"]
 git-tree-sha1 = "83cf05ab16a73219e5f6bd1bdfa9848fa24ac627"
@@ -908,6 +900,11 @@ deps = ["Artifacts", "GettextRuntime_jll", "JLLWrappers", "Libdl", "Libffi_jll",
 git-tree-sha1 = "24f6def62397474a297bfcec22384101609142ed"
 uuid = "7746bdde-850d-59dc-9ae8-88ece973131d"
 version = "2.86.3+0"
+
+[[deps.Glob]]
+git-tree-sha1 = "246c628cec062230b7d183aab88841fa94fcabe9"
+uuid = "c27321d9-0574-5035-807b-f59d2c89b15c"
+version = "1.5.0"
 
 [[deps.Graphite2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -1251,6 +1248,11 @@ version = "0.16.11"
     SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
     SymEngine = "123dc426-2d89-5057-bbad-38513e3affd8"
     tectonic_jll = "d7dd28d6-a5e6-559c-9131-7eb760cdacc5"
+
+[[deps.LazyArtifacts]]
+deps = ["Artifacts", "Pkg"]
+uuid = "4af54fe1-eca0-43a8-85a7-787d91b784e3"
+version = "1.11.0"
 
 [[deps.LazyModules]]
 git-tree-sha1 = "a560dd966b386ac9ae60bdd3a3d3a326062d3c3e"
@@ -1597,12 +1599,6 @@ version = "1.2.3"
     Requires = "ae029012-a4dd-5104-9daa-d747884805df"
     Tracker = "9f7883ad-71c0-57eb-9f7f-b5c9e6d3789c"
 
-[[deps.NearestNeighbors]]
-deps = ["AbstractTrees", "Distances", "StaticArrays"]
-git-tree-sha1 = "576eb4656529c12e77a46b17c23103dfba9fa570"
-uuid = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
-version = "0.4.29"
-
 [[deps.Netpbm]]
 deps = ["FileIO", "ImageCore", "ImageMetadata"]
 git-tree-sha1 = "d92b107dbb887293622df7697a2223f9f8176fcd"
@@ -1804,6 +1800,12 @@ git-tree-sha1 = "32b657a0d57c310a1a172bfc8c8cf68c5e674323"
 uuid = "f57f5aa1-a3ce-4bc8-8ab9-96f992907883"
 version = "0.4.5"
 
+[[deps.PackageCompiler]]
+deps = ["Artifacts", "Glob", "LazyArtifacts", "Libdl", "Pkg", "Printf", "RelocatableFolders", "TOML", "UUIDs", "p7zip_jll"]
+git-tree-sha1 = "513193b976208b1b646ad4303323153e8bff0997"
+uuid = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
+version = "2.4.0"
+
 [[deps.Packing]]
 deps = ["GeometryBasics"]
 git-tree-sha1 = "bc5bf2ea3d5351edf285a06b0016788a121ce92c"
@@ -1850,19 +1852,19 @@ uuid = "eebad327-c553-4316-9ea0-9fa01ccd7688"
 version = "0.3.3"
 
 [[deps.Planar]]
-deps = ["LRUCache", "MacroTools", "Pkg", "PlanarCore", "PrettyTables", "REPL", "Random", "Rocket", "Statistics", "StrategyStats", "Telegram", "TimeFrames"]
+deps = ["HTTP", "JSON3", "LRUCache", "MacroTools", "Pkg", "PlanarCore", "PrettyTables", "REPL", "Random", "Rocket", "Statistics", "StrategyStats", "Telegram", "TimeFrames", "URIs"]
 path = "../Planar"
 uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 version = "1.7.2"
 
 [[deps.PlanarCore]]
-deps = ["CSV", "Clustering", "CodecZlib", "ConcurrentCollections", "DataFrames", "DataFramesMeta", "DataStructures", "Dates", "Distances", "Distributed", "Distributions", "DocStringExtensions", "EzXML", "FeatureSelection", "FileWatching", "FunctionalCollections", "GLM", "HTTP", "IterTools", "JSON", "JSON3", "LMDB", "LinearAlgebra", "Logging", "LoggingExtras", "Makie", "MbedTLS", "OnlineStats", "OnlineTechnicalIndicators", "OrderedCollections", "Pkg", "PrecompileTools", "Preferences", "Printf", "Random", "Reexport", "Rocket", "Serialization", "Statistics", "StatsBase", "TOML", "Term", "TimeFrames", "URIs", "WebSockets", "Zarr", "ZipFile"]
+deps = ["CSV", "CodecZlib", "ConcurrentCollections", "DataFrames", "DataFramesMeta", "DataStructures", "Dates", "Distributed", "DocStringExtensions", "FileWatching", "FunctionalCollections", "HTTP", "IterTools", "JSON", "JSON3", "LMDB", "Logging", "LoggingExtras", "MbedTLS", "OnlineStats", "OrderedCollections", "Pkg", "PrecompileTools", "Preferences", "Printf", "Random", "Reexport", "Rocket", "Serialization", "Statistics", "StatsBase", "TOML", "Term", "TimeFrames", "URIs", "WebSockets", "Zarr"]
 path = "../PlanarCore"
 uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 version = "1.0.0"
 
 [[deps.PlanarOptim]]
-deps = ["BlackBoxOptim", "Makie", "Optimization", "OptimizationBBO", "OptimizationCMAEvolutionStrategy", "OptimizationEvolutionary", "OptimizationManopt", "OptimizationOptimJL", "Pkg", "Planar", "PlanarCore", "Printf", "REPL", "Random", "Scrapers", "StrategyStats", "Symbolics"]
+deps = ["BlackBoxOptim", "DownloadTool", "Makie", "Optimization", "OptimizationBBO", "OptimizationCMAEvolutionStrategy", "OptimizationEvolutionary", "OptimizationManopt", "OptimizationOptimJL", "Pkg", "Planar", "PlanarCore", "Printf", "REPL", "Random", "Symbolics"]
 path = "."
 uuid = "01937fd2-c099-442f-ae89-75fa208aad36"
 version = "0.1.0"
@@ -2231,15 +2233,6 @@ git-tree-sha1 = "53bf620cb2c3763d41495b2a145611c6ca400dcd"
 uuid = "53ae85a6-f571-4167-b2af-e1d143709226"
 version = "1.10.4"
 
-[[deps.Scrapers]]
-deps = ["CSV", "CodecZlib", "EzXML", "HTTP", "PlanarCore", "URIs", "ZipFile"]
-path = "../Scrapers"
-uuid = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
-version = "0.1.0"
-
-    [deps.Scrapers.weakdeps]
-    DBnomics = "3114853a-1e9b-44f2-8156-91b1682c6b69"
-
 [[deps.Scratch]]
 deps = ["Dates"]
 git-tree-sha1 = "9b81b8393e50b7d4e6d0a9f14e192294d3b7c109"
@@ -2272,11 +2265,6 @@ version = "0.5.0"
 deps = ["Distributed", "Mmap", "Random", "Serialization"]
 uuid = "1a1011a3-84de-559e-8e89-a11a2f7dc383"
 version = "1.11.0"
-
-[[deps.ShiftedArrays]]
-git-tree-sha1 = "503688b59397b3307443af35cd953a13e8005c16"
-uuid = "1277b4bf-5013-50f5-be3d-901d8477a67a"
-version = "2.0.0"
 
 [[deps.SignedDistanceFields]]
 deps = ["Statistics"]
@@ -2439,12 +2427,6 @@ weakdeps = ["ChainRulesCore", "InverseFunctions"]
     [deps.StatsFuns.extensions]
     StatsFunsChainRulesCoreExt = "ChainRulesCore"
     StatsFunsInverseFunctionsExt = "InverseFunctions"
-
-[[deps.StatsModels]]
-deps = ["DataAPI", "DataStructures", "LinearAlgebra", "Printf", "REPL", "ShiftedArrays", "SparseArrays", "StatsAPI", "StatsBase", "StatsFuns", "Tables"]
-git-tree-sha1 = "0db41c4e0d9f3fa195395a6401a8290752c9cd3d"
-uuid = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
-version = "0.7.10"
 
 [[deps.StrategyStats]]
 deps = ["DataFrames", "Logging", "OnlineTechnicalIndicators", "PlanarCore", "Statistics"]
