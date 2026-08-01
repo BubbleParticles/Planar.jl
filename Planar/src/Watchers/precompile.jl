@@ -1,7 +1,7 @@
 # Watchers precompile workloads
 # This file is included conditionally when JULIA_PRECOMP is set
 
-using ..Misc.Lang: Lang, @preset, @precomp, @m_str, @ignore
+using PlanarCore.Misc.Lang: Lang, @preset, @precomp, @m_str, @ignore
 
 if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
 @preset let

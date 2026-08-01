@@ -12,9 +12,9 @@ using .WatchersImpls:
     _check_ids
 using .Watchers: logerror, JSON3
 using Base: Semaphore, acquire, release, ReentrantLock, current_task
-using ..Data: DataFrame
-using ..Misc: period
-using ..Fetch.Exchanges.ExchangeTypes: has
+using PlanarCore.Data: DataFrame
+using PlanarCore.Misc: period
+using PlanarCore.Fetch.Exchanges.ExchangeTypes: has
 
 const PRICE_SOURCES = (:last, :vwap, :bid, :ask)
 const CcxtOHLCVCandlesVal = Val{:ccxt_ohlcv_candles}

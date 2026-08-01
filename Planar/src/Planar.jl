@@ -1,5 +1,6 @@
 module Planar
     include("submodules/PaperMode.jl")
+    include("submodules/Watchers.jl")
     include("submodules/LiveMode.jl")
     include("submodules/Remote.jl")
     include("submodules/Engine.jl")
@@ -158,5 +159,5 @@ module Planar
 
     export ExchangeID, @tf_str, @strategyenv!, @contractsenv!, @optenv!, @environment!
     export Isolated, NoMargin, MarginMode
-
+    export Watchers
 end

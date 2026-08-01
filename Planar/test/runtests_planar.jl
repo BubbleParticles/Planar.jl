@@ -150,4 +150,5 @@ end
     include("LiveMode/runtests.jl")
     include("PaperMode/runtests.jl")
     include("Remote/runtests.jl")
+    include("Watchers/runtests.jl")
 end

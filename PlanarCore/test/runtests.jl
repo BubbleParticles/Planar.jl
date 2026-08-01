@@ -21,5 +21,4 @@ using Test
     include("Strategies/runtests.jl")
     include("Stubs/runtests.jl")
     include("TimeTicks/runtests.jl")
-    include("Watchers/runtests.jl")
 end
