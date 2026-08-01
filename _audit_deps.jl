@@ -6,7 +6,7 @@ using TOML
 pkgs = [
     "PlanarCore", "PlanarOptim", "PlanarDev", "Planar",
     "Scrapers", "FeatureSelection", "StrategyTools",
-    "StrategyStats", "Cli"
+    "StrategyStats"
 ]
 
 function referenced_modules(text)
