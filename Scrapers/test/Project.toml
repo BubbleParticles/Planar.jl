@@ -1,0 +1,4 @@
+[deps]
+PlanarCore = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+CodecZlib = "944b1d66-785c-5afd-91f1-9de20f533193"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"

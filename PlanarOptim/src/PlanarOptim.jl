@@ -33,6 +33,30 @@ Main features:
 module PlanarOptim
 
 include("module.jl")
+
+# Include Plotting submodule (moved from PlanarCore)
+include("Plotting.jl")
+
+# Optional: interactive mode with WGLMakie backend.
+# This replicates what PlanarInteractive used to provide.
+# WGLMakie is a weak dependency — loaded only if available.
+# NOTE: This block is NOT run during precompilation to avoid writing into closed Main.
+function _try_setup_interactive!()
+    isdefined(Main, :PLANAR_INTERACTIVE_SETUP) && return
+    try
+        @eval using WGLMakie
+        @eval include("interactive_setup.jl")
+    catch e
+        @warn "WGLMakie not available — interactive rendering disabled: $(sprint(showerror, e))"
+    end
+    Core.eval(Main, :(const PLANAR_INTERACTIVE_SETUP = true))
+    return
+end
+
+if !Base.generating_output()
+    _try_setup_interactive!()
+end
+
 if occursin(string(@__MODULE__), get(ENV, "JULIA_PRECOMP", ""))
     include("precompile.jl")
 end

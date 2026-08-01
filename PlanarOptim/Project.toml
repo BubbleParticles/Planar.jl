@@ -5,6 +5,7 @@ authors = ["zbc"]
 
 [deps]
 BlackBoxOptim = "a134a8b2-14d6-55f6-9291-3336d3ab0209"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Optimization = "7f7a1694-90dd-40f0-9382-eb1efda571ba"
 OptimizationBBO = "3e6eede4-6085-4f62-9a71-46d9bc1eb92b"
 OptimizationCMAEvolutionStrategy = "bd407f91-200f-4536-9381-e4ba712f53f8"
@@ -17,14 +18,17 @@ PlanarCore = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+Scrapers = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 
 [weakdeps]
 BayesianOptimization = "4c6ed407-134f-591c-93fa-e0f7c164a0ec"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
+WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
 
 [sources]
-PlanarCore = {path = "/Planar.jl/PlanarCore"}
+Planar = {path = "../Planar"}
+PlanarCore = {path = "../PlanarCore"}
 
 [extensions]
 BayesExt = "BayesianOptimization"

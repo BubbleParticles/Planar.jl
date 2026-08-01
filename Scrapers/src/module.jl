@@ -1,0 +1,59 @@
+using PlanarCore.Processing: TradesOHLCV as tra, cleanup_ohlcv_data, trail!
+using PlanarCore.Processing: Processing, Pbar, Data
+using CSV
+using PlanarCore.Instruments
+using ZipFile: ZipFile as zip
+using HTTP
+using PlanarCore.Data: zi, zinstance
+using PlanarCore.Misc
+using CodecZlib: CodecZlib as zlib
+
+using PlanarCore.TimeTicks
+using PlanarCore.Lang
+using PlanarCore.Lang: @ifdebug, @acquire, splitkws
+using PlanarCore.Misc: LittleDict
+using PlanarCore.Misc.DocStringExtensions
+using PlanarCore.Data.Cache: Cache as ca
+using PlanarCore.Data.DFUtils: lastdate, firstdate
+using PlanarCore.Data.DataFrames
+using PlanarCore.Pbar
+
+@doc "Controls the number of workers used by the Scrapers module to download chunks (1 chunk == 1 request).
+See also [`SEM`](@ref)
+"
+const WORKERS = Ref(4)
+@doc "The time frame used by the Scrapers module."
+const TF = Ref(tf"1m")
+@doc "A samaphore for parallel downloads. Controls how many symbols are downloaded in parallel.
+When downloading archives from scratch use more [`WORKERS`](@ref) and smaller `sem_size`, when updating use larer `sem_size` and fewer workers.
+"
+const SEM = Base.Semaphore(3)
+
+@doc "Default HTTP parameters used by the Scrapers module."
+const DEFAULT_HTTP_PARAMS = (; connect_timeout=30)
+@doc "Active HTTP parameters used by the Scrapers module."
+const HTTP_PARAMS = LittleDict{Symbol, Any}(:connect_timeout => 30)
+
+function _doinit()
+    zi[] = zinstance()
+end
+
+include("utils.jl")
+include("bybit.jl")
+include("binance.jl")
+let
+    dbnomics_path = joinpath(@__DIR__, "..", "vendor", "DBnomics.jl")
+    if isdir(dbnomics_path)
+        pushfirst!(LOAD_PATH, dbnomics_path)
+        try
+            @eval using DBnomics
+            include("DBNomics.jl")
+        catch e
+            @warn "DBnomics not available - DBNomicsData module disabled: $(sprint(showerror, e))"
+        finally
+            filter!(p -> p != dbnomics_path, LOAD_PATH)
+        end
+    else
+        @warn "Vendored DBnomics not found at $dbnomics_path - DBNomicsData module disabled"
+    end
+end

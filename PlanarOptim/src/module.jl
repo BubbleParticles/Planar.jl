@@ -1,4 +1,5 @@
 using PlanarCore.SimMode: SimMode
+using PlanarCore: PlanarCore
 using PlanarCore.SimMode.Executors: st, Instances, OptSetup, OptRun, OptScore, OptMinimize, Context
 using PlanarCore.SimMode.TimeTicks
 using .Instances: value
