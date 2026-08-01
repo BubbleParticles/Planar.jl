@@ -563,7 +563,7 @@ function get_data(
             # Only readLines
             try
                 response = readurl(x)
-                return JSON.parse(response)
+                return JSON.parse(response; dicttype=Dict{String,Any})
             catch
                 error("BAD REQUEST")
             end
@@ -580,7 +580,7 @@ function get_data(
                 if !response_ok(response)
                     error("The response is not <200 OK>.")
                 end
-                return JSON.parse(String(response.body))
+                return JSON.parse(String(response.body); dicttype=Dict{String,Any})
             catch e
                 rethrow(e)
             end
