@@ -39,6 +39,10 @@ function test_dbnomics()
 
     @testset "DBNomics Tests" begin
         @testset "DBNomics Scraper" begin
+            if !isdefined(scr, :DBNomicsData)
+                @warn "DBnomics tests skipped: DBNomicsData unavailable (vendored DBnomics deps not resolvable in this environment)"
+                return
+            end
             if isnothing(Base.find_package("DBnomics"))
                 @warn "DBnomics package not available"
                 return

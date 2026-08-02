@@ -110,8 +110,8 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 **ZarrInstance**
 : Wrapper around Zarr storage providing the data access interface. Global instance available at `Data.zi[]`.
 
-**Scraper**
-: Module for downloading historical data archives from exchanges (currently Binance and Bybit).
+**DownloadTool**
+: Package for downloading historical data archives from exchanges (currently Binance and Bybit).
 
 **Fetch**
 : Module for downloading data directly from exchange APIs using [CCXT](exchanges.md#ccxt-integration).

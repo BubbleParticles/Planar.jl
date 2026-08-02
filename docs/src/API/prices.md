@@ -1,5 +1,0 @@
-# Prices
-
-```@autodocs
-Modules = [Prices]
-```

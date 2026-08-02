@@ -1,4 +1,4 @@
 # Pbar
 ```@autodocs
-Modules = [Pbar]
+Modules = [PlanarCore.Pbar]
 ```

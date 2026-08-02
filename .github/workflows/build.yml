@@ -132,13 +132,13 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
           target: planar-sysimage
-      - name: Docker meta precomp interactive
-        id: meta-precomp-interactive
+      - name: Docker meta precomp optim
+        id: meta-precomp-optim
         uses: docker/metadata-action@v5
         with:
           # list of Docker images to use as base name for tags
           images: |
-            bubbleparticles/planar-precomp-interactive
+            bubbleparticles/planar-precomp-optim
           # generate Docker tags based on the following events/attributes
           tags: |
             type=schedule
@@ -149,9 +149,9 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=sha
-      - name: Precomp Interactive
+      - name: Precomp Optim
         uses: docker/build-push-action@v2
-        id: precomp-interactive
+        id: precomp-optim
         with:
           context: .
           build-args: |
@@ -162,17 +162,17 @@ jobs:
             PLANAR_PHEMEX_SANDBOX_SECRET=${{ env.PLANAR_PHEMEX_SANDBOX_SECRET }}
             PLANAR_PHEMEX_SANDBOX_PASSWORD=${{ env.PLANAR_PHEMEX_SANDBOX_PASSWORD }}
           push: true
-          tags: ${{ steps.meta-precomp-interactive.outputs.tags }}
+          tags: ${{ steps.meta-precomp-optim.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
-          target: planar-precomp-interactive
-      - name: Docker meta sysimage interactive
-        id: meta-sysimage-interactive
+          target: planar-precomp-optim
+      - name: Docker meta sysimage optim
+        id: meta-sysimage-optim
         uses: docker/metadata-action@v5
         with:
           # list of Docker images to use as base name for tags
           images: |
-            bubbleparticles/planar-sysimage-interactive
+            bubbleparticles/planar-sysimage-optim
           # generate Docker tags based on the following events/attributes
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
@@ -184,9 +184,9 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=sha
-      - name: Sysimage Interactive
+      - name: Sysimage Optim
         uses: docker/build-push-action@v2
-        id: sysimage-interactive
+        id: sysimage-optim
         with:
           context: .
           build-args: |
@@ -198,10 +198,10 @@ jobs:
             PLANAR_PHEMEX_SANDBOX_SECRET=${{ env.PLANAR_PHEMEX_SANDBOX_SECRET }}
             PLANAR_PHEMEX_SANDBOX_PASSWORD=${{ env.PLANAR_PHEMEX_SANDBOX_PASSWORD }}
           push: true
-          tags: ${{ steps.meta-sysimage-interactive.outputs.tags }}
+          tags: ${{ steps.meta-sysimage-optim.outputs.tags }}
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
-          target: planar-sysimage-interactive
+          target: planar-sysimage-optim
           # This ugly bit is necessary if you don't want your cache to grow forever
           # until it hits GitHub's limit of 5GB.
           # Temp fix

@@ -71,7 +71,7 @@ The Exchanges module includes:
 ## Complete API Reference
 
 ```@autodocs
-Modules = [Planar.Exchanges, Planar.Exchanges.ExchangeTypes]
+Modules = [PlanarCore.Exchanges, PlanarCore.ExchangeTypes]
 ```
 
 ## See Also

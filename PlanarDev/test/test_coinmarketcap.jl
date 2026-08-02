@@ -21,6 +21,11 @@ _test_cmc_1(fromenv=true) = begin
 end
 
 test_coinmarketcap(fromenv=true) = begin
+    config_path = joinpath(dirname(dirname(dirname(pathof(Planar)))), "user", "secrets.toml")
+    if !isfile(config_path) && Base.get(ENV, "PLANAR_CMC_APIKEY", "") == ""
+        @warn "CoinMarketCap API tests skipped: no user/secrets.toml and PLANAR_CMC_APIKEY not set"
+        return true
+    end
     # Load module definitions into Main and invoke latest to avoid world-age issues
     @eval begin
         using .Planar: Planar

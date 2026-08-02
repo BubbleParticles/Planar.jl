@@ -71,18 +71,19 @@ check_anchor_links() {
     echo "## Anchor Links" >> "$REPORT_FILE"
     echo "" >> "$REPORT_FILE"
     
-    find "$DOCS_DIR" -name "*.md" -exec grep -l "#.*)" {} \; | while read -r file; do
+    find "$DOCS_DIR" -name "*.md" -exec grep -l '#.*)' {} \; | while read -r file; do
         echo "Checking anchor links in: $file"
         
-        # Extract anchor links within the same file
-        grep -o '\[.*\](#[^)]*' "$file" | while read -r link; do
-            anchor=$(echo "$link" | sed 's/.*](#\([^)]*\)).*/\1/')
+        # Extract anchor links within the same file (full [text](#anchor) tokens)
+        grep -oE '\[[^]]*\]\(#[^)]*\)' "$file" | while read -r link; do
+            anchor=$(echo "$link" | sed -n 's/.*](#\([^)]*\))/\1/p')
+            [ -n "$anchor" ] || continue
             
-            # Convert anchor to expected heading format
-            expected_heading=$(echo "$anchor" | sed 's/-/ /g' | tr '[:upper:]' '[:lower:]')
+            # Slugify the anchor (spaces->hyphens, strip punctuation, lowercase)
+            slug=$(echo "$anchor" | sed 's/[[:space:]]\+/-/g; s/[^A-Za-z0-9-]//g' | tr '[:upper:]' '[:lower:]')
             
-            # Check if heading exists in the file
-            if ! grep -qi "^#.*$expected_heading" "$file"; then
+            # Slugify every heading in the file the same way and compare
+            if ! grep -oE '^#{1,6} .*' "$file" | sed 's/^#* *//; s/[[:space:]]\+/-/g; s/[^A-Za-z0-9-]//g' | tr '[:upper:]' '[:lower:]' | grep -qx "$slug"; then
                 echo "- ❌ **$file**: Broken anchor link to \`#$anchor\`" >> "$REPORT_FILE"
             fi
         done

@@ -31,17 +31,17 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: true
-      JULIA_VERSION: 1.11
+      JULIA_VERSION: 1.12
     permissions: write-all
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Set up Julia
-        uses: julia-actions/setup-julia@v1
+        uses: julia-actions/setup-julia@v2
         with:
-          version: "1"
+          version: "1.12"
           include-all-prereleases: false
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         id: julia-cache
         if: always()
         with:
@@ -62,17 +62,12 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get install -y xauth
-          # FIXME
-          # [ -e ~/.cache/Planar.jl/data ] && rm -r ~/.cache/Planar.jl/data
-          julia --compiled-modules=no -O0 --inline=no --startup-file=no --history-file=no --depwarn=no --warn-overwrite=no --project=Planar docs/setup.jl
+          julia --startup-file=no --project=Planar docs/setup.jl
       - name: Build docs
         run: |
-          # FIXME
-          # [ -e ~/.cache/Planar.jl/data ] && rm -r ~/.cache/Planar.jl/data
-          # export JULIA_CONDAPKG_OFFLINE=yes
-          julia --compiled-modules=no -O0 --inline=no --startup-file=no --history-file=no --depwarn=no --warn-overwrite=no --project=Planar docs/make.jl
+          julia --startup-file=no --project=Planar docs/make.jl
       - name: Checkout gh-pages branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: gh-pages
           path: ghpages

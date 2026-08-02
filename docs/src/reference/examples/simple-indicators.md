@@ -105,6 +105,6 @@ println("Backtest period: ", from_date, " to ", to_date)
 ## See Also
 
 - **[Data Access Examples](data-access.md)** - Working with market data
-- **[Technical Analysis Examples](#technical-analysis)** - Advanced analysis techniques
+- **[Technical Analysis Examples](#advanced-indicators-example)** - Advanced analysis techniques
 - **[Risk Management Examples](../../advanced/risk-management.md)** - Position sizing and stops
-- **[Multi-Asset Strategies](#multi-asset)** - Trading multiple assets
+- **[Multi-Asset Strategies](../../guides/strategy-development.md)** - Trading multiple assets

@@ -1,5 +1,5 @@
 # Processing
 
 ```@autodocs
-Modules = [Processing]
+Modules = [PlanarCore.Processing]
 ```

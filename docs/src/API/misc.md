@@ -1,4 +1,4 @@
 # Misc
 ```@autodocs
-Modules = [Planar.Misc]
+Modules = [PlanarCore.Misc]
 ```

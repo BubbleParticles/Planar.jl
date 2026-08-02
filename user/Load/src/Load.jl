@@ -5,7 +5,7 @@ using PrecompileTools
     using Planar
     using PlanarCore.Stubs
     using DownloadTool
-    using Metrics
+    using PlanarCore.Metrics
 end
 
 end # module Load

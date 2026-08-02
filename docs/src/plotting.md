@@ -153,8 +153,7 @@ Channels or envelopes can be visualized using the `channel_indicator` function. 
 
 ### Export and Saving Options
 
-## Pe
-rformance Analysis Visualization
+## Performance Analysis Visualization
 
 ### Strategy Performance Charts
 

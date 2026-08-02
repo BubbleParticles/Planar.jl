@@ -18,7 +18,7 @@ This comprehensive index helps you quickly find information across all Planar do
 
 ### Data Management
 - **Storage** - [Zarr Backend](data.md#zarr-backend), [LMDB](data.md#storage-architecture), [Organization](data.md#data-organization)
-- **Historical Data** - [DownloadTool](data.md#historical-data-with-scrapers), [Binance Archives](data.md#basic-scraper-usage)
+- **Historical Data** - [DownloadTool](data.md#historical-data-with-downloadtool), [Binance Archives](data.md#basic-downloadtool-usage)
 - **Real-time Data** - [Fetch Module](data.md#real-time-data-with-fetch), [Rate Limits](data.md#rate-limit-management)
 - **Live Streaming** - [Watchers](data.md#live-data-streaming-with-watchers), [OHLCV Tickers](data.md#ohlcv-ticker-watcher)
 
@@ -54,8 +54,8 @@ This comprehensive index helps you quickly find information across all Planar do
 
 ### Data Functions
 - `fetch_candles()` - [Raw Data Fetching](data.md#data-validation-and-quality-checks)
-- `binancedownload()` - [Historical Data](data.md#basic-scraper-usage)
-- `binanceload()` - [Data Loading](data.md#basic-scraper-usage)
+- `binancedownload()` - [Historical Data](data.md#basic-downloadtool-usage)
+- `binanceload()` - [Data Loading](data.md#basic-downloadtool-usage)
 
 ### Order Functions
 - `MarketOrder()` - [Order Types](customizations/orders.md)
@@ -121,7 +121,7 @@ This comprehensive index helps you quickly find information across all Planar do
 ### Technical Concepts
 - Dispatch, Multiple Dispatch, Type System, Parametric Types
 - Strategy, Module, Function, Method, Interface
-- Data, Storage, Zarr, LMDB, Fetch, Scraper, Watcher
+- Data, Storage, Zarr, LMDB, Fetch, DownloadTool, Watcher
 - Optimization, Grid Search, Bayesian, Parameter Tuning
 
 ### Performance Concepts

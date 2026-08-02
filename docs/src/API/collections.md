@@ -1,5 +1,5 @@
 # Collections
 
 ```@autodocs
-Modules = [Planar.Engine.Collections]
+Modules = [PlanarCore.Collections]
 ```

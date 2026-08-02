@@ -10,7 +10,7 @@ This comprehensive guide covers Planar's [data management](../guides/data-manage
 - **[Data Collection Methods](#Data-Collection-Methods)** - Overview of collection approaches
 - **[Historical Data](#Historical-Data-Collection)** - Using DownloadTool for bulk data collection
 - **[Real-Time Data](#Real-Time-Data-Fetching)** - Fetching live data from [exchanges](../exchanges.md)
-- **[Live Streaming](#Live-Data-Streaming)** - Continuous data monitoring with Watchers
+- **[Live Streaming](../watchers/watchers.md)** - Continuous data monitoring with Watchers
 - **[Custom Data Sources](#Custom-Data-Sources)** - Integrating your own data
 - **[Data Access Patterns](#Data-Access-Patterns)** - Efficient data querying and indexing
 - **[optimization](../optimization.md)** - Caching and [optimization](../optimization.md) [strategies](../guides/strategy-development.md)
@@ -39,11 +39,11 @@ Planar uses **Zarr** as its primary storage backend, which offers several advant
 - **Chunked Access**: Efficient for time-series queries despite chunk-based reading
 - **Scalability**: Handles large datasets with progressive loading capabilities
 
-The framework wraps a Zarr subtype of `AbstractStore` in a [`Planar.Data.ZarrInstance`](@ref). The global `ZarrInstance` is accessible at `Data.zi[]`, with LMDB as the default underlying store.
+The framework wraps a Zarr subtype of `AbstractStore` in a [`PlanarCore.Data.ZarrInstance`](@ref). The global `ZarrInstance` is accessible at `Data.zi[]`, with LMDB as the default underlying store.
 
 ### Data Organization
 
-[OHLCV data](../guides/data-management.md#ohlcv-data) is organized hierarchically using [`Planar.Data.key_path`](@ref):
+[OHLCV data](../guides/data-management.md#ohlcv-data) is organized hierarchically using [`PlanarCore.Data.key_path`](@ref):
 
 ```
 ZarrInstance/
@@ -88,20 +88,19 @@ Planar provides multiple methods for collecting market data, each optimized for 
 - **Use Watchers** for [live trading](../guides/execution-modes.md#live-mode) and real-time analysis
 
 **⚠️ Data collection issues?** See [Performance Issues: Data-Related](../troubleshooting/performance-issues.md#data-related-performance-issues) for slow loading and database problems, or [Exchange Issues](../troubleshooting/exchange-issues.md) for connectivity problems.
-##
- Historical Data Collection
+## Historical Data Collection
 
 The DownloadTool module provides access to historical data archives from major exchanges, offering the most efficient method for obtaining large amounts of historical data.
 
 **Supported Exchanges**: Binance and Bybit archives
 
-### Basic Scraper Usage
+### Basic DownloadTool Usage
 
 
 ### Market Types and Frequencies
 
 
-### Advanced Scraper Examples
+### Advanced DownloadTool Examples
 
 
 ### Error Handling and Data Validation
@@ -150,8 +149,9 @@ The Fetch module downloads data directly from exchanges using [CCXT](../exchange
     - **Recent Updates**: Use fetch for recent data updates and gap filling
     - **Rate Limiting**: Implement delays between requests to respect exchange limits
     - **Data Validation**: Always validate fetched data before using in [strategies](../guides/strategy-development.md)
-    - **Raw Data**: Use `fetch_candles` for unchecked data when you need raw exchange responses## L
-ive Data Streaming
+    - **Raw Data**: Use `fetch_candles` for unchecked data when you need raw exchange responses
+
+## Live Data Streaming
 
 The Watchers module enables real-time data tracking from exchanges and other sources, storing data locally for:
 
@@ -226,7 +226,7 @@ There is another OHLCV watcher based on trades, that tracks only one pair at a t
 
 ## Custom Data Sources
 
-Assuming you have your own pipeline to fetch candles, you can use the functions [`Planar.Data.save_ohlcv`](@ref) and [`Planar.Data.load_ohlcv`](@ref) to manage the data.
+Assuming you have your own pipeline to fetch candles, you can use the functions [`PlanarCore.Data.save_ohlcv`](@ref) and [`PlanarCore.Data.load_ohlcv`](@ref) to manage the data.
 
 ### Basic Custom Data Integration
 
@@ -247,7 +247,7 @@ To load the data back:
 
 ## Generic Data Storage
 
-If you want to save other kinds of data, there are the [`Planar.Data.save_data`](@ref) and [`Planar.Data.load_data`](@ref) functions. Unlike the ohlcv functions, these functions don't check for contiguity, so it is possible to store sparse data. The data, however, still requires a timestamp column, because data when saved can either be prepend or appended, therefore an index must still be available to maintain order.
+If you want to save other kinds of data, there are the [`PlanarCore.Data.save_data`](@ref) and [`PlanarCore.Data.load_data`](@ref) functions. Unlike the ohlcv functions, these functions don't check for contiguity, so it is possible to store sparse data. The data, however, still requires a timestamp column, because data when saved can either be prepend or appended, therefore an index must still be available to maintain order.
 
 
 ### Serialized Data Storage

@@ -27,9 +27,6 @@ Data fetching and retrieval utilities.
 ### [Processing](processing.md)
 Data processing and transformation functions.
 
-### [Prices](prices.md)
-Price data structures and utilities.
-
 ### [Collections](collections.md)
 Specialized collection types and utilities.
 

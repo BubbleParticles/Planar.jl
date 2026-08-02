@@ -59,7 +59,7 @@ The Executors module is responsible for:
 ## Complete API Reference
 
 ```@autodocs
-Modules = [Planar.Engine.Executors]
+Modules = [PlanarCore.Executors]
 ```
 
 ## See Also

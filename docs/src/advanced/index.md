@@ -5,9 +5,9 @@ This section covers advanced Planar usage patterns and customization techniques.
 ## Available Topics
 
 - [Customization](../customizations/customizations.md) - Extending Planar
-- [Margin Trading](#margin-trading) - Advanced trading features
-- [Multi-Exchange](#multi-exchange) - Complex setups
-- [Performance](#performance) - Optimization and scaling
+- [Margin Trading](../guides/strategy-development.md#margin-trading-concepts) - Advanced trading features
+- [Multi-Exchange](../guides/data-management.md#multi-exchange-data-collection) - Complex setups
+- [Performance](../troubleshooting/performance-issues.md) - Optimization and scaling
 
 ## Prerequisites
 

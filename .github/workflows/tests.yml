@@ -21,6 +21,55 @@ env:
   PYTHON: python3
 
 jobs:
+  package-tests:
+    name: Package Tests (${{ matrix.package }})
+    strategy:
+      fail-fast: false
+      matrix:
+        package: [DownloadTool, FeatureSelection, Planar, PlanarCore, PlanarDev, PlanarOptim, Python, StrategyStats, StrategyTools]
+    runs-on: ubuntu-latest
+    env:
+      CCXT_GATEWAY_DISABLE: "true"
+    steps:
+    - uses: actions/checkout@v4
+    - name: restore cache
+      uses: actions/cache/restore@v4
+      id: julia-cache
+      with:
+        path: |
+          ~/.julia
+          .conda
+          PlanarDev/.CondaPkg/env
+        key: ubuntu-julia-${{ env.JULIA_VERSION }}-pkg-${{ matrix.package }}-${{ github.sha }}
+        restore-keys: |
+          ubuntu-julia-${{ env.JULIA_VERSION }}-pkg-
+    - name: Set up Julia
+      uses: julia-actions/setup-julia@v2
+      with:
+        version: ${{ env.JULIA_VERSION }}
+        include-all-prereleases: false
+    - name: Install dependencies
+      run: sudo apt-get install -y xauth direnv
+    - name: Instantiate
+      run: |
+        direnv allow .
+        eval "$(direnv export bash)"
+        julia --project=${{ matrix.package }} -e 'import Pkg; Pkg.instantiate(); using ${{ matrix.package }}'
+    - name: Run tests
+      run: |
+        direnv allow .
+        eval "$(direnv export bash)"
+        julia --project=${{ matrix.package }} -e 'import Pkg; Pkg.test()'
+    - name: Save Cache
+      uses: actions/cache/save@v4
+      if: always()
+      with:
+        path: |
+          ~/.julia
+          .conda
+          PlanarDev/.CondaPkg/env
+        key: ubuntu-julia-${{ env.JULIA_VERSION }}-pkg-${{ matrix.package }}-${{ github.sha }}
+
   unit-test:
     name: Unit Tests (Linux & macOS)
     strategy:
@@ -119,6 +168,7 @@ jobs:
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       if: always()
+      continue-on-error: true
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     - name: Save Cache
@@ -191,6 +241,7 @@ jobs:
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       if: always()
+      continue-on-error: true
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -289,14 +340,23 @@ jobs:
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       if: always()
+      continue-on-error: true
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-    - name: Save Cache
-      uses: actions/cache/save@v4
-      if: always()
-      with:
-        path: |
-          ~/.julia
-          .conda
-          PlanarDev/.CondaPkg/env
         key: ${{ matrix.os }}-julia-${{ env.JULIA_VERSION }}-real-api-test-${{ github.sha }}
+
+  ccxt-gateway-test:
+    name: ccxt-gateway Python Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+    - name: Install ccxt-gateway
+      run: |
+        python3 -m pip install --upgrade pip setuptools wheel
+        python3 -m pip install -e "./ccxt-gateway[dev]"
+    - name: Run tests
+      run: python3 -m pytest ./ccxt-gateway/tests -q

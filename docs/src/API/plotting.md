@@ -1,7 +1,7 @@
 # Plotting
 
 ```@autodocs
-Modules = [ Plotting ]
+Modules = [PlanarOptim.Plotting]
 Private = false
 Public = true
 ```

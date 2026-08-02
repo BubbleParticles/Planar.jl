@@ -52,31 +52,18 @@ if isempty(get(ENV, "PLANAR_DOCS_SKIP_BUILD", ""))
 end
 
 get(ENV, "PLANAR_DOCS_LOADED", "false") == "true" || begin
-    use(:Prices, "Data", "src", "prices.jl")
-    use(:Fetch, "Fetch")
-    use(:Processing, "Processing")
-    use(:Instruments, "Instruments")
-    use(:Exchanges, "Exchanges")
-    # Ensure Plotting is available to Documenter
-    try
-        @eval Main using Plotting
-    catch
-        # Fallback: include module source and then import
-        include(joinpath(project_path, "Plotting", "src", "Plotting.jl"))
-        @eval Main using Plotting
-    end
-    use(:Watchers, "Watchers")
-    use(:Engine, "Engine")
-    use(:Pbar, "Pbar")
-    use(:Metrics, "Metrics")
-    use(:Opt, "Opt")
-    use(:Ccxt, "Ccxt")
+    use(:PlanarCore, "PlanarCore")
+    use(:Planar, "Planar")
+    use(:PlanarOptim, "PlanarOptim")
     use(:Python, "Python")
-    use(:Strategies, "Strategies")
     use(:StrategyTools, "StrategyTools")
     use(:StrategyStats, "StrategyStats")
-    using Planar.Data.DataStructures
+    using PlanarCore.Data.DataStructures
     @eval using Base: Timer
+    # Bind submodules with short names for @docs/@ref resolution
+    @eval const Metrics = PlanarCore.Metrics
+    @eval const Strategies = PlanarCore.Strategies
+    @eval const Engine = Planar.Engine
     ENV["LOADED"] = "true"
 end
 
@@ -173,7 +160,6 @@ makedocs(;
                 "Optimization" => "API/optimization.md",
                 "Progress Bars" => "API/pbar.md",
                 "Plotting" => "API/plotting.md",
-                "Prices" => "API/prices.md",
                 "Processing" => "API/processing.md",
                 "Python Integration" => "API/python.md",
                 "Metrics" => "API/metrics.md",

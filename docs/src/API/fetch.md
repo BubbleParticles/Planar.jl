@@ -1,5 +1,5 @@
 # Fetch module
 
 ```@autodocs
-Modules = [Fetch]
+Modules = [PlanarCore.Fetch]
 ```

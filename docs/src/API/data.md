@@ -76,7 +76,7 @@ For fast metadata and configuration storage:
 ## Complete API Reference
 
 ```@autodocs
-Modules = [Planar.Data]
+Modules = [PlanarCore.Data]
 ```
 
 ## See Also

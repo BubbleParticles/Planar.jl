@@ -1,6 +1,6 @@
 # Metrics
 
 ```@autodocs
-Modules = [Metrics]
+Modules = [PlanarCore.Metrics]
 ```
 

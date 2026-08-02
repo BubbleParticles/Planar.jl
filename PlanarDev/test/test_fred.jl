@@ -35,6 +35,12 @@ function test_fred()
         return true
     end
 
+    config_path = joinpath(dirname(dirname(dirname(pathof(Planar)))), "user", "secrets.toml")
+    if !isfile(config_path) && Base.get(ENV, "PLANAR_FRED_APIKEY", "") == ""
+        @warn "FRED API tests skipped: no user/secrets.toml and PLANAR_FRED_APIKEY not set"
+        return true
+    end
+
     @eval begin
         using .Planar: Planar
         using .Planar.Engine.LiveMode.Watchers.FRED

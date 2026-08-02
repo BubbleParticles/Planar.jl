@@ -249,18 +249,19 @@ if occursin("Plotting", get(ENV, "JULIA_PRECOMP", "")) && isdefined(PlanarOptim,
         # (e.g. opt functions commented out). There is no session to plot then,
         # so skip the workload instead of calling `gridsearch(nothing)`, which
         # has no method for `Nothing` and would abort the Plotting precompile.
-        isnothing(s) && @goto __skip_opt_precomp
-        sess = PlanarOptim.gridsearch(s; resume=false)
-        # because BareStrat (in `user/strategies/BareStrat.jl`) does have opt functions commented out
-        # avoids assertion in plot_results after filtering
-        for obj in sess.results.obj
-            obj[1] = 1.0
+        if !isnothing(s)
+            sess = PlanarOptim.gridsearch(s; resume=false)
+            # because BareStrat (in `user/strategies/BareStrat.jl`) does have opt functions commented out
+            # avoids assertion in plot_results after filtering
+            for obj in sess.results.obj
+                obj[1] = 1.0
+            end
+            try
+                @precomp Plotting.plot_results(sess)
+            catch exception
+                @warn "plotting: opt extension precompile failed" exception
+            end
         end
-        try
-            @precomp Plotting.plot_results(sess)
-        catch exception
-            @error "plotting: opt extension precompile failed" exception
-        end
-        @label __skip_opt_precomp
     end
 end
+end  # module OptimizationExt

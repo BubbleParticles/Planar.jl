@@ -194,7 +194,7 @@ For more advanced setups you can also use `Planar` as a library, and construct t
 ```julia
 using Planar
 using MyDownStreamModule
-s = Planar.Engine.Strategies.strategy(MyDownStreamModule)
+s = PlanarCore.Strategies.strategy(MyDownStreamModule)
 ```
 
 
@@ -430,7 +430,7 @@ The universe (`s.universe`) is backed by a `DataFrame` (`s.universe.data`). It i
 4. **Profile Regularly**: Use Julia's profiling tools to identify bottlenecks
 5. **Memory Management**: Avoid unnecessary allocations in hot paths
 
-der Management and Risk Control
+### Risk Management and Risk Control
 
 ### Order Types and Execution
 

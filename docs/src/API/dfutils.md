@@ -1,7 +1,7 @@
 # DataFrame utils
 
 ```@autodocs
-Modules = [Planar.Data.DFUtils]
+Modules = [PlanarCore.Data.DFUtils]
 ```
 
 
