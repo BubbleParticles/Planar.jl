@@ -26,12 +26,10 @@ ENV JULIA_LOAD_PATH=:/planar
 ENV JULIA_CONDAPKG_ENV=/planar/user/.conda
 # avoids progressbar spam
 ENV CI=true
-COPY --chown=plnuser:plnuser ./Python /planar/Python
 # Instantiate python env since CondaPkg is pulled from master
 ARG CACHE=1
 RUN $JULIA_CMD --project=/planar/Python -e "import Pkg; Pkg.instantiate()"
-RUN $JULIA_CMD --project=/planar/Python -e "using Python"
-
+# Skip `using Python` here - conda env will be fully set up during full precompilation
 FROM python AS precomp-base
 ARG CACHE=1
 ENV JULIA_NUM_THREADS=auto
