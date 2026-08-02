@@ -12,7 +12,18 @@ requirejs.config({
     'highlight-julia-repl': 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/julia-repl.min',
   },
   shim: {
+  "headroom-jquery": {
+    "deps": [
+      "jquery",
+      "headroom"
+    ]
+  },
   "highlight-julia": {
+    "deps": [
+      "highlight"
+    ]
+  },
+  "highlight-julia-repl": {
     "deps": [
       "highlight"
     ]
@@ -21,20 +32,8 @@ requirejs.config({
     "deps": [
       "katex"
     ]
-  },
-  "headroom-jquery": {
-    "deps": [
-      "jquery",
-      "headroom"
-    ]
-  },
-  "highlight-julia-repl": {
-    "deps": [
-      "highlight"
-    ]
   }
-}
-});
+}});
 ////////////////////////////////////////////////////////////////////////////////
 require(['jquery', 'katex', 'katex-auto-render'], function($, katex, renderMathInElement) {
 $(document).ready(function() {
@@ -43,23 +42,22 @@ $(document).ready(function() {
     {
   "delimiters": [
     {
+      "display": false,
       "left": "$",
-      "right": "$",
-      "display": false
+      "right": "$"
     },
     {
+      "display": true,
       "left": "$$",
-      "right": "$$",
-      "display": true
+      "right": "$$"
     },
     {
+      "display": true,
       "left": "\\[",
-      "right": "\\]",
-      "display": true
+      "right": "\\]"
     }
   ]
 }
-
   );
 })
 
@@ -74,81 +72,64 @@ $(document).ready(function() {
 ////////////////////////////////////////////////////////////////////////////////
 require(['jquery'], function($) {
 
-let timer = 0;
-var isExpanded = true;
+///////////////////////////////////
 
-$(document).on(
-  "click",
-  ".docstring .docstring-article-toggle-button",
-  function () {
-    let articleToggleTitle = "Expand docstring";
-    const parent = $(this).parent();
-
-    debounce(() => {
-      if (parent.siblings("section").is(":visible")) {
-        parent
-          .find("a.docstring-article-toggle-button")
-          .removeClass("fa-chevron-down")
-          .addClass("fa-chevron-right");
-      } else {
-        parent
-          .find("a.docstring-article-toggle-button")
-          .removeClass("fa-chevron-right")
-          .addClass("fa-chevron-down");
-
-        articleToggleTitle = "Collapse docstring";
-      }
-
-      parent
-        .children(".docstring-article-toggle-button")
-        .prop("title", articleToggleTitle);
-      parent.siblings("section").slideToggle();
-    });
-  },
-);
-
-$(document).on("click", ".docs-article-toggle-button", function (event) {
-  let articleToggleTitle = "Expand docstring";
-  let navArticleToggleTitle = "Expand all docstrings";
-  let animationSpeed = event.noToggleAnimation ? 0 : 400;
-
-  debounce(() => {
-    if (isExpanded) {
-      $(this).removeClass("fa-chevron-up").addClass("fa-chevron-down");
-      $("a.docstring-article-toggle-button")
-        .removeClass("fa-chevron-down")
-        .addClass("fa-chevron-right");
-
-      isExpanded = false;
-
-      $(".docstring section").slideUp(animationSpeed);
-    } else {
-      $(this).removeClass("fa-chevron-down").addClass("fa-chevron-up");
-      $("a.docstring-article-toggle-button")
-        .removeClass("fa-chevron-right")
-        .addClass("fa-chevron-down");
-
-      isExpanded = true;
-      articleToggleTitle = "Collapse docstring";
-      navArticleToggleTitle = "Collapse all docstrings";
-
-      $(".docstring section").slideDown(animationSpeed);
+// to open and scroll to
+function openTarget() {
+  const hash = decodeURIComponent(location.hash.substring(1));
+  if (hash) {
+    const target = document.getElementById(hash);
+    if (target) {
+      const details = target.closest("details");
+      if (details) details.open = true;
     }
-
-    $(this).prop("title", navArticleToggleTitle);
-    $(".docstring-article-toggle-button").prop("title", articleToggleTitle);
-  });
-});
-
-function debounce(callback, timeout = 300) {
-  if (Date.now() - timer > timeout) {
-    callback();
   }
-
-  clearTimeout(timer);
-
-  timer = Date.now();
 }
+openTarget(); // onload
+window.addEventListener("hashchange", openTarget);
+window.addEventListener("load", openTarget);
+
+//////////////////////////////////////
+// for the global expand/collapse butter
+
+function accordion() {
+  document.body
+    .querySelectorAll("details.docstring")
+    .forEach((e) => e.setAttribute("open", "true"));
+}
+
+function noccordion() {
+  document.body
+    .querySelectorAll("details.docstring")
+    .forEach((e) => e.removeAttribute("open"));
+}
+
+function expandAll() {
+  let me = document.getElementById("documenter-article-toggle-button");
+  me.setAttribute("open", "true");
+  $(me).removeClass("fa-chevron-down").addClass("fa-chevron-up");
+  $(me).prop("title", "Collapse all docstrings");
+  accordion();
+}
+
+function collapseAll() {
+  let me = document.getElementById("documenter-article-toggle-button");
+  me.removeAttribute("open");
+  $(me).removeClass("fa-chevron-up").addClass("fa-chevron-down");
+  $(me).prop("title", "Expand all docstrings");
+  noccordion();
+}
+
+$(document).on("click", ".docs-article-toggle-button", function () {
+  var isExpanded = this.hasAttribute("open");
+  if (isExpanded) {
+    collapseAll();
+    isExpanded = false;
+  } else {
+    expandAll();
+    isExpanded = true;
+  }
+});
 
 })
 ////////////////////////////////////////////////////////////////////////////////
@@ -216,6 +197,57 @@ if (document.readyState === "loading") {
 
 })
 ////////////////////////////////////////////////////////////////////////////////
+require(['jquery'], function($) {
+$(document).ready(function () {
+  $(".footnote-ref").hover(
+    function () {
+      var id = $(this).attr("href");
+      var footnoteContent = $(id).clone().find("a").remove().end().html();
+
+      var $preview = $(this).next(".footnote-preview");
+
+      $preview.html(footnoteContent).css({
+        display: "block",
+        left: "50%",
+        transform: "translateX(-50%)",
+      });
+
+      repositionPreview($preview, $(this));
+    },
+    function () {
+      var $preview = $(this).next(".footnote-preview");
+      $preview.css({
+        display: "none",
+        left: "",
+        transform: "",
+        "--arrow-left": "",
+      });
+    },
+  );
+
+  function repositionPreview($preview, $ref) {
+    var previewRect = $preview[0].getBoundingClientRect();
+    var refRect = $ref[0].getBoundingClientRect();
+    var viewportWidth = $(window).width();
+
+    if (previewRect.right > viewportWidth) {
+      var excessRight = previewRect.right - viewportWidth;
+      $preview.css("left", `calc(50% - ${excessRight + 10}px)`);
+    } else if (previewRect.left < 0) {
+      var excessLeft = 0 - previewRect.left;
+      $preview.css("left", `calc(50% + ${excessLeft + 10}px)`);
+    }
+
+    var newPreviewRect = $preview[0].getBoundingClientRect();
+
+    var arrowLeft = refRect.left + refRect.width / 2 - newPreviewRect.left;
+
+    $preview.css("--arrow-left", arrowLeft + "px");
+  }
+});
+
+})
+////////////////////////////////////////////////////////////////////////////////
 require(['jquery', 'headroom', 'headroom-jquery'], function($, Headroom) {
 
 // Manages the top navigation bar (hides it when the user starts scrolling down on the
@@ -233,26 +265,10 @@ require(['jquery'], function($) {
 
 $(document).ready(function () {
   let meta = $("div[data-docstringscollapsed]").data();
-
-  if (meta?.docstringscollapsed) {
+  if (!meta?.docstringscollapsed) {
     $("#documenter-article-toggle-button").trigger({
       type: "click",
-      noToggleAnimation: true,
     });
-
-    setTimeout(function () {
-      if (window.location.hash) {
-        const targetId = window.location.hash.substring(1);
-        const targetElement = document.getElementById(targetId);
-
-        if (targetElement) {
-          targetElement.scrollIntoView({
-            behavior: "smooth",
-            block: "center",
-          });
-        }
-      }
-    }, 100);
   }
 });
 
@@ -558,7 +574,58 @@ $(document).ready(function () {
     target_href = version_selector_select
       .children("option:selected")
       .get(0).value;
-    window.location.href = target_href;
+
+    // if the target is just "#", don't navigate (it's the current version)
+    if (target_href === "#") {
+      return;
+    }
+
+    // try to stay on the same page when switching versions
+    // get the current page path relative to the version root
+    var current_page = window.location.pathname;
+
+    // resolve the documenterBaseURL to an absolute path
+    // documenterBaseURL is a relative path (usually "."), so we need to resolve it
+    var base_url_absolute = new URL(documenterBaseURL, window.location.href)
+      .pathname;
+    if (!base_url_absolute.endsWith("/")) {
+      base_url_absolute = base_url_absolute + "/";
+    }
+
+    // extract the page path after the version directory
+    // e.g., if we're on /stable/man/guide.html, we want "man/guide.html"
+    var page_path = "";
+    if (current_page.startsWith(base_url_absolute)) {
+      page_path = current_page.substring(base_url_absolute.length);
+    }
+
+    // construct the target URL with the same page path
+    var target_url = target_href;
+    if (page_path && page_path !== "" && page_path !== "index.html") {
+      // ensure target_href ends with a slash before appending page path
+      if (!target_url.endsWith("/")) {
+        target_url = target_url + "/";
+      }
+      target_url = target_url + page_path;
+    }
+
+    // preserve the anchor (hash) from the current page
+    var current_hash = window.location.hash;
+
+    // check if the target page exists, fallback to homepage if it doesn't
+    fetch(target_url, { method: "HEAD" })
+      .then(function (response) {
+        if (response.ok) {
+          window.location.href = target_url + current_hash;
+        } else {
+          // page doesn't exist in the target version, go to homepage
+          window.location.href = target_href;
+        }
+      })
+      .catch(function (error) {
+        // network error or other failure - use homepage
+        window.location.href = target_href;
+      });
   });
 
   // add the current version to the selector based on siteinfo.js, but only if the selector is empty
