@@ -107,7 +107,7 @@ check_anchor_links
 echo "## Summary" >> "$REPORT_FILE"
 echo "" >> "$REPORT_FILE"
 
-broken_count=$(grep -c "❌" "$REPORT_FILE" || echo "0")
+broken_count=$(grep -c "❌" "$REPORT_FILE" 2>/dev/null | tail -1 | tr -d '\n' || echo "0")
 if [[ "$broken_count" -eq 0 ]]; then
     echo "✅ All links are working correctly!" >> "$REPORT_FILE"
     echo "Link check completed successfully - no broken links found."
