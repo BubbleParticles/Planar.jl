@@ -60,7 +60,7 @@ class TestSettings:
         """Test initialization without YAML file."""
         settings = Settings()
         assert settings.server.port == 8999
-        assert settings.zmq.broker_address == "tcp://127.0.0.1:5555"
+        assert settings.zmq.broker_address == "tcp://127.0.0.1:5557"
 
     def test_init_with_yaml(self, tmp_path):
         """Test initialization with YAML file."""
