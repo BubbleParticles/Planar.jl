@@ -375,6 +375,7 @@ function _rest_gateway_dir()
     normpath(joinpath(dirname(dirname(dirname(dirname(@__DIR__)))), "ccxt-gateway", ".cache"))
 end
 const REST_GATEWAY_DIR = _rest_gateway_dir()
+mkpath(REST_GATEWAY_DIR)  # ensure directory exists for tests and gateway startup
 const REST_GATEWAY_PIDFILE = joinpath(REST_GATEWAY_DIR, "ccxt_gateway.pid")
 const REST_GATEWAY_LOCKFILE = joinpath(REST_GATEWAY_DIR, "ccxt_gateway.lock")
 function default_client()
