@@ -1,10 +1,10 @@
 FROM julia:1.12 AS base
 RUN mkdir /planar \
+    && mkdir -p /planar/user \
     && apt-get update \
     && apt-get -y install sudo direnv jq git \
-    && useradd -u 1000 -G sudo -U -m -s /bin/bash plnuser \
-    && chown plnuser:plnuser /planar \
-    # Allow sudoers
+    && useradd -m -s /bin/bash plnuser \
+    && chown -R plnuser:plnuser /planar \
     && echo "plnuser ALL=(ALL) NOPASSWD: /bin/chown" >> /etc/sudoers
 WORKDIR /planar
 USER plnuser
@@ -77,11 +77,12 @@ ARG PLANAR_PHEMEX_SANDBOX_APIKEY
 ARG PLANAR_PHEMEX_SANDBOX_SECRET
 ARG PLANAR_PHEMEX_SANDBOX_PASSWORD
 RUN scripts/docker_compile.sh; \
-    su plnuser -c "cd /planar; \
-    . .envrc; \
-    cat /tmp/compile.jl; \
-    $JULIA_CMD -t ${NTHREADS} -e \
-    'include(\"/tmp/compile.jl\"); compile(\"user/Load\"; cpu_target=\"$JULIA_CPU_TARGET\")'"; \
+    if [ -f /planar/Planar.so ]; then \
+        echo "Sysimage created successfully at /planar/Planar.so"; \
+    else \
+        echo "ERROR: Sysimage not found at /planar/Planar.so"; \
+        exit 1; \
+    fi; \
     rm -rf /tmp/compile.jl
 USER plnuser
 ENV JULIA_PROJECT=/planar/Planar
@@ -103,12 +104,12 @@ ARG PLANAR_PHEMEX_SANDBOX_APIKEY
 ARG PLANAR_PHEMEX_SANDBOX_SECRET
 ARG PLANAR_PHEMEX_SANDBOX_PASSWORD
 RUN scripts/docker_compile.sh; \
-    su plnuser -c "cd /planar; \
-    . .envrc; \
-    echo \"compiling with cpu target $JULIA_CPU_TARGET\"; \
-    cat /tmp/compile.jl; \
-    $JULIA_CMD -e \
-    'include(\"/tmp/compile.jl\"); compile(\"PlanarOptim\"; cpu_target=\"$JULIA_CPU_TARGET\")'"; \
+    if [ -f /planar/Planar.so ]; then \
+        echo "Sysimage created successfully at /planar/Planar.so"; \
+    else \
+        echo "ERROR: Sysimage not found at /planar/Planar.so"; \
+        exit 1; \
+    fi; \
     rm -rf /tmp/compile.jl
 USER plnuser
 RUN $JULIA_CMD --sysimage "/planar/Planar.so" -e "using PlanarOptim"
