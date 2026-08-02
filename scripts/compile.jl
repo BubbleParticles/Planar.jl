@@ -28,3 +28,6 @@ function compile(proj_path="user/Load"; comp_dir="Dist", cpu_target="generic", a
         create_sysimage([name]; cpu_target, sysimage_path="./Planar.so", kwargs...)
     end
 end
+
+# Execute the compilation
+compile()
