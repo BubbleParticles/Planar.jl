@@ -66,6 +66,7 @@ USER root
 RUN apt-get install -y gcc g++
 ENV JULIA_PROJECT=/planar/user/Load
 ENV CACHE=1
+ENV CCXT_GATEWAY_DISABLE=true
 ARG COMPILE_SCRIPT
 ARG NTHREADS=auto
 ARG PLANAR_BITMEX_SANDBOX_APIKEY
@@ -92,6 +93,7 @@ FROM planar-precomp-optim AS planar-sysimage-optim
 USER root
 ENV CI=true
 ENV JULIA_PROJECT=/planar/PlanarOptim
+ENV CCXT_GATEWAY_DISABLE=true
 RUN apt-get install -y gcc g++
 ARG COMPILE_SCRIPT
 ARG NTHREADS=auto
