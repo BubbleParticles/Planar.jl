@@ -21,3 +21,6 @@ CorrExt = ["CausalityTools", "StatsBase", "StatsModels", "EffectSizes"]
 
 [compat]
 OnlineTechnicalIndicators = "0.1.0"
+
+[sources]
+PlanarCore = {path = "../PlanarCore"}
