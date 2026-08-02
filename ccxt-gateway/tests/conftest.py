@@ -25,3 +25,13 @@ def _mock_zmq():
     zmq.asyncio.Context = lambda *a, **kw: mock_context
     yield
     zmq.asyncio.Context = original
+
+@pytest.fixture(scope="session", autouse=True)
+def event_loop():
+    """Create an event loop for the test session."""
+    import asyncio
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    yield loop
+    loop.close()
+    asyncio.set_event_loop(None)
