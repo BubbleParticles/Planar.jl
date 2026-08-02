@@ -62,10 +62,10 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get install -y xauth
-          julia --startup-file=no --project=Planar docs/setup.jl
+          julia --startup-file=no --project=docs docs/setup.jl
       - name: Build docs
         run: |
-          julia --startup-file=no --project=Planar docs/make.jl
+          julia --startup-file=no --project=docs docs/make.jl
       - name: Checkout gh-pages branch
         uses: actions/checkout@v4
         with:
