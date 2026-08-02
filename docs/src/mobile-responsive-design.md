@@ -192,7 +192,7 @@ The Planar documentation uses Documenter.jl's default HTML theme, which includes
 
 ## Resources
 
-- [Web Content Accessibility Guidelines (WCAG)](https://www.w3.org/WAI/WCAG21/quickref/)
+- [Web Content Accessibility Guidelines (WCAG)](https://www.w3.org/WAI/WCAG21/quickref)
 - [Google Mobile-Friendly Test](https://search.google.com/test/mobile-friendly)
 - [Lighthouse Performance Auditing](https://developers.google.com/web/tools/lighthouse)
 - [MDN Responsive Design](https://developer.mozilla.org/en-US/docs/Learn/CSS/CSS_layout/Responsive_Design)
