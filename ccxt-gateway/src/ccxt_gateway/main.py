@@ -51,6 +51,7 @@ async def _idle_monitor(app: FastAPI) -> None:
 
 async def _write_pidfile() -> None:
     """Write the PID file."""
+    os.makedirs(os.path.dirname(PIDFILE), exist_ok=True)
     with open(PIDFILE, "w") as f:
         f.write(str(os.getpid()))
 
