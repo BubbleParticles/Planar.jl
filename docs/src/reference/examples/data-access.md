@@ -88,6 +88,6 @@ end
 ## See Also
 
 - **[Simple Indicators Example](simple-indicators.md)** - Building technical indicators
-- **[Multi-Asset Strategies](#multi-asset)** - Working with multiple assets
+- **[Multi-Asset Strategies](../../guides/strategy-development.md)** - Working with multiple assets
 - **[Data API Reference](../../data.md)** - Complete data API documentation
 - **[Data Management Guide](../../guides/data-management.md)** - Comprehensive data guide

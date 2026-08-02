@@ -10,19 +10,19 @@ This library provides comprehensive, tested code examples for common Planar.jl u
 - **[Basic Strategy Structure](../../getting-started/first-strategy.md)** - Simple strategy template
 - **[Data Access](data-access.md)** - Loading and accessing market data
 - **[Simple Indicators](simple-indicators.md)** - Moving averages and basic calculations
-- **[Order Placement](#order-placement)** - Basic buy/sell order examples
+- **[Order Placement](../../customizations/orders.md)** - Basic buy/sell order examples
 
 #### Intermediate Examples
-- **[Technical Analysis](#technical-analysis)** - Advanced indicators and signals
+- **[Technical Analysis](simple-indicators.md)** - Advanced indicators and signals
 - **[Risk Management](../../advanced/risk-management.md)** - Position sizing and stop losses
-- **[Multi-Asset Strategies](#multi-asset)** - Trading multiple assets
+- **[Multi-Asset Strategies](data-access.md)** - Trading multiple assets
 - **Backtesting Setup** - Complete backtesting examples
 
 #### Advanced Examples
-- **[Margin Trading](#margin-trading)** - Leverage and margin management
+- **[Margin Trading](../../guides/strategy-development.md#margin-trading-concepts)** - Leverage and margin management
 - **Portfolio Management** - Advanced portfolio strategies
 - **[Optimization](../../optimization.md)** - Parameter optimization examples
-- **[Live Trading](#live-trading)** - Production trading setup
+- **[Live Trading](../../engine/live.md)** - Production trading setup
 
 ### By Use Case
 

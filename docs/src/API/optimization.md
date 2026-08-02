@@ -1,7 +1,7 @@
 # Optimization
 
 ```@autodocs
-Modules = [Opt]
+Modules = [PlanarOptim]
 ```
 
 

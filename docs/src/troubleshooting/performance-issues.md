@@ -14,7 +14,7 @@ This guide helps optimize Planar performance and resolve speed-related problems.
 julia --sysimage=planar.so --project=Planar
 
 # Or use Docker with pre-built sysimage
-docker run docker.io/psydyllic/planar-sysimage
+docker run docker.io/bubbleparticles/planar-sysimage
 ```
 
 ### Repeated Compilation

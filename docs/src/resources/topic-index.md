@@ -391,7 +391,6 @@ Browse documentation by topic and category.
 - [Optimization](../optimization.md)
 - [Pbar](../API/pbar.md)
 - [Plotting](../plotting.md)
-- [Prices](../API/prices.md)
 - [Processing](../API/processing.md)
 - [Python](../API/python.md)
 - [Strategies](../API/strategies.md)
@@ -434,7 +433,7 @@ Browse documentation by topic and category.
 
 ## Browse by Difficulty
 
-- **[Beginner Topics](#beginner)** - New to Planar? Start here
-- **[Intermediate Topics](#intermediate)** - Ready to build strategies
-- **[Advanced Topics](#advanced)** - Expert-level customization
+- **[Beginner Topics](../getting-started/index.md)** - New to Planar? Start here
+- **[Intermediate Topics](../guides/index.md)** - Ready to build strategies
+- **[Advanced Topics](../advanced/index.md)** - Expert-level customization
 
