@@ -138,9 +138,9 @@ start!(s)
 After mastering this basic structure:
 
 1. **Add Indicators**: Learn [Simple Indicators](simple-indicators.md)
-2. **Implement Orders**: See [Order Placement](#order-placement)
+2. **Implement Orders**: See [Order Placement](../../customizations/orders.md)
 3. **Add Risk Management**: Check [Risk Management](../../advanced/risk-management.md)
-4. **Multi-Asset Trading**: Explore [Multi-Asset Strategies](#multi-asset)
+4. **Multi-Asset Trading**: Explore [Multi-Asset Strategies](../../guides/strategy-development.md)
 
 ## See Also
 

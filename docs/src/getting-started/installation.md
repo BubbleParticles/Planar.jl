@@ -152,15 +152,15 @@ export JULIA_PRECOMP=1
 ### Using Pre-built Image
 
 ```bash
-# Run with interactive features
+# Run with optimization/plotting features
 docker run -it \
   -v $(pwd)/user:/app/user \
-  docker.io/psydyllic/planar-sysimage-interactive
+  docker.io/bubbleparticles/planar-sysimage-optim
 
 # Run production image
 docker run -d \
   -v $(pwd)/user:/app/user \
-  docker.io/psydyllic/planar-sysimage
+  docker.io/bubbleparticles/planar-sysimage
 ```
 
 ### Building Custom Image

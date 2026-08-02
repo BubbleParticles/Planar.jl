@@ -62,17 +62,17 @@ The Instruments module includes:
 ## Complete API Reference
 
 ```@autodocs
-Modules = [Instruments, Instruments.Derivatives]
+Modules = [PlanarCore.Instruments, PlanarCore.Instruments.Derivatives]
 Order = [:type]
 ```
 
 ```@autodocs
-Modules = [Instruments, Instruments.Derivatives]
+Modules = [PlanarCore.Instruments, PlanarCore.Instruments.Derivatives]
 Order = [:function]
 ```
 
 ```@autodocs
-Modules = [Instruments, Instruments.Derivatives]
+Modules = [PlanarCore.Instruments, PlanarCore.Instruments.Derivatives]
 Order = [:macro, :constant]
 ```
 

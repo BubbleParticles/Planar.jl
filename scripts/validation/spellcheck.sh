@@ -1,58 +1,34 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "📝 Running spell check..."
+echo "Running spell check..."
+cd "$(dirname "$0")/../.."   # repo root
 
-# Create custom dictionary
-cat > .aspell.en.pws << 'EOF'
-personal_ws-1.1 en 100
-Planar
-Julia
-CCXT
-API
-APIs
-backtesting
-cryptocurrency
-OHLCV
-timeframe
-timeframes
-config
-configs
-workflow
-workflows
-GitHub
-Markdown
-YAML
-JSON
-TOML
-DataFrame
-DataFrames
-async
-await
-struct
-structs
-enum
-enums
-tuple
-tuples
-dict
-dicts
-EOF
+# aspell needs a UTF-8 locale to tokenize multi-byte characters correctly
+export LANG=C.UTF-8
+export LC_ALL=C.UTF-8
 
-# Run spell check on all markdown files
+WORDLIST="docs/maintenance/aspell-wordlist.txt"
+
+# Build the aspell personal wordlist from the committed technical vocabulary.
+# Header format: personal_ws-1.1 <lang> <count> <encoding>
+{
+    echo "personal_ws-1.1 en 1000 utf-8"
+    cat "$WORDLIST"
+} > /tmp/.aspell-planar.pws
+
 error_count=0
-for file in $(find docs -name "*.md"); do
-    echo "Checking $file..."
-    if ! aspell --personal=./.aspell.en.pws --dont-backup --mode=markdown check "$file"; then
-        echo "❌ Spell check failed for $file"
+while IFS= read -r file; do
+    bad_words=$(aspell --personal=/tmp/.aspell-planar.pws --dont-backup --mode=markdown list < "$file" | sort -u)
+    if [ -n "$bad_words" ]; then
+        echo "Misspelled words in $file:"
+        echo "$bad_words"
         error_count=$((error_count + 1))
     fi
-done
+done < <(find docs/src -name "*.md")
 
-if [ $error_count -gt 0 ]; then
-    echo "❌ Spell check failed with $error_count errors"
+if [ "$error_count" -gt 0 ]; then
+    echo "Spell check failed in $error_count file(s)"
     exit 1
-else
-    echo "✅ Spell check completed successfully"
-    exit 0
 fi
+echo "Spell check completed successfully"

@@ -72,7 +72,7 @@ The strategy interface defines the main entry points that your strategy must imp
 ## Complete API Reference
 
 ```@autodocs
-Modules = [Strategies]
+Modules = [PlanarCore.Strategies]
 ```
 
 ## See Also

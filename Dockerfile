@@ -18,6 +18,7 @@ ENV JULIA_CPU_TARGET ${CPU_TARGET}
 # PLANAR ENV VARS GO HERE
 ENV PLANAR_LIQUIDATION_BUFFER=0.02
 ENV JULIA_PRECOMP=PlanarCore,Planar,PlanarOptim
+ENV JULIA_FULL_PRECOMP=PlanarCore,Planar,PlanarOptim
 CMD $JULIA_BIN -C "$JULIA_CPU_TARGET"
 
 FROM base AS python
@@ -25,12 +26,10 @@ ENV JULIA_LOAD_PATH=:/planar
 ENV JULIA_CONDAPKG_ENV=/planar/user/.conda
 # avoids progressbar spam
 ENV CI=true
-COPY --chown=plnuser:plnuser ./Lang/ /planar/Lang/
-COPY --chown=plnuser:plnuser ./Python/*.toml /planar/Python/
+COPY --chown=plnuser:plnuser ./Python /planar/Python
 # Instantiate python env since CondaPkg is pulled from master
 ARG CACHE=1
 RUN $JULIA_CMD --project=/planar/Python -e "import Pkg; Pkg.instantiate()"
-COPY --chown=plnuser:plnuser ./Python /planar/Python
 RUN $JULIA_CMD --project=/planar/Python -e "using Python"
 
 FROM python AS precomp-base
@@ -42,7 +41,7 @@ WORKDIR /planar
 RUN JULIA_PROJECT= $JULIA_CMD -e "import Pkg; Pkg.add([\"DataFrames\", \"CSV\", \"ZipFile\"])"
 COPY --chown=plnuser:plnuser ./ /planar/
 RUN touch /planar/user/.envrc; mkdir /planar/.conda
-RUN git submodule update --init
+RUN mkdir -p /planar/ccxt-gateway/.cache
 CMD $JULIA_BIN -C "$JULIA_CPU_TARGET"
 
 FROM precomp-base AS planar-precomp

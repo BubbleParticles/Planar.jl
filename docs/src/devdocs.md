@@ -12,7 +12,7 @@ Planar follows a modular architecture with clear separation of concerns:
 ┌─────────────────────────────────────────────────────────────┐
 │                    User Interface Layer                     │
 ├─────────────────────────────────────────────────────────────┤
-│  Planar.jl (Main)  │  PlanarOptim.jl   │  CLI Tools   │
+│  Planar.jl (Main)  │  PlanarOptim.jl   │  DownloadTool  │
 ├─────────────────────────────────────────────────────────────┤
 │                    Strategy Layer                           │
 ├─────────────────────────────────────────────────────────────┤
@@ -134,7 +134,7 @@ sequenceDiagram
 
 1. **Clone Repository**:
 ```bash
-git clone --recurse-submodules https://github.com/defnlnotme/Planar.jl
+git clone https://github.com/BubbleParticles/Planar.jl
 cd Planar.jl
 ```
 
@@ -203,7 +203,7 @@ end
 
 The `JULIA_PRECOMP` variable (set in `.envrc`) determines which packages run precompile workloads. This replaces the old `JULIA_NOPRECOMP` deferred-loading pattern which has been removed from all source files.
 
-The `Exchanges` and `Fetch` packages contain a `compile.jl` file to generate precompile statements using [CompileBot.jl](https://github.com/aminya/CompileBot.jl). This is particularly useful for precompilation tasks that involve numerous web requests. However, this method is not currently used as it does not compile as many methods as `PrecompileTools`.
+Precompile workloads are driven by `PrecompileTools` via the `JULIA_PRECOMP` / `JULIA_FULL_PRECOMP` environment variables (see `.envrc`), and sysimages are built with `scripts/compile.jl` (PackageCompiler) by the Docker `planar-sysimage` and `planar-sysimage-optim` targets.
 
 !!! warning "Precompile Workload Restrictions"
     Precompile workloads must not:
@@ -232,7 +232,7 @@ To reduce invalidations, include external modules in only one local package and 
 In rare cases involving complex multi-threaded scenarios, disable and re-enable the garbage collector (GC) around the loading of Planar to avoid segmentation faults:
 
 
-Refer to [PythonCall.jl issue #201](https://github.com/cjdoris/PythonCall.jl/issues/201) for more details.
+Refer to [PythonCall.jl issue #201](https://github.com/juliapy/PythonCall.jl/issues/201) for more details.
 
 ### Dependency Management
 

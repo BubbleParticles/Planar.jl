@@ -420,14 +420,14 @@ brew install --cask xquartz
 docker run --rm hello-world
 
 # Step 2: Check Planar container
-docker run --rm -it psydyllic/planar-sysimage-interactive julia --version
+docker run --rm -it bubbleparticles/planar-sysimage-optim julia --version
 
 # Step 3: Fix permission issues (Linux)
 sudo usermod -aG docker $USER
 # Logout and login again
 
 # Step 4: Mount user directory correctly
-docker run -v $(pwd)/user:/app/user psydyllic/planar-sysimage-interactive
+docker run -v $(pwd)/user:/app/user bubbleparticles/planar-sysimage-optim
 ```
 
 ### Environment Variable Issues

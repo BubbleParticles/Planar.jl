@@ -85,22 +85,25 @@ jobs:
           julia --project=docs docs/test/runtests.jl --verbose \
             --output=docs/test/results/test-results.toml
 
-      - name: Run Markdown complexity check
-        run: python scripts/validation/markdown_complexity.py || true
-
-      - name: Run heading hierarchy check
-        run: python scripts/validation/heading_hierarchy.py || true
+      - name: Run link check
+        run: bash scripts/validation/check-links.sh
 
       - name: Run accessibility check
-        run: bash scripts/validation/accessibility.sh || true
-
-      - name: Run performance check
-        run: bash scripts/validation/performance.sh || true
+        run: bash scripts/validation/accessibility.sh
 
       - name: Run spell check
-        run: bash scripts/validation/spellcheck.sh || true
+        run: bash scripts/validation/spellcheck.sh
 
-      - name: Run writing issues check
+      - name: Run Markdown complexity check (informational)
+        run: python scripts/validation/markdown_complexity.py || true
+
+      - name: Run heading hierarchy check (informational)
+        run: python scripts/validation/heading_hierarchy.py || true
+
+      - name: Run performance check (informational)
+        run: bash scripts/validation/performance.sh || true
+
+      - name: Run writing issues check (informational)
         run: bash scripts/validation/writing_issues.sh || true
 
       - name: Upload validation reports
@@ -111,8 +114,6 @@ jobs:
           path: |
             docs/test/results/
             docs/maintenance/link-check-report.md
-            docs/maintenance/template-compliance-report.md
-            docs/maintenance/freshness-report.md
 
       - name: Comment PR with validation results
         uses: actions/github-script@v6
@@ -136,17 +137,6 @@ jobs:
                 }
               }
 
-              // Template compliance results
-              if (fs.existsSync('docs/maintenance/template-compliance-report.md')) {
-                const templateReport = fs.readFileSync('docs/maintenance/template-compliance-report.md', 'utf8');
-                const issues = (templateReport.match(/❌|⚠️/g) || []).length;
-                if (issues === 0) {
-                  comment += '✅ **Template Compliance**: All templates followed correctly\n';
-                } else {
-                  comment += `⚠️ **Template Compliance**: ${issues} issues found\n`;
-                }
-              }
-
               comment += '\n📊 **Detailed Reports**: Check the workflow artifacts for complete validation reports.\n';
 
               // Add guidance for contributors
@@ -157,8 +147,6 @@ jobs:
               comment += '3. Ensure proper frontmatter and template compliance\n';
               comment += '4. Run validation scripts locally before pushing:\n';
               comment += '   ```bash\n';
-              comment += '   ./scripts/check-links.sh\n';
-              comment += '   ./scripts/check-templates.sh\n';
               comment += '   julia docs/test/runtests.jl\n';
               comment += '   ```\n';
               comment += '\n### Code Block Review\n';

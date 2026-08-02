@@ -23,6 +23,7 @@ const GATEWAY_PIDFILE = joinpath(GATEWAY_DIR, "ccxt_gateway.pid")
 const GATEWAY_LOCKFILE = joinpath(GATEWAY_DIR, "ccxt_gateway.lock")
 
 function _with_gateway_lock(f::Function)
+    mkpath(dirname(GATEWAY_LOCKFILE))
     mkpidlock(GATEWAY_LOCKFILE) do
         f()
     end

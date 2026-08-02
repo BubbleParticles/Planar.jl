@@ -25,7 +25,7 @@ In the next 15 minutes, you will:
 
 ```bash
 # Download and run Planar (one command!)
-docker run -it --rm docker.io/psydyllic/planar-sysimage-interactive julia
+docker run -it --rm docker.io/bubbleparticles/planar-sysimage-optim julia
 ```
 
 **First time?** This downloads ~2GB. Subsequent runs are instant.
@@ -34,7 +34,7 @@ docker run -it --rm docker.io/psydyllic/planar-sysimage-interactive julia
 
 ```bash
 # Quick clone and run
-git clone --recurse-submodules https://github.com/psydyllic/Planar.jl
+git clone https://github.com/BubbleParticles/Planar.jl
 cd Planar.jl && julia --project=PlanarOptim
 ```
 
@@ -47,12 +47,12 @@ In your Julia REPL, copy and paste these commands:
 ```julia
 # Activate Planar project
 import Pkg
-Pkg.activate("PlanarDev")
+Pkg.activate("PlanarOptim")
 
 # Test basic Julia functionality
 println("Julia environment ready!")
 println("Julia version: ", VERSION)
-println("Project activated: PlanarDev")
+println("Project activated: PlanarOptim")
 println("Planar project structure loaded")
 ```
 
@@ -181,13 +181,13 @@ Now that you have Planar running:
 ```julia
 # Activate Planar project
 import Pkg
-Pkg.activate("PlanarDev")
+Pkg.activate("PlanarOptim")
 
 try
     # Test basic Julia functionality
     println("Julia environment ready!")
     println("Julia version: ", VERSION)
-    println("Project activated: PlanarDev")
+    println("Project activated: PlanarOptim")
     
     # Example of basic data structure
     println("Data storage structure:")
@@ -201,7 +201,7 @@ try
     
 catch e
     @warn "Planar not available: $e"
-    println("Try running: julia --project=PlanarDev")
+    println("Try running: julia --project=PlanarOptim")
 end
 ```
 
@@ -209,7 +209,7 @@ end
 ```bash
 # Restart Docker and try again
 docker system prune
-docker run -it --rm docker.io/psydyllic/planar-sysimage-interactive julia
+docker run -it --rm docker.io/bubbleparticles/planar-sysimage-optim julia
 ```
 
 **Need more help?** Visit the [Troubleshooting Guide](../troubleshooting/index.md) for comprehensive solutions.

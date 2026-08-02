@@ -65,7 +65,7 @@ The Instances module handles:
 ## Complete API Reference
 
 ```@autodocs
-Modules = [Planar.Engine.Instances]
+Modules = [PlanarCore.Instances]
 ```
 
 ## See Also
