@@ -354,6 +354,8 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: "3.11"
+    - name: Create cache directory
+      run: mkdir -p ccxt-gateway/.cache
     - name: Install ccxt-gateway
       run: |
         python3 -m pip install --upgrade pip setuptools wheel
