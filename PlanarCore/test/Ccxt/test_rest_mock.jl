@@ -56,7 +56,7 @@ Rest.set_http_delete!(mock_delete)
         empty!(mock_get_calls)
         result = Rest.list_exchanges(client)
         @test result == ["binance"]
-        @test length(mock_get_calls) == 1
+        @test length(mock_get_calls) == 2  # ping + list_exchanges
     end
 
     @testset "start_exchange" begin
