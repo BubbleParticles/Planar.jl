@@ -734,6 +734,11 @@ end
             elseif occursin("/exchanges/$exc_name/setSandboxMode", url)
                 # get handler variant — shouldn't be hit but handle gracefully
                 HTTP.Response(200, JSON3.write(Dict("result" => Dict("success" => true), "error" => nothing, "error_code" => nothing)))
+            elseif occursin("/ping", url)
+                # Gateway heartbeat — must succeed so _check_gateway_up / spawn-verify never
+                # fall back to spawning a real daemon (which fails with ZMQ "Address already
+                # in use" when an orphan holds tcp://127.0.0.1:5557).
+                HTTP.Response(200, JSON3.write(Dict("result" => "pong", "error" => nothing, "error_code" => nothing)))
             else
                 error("Unexpected GET: $url")
             end
