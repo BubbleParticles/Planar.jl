@@ -208,11 +208,10 @@ const ReduceOnlyOrder = Union{LongReduceOnlyOrder,ShortReduceOnlyOrder}
 
 $(TYPEDSIGNATURES)
 
-This macro is used to define various order types in the trading system. It takes a boolean value to determine if the order type is a super type, and a list of types to be defined.
+This macro is used to define various order types in the trading system. It takes a list of types to be defined.
 
 """
-macro deforders(issuper, types...)
-    @assert issuper isa Bool
+macro deforders(types...)
     out = quote end
     for t in types
         type_str = string(t)
@@ -224,12 +223,7 @@ macro deforders(issuper, types...)
         type = esc(type_sym)
         short_type = esc(short_type_sym)
         ordertype = esc(Symbol(type_str * "OrderType"))
-        _orderexpr(pos_side) =
-            if issuper
-                :(Order{<:$ordertype{S},A,E,$pos_side})
-            else
-                :(Order{$ordertype{S},A,E,$pos_side})
-            end
+        _orderexpr(pos_side) = :(Order{$ordertype{S},A,E,$pos_side})
         long_orderexpr = _orderexpr(Long)
         short_orderexpr = _orderexpr(Short)
         push!(
@@ -244,8 +238,8 @@ macro deforders(issuper, types...)
     end
     out
 end
-@deforders false GTC PostOnly FOK IOC Market
-@deforders true Limit
+@deforders GTC PostOnly FOK IOC Market
+@deforders Limit
 
 ==(v1::Type{<:OrderSide}, v2::Type{BuyOrSell}) = true
 ==(v1::Type{BuyOrSell}, v2::Type{<:OrderSide}) = true
