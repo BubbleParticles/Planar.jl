@@ -125,6 +125,9 @@ module Planar
             import .st: call!
             using .st: assets, exchange
             using .ect: call!
+            import .st: ping!
+            using .ect: ping!
+            using .pln.Engine.SimMode: TickContext, TradeTick
 
             const EXCID = ExchangeID(isdefined(@__MODULE__, :EXC) ? EXC : Symbol())
             if !isdefined(@__MODULE__, :MARGIN)

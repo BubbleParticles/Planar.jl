@@ -30,6 +30,8 @@ $(TYPEDSIGNATURES)
 This function returns the price at a particular date for an order. It takes a strategy `s`, an order type, an asset `ai`, and a date as inputs.
 """
 function priceat(s::Strategy{Sim}, ::Type{<:Order}, ai, date)
+    tick = get(s.attrs, :sim_current_tick, nothing)
+    tick isa TradeTick && tick.asset === ai && return tick.price
     st.openat(ai, date)
 end
 priceat(s::Strategy{Sim}, ::T, args...) where {T<:Order} = priceat(s, T, args...)

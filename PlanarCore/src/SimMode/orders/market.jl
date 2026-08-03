@@ -32,7 +32,7 @@ function marketorder!(
     ai,
     actual_amount;
     date,
-    price=openat(ai, date),
+    price=priceat(s, o, ai, date),
     kwargs...,
 )
     t = trade!(s, o, ai; date, price, actual_amount, kwargs...)

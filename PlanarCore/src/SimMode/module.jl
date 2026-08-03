@@ -4,7 +4,7 @@ using ..Executors: Strategies, Strategies as st
 using ..Simulations: Simulations as sml
 using ..Simulations.Processing.Alignments
 
-using ..Strategies: Strategy, call!, WarmupPeriod, OrderTypes
+using ..Strategies: Strategy, call!, WarmupPeriod, OrderTypes, ping!
 using ..OrderTypes
 using ..OrderTypes: LimitOrderType, MarketOrderType
 using ..Misc
@@ -25,6 +25,7 @@ import ..Executors: call!
 
 include("precompile_call.jl")
 include("trades.jl")
+include("tickrange.jl")
 include("orders/utils.jl")
 include("orders/limit.jl")
 include("orders/market.jl")

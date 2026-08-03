@@ -3,6 +3,18 @@ const DateType = Union{AbstractString,AbstractDateTime,AbstractFloat,Integer}
 const TimeFrameOrStr = Union{TimeFrame,AbstractString}
 export DateType
 
+@doc """Sentinel timeframe key for per-asset tick data in the asset data dict.
+
+$(TYPEDSIGNATURES)
+
+Tick data (columns `:timestamp`, `:price`, `:amount`) lives in the same
+`SortedDict{TimeFrame,DataFrame}` as OHLCV under this sentinel key, so it survives
+`similar(ai)` and is never confused with a real OHLCV timeframe. It is excluded from
+every OHLCV accessor via `Instances._ohlcv_keys`.
+"""
+const TICK_TIMEFRAME = TimeFrame(Nanosecond(1))
+export TICK_TIMEFRAME
+
 @doc "Mapping of timeframes to default window sizes."
 const tf_win = IdDict(
     "1m" => 20,  #  20m

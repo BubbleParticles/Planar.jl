@@ -154,3 +154,55 @@ function update!(s::Strategy{Sim}, date, ::UpdateOrders)
     end
     _lastupdate!(s, date)
 end
+
+@doc "Action to update orders on a tick-by-tick basis (SimMode tick backtesting)."
+struct UpdateOrdersTick <: ExecAction end
+export UpdateOrdersTick
+
+@doc """Iterates over all pending orders checking for new fills against a market tick.
+
+$(TYPEDSIGNATURES)
+
+Called once per tick in tick-mode backtesting. Only the asset of the current tick is
+checked — that asset's tick price is the only price that can have moved. No
+`_check_update_date` (same-millisecond ticks are valid), no `positions!` (Sim has no
+price-based liquidation: `isliquidatable` is `Paper`/`Live` only), no `_lastupdate!`.
+"""
+function update!(s::Strategy{Sim}, tick::TradeTick, ::UpdateOrdersTick)
+    ai = tick.asset
+    for ords in (get(s.sellorders, ai, nothing), get(s.buyorders, ai, nothing))
+        isnothing(ords) && continue
+        for (_, o) in collect(ords) # Prefetch the orders since a fill can unqueue
+            isqueued(o, s, ai) || continue
+            try
+                _maybe_fill_tick!(s, o, ai, tick)
+            catch e
+                @error "Error processing order" order=o asset=ai date=tick.timestamp exception=(e, catch_backtrace())
+            end
+        end
+    end
+    nothing
+end
+
+@doc """Fills an order at the current tick price if it is crossed.
+
+$(TYPEDSIGNATURES)
+
+Buy limits fill when `tick.price <= o.price`, sell limits when `tick.price >= o.price`.
+A non-triggered FOK/IOC order is canceled (mirrors `limitorder_ifprice!`); other orders
+stay queued. Triggered orders fill at the exact tick price with `slippage=false` and
+`actual_amount=unfilled(o)`, so limit orders can fill partially across successive ticks.
+"""
+function _maybe_fill_tick!(s::Strategy{Sim}, o::AnyLimitOrder, ai, tick::TradeTick)
+    triggered =
+        o isa AnyLimitOrder{Buy} ? tick.price <= o.price : tick.price >= o.price
+    if !triggered
+        if o isa Union{AnyFOKOrder,AnyIOCOrder}
+            cancel!(s, o, ai; err=NotMatched(o.price, tick.price, DFT(0.0), DFT(0.0)))
+        end
+        return nothing
+    end
+    trade!(
+        s, o, ai; date=tick.timestamp, price=tick.price, actual_amount=unfilled(o), slippage=false
+    )
+end
