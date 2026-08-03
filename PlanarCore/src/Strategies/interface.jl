@@ -8,6 +8,13 @@ Receives:
 $(TYPEDSIGNATURES)
 "
 call!(::Strategy, current_time::DateTime, ctx) = @warn("call! not implemented for strategy, returning nothing") || nothing
+@doc "Called on each tick in tick-mode backtesting.
+Receives:
+- `ctx`: The tick context of the executor.
+- `tick`: The current market trade.
+$(TYPEDSIGNATURES)
+"
+ping!(::Strategy, ctx, tick) = @warn("ping! not implemented for strategy, returning nothing") || nothing
 @doc "[`call!(s::Strategy, ::LoadStrategy)`](@ref)"
 struct LoadStrategy <: ExecAction end
 @doc "[`call!(s::Strategy, ::ResetStrategy)`](@ref)"

@@ -227,6 +227,145 @@ function start!(s::Strategy{Sim}, count::Integer; tf=s.timeframe, kwargs...)
     start!(s, ctx; kwargs...)
 end
 
+@doc """Backtest a strategy `strat` on a tick-by-tick basis using context `ctx`.
+
+$(TYPEDSIGNATURES)
+
+This function runs a backtest of the strategy `strat` iterating over every market
+trade in `ctx.trades` in global chronological order. At each tick it first fills any
+crossed limit orders (`UpdateOrdersTick`), then calls the strategy's `ping!`
+entrypoint with the tick context and the current tick. Market orders placed inside
+`ping!` fill immediately at the current tick price with no slippage; limit orders
+placed inside `ping!` fill on subsequent ticks when crossed. Ticks before
+`first_ts + WarmupPeriod()` are skipped.
+
+There is no `trim_universe`/`resetctx` — tick data has no OHLCV alignment to trim and
+`TradeTickRange` is immutable.
+
+# Arguments
+- `strat::Strategy{Sim}`: The strategy to backtest.
+- `ctx::TickContext`: The context containing the tick range.
+- `doreset::Bool`: If true, reset the strategy before starting.
+- `show_progress::Symbol`: Progress bar mode - `:off`, `:minimal`, or `:full`.
+- `fail_fast::Bool`: If true, stop on first error; if false, continue and collect errors.
+"""
+function start!(
+    s::Strategy{Sim}, ctx::TickContext; doreset=true, show_progress=:off, fail_fast=true
+)
+    # Check for empty universe early
+    if isempty(s.universe)
+        @warn "SimMode: empty universe, nothing to backtest"
+        return s
+    end
+    if doreset
+        st.reset!(s)
+    end
+    ts = [t.timestamp for t in ctx.trades]
+    if isempty(ts)
+        @warn "SimMode: no ticks to backtest"
+        return s
+    end
+    n_warmup = searchsortedfirst(ts, ts[begin] + call!(s, WarmupPeriod())) - 1
+    trades = ctx.trades[n_warmup + 1:end]
+    s.attrs[:sim_tick_mode] = true
+    logger = if s[:sim_debug]
+        current_logger()
+    else
+        MinLevelLogger(current_logger(), s[:log_level])
+    end
+
+    try
+        with_logger(logger) do
+            # Track errors when fail_fast=false
+            error_count = Ref{Int}(0)
+            error_dates = DateTime[]
+
+            if show_progress !== :off
+                # Create custom columns for the progress bar
+                mycols = [DescriptionColumn, CompletedColumn, SeparatorColumn, ProgressColumn]
+                trades_n = Ref{Int}()
+                balance = Ref{DFT}()
+                cols_kwargs = Dict()
+
+                # Add stats columns if show_progress is :full
+                if show_progress === :full
+                    push!(mycols, StatsColumn)
+                    cols_kwargs[:StatsColumn] = Dict(:style=>"blue bold", :trades=>trades_n, :balance=>balance)
+                end
+
+                pbar!(; columns=mycols, columns_kwargs=cols_kwargs, width=140)
+                balance[] = current_total(s)
+
+                # Define update function based on show_progress mode
+                update_stats = if show_progress === :full
+                    () -> begin
+                        trades_n[] = trades_count(s)
+                        balance[] = current_total(s)
+                    end
+                else
+                    () -> nothing
+                end
+
+                @withpbar! trades desc="Backtesting" begin
+                    for tick in trades
+                        try
+                            isoutof_orders(s) && break
+                            update!(s, tick, UpdateOrdersTick())
+                            s.attrs[:sim_current_tick] = tick
+                            ping!(s, ctx, tick)
+                            update_stats()
+                            @debug "sim: tick" tick.timestamp raw(tick.asset) tick.price
+                        catch e
+                            e isa InterruptException && rethrow(e)
+                            @error "sim: error at $(tick.timestamp)" exception=(e, catch_backtrace())
+                            error_count[] += 1
+                            push!(error_dates, tick.timestamp)
+                            fail_fast && rethrow(e)
+                        end
+                        @pbupdate!
+                    end
+                end
+            else
+                for tick in trades
+                    try
+                        isoutof_orders(s) && break
+                        update!(s, tick, UpdateOrdersTick())
+                        s.attrs[:sim_current_tick] = tick
+                        ping!(s, ctx, tick)
+                        @debug "sim: tick" tick.timestamp raw(tick.asset) tick.price
+                    catch e
+                        e isa InterruptException && rethrow(e)
+                        @error "sim: error at $(tick.timestamp)" exception=(e, catch_backtrace())
+                        error_count[] += 1
+                        push!(error_dates, tick.timestamp)
+                        fail_fast && rethrow(e)
+                    end
+                end
+            end
+
+            # Log error summary if any errors occurred and fail_fast=false
+            if !fail_fast && error_count[] > 0
+                @warn "sim: backtest completed with $(error_count[]) errors on $(length(error_dates)) dates" error_dates
+            end
+        end
+    finally
+        # Never leak tick-mode flags, even on exception
+        delete!(s.attrs, :sim_tick_mode)
+        delete!(s.attrs, :sim_current_tick)
+    end
+    s
+end
+
+@doc """
+Backtest a strategy on a tick-by-tick basis from a `TradeTickRange`.
+
+$(TYPEDSIGNATURES)
+
+Convenience method that wraps `trades` in a `TickContext` and calls the main `start!`.
+"""
+start!(s::Strategy{Sim}, trades::TradeTickRange; kwargs...) =
+    start!(s, TickContext(Sim(), trades); kwargs...)
+
 @doc """Returns the latest date in the given strategy's universe.
 
 $(TYPEDSIGNATURES)

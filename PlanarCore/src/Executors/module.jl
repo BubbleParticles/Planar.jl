@@ -7,6 +7,7 @@ using ..Misc.TimeTicks
 using ..Misc: Lang
 using ..Misc.DocStringExtensions
 import ..Misc: call!, call!
+import ..Strategies: ping!
 
 include("context.jl")
 include("checks.jl")
@@ -54,7 +55,7 @@ struct OptScore <: ExecAction end
 @doc "Action to indicate if the optimization is a minimization problem."
 struct OptMinimize <: ExecAction end
 
-export call!, UpdateOrders, UpdateOrdersShuffled, CancelOrders
+export call!, ping!, UpdateOrders, UpdateOrdersShuffled, CancelOrders
 export UpdateLeverage, UpdateMargin, UpdatePositions
 export OptSetup, OptRun, OptScore, OptMinimize
 export NewTrade
