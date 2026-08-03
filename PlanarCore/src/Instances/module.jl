@@ -482,6 +482,7 @@ This function loads OHLCV (Open, High, Low, Close, Volume) data for a given `Ass
 """
 function load!(ai::AssetInstance; reset=true, zi=zi)
     for (tf, df) in ai.data
+        tf == TICK_TIMEFRAME && continue
         reset && empty!(df)
         loaded = load(zi, ai.exchange.name, raw(ai), string(tf))
         # `load` returns `nothing` when no cached OHLCV exists for this
@@ -572,7 +573,7 @@ $(TYPEDSIGNATURES)
 This function retrieves the last available candle (Open, High, Low, Close, Volume data for a specific time period) from the `AssetInstance` that is strictly lower than the date adjusted by the `TimeFrame` `tf`.
 
 """
-function Data.candlelast(ai::AssetInstance, tf::TimeFrame=first(keys(ohlcv_dict(ai))), args...)
+function Data.candlelast(ai::AssetInstance, tf::TimeFrame=first(_ohlcv_keys(ai)), args...)
     Data.candlelast(ai.data[tf])
 end
 
@@ -634,7 +635,7 @@ committed(ai::MarginInstance) =
         committed(pos)
     end
 @doc "Get the asset instance ohlcv data for the smallest time frame."
-ohlcv(ai::AssetInstance) = getfield(first(getfield(ai, :data)), :second)
+ohlcv(ai::AssetInstance) = getfield(ai, :data)[first(_ohlcv_keys(ai))]
 ohlcv(ai::AssetInstance, tf::TimeFrame) = getfield(ai, :data)[tf]
 @doc "Get the asset instance ohlcv data dictionary."
 ohlcv_dict(ai::AssetInstance) = getfield(ai, :data)
@@ -1137,18 +1138,19 @@ This function returns the timeframe for an `AssetInstance`. The timeframe repres
 """
 function timeframe(ai::AssetInstance)
     data = getfield(ai, :data)
-    if !isempty(data)
-        first(keys(data))
-    else
-        @warn "asset: can't infer timeframe since there is not data"
-        tf"1m"
+    for k in keys(data)
+        k != TICK_TIMEFRAME && return k
     end
+    @warn "asset: can't infer timeframe since there is not data"
+    tf"1m"
 end
 
+include("ticks.jl")
 include("constructors.jl")
 
 export AssetInstance, instance, load!, @rprice, @ramount
 export asset, raw, ohlcv, ohlcv_dict, bc, qc, default_asset_df
+export ticks, setticks!
 export takerfees, makerfees, maxfees, minfees, ishedged, isdust, nondust
 export Long, Short, position, posside, cash, committed
 export liqprice, leverage, bankruptcy, entryprice, price

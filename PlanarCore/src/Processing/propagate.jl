@@ -19,6 +19,12 @@ Otherwise, it asynchronously updates each higher time frame data frame and ensur
 function propagate_ohlcv!(
     data::SortedDict{TimeFrame,DataFrame}, update_func::Function=propagate_ohlcv!
 )
+    # Tick data (TICK_TIMEFRAME sentinel) is not OHLCV — never resample it. Without
+    # this exclusion the tick entry would be `first(data)` (smallest period) and get
+    # propagated as OHLCV garbage into every higher timeframe.
+    if haskey(data, TICK_TIMEFRAME)
+        data = SortedDict(k => v for (k, v) in data if k != TICK_TIMEFRAME)
+    end
     base_tf, base_data = first(data)
     if isempty(base_data)
         foreach(empty!, Iterators.drop(values(data), 1))

@@ -1,4 +1,5 @@
 using .ect.OrderTypes: LiquidationTrade, LongTrade, ShortTrade
+using .ect.Instances: _ohlcv_keys
 using .Data: default_value
 using .Data.Misc: OrderedDict
 
@@ -124,7 +125,7 @@ end
 
 macro cumbal()
     ex = quote
-        let bal = trades_balance(ai; tf=first(keys(ohlcv_dict(ai))))
+        let bal = trades_balance(ai; tf=first(_ohlcv_keys(ai)))
             isnothing(bal) ? nothing : bal.cum_total
         end
     end

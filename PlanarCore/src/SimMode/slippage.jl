@@ -230,5 +230,8 @@ simulation and paper trading modes.
 
 """
 function Executors.with_slippage(s::Strategy{<:Union{Paper,Sim}}, o, ai; date, price, actual_amount)
+    # Tick mode (set only by the Sim tick `start!`) fills at the exact tick price:
+    # no slippage, ever. Paper mode never sets `:sim_tick_mode`, so it is unaffected.
+    get(s.attrs, :sim_tick_mode, false) && return price
     _do_slippage(s, o, ai; date, price, actual_amount)
 end
