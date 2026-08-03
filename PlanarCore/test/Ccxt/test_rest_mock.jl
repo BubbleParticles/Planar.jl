@@ -42,6 +42,11 @@ Rest.set_http_get!(mock_get)
 Rest.set_http_post!(mock_post)
 Rest.set_http_delete!(mock_delete)
 
+# Pre-initialize the gateway so _ensure_gateway_running skips its /ping
+# health-check (which would route through the mocked _http_get and add a
+# second GET call to api_call endpoints).
+Rest._gateway_initialized[] = true
+
 @testset "Rest module with mocked HTTP" begin
     client = Rest.GatewayClient()
 
