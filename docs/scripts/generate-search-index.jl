@@ -133,7 +133,7 @@ function extract_headings(markdown_content::String)
     return headings
 end
 
-function extract_keywords(text::String, headings::Vector{String})
+function extract_keywords(text::AbstractString, headings::Vector{String})
     """Extract keywords from text content and headings."""
     # Combine text and headings (give headings more weight)
     combined_text = text * " " * join(headings, " ") * " " * join(headings, " ")
@@ -162,7 +162,7 @@ end
 
 
 
-function create_excerpt(text::String, max_length::Int = MAX_EXCERPT_LENGTH)
+function create_excerpt(text::AbstractString, max_length::Int = MAX_EXCERPT_LENGTH)
     """Create a short excerpt from text content."""
     if length(text) <= max_length
         return text
