@@ -41,7 +41,7 @@ println("Data is organized as: exchange/pair/timeframe/arrays")
 
 # Example of accessing data (when available)
 # This would work with actual data:
-# data_path = PlanarDev.Planar.Data.key_path("binance", "BTC/USDT", "1m")
+# data_path = PlanarCore.Data.key_path("binance", "BTC/USDT", "1m")
 # println("Data path: ", data_path)
 ```
 

@@ -10,25 +10,26 @@ Planar follows a modular architecture with clear separation of concerns:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    User Interface Layer                     │
+│                      Application Layer                      │
 ├─────────────────────────────────────────────────────────────┤
-│  Planar.jl (Main)  │  PlanarOptim.jl   │  DownloadTool  │
+│  Planar.jl (Engine, LiveMode, PaperMode,   │  PlanarOptim.jl│
+│   Watchers, Remote)                        │  (Plotting)   │
 ├─────────────────────────────────────────────────────────────┤
 │                    Strategy Layer                           │
 ├─────────────────────────────────────────────────────────────┤
-│   Strategies.jl    │    User Strategies     │  StrategyStats│
-├─────────────────────────────────────────────────────────────┤
-│                    Execution Layer                          │
-├─────────────────────────────────────────────────────────────┤
-│  SimMode.jl  │  PaperMode.jl  │  LiveMode.jl  │ Executors.jl│
-├─────────────────────────────────────────────────────────────┤
-│                    Data & Exchange Layer                    │
-├─────────────────────────────────────────────────────────────┤
-│ Exchanges.jl │ Data.jl │ Fetch.jl │ Processing.jl │ Metrics.jl│
+│  Strategies.jl    │   User Strategies    │ StrategyStats/   │
+│                   │                      │ StrategyTools    │
 ├─────────────────────────────────────────────────────────────┤
 │                    Foundation Layer                         │
 ├─────────────────────────────────────────────────────────────┤
-│Engine.jl│Instruments.jl│OrderTypes.jl│Collections.jl│Lang.jl│
+│  PlanarCore (Lang, TimeTicks, Pbar, Misc, Ccxt,             │
+│   ExchangeTypes, Data, Instruments, Processing, Exchanges,  │
+│   Fetch, OrderTypes, Instances, Collections, Strategies,    │
+│   Simulations, Executors, SimMode, Metrics, Stubs)          │
+├─────────────────────────────────────────────────────────────┤
+│                    Tooling Layer                            │
+├─────────────────────────────────────────────────────────────┤
+│  DownloadTool   │  Python   │  FeatureSelection  │  PlanarDev│
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -64,36 +65,131 @@ Unified [exchange](exchanges.md) interface:
 
 ```mermaid
 graph TD
-    A[Planar.jl] --> B[Engine.jl]
-    A --> C[Strategies.jl]
-    A --> D[SimMode.jl]
-    A --> E[PaperMode.jl]
-    A --> F[LiveMode.jl]
-    
-    C --> B
-    D --> B
-    E --> B
-    F --> B
-    
-    B --> G[Instruments.jl]
-    B --> H[OrderTypes.jl]
-    B --> I[Executors.jl]
-    
-    D --> J[Data.jl]
-    E --> J
-    F --> J
-    
-    J --> K[Fetch.jl]
-    J --> L[Processing.jl]
-    
-    F --> M[Exchanges.jl]
-    E --> M
-    
-    M --> N[ExchangeTypes.jl]
-    
-    O[PlanarOptim.jl] --> A
-    O --> P[Plotting.jl]
-    O --> Q[Opt.jl]
+    subgraph PL["Planar (application layer)"]
+        O[Planar.jl]
+        E[Engine]
+        PM[PaperMode]
+        LM[LiveMode]
+        WA[Watchers]
+        RE[Remote]
+        O --> E
+        O --> PM
+        O --> LM
+        O --> WA
+        O --> RE
+    end
+
+    subgraph PC["PlanarCore (foundation layer)"]
+        L[Lang]
+        TT[TimeTicks]
+        PB[Pbar]
+        MI[Misc]
+        CX[Ccxt]
+        ET[ExchangeTypes]
+        DA[Data]
+        IN[Instruments]
+        PR[Processing]
+        EX[Exchanges]
+        FE[Fetch]
+        OT[OrderTypes]
+        IS[Instances]
+        CO[Collections]
+        ST[Strategies]
+        SI[Simulations]
+        EC[Executors]
+        SM[SimMode]
+        ME[Metrics]
+        SB[Stubs]
+
+        TT --> L
+        PB --> L
+        PB --> TT
+        MI --> TT
+        CX --> MI
+        ET --> CX
+        DA --> L
+        DA --> MI
+        DA --> TT
+        IN --> L
+        IN --> MI
+        PR --> DA
+        PR --> MI
+        PR --> PB
+        EX --> CX
+        EX --> DA
+        EX --> ET
+        EX --> IN
+        EX --> PB
+        FE --> CX
+        FE --> DA
+        FE --> EX
+        FE --> IN
+        FE --> MI
+        FE --> PR
+        FE --> TT
+        OT --> ET
+        OT --> IN
+        IS --> EX
+        IS --> OT
+        CO --> DA
+        CO --> IS
+        CO --> IN
+        CO --> L
+        CO --> MI
+        CO --> TT
+        ST --> CO
+        ST --> DA
+        ST --> IS
+        ST --> IN
+        ST --> L
+        ST --> MI
+        ST --> OT
+        ST --> TT
+        SI --> DA
+        SI --> IS
+        SI --> IN
+        SI --> L
+        SI --> MI
+        SI --> PR
+        SI --> TT
+        EC --> IS
+        EC --> IN
+        EC --> L
+        EC --> MI
+        EC --> OT
+        EC --> ST
+        EC --> TT
+        SM --> EC
+        SM --> IS
+        SM --> L
+        SM --> MI
+        SM --> OT
+        SM --> PB
+        SM --> SI
+        SM --> ST
+        SM --> TT
+        ME --> EC
+        ME --> SI
+        SB --> DA
+        SB --> L
+        SB --> MI
+        SB --> SM
+        SB --> ST
+    end
+
+    subgraph PO["PlanarOptim (optimization layer)"]
+        OP[PlanarOptim.jl]
+        PL[Plotting]
+        OP --> PL
+    end
+
+    E --> PC
+    PM --> PC
+    LM --> PC
+    WA --> PC
+    RE --> PC
+    OP --> O
+    OP --> PC
 ```
 
 ### Data Flow Architecture
