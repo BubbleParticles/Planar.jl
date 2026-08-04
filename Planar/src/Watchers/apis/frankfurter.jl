@@ -31,21 +31,28 @@ const STATUS = Ref{Int}(0)
 ratelimit() = sleep(max(Second(0), (last_query[] - now()) + RATE_LIMIT[]))
 
 function get(path, query=nothing)
-    ratelimit()
-    resp = try
-        HTTP.get(absuri(path, API_URL); query, headers=API_HEADERS)
-    catch e
-        e
+    # The frankfurter API intermittently returns 5xx (Cloudflare 522 origin
+    # timeouts) and drops connections; retry transient failures with backoff.
+    for attempt in 1:3
+        ratelimit()
+        resp = try
+            HTTP.get(absuri(path, API_URL); query, headers=API_HEADERS)
+        catch e
+            e
+        end
+        last_query[] = now()
+        if hasproperty(resp, :status)
+            STATUS[] = resp.status
+            if resp.status == 200
+                return JSON3.read(resp.body)
+            end
+            resp.status < 500 && throw(AssertionError("Frankfurter API error: $(resp.status)"))
+        else
+            attempt == 3 && throw(resp)
+        end
+        sleep(0.5 * attempt)
     end
-    last_query[] = now()
-    if hasproperty(resp, :status)
-        STATUS[] = resp.status
-        @assert resp.status == 200 "Frankfurter API error: $(resp.status)"
-        json = JSON3.read(resp.body)
-        return json
-    else
-        throw(resp)
-    end
+    throw(AssertionError("Frankfurter API error: $(STATUS[])"))
 end
 
 @doc "Get latest exchange rates for specified base currency and symbols."
