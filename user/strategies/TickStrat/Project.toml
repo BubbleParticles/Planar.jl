@@ -13,4 +13,5 @@ margin = "NoMargin"
 mode = "Sim"
 
 [sources]
+Planar = {path = "../../../Planar"}
 PlanarCore = {path = "../../../PlanarCore"}
