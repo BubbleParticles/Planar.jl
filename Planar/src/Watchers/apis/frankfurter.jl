@@ -10,14 +10,14 @@ using PlanarCore.TimeTicks
 using PlanarCore.TimeTicks: timestamp
 using ..Watchers: jsontodict
 
-const API_URL = "https://api.frankfurter.app"
+const API_URL = "https://api.frankfurter.dev"
 const API_HEADERS = ["Accept-Encoding" => "deflate,gzip", "Accept" => "application/json"]
 
 const ApiPaths = (;
-    latest="/latest",
-    historical="/",
-    currencies="/currencies",
-    time_series="/",
+    latest="/v1/latest",
+    historical="/v1/",
+    currencies="/v1/currencies",
+    time_series="/v1/",
 )
 
 const DEFAULT_BASE = "EUR"
