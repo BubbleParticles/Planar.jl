@@ -432,6 +432,21 @@ function _check_python_works(python_exe::String)
     end
 end
 
+# Full health check: stdlib AND the packages the gateway daemon needs at
+# import time (uvicorn + the ccxt_gateway package itself). A venv that passes
+# `_check_python_works` but lacks these would spawn a daemon that dies at
+# import — which in turn breaks exchange subprocess spawning (404s).
+function _check_gateway_python(python_exe::String)
+    _check_python_works(python_exe) || return false
+    try
+        run(pipeline(`$python_exe -c "import uvicorn, ccxt_gateway"`; stdout=devnull, stderr=devnull))
+        return true
+    catch e
+        @debug "Gateway deps missing for $python_exe (uvicorn/ccxt_gateway): $e"
+        return false
+    end
+end
+
 function _fix_venv_pyvenv_cfg(venv_cfg::String)
     system_python = _find_system_python()
     system_python === nothing && return false
@@ -457,23 +472,40 @@ function _ensure_gateway_venv(gateway_dir::String)
     venv_dir = normpath(joinpath(gateway_dir, ".venv"))
     venv_python = normpath(joinpath(venv_dir, "bin", "python"))
     venv_cfg = normpath(joinpath(venv_dir, "pyvenv.cfg"))
-    # Fast path: venv is fully intact AND functional
-    if isfile(venv_python) && _check_python_works(venv_python)
+    # Fast path: venv fully intact AND functional (stdlib + gateway deps)
+    if isfile(venv_python) && _check_gateway_python(venv_python)
         @debug "Venv python found and verified at $venv_python"
         return venv_python
     end
-    # Venv exists but Python is broken — try repair
-    if isdir(venv_dir) && isfile(venv_cfg)
-        @debug "Venv exists at $venv_dir but Python is broken; attempting repair..."
-        # First check: pyvenv.cfg might point to a broken uv-managed Python
-        # Try fixing it to point to the system Python instead
-        if _fix_venv_pyvenv_cfg(venv_cfg) && _check_python_works(venv_python)
-            @debug "Venv repaired via pyvenv.cfg fix at $venv_python"
-            return venv_python
+    # Venv exists but broken — `uv sync` is the sanctioned repair (uv.lock is
+    # the source of truth). It rebuilds a CONSISTENT venv: matching interpreter
+    # AND all deps. The legacy pyvenv.cfg/symlink surgery below swapped in the
+    # system interpreter without regard for the venv's site-packages version,
+    # producing permanently broken version-mismatched venvs (AGENTS.md #54).
+    if isdir(venv_dir)
+        @debug "Venv exists at $venv_dir but is broken; repairing via uv sync..."
+        if _run_uv_sync(gateway_dir)
+            if isfile(venv_python) && _check_gateway_python(venv_python)
+                @debug "Venv repaired via uv sync at $venv_python"
+                return venv_python
+            end
+            @debug "uv sync ran but venv still not functional at $venv_python"
         end
-        # Second check: symlink might be broken — repair symlink
+    end
+    # uv unavailable or sync left the venv unusable — legacy manual repair.
+    # Only applied when the fallback interpreter matches the venv's
+    # site-packages version; a mismatched venv is recreated below instead.
+    if isdir(venv_dir) && isfile(venv_cfg)
+        vver = _venv_python_version(venv_dir)
+        sys_py = _find_system_python()
+        if sys_py !== nothing && (vver === nothing || _python_version(sys_py) == vver)
+            if _fix_venv_pyvenv_cfg(venv_cfg) && _check_gateway_python(venv_python)
+                @debug "Venv repaired via pyvenv.cfg fix at $venv_python"
+                return venv_python
+            end
+        end
         _repair_venv_python(venv_dir)
-        if isfile(venv_python) && _check_python_works(venv_python)
+        if isfile(venv_python) && _check_gateway_python(venv_python)
             @debug "Venv repaired via symlink fix at $venv_python"
             return venv_python
         end
@@ -489,7 +521,7 @@ function _ensure_gateway_venv(gateway_dir::String)
         run(`uv venv --clear $venv_dir`)
         run(`uv pip install --python $venv_dir --quiet -e $gateway_dir`)
         @debug "Venv created with uv successfully"
-        if !_check_python_works(venv_python)
+        if !_check_gateway_python(venv_python)
             @debug "uv venv produced broken Python, falling back to python3..."
             error("uv Python is broken")
         end
@@ -509,11 +541,60 @@ function _ensure_gateway_venv(gateway_dir::String)
         end
     end
     isfile(venv_python) || error("Failed to create venv at $venv_dir")
-    _check_python_works(venv_python) || error("Created venv at $venv_dir has broken Python (system python3 may be missing modules)")
+    _check_gateway_python(venv_python) || error("Created venv at $venv_dir has broken Python (system python3 may be missing modules)")
     return venv_python
 end
 
+# The ccxt-gateway venv is project-managed: uv.lock is the source of truth.
+# Run `uv sync` inside the project dir so the venv matches the lockfile —
+# this repairs venvs whose packages are missing or stale (e.g. uvicorn absent
+# even though the stdlib python check in `_ensure_gateway_venv` passes).
+# uv's output is captured and silenced; a small @warn is emitted only when
+# the sync actually changed the venv. Returns whether uv sync succeeded.
+function _run_uv_sync(gateway_dir::String)
+    uv = Sys.which("uv")
+    uv === nothing && return false
+    out = IOBuffer()
+    ok = try
+        run(pipeline(setenv(`$uv sync`; dir=gateway_dir); stdout=out, stderr=out))
+        true
+    catch e
+        @warn "uv sync failed for ccxt-gateway venv at $gateway_dir ($e):\n$(String(take!(out)))"
+        false
+    end
+    if ok && _venv_resynced(String(take!(out)))
+        @warn "ccxt-gateway venv resynchronized via uv sync (packages changed)"
+    end
+    ok
+end
+
+# True when `uv sync` output indicates the venv was actually modified
+# (package add/remove/update lines) rather than already in sync.
+_venv_resynced(out::String) = occursin(r"(?m)^\s*[+-]\s|Installed|Removed|Updated|Downgraded|Uninstalled", out)
+
+function _sync_gateway_venv(gateway_dir::String)
+    _run_uv_sync(gateway_dir) || return _ensure_gateway_venv(gateway_dir)
+    venv_python = normpath(joinpath(gateway_dir, ".venv", "bin", "python"))
+    if isfile(venv_python) && _check_gateway_python(venv_python)
+        @debug "ccxt-gateway venv synced via uv sync at $venv_python"
+        return venv_python
+    end
+    @debug "uv sync ran but venv python not functional at $venv_python; falling back to repair"
+    _ensure_gateway_venv(gateway_dir)
+end
+
+function _sync_gateway_venv()
+    try
+        daemon_script = _find_gateway_file("daemon_gateway.py")
+        _sync_gateway_venv(dirname(daemon_script))
+    catch e
+        @warn "ccxt-gateway venv sync skipped (gateway dir not found): $e"
+        nothing
+    end
+end
+
 function _repair_venv_python(venv_dir::String)
+    vver = _venv_python_version(venv_dir)
     # Remove venv-internal symlinks to avoid loops (e.g. python3 -> python)
     # but keep the main `python` symlink if it points to a valid real file.
     for name in ["python3", "python3.11", "python3.12", "python3.13", "python3.14"]
@@ -535,27 +616,61 @@ function _repair_venv_python(venv_dir::String)
         # If it points to a relative name within the venv, it may be stale
         if startswith(target, "python")
             try rm(python_link) catch end
-        elseif isfile(python_link)
-            return  # Absolute symlink to a working python — OK
+        elseif isfile(python_link) && _python_matches_venv(venv_dir, python_link, vver)
+            return  # Absolute symlink to a matching working python — OK
         end
     end
     # Try each candidate — must be a REAL file (not a venv-internal symlink)
+    # whose version matches the venv's site-packages. A mismatched interpreter
+    # breaks every package import (AGENTS.md #54).
     for candidate in ["python3", "python3.11", "python3.12", "python3.13", "python3.14"]
         exe = normpath(joinpath(venv_dir, "bin", candidate))
-        if isfile(exe) && !islink(exe)
+        if isfile(exe) && !islink(exe) && _python_matches_venv(venv_dir, exe, vver)
             @debug "Found valid python at $exe; symlinking bin/python -> $candidate"
             try rm(python_link) catch end
             try symlink(candidate, python_link) catch end
             return
         end
     end
-    # No valid python in venv — try system
+    # No valid python in venv — try system (only when the version matches;
+    # otherwise leave the venv broken so it falls through to the recreate path,
+    # which rebuilds it consistently)
     system_python = _find_system_python()
-    if system_python !== nothing
+    if system_python !== nothing && _python_matches_venv(venv_dir, system_python, vver)
         @debug "Symlinking bin/python -> $system_python"
         try rm(python_link) catch end
         try symlink(system_python, python_link) catch end
     end
+end
+
+# The venv's site-packages python version (dir name under lib/), or nothing
+# when the venv has no lib/pythonX.Y directory.
+function _venv_python_version(venv_dir::String)
+    lib = normpath(joinpath(venv_dir, "lib"))
+    isdir(lib) || return nothing
+    for name in readdir(lib)
+        m = match(r"^python(\d+\.\d+)$", name)
+        m !== nothing && return m[1]
+    end
+    nothing
+end
+
+function _python_version(exe::String)
+    try
+        ver = readchomp(pipeline(`$exe -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"`; stderr=devnull))
+        ver = strip(ver)
+        occursin(r"^\d+\.\d+$", ver) ? ver : nothing
+    catch
+        nothing
+    end
+end
+
+# Whether `exe`'s interpreter version matches the venv's site-packages.
+# `vver === nothing` (no lib dir) accepts any interpreter.
+function _python_matches_venv(venv_dir::String, exe::String, vver::Union{Nothing,String})
+    vver === nothing && return true
+    pyver = _python_version(exe)
+    pyver !== nothing && pyver == vver
 end
 
 function _find_system_python()
