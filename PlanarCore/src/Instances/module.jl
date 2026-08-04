@@ -496,6 +496,8 @@ end
 Base.getproperty(ai::AssetInstance, f::Symbol) = begin
     if f == :ohlcv
         ohlcv(ai)
+    elseif f == :ticks
+        ticks(ai)
     elseif f == :bc
         ai.asset.bc
     elseif f == :qc
