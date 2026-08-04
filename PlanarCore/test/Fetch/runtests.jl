@@ -33,6 +33,7 @@ function _default_mock_get(url; kwargs...)
             "fetchFundingRate" => true, "fetchFundingRates" => true,
             "fetchFundingHistory" => true, "fetchFundingRateHistory" => true,
             "fetchOrderBook" => true, "fetchTicker" => true,
+            "fetchTrades" => true,
         )
         HTTP.Response(200, JSON3.write(Dict("result" => has_data, "error" => nothing, "error_code" => nothing)))
     elseif endpoint == "timeframes"
@@ -93,6 +94,14 @@ function _default_mock_post(url; kwargs...)
                 "bids" => [[49900.0, 1.5], [49800.0, 3.0]],
             )
             return HTTP.Response(200, JSON3.write(Dict("result" => data, "error" => nothing, "error_code" => nothing)))
+        elseif occursin("fetchTrades", endpoint)
+            trades = [
+                Dict("id" => "3", "timestamp" => 1_700_000_003_000, "price" => 50003.0, "amount" => 0.3),
+                Dict("id" => "2", "timestamp" => 1_700_000_002_000, "price" => 50002.0, "amount" => 0.2),
+                Dict("id" => "1", "timestamp" => 1_700_000_002_000, "price" => 50002.0, "amount" => 0.2),
+                Dict("id" => "0", "timestamp" => 1_700_000_001_000, "price" => 50001.0, "amount" => 0.1),
+            ]
+            return HTTP.Response(200, JSON3.write(Dict("result" => trades, "error" => nothing, "error_code" => nothing)))
         elseif occursin("fetchFundingRates", endpoint) && !occursin("History", endpoint)
             return HTTP.Response(200, JSON3.write(Dict("result" => Dict("BTC/USDT" => Dict("fundingRate" => 0.0001, "symbol" => "BTC/USDT"), "ETH/USDT" => Dict("fundingRate" => 0.0002, "symbol" => "ETH/USDT")), "error" => nothing, "error_code" => nothing)))
         elseif occursin("fetchFundingRate", endpoint) && !occursin("History", endpoint)
@@ -477,6 +486,47 @@ end
         @testset "_fetch_ohlcv_with_delay" begin
             result = Fetch._fetch_ohlcv_with_delay(exc, "BTC/USDT"; timeframe="1m", limit=5, df=false)
             @test result isa Exchanges.Data.OHLCVTuple
+        end
+
+    finally
+        _clear_exchange_registries()
+    end
+end
+
+@testset "Trades gateway functions" begin
+    _clear_exchange_registries()
+    try
+        exc = getexchange!(:test_fetch; markets=:yes, sandbox=false)
+
+        @testset "trades_func_bykind" begin
+            f = Fetch.trades_func_bykind(exc)
+            @test f isa Function
+        end
+
+        @testset "fetch_trades single pair" begin
+            df = Fetch.fetch_trades(exc, "BTC/USDT")
+            @test df isa DataFrame
+            @test names(df) == ["timestamp", "price", "amount"]
+            @test size(df, 1) == 3  # 4 mock trades minus the duplicate (ts, price, amount) triple
+            @test issorted(df.timestamp)
+            @test df.timestamp[1] == DateTime(2023, 11, 14, 22, 13, 21)
+            @test df.price == [50001.0, 50002.0, 50003.0]
+            @test eltype(df.price) <: AbstractFloat
+            @test eltype(df.amount) <: AbstractFloat
+        end
+
+        @testset "fetch_trades multi pair" begin
+            data = Fetch.fetch_trades(exc, ["BTC/USDT", "ETH/USDT"])
+            @test data isa Dict
+            @test Set(keys(data)) == Set(["BTC/USDT", "ETH/USDT"])
+            @test data["BTC/USDT"] isa DataFrame
+            @test data["ETH/USDT"] isa DataFrame
+        end
+
+        @testset "fetch_trades pagination dedupes overlapping pages" begin
+            df = Fetch.fetch_trades(exc, "BTC/USDT"; limit=2, pages=3)
+            @test df isa DataFrame
+            @test size(df, 1) == 3  # overlapping pages collapse to the same 3 unique ticks
         end
 
     finally

@@ -696,4 +696,4 @@ end
 
 include("dispatch.jl")
 
-export fetch_ohlcv, fetch_candles
+export fetch_ohlcv, fetch_candles, fetch_trades
