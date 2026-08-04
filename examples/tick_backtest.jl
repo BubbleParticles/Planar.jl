@@ -2,9 +2,10 @@
 # examples/tick_backtest.jl — real trade data → tick-by-tick backtest
 #
 # Fetches real market trades (the trades feed) from an exchange through the
-# ccxt gateway, stores them as per-asset tick DataFrames (`setticks!`), and
-# runs the tick-by-tick SimMode backtest (`start!(s, TradeTickRange(s))`)
-# of the TickStrat example strategy — fills happen at the exact tick price.
+# ccxt gateway via `PlanarCore.Fetch.fetch_trades`, stores them as per-asset
+# tick DataFrames (`setticks!`), and runs the tick-by-tick SimMode backtest
+# (`start!(s, TradeTickRange(s))`) of the TickStrat example strategy — fills
+# happen at the exact tick price.
 #
 # Run (from the repo root, with .envrc loaded):
 #   julia --project=Planar examples/tick_backtest.jl
@@ -27,7 +28,7 @@ using Planar
 @environment!
 using PlanarCore.Data.DataFrames
 using PlanarCore.Data.DataStructures: SortedDict
-using PlanarCore.TimeTicks: dt
+using PlanarCore.Fetch: fetch_trades
 using PlanarCore.Instances: AssetInstance, setticks!, ohlcv
 using PlanarCore.Misc: Config
 
@@ -38,35 +39,6 @@ PAGES = parse(Int, get(ENV, "TICK_PAGES", "3"))
 LIMIT = parse(Int, get(ENV, "TICK_LIMIT", "1000"))
 SANDBOX = lowercase(get(ENV, "TICK_SANDBOX", "false")) == "true"
 CASH = parse(Float64, get(ENV, "TICK_CASH", "10000.0"))
-
-_num(v) = v isa Number ? Float64(v) : parse(Float64, string(v))
-
-@doc """Fetch `pages` pages of `limit` real trades for `sym` via the ccxt gateway.
-
-Trades come back newest-first per page in ccxt's pagination; the result is
-re-sorted oldest-first and de-duplicated on exact (timestamp, price, amount)
-triples (same-millisecond trades are distinct and kept).
-"""
-function fetch_trades(exc, sym; limit=LIMIT, pages=PAGES)
-    rows = Any[]
-    since = nothing
-    for _ in 1:pages
-        data = exc.fetchTrades(sym, since, limit)
-        isempty(data) && break
-        append!(rows, data)
-        since = Int(minimum(t -> _num(t[:timestamp]), data)) - 1
-        length(data) < limit && break
-    end
-    isempty(rows) && return nothing
-    df = DataFrame(
-        timestamp = [dt(Int(_num(t[:timestamp]))) for t in rows],
-        price = [_num(t[:price]) for t in rows],
-        amount = [_num(t[:amount]) for t in rows],
-    )
-    sort!(df, :timestamp)
-    unique!(df, [:timestamp, :price, :amount])
-    df
-end
 
 @doc """Aggregate a tick DataFrame into `tf`-sized OHLCV candles.
 
@@ -117,9 +89,10 @@ end
 println("connecting to ccxt gateway — exchange=$(EXC) sandbox=$(SANDBOX)")
 exc = getexchange!(EXC; sandbox=SANDBOX)
 
+data = fetch_trades(exc, SYMBOLS; limit=LIMIT, pages=PAGES)
 ais = AssetInstance[]
 for sym in SYMBOLS
-    df = fetch_trades(exc, sym)
+    df = data[sym]
     if isnothing(df) || isempty(df)
         @warn "no trades returned for $sym — skipping"
         continue

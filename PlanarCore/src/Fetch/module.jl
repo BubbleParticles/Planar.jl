@@ -1,4 +1,5 @@
 include("impl.jl")
+include("trades.jl")
 include("funding.jl")
 include("orderbook.jl")
 include("adhoc.jl")
