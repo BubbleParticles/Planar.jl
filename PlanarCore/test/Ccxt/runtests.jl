@@ -29,6 +29,10 @@ println("=== Running Ccxt Unit Tests ===")
         include("test_rest_mock.jl")
     end
     
+    @testset "Venv sync tests" begin
+        include("test_venv_sync.jl")
+    end
+    
     @testset "WebSocket unit tests" begin
         include("test_websocket.jl")
     end
