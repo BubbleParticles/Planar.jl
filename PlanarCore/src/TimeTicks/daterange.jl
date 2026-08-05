@@ -41,6 +41,13 @@ Base.similar(dr::DateRange) = begin
     DateRange(dr.start, dr.stop, dr.step)
 end
 
+# `iterate` stops are EXCLUSIVE (`stop` itself is never yielded) and the cursor
+# (`current_date`) is mutable, so `length(dr)` (inclusive, from `start`) does NOT
+# equal the iteration count. Preallocating `Vector{T}(undef, length(dr))` in
+# `collect`/comprehensions then leaks the unwritten tail slot as garbage.
+# Declare the size unknown so collections grow by push! and never read undef slots.
+Base.IteratorSize(::Type{DateRange}) = Base.SizeUnknown()
+
 function Base.print(io::IO, dr::DateRange)
     print(io, "start: ", dr.start, "\nstop:  ", dr.stop, "\nstep:  ", dr.step, "\n")
 end
