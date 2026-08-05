@@ -19,6 +19,109 @@ end
 function Progress.update!(col::StatsColumn, color::String, args...)
 end
 
+# ── shared machinery for OHLCV and tick backtests ─────────────────────────
+# Pre-flight for both OHLCV and tick backtests: refuse empty universes and
+# optionally reset the strategy. Returns `true` when the backtest may proceed.
+function _sim_start!(s::Strategy{Sim}, doreset::Bool)
+    if isempty(s.universe)
+        @warn "SimMode: empty universe, nothing to backtest"
+        return false
+    end
+    doreset && st.reset!(s)
+    true
+end
+
+# Full log verbosity under `sim_debug`, otherwise filtered to the strategy's log level.
+_sim_logger(s::Strategy{Sim}) =
+    s[:sim_debug] ? current_logger() : MinLevelLogger(current_logger(), s[:log_level])
+
+# Shared iteration machinery for both OHLCV and tick backtests: progress bar
+# scaffolding, error accounting (`error_count`/`error_dates`), the out-of-orders
+# early break and the `fail_fast`/consecutive-error rethrow policy.
+# `step(item)` performs the per-iteration work, returning `:skip` to mark the
+# item as skipped without error accounting; `dateof(item)` yields the timestamp
+# used in error reporting. `pbar_items` is the collection iterated when
+# `show_progress !== :off` — the OHLCV loop trims the warmup range for the bar.
+function _sim_loop!(
+    s::Strategy{Sim}, items;
+    step, dateof, show_progress::Symbol, fail_fast::Bool, desc::String, pbar_items=items,
+)
+    # Track errors when fail_fast=false
+    error_count = Ref{Int}(0)
+    error_dates = DateTime[]
+    consecutive_errors = 0
+    update_stats = () -> nothing
+
+    # Run one item under the shared error policy; returns `:break` when the loop
+    # must stop (out-of-orders), `:ok` otherwise, and rethrows on fatal errors.
+    run_item = function (item)
+        isoutof_orders(s) && begin
+            @deassert all(iszero(ai) for ai in universe(s))
+            return :break
+        end
+        try
+            step(item) === :skip || update_stats()
+            consecutive_errors = 0
+            return :ok
+        catch e
+            e isa InterruptException && rethrow(e)
+            @error "sim: error at $(dateof(item))" exception=(e, catch_backtrace())
+            error_count[] += 1
+            push!(error_dates, dateof(item))
+            consecutive_errors += 1
+            # fail_fast after 10 consecutive errors to prevent infinite error loops
+            if fail_fast || consecutive_errors >= 10
+                rethrow(e)
+            end
+            return :ok
+        end
+    end
+
+    if show_progress !== :off
+        # Create custom columns for the progress bar
+        mycols = [DescriptionColumn, CompletedColumn, SeparatorColumn, ProgressColumn]
+        trades = Ref{Int}()
+        balance = Ref{DFT}()
+        cols_kwargs = Dict()
+
+        # Add stats columns if show_progress is :full
+        if show_progress === :full
+            push!(mycols, StatsColumn)
+            cols_kwargs[:StatsColumn] = Dict(:style=>"blue bold", :trades=>trades, :balance=>balance)
+        end
+
+        pbar!(; columns=mycols, columns_kwargs=cols_kwargs, width=140)
+        balance[] = current_total(s)
+
+        # Define update function based on show_progress mode
+        update_stats = if show_progress === :full
+            () -> begin
+                trades[] = trades_count(s)
+                balance[] = current_total(s)
+            end
+        else
+            () -> nothing
+        end
+
+        @withpbar! pbar_items desc=desc begin
+            for item in pbar_items
+                run_item(item) === :break && break
+                @pbupdate!
+            end
+        end
+    else
+        for item in items
+            run_item(item) === :break && break
+        end
+    end
+
+    # Log error summary if any errors occurred and fail_fast=false
+    if !fail_fast && error_count[] > 0
+        @warn "sim: backtest completed with $error_count errors on $(length(error_dates)) dates" error_dates
+    end
+    nothing
+end
+
 @doc """Backtest a strategy `strat` using context `ctx` iterating according to the specified timeframe.
 
 $(TYPEDSIGNATURES)
@@ -34,17 +137,14 @@ positions, and executing the strategy's `call!` function at each step.
 - `doreset::Bool`: If true, reset the strategy before starting.
 - `resetctx::Bool`: If true, reset the context to start after warmup period.
 - `show_progress::Symbol`: Progress bar mode - `:off`, `:minimal`, or `:full`.
-- `fail_fast::Bool`: If true, stop on first error; if false, continue and collect errors.
+- `fail_fast::Bool`: If true, stop on first error; if false, continue and collect errors (aborting after 10 consecutive errors to prevent infinite error loops).
 
 """
 function start!(
     s::Strategy{Sim}, ctx::Context; trim_universe=false, doreset=true, resetctx=true, show_progress=:off, fail_fast=true
 )
     # Check for empty universe early
-    if isempty(s.universe)
-        @warn "SimMode: empty universe, nothing to backtest"
-        return s
-    end
+    _sim_start!(s, doreset) || return s
     # ensure that universe data start at the same time
     @ifdebug _resetglobals!(s)
     if trim_universe
@@ -55,139 +155,36 @@ function start!(
     if resetctx
         tt.current!(ctx.range, ctx.range.start + call!(s, WarmupPeriod()))
     end
-    if doreset
-        st.reset!(s)
-    end
     update_mode = s.attrs[:sim_update_mode]::ExecAction
-    logger = if s[:sim_debug]
-        current_logger()
-    else
-        MinLevelLogger(current_logger(), s[:log_level])
-    end
-    
-    with_logger(logger) do
-        # Track errors when fail_fast=false
-        error_count = Ref{Int}(0)
-        error_dates = DateTime[]
-        
-        if show_progress !== :off
-            # Create custom columns for the progress bar
-            mycols = [DescriptionColumn, CompletedColumn, SeparatorColumn, ProgressColumn]
-            trades = Ref{Int}()
-            balance = Ref{DFT}()
-            cols_kwargs = Dict()
-            
-            # Add stats columns if show_progress is :full
-            if show_progress === :full
-                push!(mycols, StatsColumn)
-                cols_kwargs[:StatsColumn] = Dict(:style=>"blue bold", :trades=>trades, :balance=>balance)
-            end
-            
-            wp = call!(s, WarmupPeriod())
-            wp_steps = trunc(Int, wp / ctx.range.step)
-            trimmed_start = min(ctx.range.stop, ctx.range.start + wp_steps * ctx.range.step)
-            trimmed_range = trimmed_start:ctx.range.step:ctx.range.stop
-            pbar!(; columns=mycols, columns_kwargs=cols_kwargs, width=140)
-            balance[] = current_total(s)
 
-            # Define update function based on show_progress mode
-            update_stats = if show_progress === :full
-                () -> begin
-                    trades[] = trades_count(s)
-                    balance[] = current_total(s)
-                end
-            else
-                () -> nothing
-            end
+    with_logger(_sim_logger(s)) do
+        # Warmup-trimmed range, iterated by the progress bar when show_progress is on
+        wp = call!(s, WarmupPeriod())
+        wp_steps = trunc(Int, wp / ctx.range.step)
+        trimmed_start = min(ctx.range.stop, ctx.range.start + wp_steps * ctx.range.step)
+        trimmed_range = trimmed_start:ctx.range.step:ctx.range.stop
 
-            @withpbar! trimmed_range desc="Backtesting" begin
-                # Iterate over the trimmed_range to respect warmup trimming when showing progress
-                consecutive_errors = 0
-                for date in trimmed_range
-                    try
-                        isoutof_orders(s) && begin
-                            @deassert all(iszero(ai) for ai in universe(s))
-                            break
-                        end
-                        # Check OHLCV data exists for this date before calling strategy
-                        has_data = true
-                        for ai in universe(s)
-                            o = ohlcv(ai)
-                            # Check if date falls within the OHLCV data range
-                            if date < o.timestamp[begin] || date > o.timestamp[end]
-                                has_data = false
-                                break
-                            end
-                        end
-                        if !has_data
-                            @debug "sim: skipping $date - no OHLCV data available"
-                            consecutive_errors = 0
-                            @pbupdate!
-                            continue
-                        end
-                        update!(s, date, update_mode)
-                        call!(s, date, ctx)
-                        update_stats()
-                        @debug "sim: iter" s.cash ltxzero(s.cash) isempty(s.holdings) orderscount(s)
-                        consecutive_errors = 0
-                    catch e
-                        e isa InterruptException && rethrow(e)
-                        @error "sim: error at $date" exception=(e, catch_backtrace())
-                        error_count[] += 1
-                        push!(error_dates, date)
-                        consecutive_errors += 1
-                        # fail_fast after 10 consecutive errors to prevent infinite error loops
-                        if fail_fast || consecutive_errors >= 10
-                            rethrow(e)
-                        end
-                    end
-                    @pbupdate!
+        step = function (date)
+            # Check OHLCV data exists for this date before calling strategy
+            has_data = true
+            for ai in universe(s)
+                o = ohlcv(ai)
+                # Check if date falls within the OHLCV data range
+                if date < o.timestamp[begin] || date > o.timestamp[end]
+                    has_data = false
+                    break
                 end
             end
-        else
-            consecutive_errors = 0
-            for date in ctx.range
-                try
-                    isoutof_orders(s) && begin
-                            @deassert all(iszero(ai) for ai in universe(s))
-                        break
-                    end
-                    # Check OHLCV data exists for this date before calling strategy
-                    has_data = true
-                    for ai in universe(s)
-                        o = ohlcv(ai)
-                        if date < o.timestamp[begin] || date > o.timestamp[end]
-                            has_data = false
-                            break
-                        end
-                    end
-                    if !has_data
-                        @debug "sim: skipping $date - no OHLCV data available"
-                        consecutive_errors = 0
-                        continue
-                    end
-                    update!(s, date, update_mode)
-                    call!(s, date, ctx)
-                    @debug "sim: iter" s.cash ltxzero(s.cash) isempty(s.holdings) orderscount(s)
-                    consecutive_errors = 0
-                catch e
-                    e isa InterruptException && rethrow(e)
-                    @error "sim: error at $date" exception=(e, catch_backtrace())
-                    error_count[] += 1
-                    push!(error_dates, date)
-                    consecutive_errors += 1
-                    # fail_fast after 10 consecutive errors to prevent infinite error loops
-                    if fail_fast || consecutive_errors >= 10
-                        rethrow(e)
-                    end
-                end
+            if !has_data
+                @debug "sim: skipping $date - no OHLCV data available"
+                return :skip
             end
+            update!(s, date, update_mode)
+            call!(s, date, ctx)
+            @debug "sim: iter" s.cash ltxzero(s.cash) isempty(s.holdings) orderscount(s)
+            nothing
         end
-        
-        # Log error summary if any errors occurred and fail_fast=false
-        if !fail_fast && error_count[] > 0
-            @warn "sim: backtest completed with $error_count errors on $(length(error_dates)) dates" error_dates
-        end
+        _sim_loop!(s, ctx.range; pbar_items=trimmed_range, step, dateof=identity, show_progress, fail_fast, desc="Backtesting")
     end
     s
 end
@@ -247,19 +244,13 @@ There is no `trim_universe`/`resetctx` — tick data has no OHLCV alignment to t
 - `ctx::TickContext`: The context containing the tick range.
 - `doreset::Bool`: If true, reset the strategy before starting.
 - `show_progress::Symbol`: Progress bar mode - `:off`, `:minimal`, or `:full`.
-- `fail_fast::Bool`: If true, stop on first error; if false, continue and collect errors.
+- `fail_fast::Bool`: If true, stop on first error; if false, continue and collect errors (aborting after 10 consecutive errors to prevent infinite error loops).
 """
 function start!(
     s::Strategy{Sim}, ctx::TickContext; doreset=true, show_progress=:off, fail_fast=true
 )
     # Check for empty universe early
-    if isempty(s.universe)
-        @warn "SimMode: empty universe, nothing to backtest"
-        return s
-    end
-    if doreset
-        st.reset!(s)
-    end
+    _sim_start!(s, doreset) || return s
     ts = [t.timestamp for t in ctx.trades]
     if isempty(ts)
         @warn "SimMode: no ticks to backtest"
@@ -268,85 +259,17 @@ function start!(
     n_warmup = searchsortedfirst(ts, ts[begin] + call!(s, WarmupPeriod())) - 1
     trades = ctx.trades[n_warmup + 1:end]
     s.attrs[:sim_tick_mode] = true
-    logger = if s[:sim_debug]
-        current_logger()
-    else
-        MinLevelLogger(current_logger(), s[:log_level])
-    end
 
     try
-        with_logger(logger) do
-            # Track errors when fail_fast=false
-            error_count = Ref{Int}(0)
-            error_dates = DateTime[]
-
-            if show_progress !== :off
-                # Create custom columns for the progress bar
-                mycols = [DescriptionColumn, CompletedColumn, SeparatorColumn, ProgressColumn]
-                trades_n = Ref{Int}()
-                balance = Ref{DFT}()
-                cols_kwargs = Dict()
-
-                # Add stats columns if show_progress is :full
-                if show_progress === :full
-                    push!(mycols, StatsColumn)
-                    cols_kwargs[:StatsColumn] = Dict(:style=>"blue bold", :trades=>trades_n, :balance=>balance)
-                end
-
-                pbar!(; columns=mycols, columns_kwargs=cols_kwargs, width=140)
-                balance[] = current_total(s)
-
-                # Define update function based on show_progress mode
-                update_stats = if show_progress === :full
-                    () -> begin
-                        trades_n[] = trades_count(s)
-                        balance[] = current_total(s)
-                    end
-                else
-                    () -> nothing
-                end
-
-                @withpbar! trades desc="Backtesting" begin
-                    for tick in trades
-                        try
-                            isoutof_orders(s) && break
-                            update!(s, tick, UpdateOrdersTick())
-                            s.attrs[:sim_current_tick] = tick
-                            ping!(s, ctx, tick)
-                            update_stats()
-                            @debug "sim: tick" tick.timestamp raw(tick.asset) tick.price
-                        catch e
-                            e isa InterruptException && rethrow(e)
-                            @error "sim: error at $(tick.timestamp)" exception=(e, catch_backtrace())
-                            error_count[] += 1
-                            push!(error_dates, tick.timestamp)
-                            fail_fast && rethrow(e)
-                        end
-                        @pbupdate!
-                    end
-                end
-            else
-                for tick in trades
-                    try
-                        isoutof_orders(s) && break
-                        update!(s, tick, UpdateOrdersTick())
-                        s.attrs[:sim_current_tick] = tick
-                        ping!(s, ctx, tick)
-                        @debug "sim: tick" tick.timestamp raw(tick.asset) tick.price
-                    catch e
-                        e isa InterruptException && rethrow(e)
-                        @error "sim: error at $(tick.timestamp)" exception=(e, catch_backtrace())
-                        error_count[] += 1
-                        push!(error_dates, tick.timestamp)
-                        fail_fast && rethrow(e)
-                    end
-                end
+        with_logger(_sim_logger(s)) do
+            step = function (tick)
+                update!(s, tick, UpdateOrdersTick())
+                s.attrs[:sim_current_tick] = tick
+                ping!(s, ctx, tick)
+                @debug "sim: tick" tick.timestamp raw(tick.asset) tick.price
+                nothing
             end
-
-            # Log error summary if any errors occurred and fail_fast=false
-            if !fail_fast && error_count[] > 0
-                @warn "sim: backtest completed with $(error_count[]) errors on $(length(error_dates)) dates" error_dates
-            end
+            _sim_loop!(s, trades; step, dateof=t -> t.timestamp, show_progress, fail_fast, desc="Backtesting")
         end
     finally
         # Never leak tick-mode flags, even on exception
