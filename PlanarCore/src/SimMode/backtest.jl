@@ -39,9 +39,15 @@ _sim_logger(s::Strategy{Sim}) =
 # scaffolding, error accounting (`error_count`/`error_dates`), the out-of-orders
 # early break and the `fail_fast`/consecutive-error rethrow policy.
 # `step(item)` performs the per-iteration work, returning `:skip` to mark the
-# item as skipped without error accounting; `dateof(item)` yields the timestamp
-# used in error reporting. `pbar_items` is the collection iterated when
-# `show_progress !== :off` — the OHLCV loop trims the warmup range for the bar.
+# item as skipped without stats/error accounting; `dateof(item)` yields the
+# timestamp used in error reporting. `pbar_items` is the collection iterated
+# when `show_progress !== :off` — the OHLCV loop trims the warmup range for the
+# bar.
+#
+# Hot-loop note: the per-item body is kept INLINE in both loops (never routed
+# through a capturing closure) so the compiler specializes on the concrete
+# `step` closure type and `update_mode`/`call!`/`ping!` signatures; error
+# accounting state lives in `Ref`s, not boxed locals.
 function _sim_loop!(
     s::Strategy{Sim}, items;
     step, dateof, show_progress::Symbol, fail_fast::Bool, desc::String, pbar_items=items,
@@ -49,33 +55,7 @@ function _sim_loop!(
     # Track errors when fail_fast=false
     error_count = Ref{Int}(0)
     error_dates = DateTime[]
-    consecutive_errors = 0
-    update_stats = () -> nothing
-
-    # Run one item under the shared error policy; returns `:break` when the loop
-    # must stop (out-of-orders), `:ok` otherwise, and rethrows on fatal errors.
-    run_item = function (item)
-        isoutof_orders(s) && begin
-            @deassert all(iszero(ai) for ai in universe(s))
-            return :break
-        end
-        try
-            step(item) === :skip || update_stats()
-            consecutive_errors = 0
-            return :ok
-        catch e
-            e isa InterruptException && rethrow(e)
-            @error "sim: error at $(dateof(item))" exception=(e, catch_backtrace())
-            error_count[] += 1
-            push!(error_dates, dateof(item))
-            consecutive_errors += 1
-            # fail_fast after 10 consecutive errors to prevent infinite error loops
-            if fail_fast || consecutive_errors >= 10
-                rethrow(e)
-            end
-            return :ok
-        end
-    end
+    consecutive_errors = Ref{Int}(0)
 
     if show_progress !== :off
         # Create custom columns for the progress bar
@@ -93,25 +73,55 @@ function _sim_loop!(
         pbar!(; columns=mycols, columns_kwargs=cols_kwargs, width=140)
         balance[] = current_total(s)
 
-        # Define update function based on show_progress mode
-        update_stats = if show_progress === :full
-            () -> begin
-                trades[] = trades_count(s)
-                balance[] = current_total(s)
-            end
-        else
-            () -> nothing
-        end
-
         @withpbar! pbar_items desc=desc begin
             for item in pbar_items
-                run_item(item) === :break && break
+                isoutof_orders(s) && begin
+                    @deassert all(iszero(ai) for ai in universe(s))
+                    break
+                end
+                try
+                    if step(item) !== :skip
+                        # Refresh the pbar stats columns after each real step
+                        if show_progress === :full
+                            trades[] = trades_count(s)
+                            balance[] = current_total(s)
+                        end
+                    end
+                    consecutive_errors[] = 0
+                catch e
+                    e isa InterruptException && rethrow(e)
+                    @error "sim: error at $(dateof(item))" exception=(e, catch_backtrace())
+                    error_count[] += 1
+                    push!(error_dates, dateof(item))
+                    consecutive_errors[] += 1
+                    # fail_fast after 10 consecutive errors to prevent infinite error loops
+                    if fail_fast || consecutive_errors[] >= 10
+                        rethrow(e)
+                    end
+                end
                 @pbupdate!
             end
         end
     else
         for item in items
-            run_item(item) === :break && break
+            isoutof_orders(s) && begin
+                @deassert all(iszero(ai) for ai in universe(s))
+                break
+            end
+            try
+                step(item)
+                consecutive_errors[] = 0
+            catch e
+                e isa InterruptException && rethrow(e)
+                @error "sim: error at $(dateof(item))" exception=(e, catch_backtrace())
+                error_count[] += 1
+                push!(error_dates, dateof(item))
+                consecutive_errors[] += 1
+                # fail_fast after 10 consecutive errors to prevent infinite error loops
+                if fail_fast || consecutive_errors[] >= 10
+                    rethrow(e)
+                end
+            end
         end
     end
 
@@ -184,7 +194,15 @@ function start!(
             @debug "sim: iter" s.cash ltxzero(s.cash) isempty(s.holdings) orderscount(s)
             nothing
         end
-        _sim_loop!(s, ctx.range; pbar_items=trimmed_range, step, dateof=identity, show_progress, fail_fast, desc="Backtesting")
+        # Materialize to a typed Vector{DateTime}: `DateRange` iteration is
+        # type-unstable (fields are `Union{Nothing,...}`), so iterating it in the
+        # hot loop would box every item as `Any`. Exclusive-stop semantics are
+        # preserved (see `DateRange.iterate`).
+        items = DateTime[d for d in ctx.range]
+        _sim_loop!(
+            s, items;
+            pbar_items=trimmed_range, step, dateof=identity, show_progress, fail_fast, desc="Backtesting",
+        )
     end
     s
 end
