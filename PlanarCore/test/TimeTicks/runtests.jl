@@ -136,6 +136,25 @@ end
     @test sim.start == dr.start
     @test sim.stop == dr.stop
     @test sim.step == dr.step
+
+    # collect/comprehension must yield exactly what manual iteration yields —
+    # no undef tail slots. `length(dr)` counts from `start` (inclusive of stop)
+    # while `iterate` starts at the mutable `current_date` (exclusive of stop),
+    # so collections must not preallocate from `length`. (Iteration advances
+    # `current_date`, so each form gets its own fresh range.)
+    mk4() = (
+        dr = DateRange(start_dt, stop_dt + _Dates.Day(100), _Dates.Day(1));
+        current!(dr, dr.start + _Dates.Day(7));
+        dr
+    )
+    manual4 = DateTime[]
+    for d in mk4()
+        push!(manual4, d)
+    end
+    @test DateTime[d for d in mk4()] == manual4
+    @test collect(DateTime, mk4()) == manual4
+    @test issorted(manual4)
+    @test !isempty(manual4) && manual4[1] == start_dt + _Dates.Day(7)
 end
 
 # ──────────────────────────────────────────────
