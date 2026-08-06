@@ -44,13 +44,14 @@ _sim_logger(s::Strategy{Sim}) =
 # when `show_progress !== :off` — the OHLCV loop trims the warmup range for the
 # bar.
 #
-# Hot-loop note: the per-item body is kept INLINE in both loops (never routed
-# through a capturing closure) so the compiler specializes on the concrete
-# `step` closure type and `update_mode`/`call!`/`ping!` signatures; error
-# accounting state lives in `Ref`s, not boxed locals.
+# Hot-loop note: `step` and `dateof` are POSITIONAL args (never kwargs) —
+# Julia specializes only on positional arguments, so the concrete closure type
+# lands in the method signature and `step(item)` compiles to a static call.
+# The per-item body is kept INLINE in both loops (never routed through a
+# capturing closure); error accounting state lives in `Ref`s, not boxed locals.
 function _sim_loop!(
-    s::Strategy{Sim}, items;
-    step, dateof, show_progress::Symbol, fail_fast::Bool, desc::String, pbar_items=items,
+    s::Strategy{Sim}, items, step, dateof;
+    show_progress::Symbol, fail_fast::Bool, desc::String, pbar_items=items,
 )
     # Track errors when fail_fast=false
     error_count = Ref{Int}(0)
@@ -200,8 +201,8 @@ function start!(
         # preserved (see `DateRange.iterate`).
         items = DateTime[d for d in ctx.range]
         _sim_loop!(
-            s, items;
-            pbar_items=trimmed_range, step, dateof=identity, show_progress, fail_fast, desc="Backtesting",
+            s, items, step, identity;
+            pbar_items=trimmed_range, show_progress, fail_fast, desc="Backtesting",
         )
     end
     s
@@ -287,7 +288,7 @@ function start!(
                 @debug "sim: tick" tick.timestamp raw(tick.asset) tick.price
                 nothing
             end
-            _sim_loop!(s, trades; step, dateof=t -> t.timestamp, show_progress, fail_fast, desc="Backtesting")
+            _sim_loop!(s, trades, step, t -> t.timestamp; show_progress, fail_fast, desc="Backtesting")
         end
     finally
         # Never leak tick-mode flags, even on exception
