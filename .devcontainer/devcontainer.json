@@ -1,0 +1,36 @@
+{
+  "name": "Planar.jl Development",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "root",
+  "mounts": [
+    "source=planar-julia-depot,target=/opt/julia-depot,type=volume"
+  ],
+  "containerEnv": {
+    "JULIA_DEPOT_PATH": "/opt/julia-depot"
+  },
+  "postCreateCommand": "direnv allow . && printf '\\n# direnv\\neval \"$(direnv hook bash)\"\\n' >> ~/.bashrc && julia --project=Planar -e 'import Pkg; Pkg.instantiate()'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "julialang.language-julia",
+        "ms-python.python",
+        "tamasfe.even-better-toml"
+      ],
+      "settings": {
+        "julia.executablePath": "/usr/local/julia/bin/julia",
+        "files.watcherExclude": {
+          "**/.CondaPkg/**": true,
+          "**/user/.conda/**": true,
+          "**/ccxt-gateway/.venv/**": true
+        },
+        "search.exclude": {
+          "**/user/.conda/**": true,
+          "**/Planar.so": true
+        }
+      }
+    }
+  }
+}
