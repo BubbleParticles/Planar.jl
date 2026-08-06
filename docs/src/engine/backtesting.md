@@ -54,6 +54,70 @@ Here's a more detailed example showing a complete [backtesting](../guides/execut
 
 ### Walk-Forward Analysis
 
+## Tick-by-Tick Backtesting
+
+In addition to the candle-based [backtest](../guides/execution-modes.md#simulation-mode) described above, `SimMode` can replay the market's actual trade stream, trade by trade. Instead of iterating over candles and calling `call!` once per timestep, the backtest iterates over **every market trade** in global chronological order and calls `ping!` for each one.
+
+!!! note "Not an order-book simulation"
+    Tick backtesting replays public trade prints. It does not reconstruct the order book — there is no bid/ask spread, no queue position, and no liquidity modeling.
+
+### Tick Data
+
+Each asset's tick stream is a `DataFrame` with three columns:
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `:timestamp` | `DateTime` | Trade time, millisecond precision |
+| `:price` | `DFT` | Trade price |
+| `:amount` | `DFT` | Traded quantity |
+
+`Planar.Fetch.fetch_trades` returns exactly this schema (paginating the exchange's `fetchTrades` through the ccxt gateway, sorted oldest-first and de-duplicated on exact `(timestamp, price, amount)` triples), and `Planar.Instances.setticks!` stores a tick `DataFrame` on an `AssetInstance`:
+
+```julia
+using Planar
+
+df = Planar.Fetch.fetch_trades(exc, "BTC/USDT"; since=1_700_000_000_000, limit=1000, pages=10)
+Planar.Instances.setticks!(ai, df)
+```
+
+Every asset in the strategy's universe must have tick data, ordered by timestamp, before a tick backtest can run.
+
+### Running a Tick Backtest
+
+The strategy implements `ping!` instead of `call!`:
+
+```julia
+function ping!(s::Strategy{Sim}, ctx::TickContext, tick::TradeTick)
+    # React to the current market trade. Place orders with the normal order
+    # creation calls, using `tick.timestamp` as the order date.
+    nothing
+end
+```
+
+`TradeTickRange(s)` merges every universe asset's tick stream into a single globally time-ordered sequence of `TradeTick` — `timestamp`, `asset`, `price`, `amount`; there is no `side` field, fills depend only on the price. The merge is a stable sort, so ticks within the same millisecond keep universe order deterministically. Constructing the range throws an `ArgumentError` if any universe asset has no tick data.
+
+```julia
+ctx = TickContext(Sim(), TradeTickRange(s))
+start!(s, ctx)
+# or, equivalently:
+start!(s, TradeTickRange(s))
+```
+
+Per tick, the backtester:
+
+1. Fills any crossed limit orders (`UpdateOrdersTick`): a buy limit fills when `tick.price <= order price`, a sell limit when `tick.price >= order price`. Non-triggered FOK/IOC orders are canceled; other orders stay queued. Fills execute at the exact tick price with no slippage and `actual_amount=unfilled(o)`, so limit orders can fill partially across successive ticks.
+2. Calls `ping!(s, ctx, tick)`. Market orders placed inside `ping!` fill immediately at the current tick price with no slippage; limit orders queue and fill on later ticks when crossed.
+
+`start!` accepts the same keyword arguments as the candle backtest: `doreset`, `show_progress` (`:off`, `:minimal`, or `:full`), and `fail_fast` (on `false`, errors are collected and logged, aborting after 10 consecutive errors to prevent infinite error loops).
+
+### Differences from Candle Backtesting
+
+- **Warmup**: ticks before `first_ts + WarmupPeriod()` are skipped. `WarmupPeriod()` defaults to the strategy's timeframe period (`call!(s, ::WarmupPeriod)`).
+- **Same-millisecond ticks are valid**: `UpdateOrdersTick` performs no date-change check, so multiple trades within one millisecond are all processed.
+- **No liquidation pass**: Sim has no price-based liquidation (`isliquidatable` is `Paper`/`Live` only), so no `positions!` runs per tick.
+- **Per-asset order checks**: only the current tick's asset has its pending orders checked, since its tick price is the only price that moved.
+- **No `trim_universe`/`resetctx`**: tick data has no OHLCV alignment to trim, and `TradeTickRange` is immutable.
+
 # Orders
 
 To place a limit order within your strategy, you call `call!` just like any call to the executor. Here are the arguments:

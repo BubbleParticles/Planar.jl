@@ -19,19 +19,19 @@ Tick-by-tick backtesting may not be ideal due to several factors:
 - **Computational Costs**: Intensive data and computational requirements may limit backtesting to a short time frame, insufficient for evaluating performance through different market conditions.
 
 ### Implementing HFT Backtesting
-Should you decide to implement HFT backtesting, consider the following two approaches:
+Two approaches are available for HFT-style backtesting:
+
+#### Built-in Tick-Based Backtesting
+`SimMode` ships with a tick-based backtester that replays the market's trade stream trade by trade — no new execution mode is needed. See [Running a Backtest → Tick-by-Tick Backtesting](../engine/backtesting.md#tick-by-tick-backtesting) for the full details. In short:
+
+- Each universe asset needs a tick `DataFrame` with `:timestamp`, `:price`, `:amount` columns (the schema returned by `Planar.Fetch.fetch_trades`), stored with `Planar.Instances.setticks!`.
+- The strategy implements `ping!(s, ctx, tick)` instead of `call!`.
+- The backtest runs with:
+
+```julia
+ctx = TickContext(Sim(), TradeTickRange(s))
+start!(s, ctx)
+```
 
 #### [OHLCV](../guides/data-management.md#ohlcv-data)-Based Approach
 - A simpler method involves using the [OHLCV](../guides/data-management.md#ohlcv-data) model with extremely short-duration candles, such as `1s` candles. The backtester processes time steps, typically using the [strategy](../guides/strategy-development.md)'s base [timeframe](../guides/data-management.md#timeframes). By selecting a `1s` [timeframe](../guides/data-management.md#timeframes) and supplying the corresponding candles, you can achieve the desired time resolution for your [backtest](../guides/execution-modes.md#simulation-mode).
-
-#### Tick-Based Approach
-- A more complex method requires developing a new execution mode, which could be named `TickSimMode`. This involves adapting the `[backtest](../guides/execution-modes.md#simulation-mode)!` function to handle tick data. While order creation logic may remain largely unchanged, functions like `volumeat(ai, date)` or `openat, closeat`, which currently fetch candle data, need to be modified. These functions should be tailored to compute the trade's actual price and volume from the tick data. This is analogous to customizing functions such as `limitorder_ifprice!` to work with tick data.
-- If you have access to full trades history, then you can reconstruct the orderbook (not implemented), and then the execution logic of `PaperMode` can be repurposed for the tick based backtester because it already operates with orderbook data.
-
-\```example
-/ Example of setting up a 1-second OHLCV [backtest](../guides/execution-modes.md#simulation-mode)
-/ Note: Actual implementation details will vary based on your specific backtesting framework
-SimMode backtester = new SimMode("1s");
-backtester.loadData("path/to/1s_candle_data.csv");
-backtester.run();
-\```
