@@ -4,7 +4,7 @@ using DataFrames
 using LinearAlgebra
 using Statistics
 using StatsBase: mode, countmap
-using FeatureSelection
+using PlanarFeatureSelection
 
 @testset "pairs_trading.jl tests" failfast=true begin
     @testset "pairs_trading_signals function" begin
@@ -19,7 +19,7 @@ using FeatureSelection
         
         # Generate signals
         lookback = 20
-        result = FeatureSelection.pairs_trading_signals((p1, p2), lookback)
+        result = PlanarFeatureSelection.pairs_trading_signals((p1, p2), lookback)
         
         # Test output structure
         @test result isa DataFrame
@@ -41,7 +41,7 @@ using FeatureSelection
         @test all(x -> x in (-1, 0, 1), result.signal[lookback:end])
         
         # Test with custom zscore threshold
-        result_custom = FeatureSelection.pairs_trading_signals((p1, p2), lookback, zscore_threshold=1.0)
+        result_custom = PlanarFeatureSelection.pairs_trading_signals((p1, p2), lookback, zscore_threshold=1.0)
         @test all(x -> x in (-1, 0, 1), result_custom.signal[lookback:end])
         
         # More signals should be generated with lower threshold
@@ -65,7 +65,7 @@ using FeatureSelection
         prices = Dict("A" => p1, "B" => p2, "C" => p3, "D" => p4)
         
         # Find cointegrated pairs
-        cointegrated = FeatureSelection.find_cointegrated_prices(prices, pvalue_threshold=0.05)
+        cointegrated = PlanarFeatureSelection.find_cointegrated_prices(prices, pvalue_threshold=0.05)
         
         # Check output structure
         @test cointegrated isa DataFrame
@@ -142,7 +142,7 @@ using FeatureSelection
         end
         
         # Detect regimes
-        regimes = FeatureSelection.detect_correlation_regime(corr_matrices, window_size, n_regimes=n_regimes)
+        regimes = PlanarFeatureSelection.detect_correlation_regime(corr_matrices, window_size, n_regimes=n_regimes)
         
         # Basic output checks
         @test length(regimes) == n_matrices
