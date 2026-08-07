@@ -28,8 +28,8 @@ ENV JULIA_CONDAPKG_ENV=/planar/user/.conda
 ENV CI=true
 # Instantiate python env since CondaPkg is pulled from master
 ARG CACHE=1
-RUN $JULIA_CMD --project=/planar/Python -e "import Pkg; Pkg.instantiate()"
-# Skip `using Python` here - conda env will be fully set up during full precompilation
+RUN $JULIA_CMD --project=/planar/PlanarPython -e "import Pkg; Pkg.instantiate()"
+# Skip `using PlanarPython` here - conda env will be fully set up during full precompilation
 FROM python AS precomp-base
 ARG CACHE=1
 ENV JULIA_NUM_THREADS=auto
