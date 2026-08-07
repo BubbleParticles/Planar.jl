@@ -295,7 +295,7 @@ version = "0.1.11"
 [[deps.FeatureSelection]]
 deps = ["Clustering", "DataStructures", "Distances", "Distributions", "GLM", "LinearAlgebra", "OnlineStats", "OnlineStatsBase", "OnlineTechnicalIndicators", "PlanarCore", "Statistics", "StatsBase", "TimeFrames"]
 path = ".."
-uuid = "b3c4d5e6-f7a8-9012-bcde-f3a4b5c6d7e8"
+uuid = "799974c5-219d-476a-ada7-be492421c276"
 version = "0.1.0"
 
 [[deps.FilePathsBase]]
@@ -692,7 +692,7 @@ weakdeps = ["REPL"]
 [[deps.PlanarCore]]
 deps = ["CSV", "CodecZlib", "ConcurrentCollections", "DataFrames", "DataFramesMeta", "DataStructures", "Dates", "Distributed", "DocStringExtensions", "FileWatching", "FunctionalCollections", "HTTP", "IterTools", "JSON", "JSON3", "LMDB", "Logging", "LoggingExtras", "MbedTLS", "OnlineStats", "OrderedCollections", "Pkg", "PrecompileTools", "Preferences", "Printf", "Random", "Reexport", "Rocket", "Serialization", "Statistics", "StatsBase", "TOML", "Term", "TimeFrames", "URIs", "WebSockets", "Zarr"]
 path = "../../PlanarCore"
-uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+uuid = "a475c859-e357-4be2-a5e3-43038ab4b158"
 version = "1.0.0"
 
 [[deps.PooledArrays]]

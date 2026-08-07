@@ -7,7 +7,7 @@ authors = ["zbc"]
 DownloadTool = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
 PackageCompiler = "9b87118b-4619-50d2-8e1e-99f35a4d4d9d"
 Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
-PlanarCore = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+PlanarCore = "a475c859-e357-4be2-a5e3-43038ab4b158"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 
 [compat]
