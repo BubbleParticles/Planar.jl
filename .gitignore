@@ -86,3 +86,4 @@ node_modules
 .memory
 .smallcode
 *~
+/PlanarRegistry/
