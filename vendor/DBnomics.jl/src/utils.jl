@@ -174,14 +174,16 @@ end
 
 #-------------------------------------------------------------------------------
 # filter_ok
+# Key order must not matter: Dict iteration order for String keys is
+# hash-randomized per process, so compare sorted key lists.
 function filter_ok(x::Dict)::Bool
     try
         res = false
-        nm1 = [string(key) for key in keys(x)]
+        nm1 = sort([string(key) for key in keys(x)])
         if isa(x[:parameters], Nothing)
             nm2 = nothing
         else
-            nm2 = [string(key) for key in keys(x[:parameters])]
+            nm2 = sort([string(key) for key in keys(x[:parameters])])
         end
         if nm1 == ["code", "parameters"]
             if isa(nm2, Nothing)
@@ -544,7 +546,16 @@ function additional_info_add(x::Dict, cols, maps)
 end
 
 #-------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------
+# _parse_json
+# JSON 1.x parse returns JSON.Object{String, Any} wrappers nested inside plain
+# Vector{Any} arrays; normalize everything to Dict{String, Any}/Vector{Any} so
+# the codebase's ::Dict dispatch and mutation (to_dict, ckeys_string,
+# rename_dict!, ...) keep working.
+_parse_json(s::AbstractString) = _plain_json(JSON.parse(s))
+_plain_json(x::AbstractDict) = Dict{String, Any}(string(k) => _plain_json(v) for (k, v) in pairs(x))
+_plain_json(x::AbstractVector) = Any[_plain_json(v) for v in x]
+_plain_json(x) = x
+
 #-------------------------------------------------------------------------------
 # get_data
 function get_data(
@@ -563,7 +574,7 @@ function get_data(
             # Only readLines
             try
                 response = readurl(x)
-                return JSON.parse(response)
+                return _parse_json(response)
             catch
                 error("BAD REQUEST")
             end
@@ -580,7 +591,7 @@ function get_data(
                 if !response_ok(response)
                     error("The response is not <200 OK>.")
                 end
-                return JSON.parse(String(response.body))
+                return _parse_json(String(response.body))
             catch e
                 rethrow(e)
             end
@@ -984,16 +995,16 @@ end
 
 #-------------------------------------------------------------------------------
 # value_to_float!
+# Non-numeric observation strings (the API encodes missing observations as
+# "NA") map to `missing` instead of crashing float().
+_value_to_float(::Missing) = missing
+_value_to_float(v::AbstractString) = something(tryparse(Float64, v), missing)
+_value_to_float(v) = float(v)
+
 function value_to_float!(x::Dict)::Nothing
     if haskey(x, :value)
-        if !(isa(x, Array{Float64, 1}) || isa(x, Array{Union{Missing, Float64}, 1}))
-            tmpx = pop!(x, :value)
-            if has_missing(tmpx)
-                push!(x, :value => convert(Array{Union{Missing, Float64}, 1}, tmpx))
-            else
-                push!(x, :value => float.(tmpx))
-            end
-        end
+        tmpx = pop!(x, :value)
+        push!(x, :value => _value_to_float.(tmpx))
     end
     nothing
 end
