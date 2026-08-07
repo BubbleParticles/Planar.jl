@@ -1,0 +1,36 @@
+[project]
+name = "planar-trader"
+version = "0.1.0"
+description = "Python driver for the Planar trading framework (Julia engine)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Planar contributors"}
+]
+keywords = ["trading", "backtesting", "crypto", "ccxt", "planar", "julia"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+planar = "planar_trader.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/planar_trader"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -47,6 +47,45 @@ docker pull docker.io/bubbleparticles/planar-sysimage
 scripts/build.sh
 ```
 
+### Method 3: Julia Registry (Recommended for Users)
+
+Planar is distributed through the community `PlanarRegistry`. Install it in any
+Julia environment with two commands:
+
+```julia
+using Pkg
+Pkg.Registry.add(RegistrySpec(url = "https://github.com/BubbleParticles/PlanarRegistry.git"))
+Pkg.add("Planar")
+```
+
+Then use it from your project:
+
+```julia
+using Planar
+```
+
+Note: if you were using Planar before the registry was set up, remove the old
+manual install first (`Pkg.rm("Planar")` in the project where you added it).
+
+### Method 4: pip (planar CLI)
+
+The `planar` command-line driver is distributed on PyPI as `planar-trader`:
+
+```bash
+pip install planar-trader
+```
+
+It bootstraps a project, installs the Julia packages, and runs strategies:
+
+```bash
+planar init mybot          # creates user/planar.toml + user/strategies/
+cd mybot
+planar run MyStrategy --mode sim
+```
+
+See [PACKAGING.md](../../../PACKAGING.md) for details on the Julia registry and
+PyPI publishing workflow.
+
 ## Project Setup
 
 ### 2. Create User Directory
