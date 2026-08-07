@@ -1,7 +1,23 @@
+authors = ["zbc"]
 name = "FeatureSelection"
 uuid = "799974c5-219d-476a-ada7-be492421c276"
 version = "0.1.0"
-authors = ["zbc"]
+license = "Apache-2.0"
+
+[compat]
+Clustering = "0.15.8"
+DataStructures = "0.19.6"
+Distances = "0.10.12"
+Distributions = "0.25.130"
+GLM = "1.9.5"
+OnlineStats = "1.7.4"
+OnlineStatsBase = "1.7.3"
+OnlineTechnicalIndicators = "0.1.2"
+PlanarCore = "1"
+Statistics = "1.11.1"
+StatsBase = "0.34.12"
+TimeFrames = "0.2.0"
+julia = "1.12"
 
 [deps]
 Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
@@ -13,13 +29,10 @@ LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 OnlineStats = "a15396b6-48d5-5d58-9928-6d29437db91e"
 OnlineStatsBase = "925886fa-5bf2-5e8e-b522-a9147a512338"
 OnlineTechnicalIndicators = "dc2d07fb-478f-4566-8417-81bb3e5a7af1"
+PlanarCore = "a475c859-e357-4be2-a5e3-43038ab4b158"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 TimeFrames = "51948d2b-02eb-5b28-9840-c902cc6821c9"
-PlanarCore = "a475c859-e357-4be2-a5e3-43038ab4b158"
 
-[sources]
-PlanarCore = {path = "../PlanarCore"}
-[compat]
-julia = "1.12"
-PlanarCore = "1"
+[sources.PlanarCore]
+path = "../PlanarCore"
