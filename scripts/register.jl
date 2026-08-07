@@ -131,10 +131,16 @@ function register_package!(
     deps_toml[range_key(version)] = Dict{String,Any}(name => string(uuid) for (name, uuid) in deps)
     write_toml!(deps_file, deps_toml)
 
-    # Compat.toml — compat constraints per version range
+    # Compat.toml — compat constraints per version range.
+    # Multi-version specs (e.g. "0.18.22, 0.19.6") must be written as TOML
+    # vectors: the registry reader parses entries with `VersionSpec` which
+    # (unlike project `semver_spec`) does not split on commas.
     compat_file = joinpath(dir, "Compat.toml")
     compat_toml = isfile(compat_file) ? read_toml(compat_file) : Dict{String,Any}()
-    compat_toml[range_key(version)] = Dict{String,Any}(string(k) => string(v) for (k, v) in compat)
+    compat_toml[range_key(version)] = Dict{String,Any}(
+        string(k) => (occursin(',', string(v)) ? [strip(s) for s in split(string(v), ',')] : string(v))
+        for (k, v) in compat
+    )
     write_toml!(compat_file, compat_toml)
 
     return (name, uuid)
