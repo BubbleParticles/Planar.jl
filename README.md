@@ -120,6 +120,37 @@ docker pull docker.io/bubbleparticles/planar-precomp-interactive
 docker pull docker.io/bubbleparticles/planar-precomp
 ```
 
+### From the Julia registry (recommended)
+
+Planar is distributed through the community `PlanarRegistry`. Requires Julia
+1.9+. In any Julia environment:
+
+```julia
+using Pkg
+Pkg.Registry.add(RegistrySpec(url = "https://github.com/BubbleParticles/PlanarRegistry.git"))
+Pkg.add("Planar")
+```
+
+Then `using Planar`. (If you installed Planar manually before the registry
+existed, remove the old copy first: `Pkg.rm("Planar")`.)
+
+### Via pip (planar CLI)
+
+The `planar` command-line driver is on PyPI as `planar-trader`:
+
+```bash
+pip install planar-trader
+planar init mybot
+cd mybot
+planar run MyStrategy --mode sim
+```
+
+It sets up the Julia project (registry + `Pkg.add("Planar")`), creates
+`user/planar.toml` and `user/strategies/`, and runs strategies in sim, paper,
+or live mode.
+
+See [`PACKAGING.md`](PACKAGING.md) for the full packaging/registration story.
+
 ### From sources
 Planar.jl requires at least Julia 1.9. Is not in the julia registry, to install it do the following:
 

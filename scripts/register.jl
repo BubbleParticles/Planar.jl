@@ -60,8 +60,11 @@ function tree_sha(ref::String, subdir::String)
     return sha
 end
 
-@doc "Read a TOML file as a plain Dict."
-read_toml(path::String) = TOML.parsefile(path)
+@doc "Read a TOML file as a plain Dict (empty when missing)."
+function read_toml(path::String)
+    isfile(path) || return Dict{String,Any}()
+    return TOML.parsefile(path)
+end
 
 @doc "Merge `new` into `old` (nested dicts merged recursively, scalars overwritten)."
 function merge_toml!(old::Dict{String,Any}, new::Dict{String,Any})
