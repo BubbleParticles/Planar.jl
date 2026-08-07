@@ -6,7 +6,7 @@ focus on the these packages (1 group per TODO item)
 - Ccxt, ExchangeTypes, Exchanges, Fetch, Watchers, Cli
 - Data, Processing, Strategies, Metrics, Pbar, Stubs
 - Opt, Plotting, Remote, Engine, Planar, PlanarDev, PlanarOptim
-- PlanarPython, StrategyTools, StrategyStats, PlanarFeatureSelection, DownloadTool
+- PlanarPython, PlanarStrategyTools, PlanarStrategyStats, PlanarFeatureSelection, PlanarDownloadTool
 Audit each one. Spawn on subagent per package (but only 1 group at a time). Spot and fix all bugs you encounter starting from the most critical ones. The most important bugs are the ones that would make the runtime (julia crash) or  
 the strategy error out of its running loops (throw exceptions or other things). Make sure all      
 spawned tasks (async operations) are properly logged (no silent crashes or bugs). No cheating, no 

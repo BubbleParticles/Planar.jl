@@ -1,21 +1,21 @@
 using Test
 
-# DBnomics test requires the DownloadTool project environment
+# DBnomics test requires the PlanarDownloadTool project environment
 const HAS_SCRAPERS = let
     try
         include("env_scraper.jl")
         true
     catch e
-        @warn "Skipping DBnomics tests: DownloadTool project not available ($e)"
+        @warn "Skipping DBnomics tests: PlanarDownloadTool project not available ($e)"
         false
     end
 end
 
 # DBnomics.jl vendor package may not be available
-# DBnomics vendored in DownloadTool
+# DBnomics vendored in PlanarDownloadTool
 const HAS_DBNOMICS = let
     try
-        db_path = joinpath(@__DIR__, "..", "..", "DownloadTool", "vendor", "DBnomics.jl")
+        db_path = joinpath(@__DIR__, "..", "..", "PlanarDownloadTool", "vendor", "DBnomics.jl")
         if isdir(db_path)
             pushfirst!(LOAD_PATH, db_path)
         end
@@ -33,7 +33,7 @@ end
 
 function test_dbnomics()
     if !HAS_SCRAPERS
-        @warn "Skipping DBnomics tests: DownloadTool environment not available"
+        @warn "Skipping DBnomics tests: PlanarDownloadTool environment not available"
         return
     end
 

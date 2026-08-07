@@ -49,10 +49,10 @@ Performance metrics and analysis.
 ### [Optimization](optimization.md)
 Parameter optimization and hyperparameter tuning.
 
-### [Strategy Tools](../API/strategytools.md)
+### [PlanarStrategyTools](../API/strategytools.md)
 Utilities for [strategy](../guides/strategy-development.md) development.
 
-### [Strategy Statistics](../API/strategystats.md)
+### [PlanarStrategyStats](../API/strategystats.md)
 Statistical analysis of [strategy](../guides/strategy-development.md) performance.
 
 ## Visualization & UI

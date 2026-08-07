@@ -2,12 +2,12 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "6f19ddd4798ad0e18e5337476efa9319d093c5a2"
+project_hash = "5da247914cbccab6c942e600f2ec3235c8b39ff7"
 
 [[deps.ADTypes]]
-git-tree-sha1 = "0a81a018463de6c3f4f2c9360121c562e5add9e4"
+git-tree-sha1 = "9b38b82a9fe131f3d331a53b7203d9d1a2a4602c"
 uuid = "47edcb42-4c32-4615-8424-f2b9edc5f35b"
-version = "1.22.3"
+version = "1.22.4"
 
     [deps.ADTypes.extensions]
     ADTypesChainRulesCoreExt = "ChainRulesCore"
@@ -188,10 +188,13 @@ version = "0.1.10"
 
 [[deps.BlackBoxOptim]]
 deps = ["Compat", "Distributed", "Distributions", "LinearAlgebra", "Printf", "Random", "Statistics", "StatsAPI", "StatsBase"]
-git-tree-sha1 = "c7f5639edcb2965a7937674a6c93785b4b5793ac"
+git-tree-sha1 = "4f2a1e153aaf86982be76754aa7c01fea4073e25"
 uuid = "a134a8b2-14d6-55f6-9291-3336d3ab0209"
-version = "0.6.10"
-weakdeps = ["HTTP", "Sockets"]
+version = "0.6.11"
+weakdeps = ["HTTP", "JSON", "Sockets"]
+
+    [deps.BlackBoxOptim.extensions]
+    BlackBoxOptimRealtimePlotServerExt = ["HTTP", "JSON", "Sockets"]
 
 [[deps.Blosc]]
 deps = ["Blosc_jll"]
@@ -346,9 +349,9 @@ uuid = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 version = "1.0.2"
 
 [[deps.CommonSolve]]
-git-tree-sha1 = "f54afab101687a7049833d07636418a83e9a250b"
+git-tree-sha1 = "cf963add2340ad9960e5eb22844e61ad8f931fe1"
 uuid = "38540f10-b2f7-11e9-35d8-d573e4eb0ff2"
-version = "0.2.12"
+version = "0.2.13"
 
 [[deps.CommonSubexpressions]]
 deps = ["MacroTools"]
@@ -409,9 +412,9 @@ version = "0.1.1"
 
 [[deps.ConcurrentUtilities]]
 deps = ["Serialization", "Sockets"]
-git-tree-sha1 = "21d088c496ea22914fe80906eb5bce65755e5ec8"
+git-tree-sha1 = "3c9be947934c38475bafe822c6d61aaed17f0738"
 uuid = "f0e56b4a-5159-44fe-b623-3e5288b988bb"
-version = "2.5.1"
+version = "2.6.0"
 
 [[deps.Configurations]]
 deps = ["ExproniconLite", "OrderedCollections", "TOML"]
@@ -607,15 +610,6 @@ weakdeps = ["Makie", "Random"]
     DomainSetsMakieExt = "Makie"
     DomainSetsRandomExt = "Random"
 
-[[deps.DownloadTool]]
-deps = ["CSV", "CodecZlib", "Comonicon", "EzXML", "HTTP", "PlanarCore", "URIs", "ZipFile"]
-path = "../DownloadTool"
-uuid = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
-version = "0.1.0"
-
-    [deps.DownloadTool.weakdeps]
-    DBnomics = "3114853a-1e9b-44f2-8156-91b1682c6b69"
-
 [[deps.Downloads]]
 deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
@@ -757,9 +751,9 @@ weakdeps = ["PDMats", "SparseArrays", "StaticArrays", "Statistics"]
 
 [[deps.FiniteDiff]]
 deps = ["ArrayInterface", "LinearAlgebra", "Setfield"]
-git-tree-sha1 = "07e98e3f332ee60179813dd9cdf21412e3c0a96a"
+git-tree-sha1 = "0a155bdf6f00bfe7f80adc3e7e5aae19851fbea1"
 uuid = "6a86dc24-6348-571c-b903-95158fe2bd41"
-version = "2.32.0"
+version = "2.32.1"
 
     [deps.FiniteDiff.extensions]
     FiniteDiffBandedMatricesExt = "BandedMatrices"
@@ -837,9 +831,9 @@ version = "1.1.3"
 
 [[deps.FunctionWrappersWrappers]]
 deps = ["FunctionWrappers", "PrecompileTools", "SciMLPublic"]
-git-tree-sha1 = "755903758db86cd86ee10b079fd15d2036e090c3"
+git-tree-sha1 = "daced009d54a7cf502a9b5ed2f615c341f78af6f"
 uuid = "77dc65aa-8811-40c2-897b-53d922fa7daf"
-version = "1.12.0"
+version = "1.12.1"
 
     [deps.FunctionWrappersWrappers.extensions]
     FunctionWrappersWrappersEnzymeExt = ["Enzyme", "EnzymeCore"]
@@ -1153,9 +1147,9 @@ version = "1.8.0"
 
 [[deps.JSON]]
 deps = ["Dates", "Logging", "Parsers", "PrecompileTools", "StructUtils", "UUIDs", "Unicode"]
-git-tree-sha1 = "c89d196f5ffb64bfbf80985b699ea913b0d2c211"
+git-tree-sha1 = "65979512c25a0727f050e6e4be40f0fd9ec893f7"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
-version = "1.6.1"
+version = "1.7.0"
 
     [deps.JSON.extensions]
     JSONArrowExt = ["ArrowTypes"]
@@ -1301,9 +1295,9 @@ version = "0.3.1"
 
 [[deps.LeftChildRightSiblingTrees]]
 deps = ["AbstractTrees"]
-git-tree-sha1 = "95ba48564903b43b2462318aa243ee79d81135ff"
+git-tree-sha1 = "d4816abce26971e3237b46a47b99991f306e4832"
 uuid = "1d6d02ad-be62-4b6b-8a6d-2f90e265016e"
-version = "0.2.1"
+version = "0.3.0"
 
 [[deps.LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
@@ -1549,9 +1543,9 @@ version = "0.6.9"
 
 [[deps.MatrixEquations]]
 deps = ["LinearAlgebra", "LinearMaps"]
-git-tree-sha1 = "1e894d9da44f874321bfd2266ebc2b60c04bc9ea"
+git-tree-sha1 = "e357e9f4cf3b1306ba6119e49e4d94cd57816835"
 uuid = "99c1a7ee-ab34-5fd5-8076-27c950a045f4"
-version = "2.6.2"
+version = "2.6.3"
 
 [[deps.MbedTLS]]
 deps = ["Dates", "MbedTLS_jll", "MozillaCACerts_jll", "NetworkOptions", "Random", "Sockets"]
@@ -1878,9 +1872,9 @@ version = "0.12.3"
 
 [[deps.Parsers]]
 deps = ["Dates", "PrecompileTools", "UUIDs"]
-git-tree-sha1 = "32a4e09c5f29402573d673901778a0e03b0807b9"
+git-tree-sha1 = "3de8f5e6e90ebfa8d6d1f86997d6cdcd6a912ff3"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "2.8.6"
+version = "2.8.7"
 
 [[deps.Pixman_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "LLVMOpenMP_jll", "Libdl"]
@@ -1904,7 +1898,7 @@ uuid = "eebad327-c553-4316-9ea0-9fa01ccd7688"
 version = "0.3.3"
 
 [[deps.Planar]]
-deps = ["DocStringExtensions", "Documenter", "HTTP", "JSON3", "LRUCache", "MacroTools", "Pkg", "PlanarCore", "PrettyTables", "REPL", "Random", "Rocket", "Statistics", "StrategyStats", "Suppressor", "Telegram", "TimeFrames", "URIs"]
+deps = ["DocStringExtensions", "Documenter", "HTTP", "JSON3", "LRUCache", "MacroTools", "Pkg", "PlanarCore", "PlanarStrategyStats", "PrettyTables", "REPL", "Random", "Rocket", "Statistics", "Suppressor", "Telegram", "TimeFrames", "URIs"]
 path = "../Planar"
 uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 version = "1.7.2"
@@ -1915,8 +1909,17 @@ path = "../PlanarCore"
 uuid = "a475c859-e357-4be2-a5e3-43038ab4b158"
 version = "1.0.0"
 
+[[deps.PlanarDownloadTool]]
+deps = ["CSV", "CodecZlib", "Comonicon", "EzXML", "HTTP", "PlanarCore", "URIs", "ZipFile"]
+path = "../PlanarDownloadTool"
+uuid = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
+version = "0.1.0"
+
+    [deps.PlanarDownloadTool.weakdeps]
+    DBnomics = "3114853a-1e9b-44f2-8156-91b1682c6b69"
+
 [[deps.PlanarOptim]]
-deps = ["BlackBoxOptim", "DownloadTool", "Makie", "Optimization", "OptimizationBBO", "OptimizationCMAEvolutionStrategy", "OptimizationEvolutionary", "OptimizationManopt", "OptimizationOptimJL", "Pkg", "Planar", "PlanarCore", "Printf", "REPL", "Random", "Symbolics"]
+deps = ["BlackBoxOptim", "Makie", "Optimization", "OptimizationBBO", "OptimizationCMAEvolutionStrategy", "OptimizationEvolutionary", "OptimizationManopt", "OptimizationOptimJL", "Pkg", "Planar", "PlanarCore", "PlanarDownloadTool", "Printf", "REPL", "Random", "Symbolics"]
 path = "."
 uuid = "01937fd2-c099-442f-ae89-75fa208aad36"
 version = "0.1.0"
@@ -1928,6 +1931,21 @@ version = "0.1.0"
     BayesianOptimization = "4c6ed407-134f-591c-93fa-e0f7c164a0ec"
     ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
     WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
+
+[[deps.PlanarStrategyStats]]
+deps = ["DataFrames", "Logging", "OnlineTechnicalIndicators", "PlanarCore", "Statistics"]
+path = "../PlanarStrategyStats"
+uuid = "d4fe19c2-883d-48d3-92d7-80b36677371b"
+version = "0.1.0"
+
+    [deps.PlanarStrategyStats.extensions]
+    CorrExt = ["CausalityTools", "StatsBase", "StatsModels", "EffectSizes"]
+
+    [deps.PlanarStrategyStats.weakdeps]
+    CausalityTools = "01837fd2-c099-442f-ae89-75fa208aad36"
+    EffectSizes = "e248de7e-9197-5860-972e-353a2af44d75"
+    StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+    StatsModels = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
 
 [[deps.PlotUtils]]
 deps = ["ColorSchemes", "Colors", "Dates", "PrecompileTools", "Printf", "Random", "Reexport", "StableRNGs", "Statistics"]
@@ -1982,9 +2000,9 @@ version = "1.5.2"
 
 [[deps.PrettyTables]]
 deps = ["Crayons", "LaTeXStrings", "Markdown", "PrecompileTools", "Printf", "REPL", "Reexport", "StringManipulation", "Tables"]
-git-tree-sha1 = "807a56f504aa08838a11e9a0727c3d704f90c44b"
+git-tree-sha1 = "ca9385c2f2c93a9491c6c53d31e9c237fe21b232"
 uuid = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
-version = "3.4.4"
+version = "3.4.5"
 
     [deps.PrettyTables.extensions]
     PrettyTablesExcelExt = "XLSX"
@@ -2150,9 +2168,9 @@ version = "0.9.0"
 
 [[deps.Rmath_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "58cdd8fb2201a6267e1db87ff148dd6c1dbd8ad8"
+git-tree-sha1 = "6d40b2fe70437b01397d2a4d5b020008da4e7019"
 uuid = "f50d1b31-88e8-58de-be2c-1cc44531875f"
-version = "0.5.1+0"
+version = "0.5.2+0"
 
 [[deps.Rocket]]
 deps = ["DataStructures", "Sockets", "Unrolled"]
@@ -2193,9 +2211,9 @@ version = "0.2.1"
 
 [[deps.RuntimeGeneratedFunctions]]
 deps = ["ExprTools", "SHA", "Serialization"]
-git-tree-sha1 = "6368773b8b433a5c6d9f8b9427c5fbded65fc8c0"
+git-tree-sha1 = "65c9e1142f0372bfc16ba14b9edd57737fe0039f"
 uuid = "7e49a35a-f44a-4d26-94aa-eba1b4ca6b47"
-version = "0.5.23"
+version = "0.5.24"
 
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
@@ -2265,10 +2283,10 @@ version = "1.10.1"
     Tracy = "e689c965-62c8-4b79-b2c5-8359227902fd"
 
 [[deps.SciMLOperators]]
-deps = ["Accessors", "Adapt", "ArrayInterface", "DocStringExtensions", "LinearAlgebra"]
-git-tree-sha1 = "c92b87cd04563954537c4e832fb894b00f1b407e"
+deps = ["Accessors", "Adapt", "ArrayInterface", "DocStringExtensions", "LinearAlgebra", "SciMLPublic"]
+git-tree-sha1 = "54333a8ba01ff383643b44d5a97a4bc2c07d4d2f"
 uuid = "c0aeaf25-5076-4817-a8d5-81caf7dfa961"
-version = "1.25.2"
+version = "1.26.1"
 
     [deps.SciMLOperators.extensions]
     SciMLOperatorsLoopVectorizationExt = "LoopVectorization"
@@ -2410,9 +2428,9 @@ version = "0.4.27"
 
 [[deps.SpecialFunctions]]
 deps = ["IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
-git-tree-sha1 = "97c8329c5f503d2936fb36719fe25b9f94b1ae8a"
+git-tree-sha1 = "c3ac026e735264e9bdc6a9bcbd1b1e781b36e3bc"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
-version = "2.8.1"
+version = "2.8.3"
 weakdeps = ["ChainRulesCore"]
 
     [deps.SpecialFunctions.extensions]
@@ -2479,21 +2497,6 @@ weakdeps = ["ChainRulesCore", "InverseFunctions"]
     StatsFunsChainRulesCoreExt = "ChainRulesCore"
     StatsFunsInverseFunctionsExt = "InverseFunctions"
 
-[[deps.StrategyStats]]
-deps = ["DataFrames", "Logging", "OnlineTechnicalIndicators", "PlanarCore", "Statistics"]
-path = "../StrategyStats"
-uuid = "d4fe19c2-883d-48d3-92d7-80b36677371b"
-version = "0.1.0"
-
-    [deps.StrategyStats.extensions]
-    CorrExt = ["CausalityTools", "StatsBase", "StatsModels", "EffectSizes"]
-
-    [deps.StrategyStats.weakdeps]
-    CausalityTools = "01837fd2-c099-442f-ae89-75fa208aad36"
-    EffectSizes = "e248de7e-9197-5860-972e-353a2af44d75"
-    StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
-    StatsModels = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
-
 [[deps.StringManipulation]]
 deps = ["PrecompileTools"]
 git-tree-sha1 = "8a90c1d77c3277a5d43b83927b3cbe2c70a37484"
@@ -2529,9 +2532,9 @@ version = "1.11.0"
 
 [[deps.StructUtils]]
 deps = ["Dates", "UUIDs"]
-git-tree-sha1 = "82bee338d650aa515f31866c460cb7e3bcef90b8"
+git-tree-sha1 = "a99e557661bfcee04af1ba688ab6c211b25327f9"
 uuid = "ec057cc2-7a8d-4b58-b3b3-92acb9f63b42"
-version = "2.8.2"
+version = "2.8.3"
 
     [deps.StructUtils.extensions]
     StructUtilsMeasurementsExt = ["Measurements"]
@@ -2564,9 +2567,9 @@ version = "0.2.8"
 
 [[deps.SymbolicIndexingInterface]]
 deps = ["Accessors", "ArrayInterface", "RuntimeGeneratedFunctions", "StaticArraysCore"]
-git-tree-sha1 = "73048fd086b7a169bbd7232bf60bfd43240691eb"
+git-tree-sha1 = "ae6fd46b22508c2dfcd0fabf144ce5e9d9d2e719"
 uuid = "2efcf032-c050-4f8e-a9bb-153293bab1f5"
-version = "0.3.51"
+version = "0.3.53"
 weakdeps = ["PrettyTables"]
 
     [deps.SymbolicIndexingInterface.extensions]
@@ -2676,9 +2679,9 @@ version = "2.0.0"
 
 [[deps.TerminalLoggers]]
 deps = ["LeftChildRightSiblingTrees", "Logging", "Markdown", "Printf", "ProgressLogging", "UUIDs"]
-git-tree-sha1 = "f133fab380933d042f6796eda4e130272ba520ca"
+git-tree-sha1 = "81c9b4137edfe56a56efcdcb35d721b2ce3e2416"
 uuid = "5d786b92-1e48-4d6f-9151-6b4477ca9bed"
-version = "0.1.7"
+version = "0.1.8"
 
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]

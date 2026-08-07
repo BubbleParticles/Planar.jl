@@ -1,8 +1,8 @@
-# StrategyStats
+# PlanarStrategyStats
 Library for common [strategy](../guides/strategy-development.md) signals generation.
 
 ```@autodocs
-Modules = [StrategyStats]
+Modules = [PlanarStrategyStats]
 ```
 
 

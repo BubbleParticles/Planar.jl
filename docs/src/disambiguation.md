@@ -110,7 +110,7 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 **ZarrInstance**
 : Wrapper around Zarr storage providing the data access interface. Global instance available at `Data.zi[]`.
 
-**DownloadTool**
+**PlanarDownloadTool**
 : Package for downloading historical data archives from exchanges (currently Binance and Bybit).
 
 **Fetch**

@@ -37,12 +37,12 @@ const DEFAULT_REGISTRY_REPO = "https://github.com/BubbleParticles/PlanarRegistry
 # All packages hosted in the monorepo, in registration order.
 const PACKAGES = [
     "PlanarCore",
-    "StrategyStats",
+    "PlanarStrategyStats",
     "Planar",
     "PlanarFeatureSelection",
-    "DownloadTool",
+    "PlanarDownloadTool",
     "PlanarPython",
-    "StrategyTools",
+    "PlanarStrategyTools",
     "PlanarOptim",
     "PlanarDev",
 ]
