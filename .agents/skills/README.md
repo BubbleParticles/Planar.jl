@@ -1,5 +1,15 @@
 # Skills
 
+## [release-planar/](./release-planar/) — `SKILL.md`
+
+Publishes Planar updates: regenerates the custom Julia registry
+(`scripts/register.jl`, then push `PlanarRegistry/`) and publishes the
+`planar-trader` PyPI package.
+
+**Usage:** bump+tag with `release-version`, then `julia scripts/register.jl --ref v<version> --commit`
+from the monorepo root, push the registry, then `uv publish` or tag-based CI.
+See [SKILL.md](./release-planar/SKILL.md) for the full flow and verification.
+
 ## [release-version/](./release-version/) — `SKILL.md`
 
 Bumps the Planar version, syncs all project manifests, commits, and tags.
