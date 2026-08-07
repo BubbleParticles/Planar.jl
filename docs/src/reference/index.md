@@ -11,7 +11,7 @@ Complete reference documentation for Planar APIs, [configuration](../config.md),
 
 ## Quick Links
 
-- **Core API** - Essential functions
+- **Core API** - [Essential functions](../API/api.md)
 - **[Strategy API](../API/strategies.md)** - Strategy development
 - **[Exchange API](../exchanges.md)** - Exchange integration
 - **[Data API](../data.md)** - Data management
@@ -19,9 +19,9 @@ Complete reference documentation for Planar APIs, [configuration](../config.md),
 
 ## See Also
 
-- **[](../reference/api/index.md)** - Complete API documentation
+- **[API Documentation](../reference/api/index.md)** - Complete API documentation
 - **[Strategy Development](../guides/strategy-development.md)** - Learn to use the APIs
-- **[](../troubleshooting/index.md)** - API troubleshooting
+- **[Troubleshooting](../troubleshooting/index.md)** - API troubleshooting
 - **[Exchanges](../exchanges.md)** - Exchange integration and configuration
 - **[Config](../config.md)** - Exchange integration and configuration
 - **[Optimization](../optimization.md)** - Performance optimization techniques

@@ -1,8 +1,7 @@
 # Data Management Guide
 
 
-
-This comprehensive guide covers Planar's [data management](../guides/data-management.md) system for [OHLCV](../guides/data-management.md#ohlcv-data) (Open, High, Low, Close, Volume) data and other time-series [market data](../guides/data-management.md). Learn how to efficiently collect, store, and access market data using multiple collection methods and storage backends.
+This comprehensive guide covers Planar's [data management](../guides/data-management.md) system for [OHLCV](data-management.md#Data-Collection-Methods) (Open, High, Low, Close, Volume) data and other time-series [market data](../guides/data-management.md). Learn how to efficiently collect, store, and access market data using multiple collection methods and storage backends.
 
 ## Quick Navigation
 
@@ -43,7 +42,7 @@ The framework wraps a Zarr subtype of `AbstractStore` in a [`PlanarCore.Data.Zar
 
 ### Data Organization
 
-[OHLCV data](../guides/data-management.md#ohlcv-data) is organized hierarchically using [`PlanarCore.Data.key_path`](@ref):
+[OHLCV data](data-management.md#Data-Collection-Methods) is organized hierarchically using [`PlanarCore.Data.key_path`](@ref):
 
 ```
 ZarrInstance/
@@ -65,9 +64,9 @@ ZarrInstance/
 
 This hierarchical organization provides:
 
-- **Logical Grouping**: Data organized by source, instrument, and [timeframe](../guides/data-management.md#timeframes)
+- **Logical Grouping**: Data organized by source, instrument, and [timeframe](data-management.md#Timeframe-Management)
 - **Efficient Queries**: Fast access to specific data subsets
-- **Scalability**: Easy addition of new [exchanges](../exchanges.md), pairs, and [timeframes](../guides/data-management.md#timeframes)
+- **Scalability**: Easy addition of new [exchanges](../exchanges.md), pairs, and [timeframes](data-management.md#Timeframe-Management)
 - **Data Integrity**: Consistent structure across all data sources
 - **Performance**: Optimized for common access patterns
 
@@ -83,28 +82,16 @@ Planar provides multiple methods for collecting market data, each optimized for 
 
 ### Choosing the Right Method
 
-- **Use DownloadTool** for initial historical data collection and [backtesting](../guides/execution-modes.md#simulationmode) datasets
+- **Use DownloadTool** for initial historical data collection and [backtesting](execution-modes.md#Simulation-Mode) datasets
 - **Use Fetch** for recent data updates and filling gaps in historical data
-- **Use Watchers** for [live trading](../guides/execution-modes.md#live-mode) and real-time analysis
+- **Use Watchers** for [live trading](execution-modes.md#Live-Mode) and real-time analysis
 
-**⚠️ Data collection issues?** See [Performance Issues: Data-Related](../troubleshooting/performance-issues.md#data-related-performance-issues) for slow loading and database problems, or [Exchange Issues](../troubleshooting/exchange-issues.md) for connectivity problems.
+**⚠️ Data collection issues?** See [Performance Issues: Data-Related](../troubleshooting/performance-issues.md#Data-Performance) for slow loading and database problems, or [Exchange Issues](../troubleshooting/exchange-issues.md) for connectivity problems.
 ## Historical Data Collection
 
 The DownloadTool module provides access to historical data archives from major exchanges, offering the most efficient method for obtaining large amounts of historical data.
 
 **Supported Exchanges**: Binance and Bybit archives
-
-### Basic DownloadTool Usage
-
-
-### Market Types and Frequencies
-
-
-### Advanced DownloadTool Examples
-
-
-### Error Handling and Data Validation
-
 
 ### Bybit DownloadTool
 
@@ -114,35 +101,23 @@ The DownloadTool module provides access to historical data archives from major e
     If data becomes corrupted, pass `reset=true` to force a complete redownload.
 
 !!! tip "Performance Optimization"
-    - **Monthly Archives**: Use for historical [backtesting](../guides/execution-modes.md#simulationmode) (faster download, larger chunks)
+    - **Monthly Archives**: Use for historical [backtesting](execution-modes.md#Simulation-Mode) (faster download, larger chunks)
     - **Daily Archives**: Use for recent data or frequent updates
     - **Parallel Downloads**: Consider for multiple symbols, but respect [exchange](../exchanges.md) rate limits
 
 ## Real-Time Data Fetching
 
-The Fetch module downloads data directly from exchanges using [CCXT](../exchanges.md#ccxt-integration), making it ideal for:
+The Fetch module downloads data directly from exchanges using [CCXT](../exchanges.md#CCXT-Integration), making it ideal for:
 
 - Getting the most recent market data
 - Filling gaps in historical data
-- Real-time data updates for [live trading](../guides/execution-modes.md#live-mode)
-
-### Basic Fetch Usage
-
-
-### Advanced Fetch Examples
-
-
-### Multi-Exchange Data Collection
-
-
-### Rate Limit Management
-
+- Real-time data updates for [live trading](execution-modes.md#Live-Mode)
 
 ### Data Validation and Quality Checks
 
 
 !!! warning "Rate Limit Considerations"
-    Direct [exchange](../exchanges.md) fetching is heavily rate-limited, especially for smaller [timeframes](../guides/data-management.md#timeframes).
+    Direct [exchange](../exchanges.md) fetching is heavily rate-limited, especially for smaller [timeframes](data-management.md#Timeframe-Management).
     Use archives for bulk historical data collection.
 
 !!! tip "Fetch Best Practices"
@@ -159,7 +134,7 @@ The Watchers module enables real-time data tracking from exchanges and other sou
 - Real-time data analysis
 - Continuous market monitoring
 
-### [OHLCV](../guides/data-management.md#ohlcv-data) Ticker Watcher
+### [OHLCV](data-management.md#Data-Collection-Methods) Ticker Watcher
 
 The ticker watcher monitors multiple pairs simultaneously using exchange ticker endpoints:
 
@@ -191,27 +166,12 @@ catch e
 end
 ```
 
-As a convention, the `view` property of a watcher shows the processed data:
+As a convention, the `view` property of a watcher shows the processed data.
 
 
 ### Single-Pair OHLCV Watcher
 
-There is another OHLCV watcher based on trades, that tracks only one pair at a time with higher precision:
-
-
-### Advanced Watcher Configuration
-
-
-### Watcher Management
-
-
-### Orderbook Watcher
-
-
-### Custom Data Processing
-
-
-### Error Handling and Resilience
+There is another OHLCV watcher based on trades, that tracks only one pair at a time with higher precision.
 
 
 ### Data Persistence and Storage
@@ -231,19 +191,6 @@ Assuming you have your own pipeline to fetch candles, you can use the functions 
 ### Basic Custom Data Integration
 
 To save the data, it is easier if you pass a standard OHLCV dataframe, otherwise you need to provide a `saved_col` argument that indicates the correct column index to use as the `timestamp` column (or use lower-level functions).
-
-
-To load the data back:
-
-
-### Advanced Custom Data Examples
-
-
-### Custom Data Validation
-
-
-### Working with Large Custom Datasets
-
 
 ## Generic Data Storage
 
@@ -265,18 +212,12 @@ While OHLCV data requires a concrete type for storage (default `Float64`) generi
 
 ## Data Access Patterns
 
-The Data module implements dataframe indexing by dates such that you can conveniently access rows by:
-
-
-### Advanced Indexing Examples
+The Data module implements dataframe indexing by date, so you can conveniently access rows by timestamp.
 
 
 ### Timeframe Management
 
 With ohlcv data, we can access the timeframe of the series directly from the dataframe by calling `timeframe!(df)`. This will either return the previously set timeframe or infer it from the `timestamp` column. You can set the timeframe by calling e.g. `timeframe!(df, tf"1m")` or `timeframe!!` to overwrite it.
-
-
-### Efficient Data Slicing
 
 
 ### Progressive Data Loading

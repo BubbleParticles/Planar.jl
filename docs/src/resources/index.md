@@ -4,15 +4,14 @@ Additional resources and reference materials for Planar users.
 
 ## Available Resources
 
-- **Glossary** - Terms and concepts
-- **Migration Guides** - Version update guides
+- **[Glossary](../disambiguation.md)** - Terms and concepts
 - [Community](community.md) - Support and contacts
 
 ## External Resources
 
 - [Julia Documentation](https://docs.julialang.org/) - [Julia](https://julialang.org/) language reference
 - [CCXT Documentation](https://docs.ccxt.com/) - Exchange API reference
-- [Planar GitHub](https://github.com/defnlnotme/Planar.jl) - Source code and issues
+- [Planar GitHub](https://github.com/BubbleParticles/Planar.jl) - Source code and issues
 
 
 ## See Also
@@ -22,4 +21,4 @@ Additional resources and reference materials for Planar users.
 
 ## Contributing
 
-Interested in contributing to Planar? See our contribution guidelines and community resources.
+Interested in contributing to Planar? See the [community resources](community.md) and the contribution guidelines in `docs/CONTRIBUTING.md`.

@@ -34,7 +34,7 @@ futures = true
 
 ### Strategy Configuration
 
-Strategies can be configured in two ways:
+Strategies can be configured in two ways.
 
 #### File-based Strategies
 
@@ -213,7 +213,7 @@ Some settings can be overridden using environment variables:
 
 ## Configuration Validation
 
-Planar validates configuration files on startup and provides helpful error messages for common issues:
+Planar validates configuration files on startup and provides helpful error messages for common issues.
 
 ### Common Configuration Errors
 
@@ -234,7 +234,7 @@ Planar validates configuration files on startup and provides helpful error messa
 
 ### Validation Commands
 
-Test your configuration before running strategies:
+Test your configuration before running strategies.
 
 
 ## Configuration Examples

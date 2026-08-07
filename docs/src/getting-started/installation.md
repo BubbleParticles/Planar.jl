@@ -49,9 +49,6 @@ scripts/build.sh
 
 ## Project Setup
 
-### 1. Install Dependencies
-
-
 ### 2. Create User Directory
 
 ```bash
@@ -139,14 +136,6 @@ export JULIA_NUM_THREADS=6
 export JULIA_PRECOMP=1
 ```
 
-## Verification
-
-### Test Installation
-
-
-### Run Example Strategy
-
-
 ## Docker Setup
 
 ### Using Pre-built Image
@@ -174,9 +163,6 @@ JULIA_VERSION=1.11.1 scripts/build.sh
 ```
 
 ## Performance Optimization
-
-### Precompilation
-
 
 ### Memory Settings
 

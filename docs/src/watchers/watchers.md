@@ -1,10 +1,10 @@
 # Watchers
 
-A `Watcher` type serves as an interface over a data feed. Implementations are available for certain third-party APIs, [exchanges](../exchanges.md) [OHLCV](../guides/data-management.md#ohlcv-data) (Open, High, Low, Close, Volume) data construction, and order books.
+A `Watcher` type serves as an interface over a data feed. Implementations are available for certain third-party APIs, [exchanges](../exchanges.md) [OHLCV](../guides/data-management.md#Data-Collection-Methods) (Open, High, Low, Close, Volume) data construction, and order books.
 
 ## User Interface
 
-To instantiate a watcher, call its related function. For example, `ccxt_ohlcv_watcher` can be used to instantiate a watcher that tracks trade data from an [exchanges](../exchanges.md) and builds [OHLCV](../guides/data-management.md#ohlcv-data) candles for the specified [timeframe](../guides/data-management.md#timeframes). 
+To instantiate a watcher, call its related function. For example, `ccxt_ohlcv_watcher` can be used to instantiate a watcher that tracks trade data from an [exchanges](../exchanges.md) and builds [OHLCV](../guides/data-management.md#Data-Collection-Methods) candles for the specified [timeframe](../guides/data-management.md#Timeframe-Management). 
 
 A watcher instance provides the following functions:
 

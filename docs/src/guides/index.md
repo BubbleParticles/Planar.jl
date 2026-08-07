@@ -5,13 +5,13 @@ This section contains comprehensive guides for developing with Planar. These gui
 ## Available Guides
 
 - **[Strategy Development](strategy-development.md)** - Complete guide to building trading [strategies](strategy-development.md) using [Julia](https://julialang.org/)'s [dispatch system](../guides/strategy-development.md), covering everything from basic concepts to advanced patterns
-- **[Data Management](data-management.md)** - Comprehensive [data management](data-management.md) system for [OHLCV](../guides/data-management.md#ohlcv-data) and time-series [market data](../guides/data-management.md) using multiple collection methods and storage backends
+- **[Data Management](data-management.md)** - Comprehensive [data management](data-management.md) system for [OHLCV](data-management.md#Data-Collection-Methods) and time-series [market data](../guides/data-management.md) using multiple collection methods and storage backends
 - **[Execution Modes](execution-modes.md)** - Understanding and transitioning between Sim, Paper, and Live trading modes with proper risk management
 
-## Coming Soon
+## Optimization and Visualization
 
-- **Optimization** - Parameter tuning and [backtesting](../guides/execution-modes.md#simulation-mode) [optimization](../optimization.md) techniques
-- **Visualization** - Plotting and analysis of [strategy](../guides/strategy-development.md) performance and [market data](../guides/data-management.md)
+- **[Optimization](../optimization.md)** - Parameter tuning and [backtesting](execution-modes.md#Simulation-Mode) techniques
+- **[Visualization](../plotting.md)** - Plotting and analysis of [strategy](../guides/strategy-development.md) performance and [market data](../guides/data-management.md)
 
 ## Getting Started
 
@@ -19,7 +19,7 @@ If you're new to Planar, we recommend starting with the [Getting Started](../get
 
 1. **Strategy Development** - Learn the core concepts and patterns
 2. **Data Management** - Understand how to work with [market data](../guides/data-management.md)
-3. **Execution Modes** - Progress from [simulation](../guides/execution-modes.md#simulation-mode) to [live trading](../guides/execution-modes.md#live-mode)
+3. **Execution Modes** - Progress from [simulation](execution-modes.md#Simulation-Mode) to [live trading](execution-modes.md#Live-Mode)
 
 
 ## See Also

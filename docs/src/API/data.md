@@ -13,64 +13,16 @@ The Data module is responsible for:
 
 ## Core Data Structures
 
-### OHLCV Data Access
-
-
-#### Usage Examples
-
-
-### Data Loading and Storage
-
-#### Primary Data Functions
-
-
-#### Advanced Data Operations
-
-
 ### Data Persistence
 
 #### Zarr Storage
 
-Planar uses Zarr format for efficient storage of large time series datasets:
+Planar uses Zarr format for efficient storage of large time series datasets.
 
 
 #### LMDB Key-Value Storage
 
-For fast metadata and configuration storage:
-
-
-## Data Validation and Integrity
-
-### Data Quality Checks
-
-
-### Data Cleaning
-
-
-## DataFrame Integration
-
-### Working with DataFrames
-
-
-## Performance Optimization
-
-### Efficient Data Access Patterns
-
-
-### Memory Management
-
-
-## Data Streaming and Updates
-
-### Real-time Data Updates
-
-
-## Common Data Patterns
-
-### Moving Averages
-
-
-### Price Analysis
+For fast metadata and configuration storage.
 
 
 ## Complete API Reference

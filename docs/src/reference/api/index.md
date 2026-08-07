@@ -87,7 +87,7 @@ end
 
 ## Error Handling
 
-Most API functions use Julia's standard error handling:
+Most API functions use Julia's standard error handling.
 
 
 ## Performance Considerations

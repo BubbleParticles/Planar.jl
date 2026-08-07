@@ -153,9 +153,11 @@ These tools can be integrated into CI/CD pipelines to ensure documentation quali
 
 1. **Always specify language for code blocks:**
    ```markdown
-   
-   ```
    # Bad: No language specified
+   println("Hello, World!")
+   ```
+   ```julia
+   # Good: Language specified
    println("Hello, World!")
    ```
 

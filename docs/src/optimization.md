@@ -34,108 +34,56 @@ The typical optimization workflow in Planar follows these steps:
 
 ### Basic Parameter Setup
 
-Define optimizable parameters in your strategy:
+Define optimizable parameters in your strategy.
 
 
 ### Parameter Ranges
 
-Define the search space for optimization:
+Define the search space for optimization.
 
 
 ### Advanced Parameter Types
 
-Support for different parameter types:
+Support for different parameter types.
 
 
 ## Optimization Algorithms
 
 ### Grid Search
 
-Exhaustive search testing all parameter combinations:
+Exhaustive search testing all parameter combinations.
 
 
 ### Bayesian Optimization
 
-Efficient optimization using probabilistic models:
+Efficient optimization using probabilistic models.
 
 
 ### Random Search
 
-Random sampling of parameter space:
+Random sampling of parameter space.
 
 
 ### Evolutionary Algorithms
 
-Genetic algorithm-based optimization:
+Genetic algorithm-based optimization.
 
 
 ## Objective Functions
 
 ### Built-in Objectives
 
-Planar provides several built-in objective functions:
+Planar provides several built-in objective functions.
 
 
 ### Custom Objective Functions
 
-Define your own optimization objectives:
+Define your own optimization objectives.
 
 
 ### Multi-Objective Optimization
 
-Optimize multiple objectives simultaneously:
-
-
-## Optimization Configuration
-
-### Basic Configuration
-
-
-### Advanced Configuration
-
-
-## Result Analysis
-
-### Accessing Results
-
-
-### Result Visualization
-
-
-### Statistical Analysis
-
-
-## Validation and Overfitting Prevention
-
-### Cross-Validation
-
-
-### Walk-Forward Analysis
-
-
-### Out-of-Sample Testing
-
-
-## Performance Optimization
-
-### Parallel Processing
-
-
-### Memory Management
-
-
-### Early Stopping
-
-
-## Advanced Techniques
-
-### Hierarchical Optimization
-
-
-### Ensemble Optimization
-
-
-### Adaptive Optimization
+Optimize multiple objectives simultaneously.
 
 
 ## Best Practices
@@ -184,9 +132,6 @@ Optimize multiple objectives simultaneously:
    - Enable memory-efficient mode
    - Reduce batch size
    - Use disk caching
-
-### Debug Mode
-
 
 ## See Also
 

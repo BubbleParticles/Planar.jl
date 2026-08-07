@@ -10,70 +10,11 @@ The Engine serves as the central coordinator that:
 - Coordinates with exchanges and executors
 - Provides unified interfaces for backtesting and live trading
 
-## Core Functions
-
-### Data Management
-
-#### OHLCV Data Functions
-
-
-#### Usage Examples
-
-
-#### Advanced Data Operations
-
-
-### Strategy Execution
-
-#### Execution Control
-
-
-#### Example: Strategy Lifecycle
-
-
-### Exchange Integration
-
-#### Exchange Access
-
-
-#### Example: Exchange Operations
-
-
 ## Data Structures and Types
 
 ### Core Types
 
-The Engine module works with several key types:
-
-
-### Data Handlers
-
-
-## Integration Patterns
-
-### Backtesting Pattern
-
-
-### Paper Trading Pattern
-
-
-### Live Trading Pattern
-
-
-## Performance Optimization
-
-### Efficient Data Access
-
-
-### Batch Operations
-
-
-## Error Handling
-
-### Robust Data Loading
-
-
-### Exchange Connection Handling
+The Engine module works with several key types.
 
 
 ## Complete API Reference
