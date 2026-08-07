@@ -8,7 +8,7 @@ By completing this getting started section, you will:
 
 - **Understand Planar's core concepts** and unique advantages
 - **Successfully install and configure** Planar on your system
-- **Run your first [backtest](../guides/execution-modes.md#simulation-mode)** and interpret the results
+- **Run your first [backtest](../guides/execution-modes.md#Simulation-Mode)** and interpret the results
 - **Build a custom [strategy](../guides/strategy-development.md)** from scratch using [technical indicators](../guides/strategy-development.md)-development.md#technical-indicators)
 - **Analyze performance metrics** and debug strategy issues
 - **Know the next steps** for advanced strategy development
@@ -19,7 +19,7 @@ This getting started section is organized in a logical progression:
 
 1. **[Installation Guide](installation.md)** - Set up your development environment *(10 minutes)*
 2. **[Quick Start Guide](quick-start.md)** - Run your first strategy and see results *(15 minutes)*
-3. **[First Strategy Tutorial](../getting-started/first-strategy.md)** - Build a custom [RSI](../guides/strategy-development.md#technical-indicators) strategy from scratch *(20 minutes)*
+3. **[First Strategy Tutorial](../getting-started/first-strategy.md)** - Build a custom [RSI](../customizations/customizations.md#Custom-Indicators-and-Signals) strategy from scratch *(20 minutes)*
 
 **Total estimated time**: 45 minutes
 
@@ -28,17 +28,17 @@ This getting started section is organized in a logical progression:
 Planar is an advanced trading bot framework built in [Julia](https://julialang.org/), designed for demanding practitioners who need sophisticated cryptocurrency trading capabilities. Here's what makes it special:
 
 - **Customizable**: [Julia](https://julialang.org/)'s dispatch mechanism enables easy customization without monkey patching
-- **Margin/Leverage Support**: Full type hierarchy for isolated and [cross margin](../guides/strategy-development.md#margin-modes) trading with hedged/unhedged positions
+- **Margin/Leverage Support**: Full type hierarchy for isolated and [cross margin](../guides/strategy-development.md#Margin-Modes) trading with hedged/unhedged positions
 - **Large Dataset Handling**: Uses Zarr.jl for progressive chunk-by-chunk data access and storage
-- **Data Consistency**: Ensures [OHLCV data](../guides/data-management.md#ohlcv-data) integrity with contiguous date checking
-- **Lookahead Bias Prevention**: Full-featured date/[timeframe](../guides/data-management.md#timeframes) handling to prevent common backtesting errors
+- **Data Consistency**: Ensures [OHLCV data](../guides/data-management.md#Data-Collection-Methods) integrity with contiguous date checking
+- **Lookahead Bias Prevention**: Full-featured date/[timeframe](../guides/data-management.md#Timeframe-Management) handling to prevent common backtesting errors
 - **By-Simulation**: Unique ability to run simulation during live trading for tuning and validation
 - **Low Code Duplication**: Same strategy code works across backtesting, paper, and live trading modes
 
 ## Prerequisites
 
 ### Required Knowledge
-- **Basic trading concepts**: Understanding of [OHLCV data](../guides/data-management.md#ohlcv-data), buy/sell orders, and cryptocurrency [exchanges](../exchanges.md)
+- **Basic trading concepts**: Understanding of [OHLCV data](../guides/data-management.md#Data-Collection-Methods), buy/sell orders, and cryptocurrency [exchanges](../exchanges.md)
 - **Command line comfort**: Ability to run commands in terminal/command prompt
 - **Basic programming concepts**: Variables, functions, and modules ([Julia](https://julialang.org/) experience helpful but not required)
 
@@ -54,14 +54,14 @@ Planar is an advanced trading bot framework built in [Julia](https://julialang.o
 
 ## Recommended Learning Paths
 
-Choose the path that best matches your experience level:
+Choose the path that best matches your experience level.
 
 ### 🆕 Complete Beginner Path
 **Best for**: New to algorithmic trading or Planar  
 **Time**: 45 minutes | **Difficulty**: ⭐☆☆
 
 1. [📥 Installation Guide](installation.md) *(10 min)* - Set up your environment
-2. [⚡ Quick Start](quick-start.md) *(15 min)* - Run your first [backtest](../guides/execution-modes.md#simulation-mode)  
+2. [⚡ Quick Start](quick-start.md) *(15 min)* - Run your first [backtest](../guides/execution-modes.md#Simulation-Mode)  
 3. [🎯 First Strategy](../getting-started/first-strategy.md) *(20 min)* - Build from scratch
 
 ### 🚀 Experienced Trader Path
@@ -92,7 +92,7 @@ Let's get started! 🚀
 
 ## After Getting Started
 
-Once you complete this section, you'll be ready to:
+Once you complete this section, you'll be ready to explore more advanced topics.
 
 ### Immediate Next Steps
 - **[Strategy Development Guide](../guides/strategy-development.md)** - Learn advanced patterns and best practices

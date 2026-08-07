@@ -436,4 +436,3 @@ Browse documentation by topic and category.
 - **[Beginner Topics](../getting-started/index.md)** - New to Planar? Start here
 - **[Intermediate Topics](../guides/index.md)** - Ready to build strategies
 - **[Advanced Topics](../advanced/index.md)** - Expert-level customization
-

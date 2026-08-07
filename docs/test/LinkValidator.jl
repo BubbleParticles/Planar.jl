@@ -144,8 +144,19 @@ function check_external_link(url::String, source_file::String, line_number::Int;
     end
     
     try
-        # Make HEAD request to check if URL is accessible
-        response = HTTP.head(url; timeout=timeout, redirect=true)
+        # Make HEAD request to check if URL is accessible.
+        # HTTP.jl 1.11 (Reseau-based) dropped the `timeout`/`redirect` kwargs
+        # in favor of `request_timeout`; older releases accept `timeout`.
+        # Probe the modern kwarg first and fall back to the legacy form.
+        response = try
+            HTTP.head(url; request_timeout=timeout)
+        catch e
+            if e isa MethodError
+                HTTP.head(url; timeout=timeout)
+            else
+                rethrow()
+            end
+        end
         status_code = response.status
         
         # Consider 2xx and 3xx status codes as valid

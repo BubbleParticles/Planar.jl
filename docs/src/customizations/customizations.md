@@ -17,77 +17,77 @@ The framework provides parametrized types for various elements:
 
 ### Dispatch Patterns
 
-Planar uses several dispatch patterns for customization:
+Planar uses several dispatch patterns for customization.
 
 
 ## Custom Order Types Implementation
 
 ### Basic Order Type Definition
 
-To implement a custom order type, create an abstract type inheriting from `OrderType`:
+To implement a custom order type, create an abstract type inheriting from `OrderType`.
 
 
 This creates `TrailingStopOrder`, `TrailingStopBuy`, and `TrailingStopSell` types.
 
 ### Order State Management
 
-Custom orders often require additional state. Define a state structure:
+Custom orders often require additional state. Define a state structure.
 
 
 ### Order Constructor
 
-Implement a constructor for your custom order:
+Implement a constructor for your custom order.
 
 
 ### Order Execution Logic
 
-Implement the execution logic for different modes:
+Implement the execution logic for different modes.
 
 
 ## Custom Exchange Implementation
 
 ### Exchange Interface Requirements
 
-To implement a custom [exchange](../exchanges.md), you need to satisfy the interface defined by the `check` function in the `Exchanges` module. Here's a comprehensive example:
+To implement a custom [exchange](../exchanges.md), you need to satisfy the interface defined by the `check` function in the `Exchanges` module. Here's a comprehensive example.
 
 
 ### Exchange-Specific Customizations
 
-You can customize behavior for specific exchanges using dispatch:
+You can customize behavior for specific exchanges using dispatch.
 
 
 ## Advanced Customization Patterns
 
 ### Strategy-Specific Functions
 
-Create "snowflake" functions for specific [strategies](../guides/strategy-development.md):
+Create "snowflake" functions for specific [strategies](../guides/strategy-development.md).
 
 
 ### Custom Indicators and Signals
 
-Extend the framework with custom [technical indicators](../guides/strategy-development.md#technical-indicators):
+Extend the framework with custom [technical indicators](customizations.md#Custom-Indicators-and-Signals).
 
 
 ### Custom Risk Management
 
-Implement sophisticated risk management:
+Implement sophisticated risk management.
 
 
 ## Best Practices for Customization
 
 ### 1. Minimal Invasive Changes
 
-Only override the specific functions that need customization. Leverage existing functionality wherever possible:
+Only override the specific functions that need customization. Leverage existing functionality wherever possible.
 
 
 ### 2. Type Stability
 
-Ensure your customizations maintain type stability:
+Ensure your customizations maintain type stability.
 
 
 ### 3. Error Handling
 
-Implement robust error handling in custom functions:
+Implement robust error handling in custom functions.
 
 
 ### 4. Documentation and Testing
@@ -140,8 +140,7 @@ end
 
 ### 5. Performance Considerations
 
-Be mindful of performance in hot paths:
-
+Be mindful of performance in hot paths.
 
 
 ## See Also
@@ -157,7 +156,7 @@ Be mindful of performance in hot paths:
 
 ### Common Issues
 
-1. **Method Ambiguity**: When [multiple dispatch](../guides/strategy-development.md#dispatch-system) signatures could match
+1. **Method Ambiguity**: When [multiple dispatch](../guides/strategy-development.md#Dispatch-System) signatures could match
 
 2. **Type Piracy**: Extending methods you don't own on types you don't own
 
@@ -170,4 +169,4 @@ Be mindful of performance in hot paths:
 3. Use `methodswith` to find all methods for a type
 4. Use `@which` to determine which method will be called
 
-Remember to [leverage](../guides/strategy-development.md#margin-modes) this flexibility to enhance functionality without overcomplicating the system, thus avoiding "complexity bankruptcy."
+Remember to [leverage](../guides/strategy-development.md#Margin-Modes) this flexibility to enhance functionality without overcomplicating the system, thus avoiding "complexity bankruptcy."

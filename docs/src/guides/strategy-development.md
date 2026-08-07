@@ -1,17 +1,15 @@
 # Strategy Development Guide
 
 
-
 This comprehensive guide covers everything you need to know about developing trading [strategies](../guides/strategy-development.md) in Planar. From basic concepts to advanced patterns, you'll learn how to build robust, profitable trading systems using [Julia](https://julialang.org/)'s powerful [dispatch system](../guides/strategy-development.md#Dispatch-System).
 
 ## Quick Navigation
 
 - **[Strategy Fundamentals](#Strategy-Fundamentals)** - Core concepts and architecture
-- **[strategies](../guides/strategy-development.md)** - Interactive and manual setup
+- **[Creating Strategies](#Creating-Strategies)** - Interactive and manual setup
 - **[Strategy Interface](#Strategy-Interface)** - Understanding the call! dispatch system
-- **[Advanced Examples](#Advanced-Examples)** - Multi-[timeframe](../guides/data-management.md#timeframes), portfolio, and [optimization](../optimization.md) strategies
 - **[Best Practices](#Best-Practices)** - Code organization and performance tips
-- **[troubleshooting](../troubleshooting/index.md)** - Common issues and solutions
+- **[Quick Troubleshooting](#Quick-Troubleshooting)** - Common issues and solutions
 
 ## Prerequisites
 
@@ -23,7 +21,7 @@ Before diving into strategy development, ensure you have:
 
 ## Related Topics
 
-- **[optimization](../optimization.md)** - Parameter tuning and [backtesting](../guides/execution-modes.md#simulation)-mode)
+- **[optimization](../optimization.md)** - Parameter tuning and [backtesting](execution-modes.md#Simulation-Mode)-mode)
 - **[Plotting](../plotting.md)** - Visualizing strategy performance
 - **[Customization](../customizations/customizations.md)** - Extending strategy functionality
 
@@ -38,7 +36,7 @@ Planar strategies are built around Julia's powerful dispatch system, enabling cl
 - **Strategy Module**: Contains your trading logic and [configuration](../config.md)
 - **Dispatch System**: Uses `call!` methods to handle different strategy events
 - **Asset Universe**: Collection of tradeable assets managed by the strategy
-- **Execution Modes**: Sim ([backtesting](../guides/execution-modes.md#simulation)-mode)), Paper (simulated live), and Live trading
+- **Execution Modes**: Sim ([backtesting](execution-modes.md#Simulation-Mode)-mode)), Paper (simulated live), and Live trading
 - **Margin Support**: Full support for isolated and [cross margin](../guides/strategy-development.md#Margin-Modes) trading
 
 #### Strategy Type Hierarchy
@@ -62,11 +60,9 @@ The strategy interface uses Julia's [multiple dispatch](../guides/strategy-devel
 - Methods dispatching on strategy instances are called during runtime
 
 
-**Action-Based Dispatch**:
-
 #### Exchange-Specific Dispatch
 
-You can customize behavior for specific [exchanges](../exchanges.md):
+You can customize behavior for specific [exchanges](../exchanges.md).
 
 
 ### Margin Trading Concepts
@@ -81,22 +77,16 @@ Planar provides comprehensive [margin trading](../guides/strategy-development.md
 
 **Cross Margin**: Shared margin across all positions
 
-#### Position Management
-
-
-#### Risk Management Patterns
-
-
 ## Creating Strategies
 
 ### Interactive Strategy Generator
 
-The simplest way to create a strategy is using the interactive generator, which prompts for all required [configuration](../config.md) options:
+The simplest way to create a strategy is using the interactive generator, which prompts for all required [configuration](../config.md) options.
 
 
 ### Non-Interactive Strategy Creation
 
-You can also create strategies programmatically without user interaction:
+You can also create strategies programmatically without user interaction.
 
 
 ### Manual Strategy Setup
@@ -105,7 +95,7 @@ If you want to create a strategy manually you can either:
 - Copy the `user/strategies/Template.jl` to a new file in the same directory and customize it
 - Generate a new project in `user/strategies` and customize `Template.jl` to be your project entry file
 
-For more advanced setups you can also use `Planar` as a library, and construct the strategy object directly from your own module:
+For more advanced setups you can also use `Planar` as a library, and construct the strategy object directly from your own module.
 
 
 ### Project-Based Strategies
@@ -129,18 +119,12 @@ user/strategies/MyStrategy/
 
 ### Loading a Strategy
 
-Strategies are instantiated by loading a Julia module at runtime:
+Strategies are instantiated by loading a Julia module at runtime.
 
 
 The strategy name corresponds to the module name, which is imported from:
 - `user/strategies/Example.jl` (single file strategy)
 - `user/strategies/Example/src/Example.jl` (project-based strategy)
-
-### Strategy Type Structure
-
-
-### Basic Strategy Module
-
 
 ### Function Signature Convention
 
@@ -162,39 +146,6 @@ Understanding the strategy lifecycle is crucial for proper implementation:
 5. **Execution Loop**: `call!(s::SC, timestamp, context)` is called repeatedly
 6. **Cleanup**: `call!(s::SC, ::StopStrategy)` is called when stopping
 
-### Essential Strategy Methods
-
-#### Required Methods
-
-
-#### Optional Methods
-
-
-### Advanced Dispatch Patterns
-
-#### Conditional Dispatch by Mode
-
-
-#### Parameter-Based Dispatch
-
-
-## Advanced Examples
-
-### Multi-Timeframe Strategy
-
-
-### Portfolio Rebalancing Strategy
-
-
-### Advanced Optimization Strategy
-
-
-### Simple Moving Average Strategy
-
-
-### Margin Trading Strategy
-
-
 ## Best Practices
 
 ### Code Organization
@@ -205,9 +156,6 @@ Understanding the strategy lifecycle is crucial for proper implementation:
 
 3. **Parameter Management**: Use strategy attributes for parameters
 
-### Error Handling
-
-
 ### Performance Optimization
 
 1. **Minimize Allocations**: Reuse data structures when possible
@@ -215,12 +163,9 @@ Understanding the strategy lifecycle is crucial for proper implementation:
 3. **Conditional Logic**: Use early returns to avoid unnecessary computations
 
 
-### Testing and Validation
-
-
 ### Strategy Configuration
 
-Strategies can be configured through `user/[planar.toml](../config.md#configuration-file)`:
+Strategies can be configured through `user/[planar.toml](../config.md#Configuration-File)`:
 
 ```toml
 [strategies.MyStrategy]
@@ -241,27 +186,27 @@ For comprehensive strategy troubleshooting with detailed solutions, see [Strateg
 
 ### Common Issues Quick Reference
 
-**❌ Strategy loading fails** → [Strategy Problems: Loading Issues](../troubleshooting/strategy-problems.md#strategy-loading-and-compilation-issues)
+**❌ Strategy loading fails** → [Strategy Problems: Loading Issues](../troubleshooting/strategy-problems.md#Strategy-Loading-and-Compilation-Issues)
 - Module not found errors
 - Compilation failures
 - Missing dependencies
 
-**❌ Runtime execution errors** → [Strategy Problems: Execution Issues](../troubleshooting/strategy-problems.md#strategy-execution-issues)
+**❌ Runtime execution errors** → [Strategy Problems: Execution Issues](../troubleshooting/strategy-problems.md#Strategy-Execution-Issues)
 - Method dispatch errors
 - Data access problems
 - Signal generation failures
 
-**❌ No trades executing** → [Strategy Problems: Order Execution](../troubleshooting/strategy-problems.md#order-execution-issues)
+**❌ No trades executing** → [Strategy Problems: Order Execution](../troubleshooting/strategy-problems.md#Order-Execution-Issues)
 - Insufficient balance
 - Order validation failures
 - Position management errors
 
-**❌ Slow performance** → [Performance Issues](../troubleshooting/performance-issues.md#strategy-execution-performance)
+**❌ Slow performance** → [Performance Issues](../troubleshooting/performance-issues.md#Strategy-Performance)
 - Backtesting optimization
 - Memory usage problems
 - Algorithm efficiency
 
-**❌ Data problems** → [Exchange Issues](../troubleshooting/exchange-issues.md) or [Performance Issues: Data](../troubleshooting/performance-issues.md#data-related-performance-issues)
+**❌ Data problems** → [Exchange Issues](../troubleshooting/exchange-issues.md) or [Performance Issues: Data](../troubleshooting/performance-issues.md#Data-Performance)
 - Missing market data
 - Exchange connectivity
 - Database performance
@@ -278,20 +223,9 @@ For detailed troubleshooting steps and platform-specific solutions, visit [Strat
 - Check that `call!(s::SC, ::OptScore)` returns appropriate metrics
 - Verify that parameter overrides are applied correctly in `call!(s::SC, params, ::OptRun)`
 
-### Debugging Strategies
-
-#### Enable Debug Logging
-
-
-#### Strategy State Inspection
-
-
-#### Performance Profiling
-
-
 ### Removing Strategies
 
-The function `remove_strategy` allows you to discard a strategy by its name:
+The function `remove_strategy` allows you to discard a strategy by its name.
 
 
 ## Advanced Topics
@@ -337,9 +271,6 @@ catch e
     @warn "Planar not available: $e"
 end
 ```
-
-### Custom Indicators
-
 
 ### Integration with External Libraries
 

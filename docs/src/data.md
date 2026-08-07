@@ -1,8 +1,7 @@
 # Data Management
 
 
-
-The Data module provides comprehensive storage and management of [OHLCV](guides/data-management.md#ohlcv-data) (Open, High, Low, Close, Volume) data and other time-series [market data](guides/data-management.md).
+The Data module provides comprehensive storage and management of [OHLCV](guides/data-management.md#Data-Collection-Methods) (Open, High, Low, Close, Volume) data and other time-series [market data](guides/data-management.md).
 
 ## Quick Navigation
 
@@ -37,7 +36,7 @@ The framework wraps a Zarr subtype of `AbstractStore` in a [`PlanarCore.Data.Zar
 
 ### Data Organization
 
-[OHLCV data](guides/data-management.md#ohlcv-data) is organized hierarchically using [`PlanarCore.Data.key_path`](@ref):
+[OHLCV data](guides/data-management.md#Data-Collection-Methods) is organized hierarchically using [`PlanarCore.Data.key_path`](@ref).
 
 ## Data Architecture Overview
 
@@ -45,7 +44,7 @@ The Data module provides a comprehensive [data management](guides/data-managemen
 
 - **Storage Backend**: Zarr arrays with LMDB as the default store
 - **Data Organization**: Hierarchical structure by exchange/source, pair, and timeframe
-- **Data Types**: [OHLCV data](guides/data-management.md#ohlcv-data), generic time-series data, and cached metadata
+- **Data Types**: [OHLCV data](guides/data-management.md#Data-Collection-Methods), generic time-series data, and cached metadata
 - **Access Patterns**: Progressive loading for large datasets, contiguous time-series validation
 - **Performance**: Chunked storage, compression, and optimized indexing
 
@@ -70,16 +69,13 @@ ZarrInstance/
 
 ## Data Collection Methods
 
-Planar provides multiple methods for collecting market data, each optimized for different use cases:
+Planar provides multiple methods for collecting market data, each optimized for different use cases.
 
 ## Historical Data with DownloadTool
 
 The DownloadTool module provides access to historical data archives from major exchanges, offering the most efficient method for obtaining large amounts of historical data.
 
 **Supported Exchanges**: Binance and Bybit archives
-
-### Basic DownloadTool Usage
-
 
 ### Advanced DownloadTool Examples
 
@@ -97,33 +93,24 @@ Use different market types (`:spot`, `:um`, `:cm`), frequencies (`:daily`, `:mon
     If data becomes corrupted, pass `reset=true` to force a complete redownload.
 
 !!! tip "Performance Optimization"
-    - **Monthly Archives**: Use for historical [backtesting](guides/execution-modes.md#simulation)-mode) (faster download, larger chunks)
+    - **Monthly Archives**: Use for historical [backtesting](guides/execution-modes.md#Simulation-Mode)-mode) (faster download, larger chunks)
     - **Daily Archives**: Use for recent data or frequent updates
     - **Parallel Downloads**: Consider for multiple symbols, but respect [exchange](exchanges.md) rate limits 
 
 ## Real-Time Data with Fetch
 
-The Fetch module downloads data directly from exchanges using [CCXT](exchanges.md#ccxt-integration), making it ideal for:
+The Fetch module downloads data directly from exchanges using [CCXT](exchanges.md#CCXT-Integration), making it ideal for:
 
 - Getting the most recent market data
 - Filling gaps in historical data
-- Real-time data updates for [live trading](guides/execution-modes.md#live-mode)
-
-### Basic Fetch Usage
-
-
-### Advanced Fetch Examples
-
-
-### Multi-Exchange Data Collection
-
+- Real-time data updates for [live trading](guides/execution-modes.md#Live-Mode)
 
 ### Rate Limit Management
 
 Use delays between requests and validate data quality. Implement error handling for failed requests.
 
 !!! warning "Rate Limit Considerations"
-    Direct exchange fetching is heavily rate-limited, especially for smaller [timeframes](guides/data-management.md#timeframes).
+    Direct exchange fetching is heavily rate-limited, especially for smaller [timeframes](guides/data-management.md#Timeframe-Management).
     Use archives for bulk historical data collection.
 
 !!! tip "Fetch Best Practices"
@@ -142,8 +129,7 @@ The Watchers module enables real-time data tracking from exchanges and other sou
 
 ### OHLCV Ticker Watcher
 
-The ticker watcher monitors multiple pairs simultaneously using exchange ticker endpoints:
-
+The ticker watcher monitors multiple pairs simultaneously using exchange ticker endpoints.
 
 
 As a convention, the `view` property of a watcher shows the processed data. In this case, the candles processed
@@ -152,21 +138,12 @@ by the `ohlcv_ticker_watcher` will be stored in a dict.
 
 ### Single-Pair OHLCV Watcher
 
-There is another OHLCV watcher based on trades, that tracks only one pair at a time with higher precision:
+There is another OHLCV watcher based on trades, that tracks only one pair at a time with higher precision.
 
 
 ### Watcher Configuration
 
 Configure watchers with custom intervals using `timeout_interval`, `fetch_interval`, and `flush_interval` parameters. Use `wc.start!()` and `wc.stop!()` for lifecycle management.
-
-### Orderbook Watcher
-
-
-### Custom Data Processing
-
-
-### Error Handling and Resilience
-
 
 ### Data Persistence and Storage
 
@@ -187,19 +164,6 @@ Assuming you have your own pipeline to fetch candles, you can use the functions 
 ### Basic Custom Data Integration
 
 To save the data, it is easier if you pass a standard OHLCV dataframe, otherwise you need to provide a `saved_col` argument that indicates the correct column index to use as the `timestamp` column (or use lower-level functions).
-
-
-To load the data back:
-
-
-### Advanced Custom Data Examples
-
-
-### Custom Data Validation
-
-
-### Working with Large Custom Datasets
-
 
 ### Generic Data Storage
 
@@ -229,10 +193,7 @@ Since these save/load functions require a timestamp column, they check that the 
 
 ## Data Indexing and Access Patterns
 
-The Data module implements dataframe indexing by dates such that you can conveniently access rows by:
-
-
-### Advanced Indexing Examples
+The Data module implements dataframe indexing by date, so you can conveniently access rows by timestamp.
 
 
 ### Timeframe Management
@@ -240,62 +201,17 @@ The Data module implements dataframe indexing by dates such that you can conveni
 With ohlcv data, we can access the timeframe of the series directly from the dataframe by calling `timeframe!(df)`. This will either return the previously set timeframe or infer it from the `timestamp` column. You can set the timeframe by calling e.g. `timeframe!(df, tf"1m")` or `timeframe!!` to overwrite it.
 
 
-### Efficient Data Slicing
-
-
-### Data Aggregation and Resampling
-
-
 ## Caching and Performance Optimization
 
 `Data.Cache.save_cache` and `Data.Cache.load_cache` can be used to store generic metadata like JSON payloads. The data is saved in the Planar data directory which is either under the `XDG_CACHE_DIR` if set or under `$HOME/.cache` by default.
-
-### Basic Caching Usage
-
-
-### Advanced Caching Examples
-
-
-### Performance Optimization Strategies
-
-
-### Cache Management
-
-
-### Storage Configuration Optimization
-
 
 ## Data Processing and Transformation
 
 The Data module provides comprehensive tools for processing and transforming financial data. This section covers data cleaning, validation, and transformation techniques.
 
-### Data Cleaning and Validation
-
-
-### Gap Detection and Filling
-
-
-### Data Transformation and Feature Engineering
-
-
 ## Storage Configuration and Optimization
 
 This section covers advanced storage configuration, optimization techniques, and troubleshooting for the Zarr/LMDB backend.
-
-### Zarr Storage Configuration
-
-
-### LMDB Configuration and Tuning
-
-
-### Storage Optimization Strategies
-
-
-### Data Validation and Integrity
-
-
-### Troubleshooting Storage Issues
-
 
 ### Progressive Data Loading
 
@@ -312,21 +228,6 @@ When loading data from storage, you can directly use the `ZArray` by passing `ra
 ## Real-Time Data Pipelines and Monitoring
 
 This section covers advanced real-time data collection, processing, and monitoring using the Watchers system.
-
-### Real-Time Data Pipeline Architecture
-
-
-### Advanced Watcher Management
-
-
-### Real-Time Data Processing
-
-
-### Monitoring and Alerting
-
-
-### Data Quality Monitoring
-
 
 ### Complete Pipeline Example
 

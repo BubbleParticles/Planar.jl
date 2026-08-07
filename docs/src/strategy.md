@@ -1,7 +1,6 @@
 # Strategy Development Guide
 
 
-
 This comprehensive guide covers everything you need to know about developing trading [strategies](guides/../guides/strategy-development.md) in Planar. From basic concepts to advanced patterns, you'll learn how to build robust, profitable trading systems.
 
 ## Quick Navigation
@@ -9,7 +8,6 @@ This comprehensive guide covers everything you need to know about developing tra
 - **[Strategy Fundamentals](#Strategy-Fundamentals)** - Core concepts and architecture
 - **[Creating Strategies](#Creating-a-New-Strategy)** - Interactive and manual setup
 - **[Loading Strategies](#Loading-a-Strategy)** - Runtime instantiation
-- **[Advanced Examples](#Advanced-Strategy-Examples)** - Multi-timeframe, portfolio, and optimization strategies
 - **[Best Practices](#Best-Practices)** - Code organization and performance tips
 - **[Troubleshooting](#Troubleshooting-and-Debugging)** - Common issues and solutions
 
@@ -31,15 +29,15 @@ Before diving into strategy development, ensure you have:
 
 ### Architecture Overview
 
-Planar strategies are built around [Julia](https://julialang.org/)'s powerful [dispatch system](guides/../guides/strategy-development.md#dispatch-system), enabling clean separation of concerns and easy customization. Each strategy is a Julia module that implements specific interface methods through the `call!` function dispatch pattern.
+Planar strategies are built around [Julia](https://julialang.org/)'s powerful [dispatch system](guides/strategy-development.md#Dispatch-System), enabling clean separation of concerns and easy customization. Each strategy is a Julia module that implements specific interface methods through the `call!` function dispatch pattern.
 
 #### Core Components
 
 - **Strategy Module**: Contains your trading logic and [configuration](config.md)
 - **Dispatch System**: Uses `call!` methods to handle different strategy events
 - **Asset Universe**: Collection of tradeable assets managed by the strategy
-- **Execution Modes**: Sim ([backtesting](guides/execution-modes.md#simulation)-mode)), Paper (simulated live), and Live trading
-- **Margin Support**: Full support for isolated and [cross margin](guides/../guides/strategy-development.md#margin-modes) trading
+- **Execution Modes**: Sim ([backtesting](guides/execution-modes.md#Simulation-Mode)-mode)), Paper (simulated live), and Live trading
+- **Margin Support**: Full support for isolated and [cross margin](guides/strategy-development.md#Margin-Modes) trading
 
 #### Strategy Type Hierarchy
 
@@ -53,7 +51,7 @@ Where:
 
 ### Dispatch System
 
-The strategy interface uses Julia's [multiple dispatch](guides/../guides/strategy-development.md#dispatch-system) through the `call!` function. This pattern allows you to define different behaviors for different contexts while maintaining clean, extensible code.
+The strategy interface uses Julia's [multiple dispatch](guides/strategy-development.md#Dispatch-System) through the `call!` function. This pattern allows you to define different behaviors for different contexts while maintaining clean, extensible code.
 
 #### Key Dispatch Patterns
 
@@ -62,16 +60,14 @@ The strategy interface uses Julia's [multiple dispatch](guides/../guides/strateg
 - Methods dispatching on strategy instances are called during runtime
 
 
-**Action-Based Dispatch**:
-
 #### Exchange-Specific Dispatch
 
-You can customize behavior for specific [exchanges](exchanges.md):
+You can customize behavior for specific [exchanges](exchanges.md).
 
 
 ### Margin Trading Concepts
 
-Planar provides comprehensive [margin trading](guides/../guides/strategy-development.md#margin-trading-concepts) support with proper position management and risk controls.
+Planar provides comprehensive [margin trading](guides/strategy-development.md#Margin-Trading-Concepts) support with proper position management and risk controls.
 
 #### Margin Modes
 
@@ -80,12 +76,6 @@ Planar provides comprehensive [margin trading](guides/../guides/strategy-develop
 **Isolated Margin**: Each position has independent margin
 
 **Cross Margin**: Shared margin across all positions
-
-#### Position Management
-
-
-#### Risk Management Patterns
-
 
 ## Creating a New Strategy
 
@@ -155,13 +145,13 @@ julia> s = ans
 
 ### Non-Interactive Strategy Creation
 
-You can also create strategies programmatically without user interaction:
+You can also create strategies programmatically without user interaction.
 
 ## Loading a Strategy
 
 ### Basic Strategy Loading
 
-Strategies are instantiated by loading a Julia module at runtime:
+Strategies are instantiated by loading a Julia module at runtime.
 
 
 The strategy name corresponds to the module name, which is imported from:
@@ -169,12 +159,6 @@ The strategy name corresponds to the module name, which is imported from:
 - `user/strategies/Example/src/Example.jl` (project-based strategy)
 
 After module import, the strategy is instantiated by calling `call!(::Type{S}, ::LoadStrategy, cfg)`.
-
-### Strategy Type Structure
-
-
-### Example Strategy Module
-
 
 ### Dispatch Convention
 
@@ -220,22 +204,6 @@ Understanding the strategy lifecycle is crucial for proper implementation:
 5. **Execution Loop**: `call!(s::SC, timestamp, context)` is called repeatedly
 6. **Cleanup**: `call!(s::SC, ::StopStrategy)` is called when stopping
 
-### Essential Strategy Methods
-
-#### Required Methods
-
-
-#### Optional Methods
-
-
-### Advanced Dispatch Patterns
-
-#### Conditional Dispatch by Mode
-
-
-#### Parameter-Based Dispatch
-
-
 ## List of strategy call! functions
 
 ```@docs
@@ -251,17 +219,6 @@ Really delete strategy located at /run/media/fra/stateful-1/dev/Planar.jl/user/s
 [ Info: Strategy removed
 Remove user config entry MyNewStrategy? [n]/y: y
 ```
-
-## Advanced Strategy Examples
-
-### Multi-Timeframe Strategy
-
-
-### Portfolio Rebalancing Strategy
-
-
-### Advanced Optimization Strategy
-
 
 ## Strategy Setup and Loading (Preserved)
 
@@ -286,7 +243,7 @@ user/strategies/MyStrategy/
 
 ### Strategy Configuration
 
-Strategies can be configured through `user/[planar.toml](config.md#configuration-file)`:
+Strategies can be configured through `user/[planar.toml](config.md#Configuration-File)`:
 
 ```toml
 [strategies.MyStrategy]
@@ -301,14 +258,6 @@ custom_param1 = 1.5
 custom_param2 = "value"
 ```
 
-## Strategy Examples
-
-### Simple Moving Average Strategy
-
-
-### Margin Trading Strategy
-
-
 ## Best Practices
 
 ### Code Organization
@@ -319,9 +268,6 @@ custom_param2 = "value"
 
 3. **Parameter Management**: Use strategy attributes for parameters
 
-### Error Handling
-
-
 ### Performance Optimization
 
 1. **Minimize Allocations**: Reuse data structures when possible
@@ -329,15 +275,9 @@ custom_param2 = "value"
 3. **Conditional Logic**: Use early returns to avoid unnecessary computations
 
 
-### Testing and Validation
-
-
 ## Resizeable Universe
 
 The universe (`s.universe`) is backed by a `DataFrame` (`s.universe.data`). It is possible to add and remove assets from the universe during runtime, although this feature is not extensively tested.
-
-### Dynamic Asset Management
-
 
 ## Troubleshooting and Debugging
 
@@ -362,7 +302,7 @@ The universe (`s.universe`) is backed by a `DataFrame` (`s.universe.data`). It i
 
 #### 2. Data Access Issues
 
-**Issue**: [OHLCV data](guides/../guides/data-management.md#ohlcv-data) is empty or missing
+**Issue**: [OHLCV data](guides/data-management.md#Data-Collection-Methods) is empty or missing
 
 **Solutions**:
 - Check data availability for your timeframe and date range
@@ -400,28 +340,6 @@ The universe (`s.universe`) is backed by a `DataFrame` (`s.universe.data`). It i
 - Update leverage before placing orders:
 
 
-### Debugging Techniques
-
-#### 1. Logging and Monitoring
-
-
-#### 2. Strategy State Inspection
-
-
-#### 3. Performance Profiling
-
-
-#### 4. Unit Testing Strategies
-
-
-### Error Recovery Patterns
-
-#### 1. Graceful Degradation
-
-
-#### 2. Circuit Breaker Pattern
-
-
 ### Performance Optimization Tips
 
 1. **Minimize Data Access**: Cache frequently used values
@@ -430,51 +348,26 @@ The universe (`s.universe`) is backed by a `DataFrame` (`s.universe.data`). It i
 4. **Profile Regularly**: Use Julia's profiling tools to identify bottlenecks
 5. **Memory Management**: Avoid unnecessary allocations in hot paths
 
-### Risk Management and Risk Control
-
 ### Order Types and Execution
 
 Planar supports various order types for different trading scenarios. Understanding when and how to use each type is crucial for effective strategy implementation.
 
 #### Market Orders
 
-Market orders execute immediately at the current market price:
+Market orders execute immediately at the current market price.
 
 
 #### Limit Orders
 
-Limit orders execute only at a specified price or better:
+Limit orders execute only at a specified price or better.
 
 
 #### Stop Orders
 
-Stop orders become market orders when a trigger price is reached:
-
-
-#### Order Management Patterns
-
-
-### Position Management for Margin Trading
-
-#### Position Types and States
-
-
-#### Leverage Management
-
-
-#### Position Sizing Strategies
+Stop orders become market orders when a trigger price is reached.
 
 
 ### Risk Management Patterns
-
-#### Stop Loss Strategies
-
-
-#### Take Profit Strategies
-
-
-#### Portfolio Risk Management
-
 
 #### Risk Metrics and Monitoring
 

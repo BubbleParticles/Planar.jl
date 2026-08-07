@@ -90,7 +90,6 @@ sandbox = true  # for testing
 
 **Problem**: PythonCall.jl fails to initialize.
 
-**Solution**:
 
 ### CCXT Installation Issues
 
@@ -164,7 +163,6 @@ docker run -v $(pwd)/user:/app/user planar
 - Increase system memory or use swap
 
 ## Network Issues
-
 
 
 ### Firewall Issues

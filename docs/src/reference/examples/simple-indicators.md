@@ -15,15 +15,6 @@ This example demonstrates how to calculate and use common technical indicators i
 **Complexity:** Beginner  
 **Prerequisites:** [Data Access Examples](data-access.md)
 
-## Complete Indicators Example
-
-
-## Advanced Indicators Example
-
-
-## Indicator-Based Strategy Example
-
-
 ## Usage Examples
 
 ### Basic Indicators
@@ -94,17 +85,9 @@ println("Backtest period: ", from_date, " to ", to_date)
 4. **Validate Inputs**: Always check for sufficient data before calculation
 5. **Handle Edge Cases**: Account for division by zero and invalid data
 
-## Common Indicator Patterns
-
-### Trend Following
-
-### Mean Reversion
-
-### Volume Confirmation
-
 ## See Also
 
 - **[Data Access Examples](data-access.md)** - Working with market data
-- **[Technical Analysis Examples](#advanced-indicators-example)** - Advanced analysis techniques
+- **[Technical Analysis Examples](simple-indicators.md#Advanced-Indicators)** - Advanced analysis techniques
 - **[Risk Management Examples](../../advanced/risk-management.md)** - Position sizing and stops
 - **[Multi-Asset Strategies](../../guides/strategy-development.md)** - Trading multiple assets

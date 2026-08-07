@@ -4,7 +4,7 @@ Within the Planar "model", we use the _call!_ and _call!_ functions to communica
 
 In the Planar framework, the user generally only writes `call!` functions within their [strategies](../guides/strategy-development.md).
 
-Unlike other trading bots that offer a set of methods for tuning purposes, usually tied to the super class of the strategy, Planar conventionally deals only with `call!` functions. This allows you to know that whenever a _call!_ call is made from the strategy, it is a point where [simulation](../guides/execution-modes.md#simulation-mode) and live execution may diverge.
+Unlike other trading bots that offer a set of methods for tuning purposes, usually tied to the super class of the strategy, Planar conventionally deals only with `call!` functions. This allows you to know that whenever a _call!_ call is made from the strategy, it is a point where [simulation](../guides/execution-modes.md#Simulation-Mode) and live execution may diverge.
 
 The functions are implemented in a way that they dispatch differently according to the execution mode of the strategy. There are 3 execution modes:
 
@@ -20,8 +20,6 @@ If the strategy is instantiated in `Sim` mode, calling `call!(s, ...)`, where `s
 
 To follow the `call!` dispatch convention, you can expect the first argument of every call function to the executor to be the strategy object itself, while strategy functions might have either the strategy object or the type of the strategy as the first argument (`Type{Strategy{...}}`).
     
-
-
 
 ## See Also
 

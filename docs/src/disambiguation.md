@@ -39,15 +39,15 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 : Trading with borrowed funds to increase position size. Planar supports `NoMargin` (spot), `Isolated` (position-specific margin), and `Cross` (shared margin) modes.
 
 **Leverage**
-: The ratio of position size to margin. Higher [leverage](guides/../guides/strategy-development.md#margin-modes) amplifies both profits and losses.
+: The ratio of position size to margin. Higher [leverage](guides/strategy-development.md#Margin-Modes) amplifies both profits and losses.
 
 ### Data and Market Terms
 
-**[OHLCV](guides/../guides/data-management.md#ohlcv-data)**
+**[OHLCV](guides/data-management.md#Data-Collection-Methods)**
 : Open, High, Low, Close, Volume - standard candlestick data format. Usually refers to a DataFrame containing this [market data](guides/../guides/data-management.md).
 
 **Candle**
-: A single [OHLCV data](guides/../guides/data-management.md#ohlcv-data) point, can be a DataFrame row, named tuple, or `Candle` structure.
+: A single [OHLCV data](guides/data-management.md#Data-Collection-Methods) point, can be a DataFrame row, named tuple, or `Candle` structure.
 
 **Timeframe**
 : The duration each candle represents (e.g., `tf"1m"` for 1-minute candles, `tf"1h"` for hourly).
@@ -56,7 +56,7 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 : A complex data structure associating a DataFrame, Zarr array, and trading pair.
 
 **Resample**
-: Converting data between [timeframes](guides/../guides/data-management.md#timeframes), usually downsampling (e.g., 1m → 1h) as upsampling is rarely beneficial.
+: Converting data between [timeframes](guides/data-management.md#Timeframe-Management), usually downsampling (e.g., 1m → 1h) as upsampling is rarely beneficial.
 
 ### Exchange and Infrastructure Terms
 
@@ -64,7 +64,7 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 : Can refer to an `Exchange` instance, `ExchangeID`, or the `Symbol` of an [exchanges](exchanges.md) ID. A global `exc` variable is defined in `ExchangeTypes` for REPL convenience.
 
 **Sandbox**
-: Exchange-provided "testnet" for API testing. Distinct from [paper trading](guides/execution-modes.md#paper-mode) - sandbox uses test APIs, [paper trading](guides/execution-modes.md#paper-mode) uses live data with simulated execution.
+: Exchange-provided "testnet" for API testing. Distinct from [paper trading](guides/execution-modes.md#Paper-Mode) - sandbox uses test APIs, [paper trading](guides/execution-modes.md#Paper-Mode) uses live data with simulated execution.
 
 **Instance**
 : Typically implies an `AssetInstance` - the combination of an asset and [exchanges](exchanges.md).
@@ -91,10 +91,10 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 ### Execution Modes
 
 **Sim Mode**
-: Backtesting mode using historical data. Fast execution with simplified order [simulation](guides/execution-modes.md#simulation-mode).
+: Backtesting mode using historical data. Fast execution with simplified order [simulation](guides/execution-modes.md#Simulation-Mode).
 
 **Paper Mode**
-: Real-time [simulation](guides/execution-modes.md#simulation-mode) using live [market data](guides/../guides/data-management.md) but no actual trades. Tests strategy logic with realistic market conditions.
+: Real-time [simulation](guides/execution-modes.md#Simulation-Mode) using live [market data](guides/../guides/data-management.md) but no actual trades. Tests strategy logic with realistic market conditions.
 
 **Live Mode**
 : Real trading with actual capital and exchange APIs. Includes full risk management and monitoring.
@@ -102,7 +102,7 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 ### Data System
 
 **Zarr**
-: Columnar storage format used for [OHLCV data](guides/../guides/data-management.md#ohlcv-data). Supports compression and chunked access for large datasets.
+: Columnar storage format used for [OHLCV data](guides/data-management.md#Data-Collection-Methods). Supports compression and chunked access for large datasets.
 
 **LMDB**
 : Lightning Memory-Mapped Database used as the default storage backend for Zarr arrays.
@@ -114,7 +114,7 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 : Package for downloading historical data archives from exchanges (currently Binance and Bybit).
 
 **Fetch**
-: Module for downloading data directly from exchange APIs using [CCXT](exchanges.md#ccxt-integration).
+: Module for downloading data directly from exchange APIs using [CCXT](exchanges.md#CCXT-Integration).
 
 **Watcher**
 : Real-time data monitoring system that continuously collects and stores live [market data](guides/../guides/data-management.md).
@@ -168,8 +168,8 @@ This glossary defines key terms and concepts used throughout Planar documentatio
 - Project: `user/[strategies](guides/../guides/strategy-development.md)/StrategyName/src/StrategyName.jl`
 
 **Configuration Files**
-- Main config: `user/[planar.toml](config.md#configuration)-file)`
-- Secrets: `user/[secrets.toml](config.md#secrets-management)`
+- Main config: `user/[planar.toml](config.md)-file)`
+- Secrets: `user/[secrets.toml](config.md#Secrets-Management)`
 - Strategy config: `user/[strategies](guides/../guides/strategy-development.md)/StrategyName/Project.toml`
 
 **Data Storage**

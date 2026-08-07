@@ -15,6 +15,8 @@ Options:
     --docs=PATH       Path to docs directory (default: docs/src)
     --skip-links      Skip link validation
     --skip-format     Skip format validation
+    --skip-examples   Accepted for Makefile compatibility (no-op)
+    --timeout=N       Accepted for Makefile compatibility (no-op)
     --verbose         Enable verbose output
     --help            Show this help message
 """
@@ -62,6 +64,15 @@ function parse_args(args)
         elseif startswith(arg, "--output=")
             options[:output_file] = arg[10:end]
 
+        elseif arg == "--skip-examples"
+            # Accepted for Makefile compatibility: code-example testing was
+            # replaced with manual AI-guided review (see maintenance/
+            # ai-code-block-review-guide.md), so there is nothing to skip.
+            options[:skip_examples] = true
+        elseif startswith(arg, "--timeout=")
+            # Accepted for Makefile compatibility: the runner has no
+            # per-check timeouts, so the value is ignored.
+            options[:timeout] = arg[11:end]
         elseif arg == "--skip-links"
             options[:skip_links] = true
         elseif arg == "--skip-format"
@@ -94,6 +105,8 @@ Options:
     --docs=PATH       Path to docs directory (default: docs/src)
     --skip-links      Skip link validation
     --skip-format     Skip format validation
+    --skip-examples   Accepted for Makefile compatibility (no-op)
+    --timeout=N       Accepted for Makefile compatibility (no-op)
     --verbose         Enable verbose output
     --help            Show this help message
 """)

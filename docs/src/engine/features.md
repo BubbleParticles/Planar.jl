@@ -11,7 +11,7 @@ The types considered for possible combinations are:
 | Isolated | -      | X         |
 | Cross    | -      | -         |
 
-Currently, the bot supports trading on spot markets, or derivatives markets with [isolated margin](../guides/strategy-development.md#margin-modes). There should be errors (or at least warnings) already implemented to check that the [strategy](../guides/strategy-development.md) universe respects the strategy combination. 
+Currently, the bot supports trading on spot markets, or derivatives markets with [isolated margin](../guides/strategy-development.md#Margin-Modes). There should be errors (or at least warnings) already implemented to check that the [strategy](../guides/strategy-development.md) universe respects the strategy combination. 
 
 There isn't any restriction as to why a strategy should only be allowed to have only one type of market, since most of the logic is handled per asset instance. However, supporting `Cross` margin might require further constraints. Moreover, since it is possible to create and run as many [strategies](../guides/strategy-development.md) as you want in parallel, having the strategy type to retain simplicity enables more composability.
 

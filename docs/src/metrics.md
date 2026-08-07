@@ -1,6 +1,6 @@
 # Metrics Module Documentation
 
-The `Metrics` module provides functions for analyzing the outcomes of [backtest](guides/execution-modes.md#simulation-mode) runs within the trading [strategy](guides/../guides/strategy-development.md) framework.
+The `Metrics` module provides functions for analyzing the outcomes of [backtest](guides/execution-modes.md#Simulation-Mode) runs within the trading [strategy](guides/../guides/strategy-development.md) framework.
 
 ### Resampling Trades
 

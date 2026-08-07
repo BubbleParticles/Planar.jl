@@ -19,7 +19,7 @@ This library provides comprehensive, tested code examples for common Planar.jl u
 - **Backtesting Setup** - Complete backtesting examples
 
 #### Advanced Examples
-- **[Margin Trading](../../guides/strategy-development.md#margin-trading-concepts)** - Leverage and margin management
+- **[Margin Trading](../../guides/strategy-development.md#Margin-Trading-Concepts)** - Leverage and margin management
 - **Portfolio Management** - Advanced portfolio strategies
 - **[Optimization](../../optimization.md)** - Parameter optimization examples
 - **[Live Trading](../../engine/live.md)** - Production trading setup
@@ -73,11 +73,11 @@ Backtesting, validation, and performance analysis.
 ## How to Use These Examples
 
 ### 1. Copy and Adapt
-All examples are designed to be copied and modified for your specific needs:
+All examples are designed to be copied and modified for your specific needs.
 
 
 ### 2. Combine Examples
-Many examples can be combined to create more complex strategies:
+Many examples can be combined to create more complex strategies.
 
 
 ### 3. Test Thoroughly
@@ -102,7 +102,7 @@ println("Example backtest period: ", start_date, " to ", end_date)
 
 ## Example Template
 
-All examples follow this consistent structure:
+All examples follow this consistent structure.
 
 
 ## Testing Your Examples
@@ -151,9 +151,6 @@ We welcome contributions to the examples library! When contributing:
 3. **Document Clearly**: Include clear descriptions and comments
 4. **Provide Context**: Explain when and why to use the example
 5. **Keep It Simple**: Focus on demonstrating specific concepts
-
-### Submission Guidelines
-
 
 ## Getting Help
 

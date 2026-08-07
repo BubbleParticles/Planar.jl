@@ -1,11 +1,11 @@
 # Plotting and Visualization
 
-The Plotting module utilizes [Makie](https://docs.makie.org/stable/) for creating visualizations. It is important to note that graphical backends are not automatically included with the module and must be installed manually:
+The Plotting module utilizes [Makie](https://docs.makie.org/stable/) for creating visualizations. It is important to note that graphical backends are not automatically included with the module and must be installed manually.
 
 
 Planar enhances Makie with specialized plotting recipes for financial analysis:
 
-- [OHLCV](guides/../guides/data-management.md#ohlcv-data) (Open-High-Low-Close Volume) charts
+- [OHLCV](guides/data-management.md#Data-Collection-Methods) (Open-High-Low-Close Volume) charts
 - Detailed trade history visualization
 - Summarized trade history with volume and balance insights
 - Custom indicator overlays and channels
@@ -19,42 +19,42 @@ Planar enhances Makie with specialized plotting recipes for financial analysis:
 
 ### GLMakie (Desktop Applications)
 
-GLMakie is the recommended backend for desktop applications and provides the best performance for interactive plots:
+GLMakie is the recommended backend for desktop applications and provides the best performance for interactive plots.
 
 
 ### WGLMakie (Web Applications)
 
-WGLMakie is ideal for web-based applications and Jupyter notebooks:
+WGLMakie is ideal for web-based applications and Jupyter notebooks.
 
 
 ### CairoMakie (Static Images)
 
-For generating static images or when interactive features are not needed:
+For generating static images or when interactive features are not needed.
 
 For generating static images, use CairoMakie and save with `save("chart.png", figure)`.
 
-## [OHLCV](guides/../guides/data-management.md#ohlcv-data) Charts
+## [OHLCV](guides/data-management.md#Data-Collection-Methods) Charts
 
-[OHLCV data](guides/../guides/data-management.md#ohlcv-data) is represented using candlesticks to indicate price movement, with red signifying a price decrease and green an increase. Volume is depicted as bars in the background of the chart.
+[OHLCV data](guides/data-management.md#Data-Collection-Methods) is represented using candlesticks to indicate price movement, with red signifying a price decrease and green an increase. Volume is depicted as bars in the background of the chart.
 
-### Basic [OHLCV](guides/../guides/data-management.md#ohlcv-data) Chart
+### Basic [OHLCV](guides/data-management.md#Data-Collection-Methods) Chart
 
 ![OHLCV Plot](assets/ohlcv.gif)
 
 ### Customizing OHLCV Charts
 
-You can customize various aspects of OHLCV charts:
+You can customize various aspects of OHLCV charts.
 
 Customize charts with parameters like `title`, `up_color`, `down_color`, `volume_color`, and `show_volume`.
 
 ### Time Range Selection
 
-Display specific time periods:
+Display specific time periods.
 
 
 ### Multiple Timeframes
 
-Compare different [timeframes](guides/../guides/data-management.md#timeframes) on the same chart:
+Compare different [timeframes](guides/data-management.md#Timeframe-Management) on the same chart.
 
 Create multi-timeframe layouts using `Figure()` and `Axis()` with `Plotting.ohlcv!()` for each subplot.
 
@@ -66,12 +66,9 @@ The history of trades is illustrated using triangles, with upwards pointing tria
 
 ![TradesTicks](assets/tradesticks.jpg)
 
-### Advanced Trade Analysis
-
-
 ### Trade Performance Overlay
 
-Combine trade markers with performance metrics:
+Combine trade markers with performance metrics.
 
 Add balance lines and statistics with `Plotting.balance_line!()` and `Plotting.add_stats_table!()`.
 
@@ -117,55 +114,27 @@ Group assets by categories and plot with different colors using loops and subplo
 
 ## Custom Indicators
 
-Custom indicators enhance chart analysis and can be integrated into plots. Planar provides several functions for adding [technical indicators](guides/../guides/strategy-development.md#technical-indicators) to your charts.
+Custom indicators enhance chart analysis and can be integrated into plots. Planar provides several functions for adding [technical indicators](customizations/customizations.md#Custom-Indicators-and-Signals) to your charts.
 
 ### Line Indicators
 
-Moving averages and other line-based indicators can be added using the `line_indicator` function:
+Moving averages and other line-based indicators can be added using the `line_indicator` function.
 
 ![Line Indicator](assets/line-indicator.jpg)
 
-### Advanced Line Indicators
-
-
 ### Channel Indicators
 
-Channels or envelopes can be visualized using the `channel_indicator` function. This tool is useful for identifying trends and potential breakouts:
+Channels or envelopes can be visualized using the `channel_indicator` function. This tool is useful for identifying trends and potential breakouts.
 
 ![Channel Indicator](assets/channel-indicator.jpg)
 
-### Advanced Channel Indicators
-
-
-### Oscillator Indicators
-
-
-### Custom Indicator Development
-
-
-## Styling and Customization
-
-### Color Schemes and Themes
-
-
-### Chart Layout and Sizing
-
-
-### Export and Saving Options
-
 ## Performance Analysis Visualization
-
-### Strategy Performance Charts
-
 
 ### Risk Metrics Visualization
 
 Create risk analysis charts using functions like `Plotting.rolling_sharpe()`, `Plotting.rolling_volatility()`, and `Plotting.calculate_var()`.
 
 ## Optimization Result Visualization
-
-### Parameter Optimization Heatmaps
-
 
 ### 3D Optimization Surface
 
@@ -190,9 +159,6 @@ GLMakie supports interactive features like `Slider()`, `Button()`, and `lift()` 
 ## Troubleshooting and Performance
 
 ### Common Plotting Issues
-
-#### Backend Problems
-
 
 #### Performance Tips
 
@@ -260,13 +226,6 @@ catch e
 end
     resolution = (1200, 800),
 
-#### Jupyter Notebook Integration
-
-
-### Memory Usage Optimization
-
-
-
 ## See Also
 
 - **[Exchanges](exchanges.md)** - Exchange integration and configuration
@@ -277,12 +236,6 @@ end
 - **[Data Management](guides/../guides/data-management.md)** - Guide: Data handling and management
 
 ## Advanced Interactive Features
-
-### Custom Interaction Handlers
-
-
-### Real-time Data Streaming
-
 
 ### Multi-Window Management
 

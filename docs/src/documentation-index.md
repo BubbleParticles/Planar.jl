@@ -5,57 +5,57 @@ This comprehensive index helps you quickly find information across all Planar do
 ## Topics by Category
 
 ### Getting Started
-- **Installation** - [Docker](getting-started/installation.md#docker-installation), [Source](getting-started/installation.md#source-installation)
+- **Installation** - [Docker](getting-started/installation.md#Method-2-Docker), [Source](getting-started/installation.md#Method-1-Git-Clone-Recommended)
 - **Quick Start** - [15-minute tutorial](getting-started/quick-start.md)
-- **First Strategy** - [Tutorial](getting-started/first-strategy.md), [Examples](getting-started/first-strategy.md#strategy-examples)
+- **First Strategy** - [Tutorial](getting-started/first-strategy.md), [Examples](getting-started/first-strategy.md)
 
 ### Strategy Development
-- **Strategy Basics** - [Architecture](strategy.md#strategy-fundamentals), [Dispatch System](strategy.md#dispatch-system)
-- **Strategy Creation** - [Interactive Generator](strategy.md#interactive-strategy-generator), [Manual Setup](strategy.md#manual-setup)
-- **Strategy Loading** - [Runtime Loading](strategy.md#loading-a-strategy), [Configuration](strategy.md#strategy-configuration)
-- **Advanced Patterns** - [Multi-timeframe](strategy.md#multi-timeframe-strategy), [Portfolio Rebalancing](strategy.md#portfolio-rebalancing-strategy)
-- **Margin Trading** - [Concepts](strategy.md#margin-trading-concepts), [Position Management](strategy.md#position-management)
+- **Strategy Basics** - [Architecture](strategy.md#Strategy-Fundamentals), [Dispatch System](strategy.md#Dispatch-System)
+- **Strategy Creation** - [Interactive Generator](strategy.md#Interactive-Strategy-Generator), [Manual Setup](strategy.md#Manual-setup)
+- **Strategy Loading** - [Runtime Loading](strategy.md#Loading-a-Strategy), [Configuration](strategy.md#Strategy-Configuration)
+- **Advanced Patterns** - [Timeframe Management](guides/data-management.md#Timeframe-Management), [Optimization](optimization.md)
+- **Margin Trading** - [Concepts](strategy.md#Margin-Trading-Concepts), [Position Management](advanced/risk-management.md)
 
 ### Data Management
-- **Storage** - [Zarr Backend](data.md#zarr-backend), [LMDB](data.md#storage-architecture), [Organization](data.md#data-organization)
-- **Historical Data** - [DownloadTool](data.md#historical-data-with-downloadtool), [Binance Archives](data.md#basic-downloadtool-usage)
-- **Real-time Data** - [Fetch Module](data.md#real-time-data-with-fetch), [Rate Limits](data.md#rate-limit-management)
-- **Live Streaming** - [Watchers](data.md#live-data-streaming-with-watchers), [OHLCV Tickers](data.md#ohlcv-ticker-watcher)
+- **Storage** - [Zarr Backend](data.md#Zarr-Backend), [LMDB](data.md#Storage-Architecture), [Organization](data.md#Data-Organization)
+- **Historical Data** - [DownloadTool](data.md#Historical-Data-with-DownloadTool), [Binance Archives](data.md#Historical-Data-with-DownloadTool)
+- **Real-time Data** - [Fetch Module](data.md#Real-Time-Data-with-Fetch), [Rate Limits](data.md#Rate-Limit-Management)
+- **Live Streaming** - [Watchers](data.md#Live-Data-Streaming-with-Watchers), [OHLCV Tickers](data.md#OHLCV-Ticker-Watcher)
 
 ### Execution Modes
-- **Backtesting** - [Configuration](engine/backtesting.md#backtest-configuration), [Performance](engine/backtesting.md#performance-optimization-settings)
+- **Backtesting** - [Configuration](engine/backtesting.md#Backtest-Configuration), [Performance](engine/backtesting.md#Performance-Optimization-Settings)
 - **Paper Trading** - [Setup](engine/paper.md), [Real-time Simulation](engine/paper.md)
 - **Live Trading** - [API Setup](engine/live.md), [Risk Management](engine/live.md), [Monitoring](engine/live.md)
-- **Mode Comparison** - [Feature Matrix](engine/mode-comparison.md#feature-comparison-matrix), [Transition Guide](engine/mode-comparison.md)
+- **Mode Comparison** - [Feature Matrix](engine/mode-comparison.md#Feature-Comparison-Matrix), [Transition Guide](engine/mode-comparison.md)
 
 ### Optimization
-- **Methods** - [Grid Search](optimization.md#grid-search), [Bayesian Optimization](optimization.md#bayesian-optimization)
-- **Configuration** - [Parameter Definition](optimization.md#parameter-definition), [Objective Functions](optimization.md#objective-functions)
-- **Results** - [Analysis](optimization.md#result-analysis), [Visualization](optimization.md#optimization-visualization)
+- **Methods** - [Grid Search](optimization.md#Grid-Search), [Bayesian Optimization](optimization.md#Bayesian-Optimization)
+- **Configuration** - [Parameter Definition](optimization.md#Parameter-Definition), [Objective Functions](optimization.md#Objective-Functions)
+- **Results** - [Analysis](optimization.md), [Visualization](plotting.md#Optimization-Result-Visualization)
 
 ### Visualization
-- **Chart Types** - [OHLCV](plotting.md#ohlcv-charts), [Trade Visualization](plotting.md#trade-visualization)
-- **Customization** - [Styling](plotting.md#chart-styling), [Interactivity](plotting.md#interactive-features)
-- **Backends** - [GLMakie](plotting.md#glmakie-setup), [WGLMakie](plotting.md#wglmakie-setup)
+- **Chart Types** - [OHLCV](plotting.md#OHLCV-Charts), [Trade Visualization](plotting.md#Basic-Trade-Visualization)
+- **Customization** - [Styling](plotting.md), [Interactivity](plotting.md#Interactive-Features)
+- **Backends** - [GLMakie](plotting.md#GLMakie-Desktop-Applications), [WGLMakie](plotting.md#WGLMakie-Web-Applications)
 
 ### Customization
-- **Dispatch System** - [Overview](customizations/customizations.md#dispatch-system), [Patterns](customizations/customizations.md#dispatch-patterns)
-- **Custom Orders** - [Implementation](customizations/orders.md), [Examples](customizations/orders.md#examples)
+- **Dispatch System** - [Overview](customizations/customizations.md#Dispatch-Patterns), [Patterns](customizations/customizations.md#Dispatch-Patterns)
+- **Custom Orders** - [Implementation](customizations/orders.md), [Examples](customizations/orders.md)
 - **Exchange Extensions** - [Adding Exchanges](customizations/exchanges.md), [Custom Behavior](customizations/exchanges.md)
 
 ## Function Index
 
 ### Core Functions
-- `strategy()` - [Strategy Loading](strategy.md#loading-a-strategy)
+- `strategy()` - [Strategy Loading](strategy.md#Loading-a-Strategy)
 - `start!()` - [Backtesting](engine/backtesting.md), [Strategy Execution](strategy.md)
-- `call!()` - [Dispatch System](strategy.md#dispatch-system), [Strategy Interface](strategy.md#strategy-interface-details)
-- `fetch_ohlcv()` - [Data Fetching](data.md#basic-fetch-usage)
-- `load_ohlcv()` - [Data Loading](strategy.md#quick-example)
+- `call!()` - [Dispatch System](strategy.md#Dispatch-System), [Strategy Interface](strategy.md#Strategy-Interface-Details)
+- `fetch_ohlcv()` - [Data Fetching](data.md#Real-Time-Data-with-Fetch)
+- `load_ohlcv()` - [Data Loading](data.md#Progressive-Data-Loading)
 
 ### Data Functions
-- `fetch_candles()` - [Raw Data Fetching](data.md#data-validation-and-quality-checks)
-- `binancedownload()` - [Historical Data](data.md#basic-downloadtool-usage)
-- `binanceload()` - [Data Loading](data.md#basic-downloadtool-usage)
+- `fetch_candles()` - [Raw Data Fetching](data.md#Error-Handling-and-Data-Validation)
+- `binancedownload()` - [Historical Data](data.md#Historical-Data-with-DownloadTool)
+- `binanceload()` - [Data Loading](data.md#Historical-Data-with-DownloadTool)
 
 ### Order Functions
 - `MarketOrder()` - [Order Types](customizations/orders.md)
@@ -75,34 +75,34 @@ This comprehensive index helps you quickly find information across all Planar do
 ## Configuration Topics
 
 ### Strategy Configuration
-- **Constants** - [DESCRIPTION, EXC, MARGIN, TF](strategy.md#module-constants)
-- **Environment Macros** - [@strategyenv!, @contractsenv!, @optenv!](strategy.md#environment-macros)
-- **Parameters** - [Strategy Attributes](strategy.md#parameter-management)
+- **Constants** - [DESCRIPTION, EXC, MARGIN, TF](strategy.md#Best-Practices)
+- **Environment Macros** - [@strategyenv!, @contractsenv!, @optenv!](strategy.md#Best-Practices)
+- **Parameters** - [Strategy Attributes](strategy.md#Best-Practices)
 
 ### System Configuration
 - **Environment Variables** - [JULIA_PROJECT, JULIA_NUM_THREADS](troubleshooting/index.md)
 - **Exchange APIs** - [API Keys](engine/live.md), [Sandbox Mode](engine/live.md)
-- **Data Storage** - [LMDB Configuration](data.md#storage-architecture)
+- **Data Storage** - [LMDB Configuration](data.md#Storage-Architecture)
 
 ## Error Handling
 
 ### Common Issues
 - **Installation Problems** - [Dependency Conflicts](troubleshooting/index.md)
 - **Strategy Loading** - [Module Not Found](troubleshooting/index.md)
-- **Data Issues** - [Missing Data](troubleshooting.md#data-access-issues)
-- **Order Execution** - [Insufficient Funds](troubleshooting.md#order-execution-problems)
+- **Data Issues** - [Missing Data](troubleshooting.md#Data-Storage-and-Management-Issues)
+- **Order Execution** - [Insufficient Funds](troubleshooting.md#Order-Execution-Issues)
 
 ### Debugging
-- **Logging** - [Strategy Debugging](strategy.md#logging-and-monitoring)
-- **State Inspection** - [Debug Methods](strategy.md#strategy-state-inspection)
-- **Performance** - [Profiling](strategy.md#performance-profiling)
+- **Logging** - [Strategy Debugging](troubleshooting/strategy-problems.md#Debugging-Strategies)
+- **State Inspection** - [Debug Methods](troubleshooting/strategy-problems.md#Debugging-Strategies)
+- **Performance** - [Profiling](troubleshooting/performance-issues.md#Strategy-Performance)
 
 ## File Locations
 
 ### User Files
 - **Strategies** - `user/[strategies](guides/../guides/strategy-development.md)/`
-- **Configuration** - `user/[planar.toml](config.md#configuration)-file)`
-- **Secrets** - `user/[secrets.toml](config.md#secrets-management)`
+- **Configuration** - `user/[planar.toml](config.md)-file)`
+- **Secrets** - `user/[secrets.toml](config.md#Secrets-Management)`
 - **Data** - `user/data.mdb`, `user/lock.mdb`
 
 ### Documentation
@@ -113,7 +113,7 @@ This comprehensive index helps you quickly find information across all Planar do
 ## Search Keywords
 
 ### Trading Concepts
-- [OHLCV](guides/../guides/data-management.md#ohlcv-data), Candlestick, Timeframe, Exchange, Pair, Symbol
+- [OHLCV](guides/data-management.md#Data-Collection-Methods), Candlestick, Timeframe, Exchange, Pair, Symbol
 - Long, Short, Position, Margin, Leverage, Isolated, Cross
 - Buy, Sell, Order, Trade, Execution, Slippage, Fees
 - Backtest, Paper Trading, Live Trading, Simulation
@@ -141,11 +141,9 @@ This comprehensive index helps you quickly find information across all Planar do
 
 ## Quick Reference
 
-### Essential Commands
-
 ### Key File Paths
 - Strategy files: `user/[strategies](guides/../guides/strategy-development.md)/StrategyName.jl`
-- Configuration: `user/[planar.toml](config.md#configuration-file)`
+- Configuration: `user/[planar.toml](config.md#Configuration-File)`
 - Documentation: `docs/src/`
 - Examples: `user/strategies/QuickStart/examples/`
 

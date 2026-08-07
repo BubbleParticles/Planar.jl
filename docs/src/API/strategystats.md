@@ -6,7 +6,6 @@ Modules = [StrategyStats]
 ```
 
 
-
 ## See Also
 
 - **[Strategy Development](../guides/strategy-development.md)** - Guide: Strategy development and implementation

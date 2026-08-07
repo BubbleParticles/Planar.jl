@@ -14,15 +14,6 @@ This example demonstrates how to load, access, and work with market data in Plan
 **Complexity:** Beginner  
 **Prerequisites:** [Basic Strategy Structure](../../getting-started/first-strategy.md)
 
-## Complete Data Access Example
-
-
-## Multi-Timeframe Data Access
-
-
-## Efficient Data Loading Patterns
-
-
 ## Usage Examples
 
 ### Basic Usage
@@ -44,8 +35,6 @@ println("Data is organized as: exchange/pair/timeframe/arrays")
 # data_path = PlanarCore.Data.key_path("binance", "BTC/USDT", "1m")
 # println("Data path: ", data_path)
 ```
-
-### Multi-Timeframe Usage
 
 ### Efficient Data Usage
 ```julia
@@ -70,12 +59,6 @@ for i in 1:3
     # data = get_data_at_time(zi, current_time + Minute(i))
 end
 ```
-
-## Common Data Access Patterns
-
-### Safe Data Access
-
-### Batch Data Processing
 
 ## Performance Tips
 

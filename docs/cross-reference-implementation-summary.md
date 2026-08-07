@@ -65,7 +65,7 @@ Successfully implemented a comprehensive cross-referencing system for the Planar
 
 ### Browsing Interface
 - **Topic Index** (`docs/src/resources/topic-index.md`) - Complete topic overview
-- **Browse by Topic** (`docs/src/resources/browse-by-topic.md`) - Interactive topic browser
+- **Browse by Topic** (`docs/src/resources/browse-by-topic.md`) - Interactive topic browser, generated on demand by `docs/scripts/implement_topic_tagging.jl` (kept out of the tree while empty)
 - Organized by difficulty level and content type
 - Visual icons and descriptions for each topic category
 

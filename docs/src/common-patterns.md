@@ -1,6 +1,6 @@
 # Common Code Patterns
 
-Since we've reduced code blocks dramatically, here are common patterns explained:
+Since we've reduced code blocks dramatically, here are common patterns explained.
 
 ## Basic Module Loading
 Use: `using Planar` followed by `@environment!` to load the framework.
