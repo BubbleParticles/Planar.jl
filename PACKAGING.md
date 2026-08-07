@@ -96,16 +96,16 @@ so users only need `Pkg.add("Planar")`. Status and remaining requirements:
    top-level directory of each package tree; `LICENSE.md` (Apache text) was
    copied into all 9 package dirs and `license = "Apache-2.0"` added to every
    `Project.toml`.
-4. **Package names — two collisions found (audited against 14,111 General
-   packages with the RegistryCI Damerau–Levenshtein checks):**
+4. **Package names — collisions resolved by renaming (audited against 14,110
+   General packages with the RegistryCI Damerau–Levenshtein checks):**
    - `FeatureSelection` **already exists in General** (JuliaAI/FeatureSelection.jl,
-     uuid `33837fe5-…`) — hard collision (distance 0). The monorepo package must
-     be **renamed** before General registration (proposal: `PlanarFeatureSelection`).
-   - `Python` fails the similarity check (raw distance 1 to `IPython`). Either
-     rename it or register as-is and have a maintainer apply the
-     `Override AutoMerge: name similarity is okay` label for a manual merge.
-   - The other 7 names (`Planar`, `PlanarCore`, `PlanarDev`, `PlanarOptim`,
-     `StrategyStats`, `StrategyTools`, `DownloadTool`) pass all distance checks.
+     uuid `33837fe5-…`) — hard collision (distance 0). **Renamed to
+     `PlanarFeatureSelection`** (uuid unchanged, `799974c5-…`); min distance to
+     any General name is now 6.
+   - `Python` failed the similarity check (raw distance 1 to `IPython`).
+     **Renamed to `PlanarPython`** (uuid unchanged, `e8cdc95d-…`); min distance
+     is now 5 (to `OlivePython`) — no override label needed.
+   - All 9 names pass the distance checks (re-verified after the renames).
 5. **Tree hygiene.** `Manifest.toml`/`LocalPreferences.toml` inside the registered
    trees are inert for installation and are **not** gated by RegistryCI
    automerge (no tarball/Manifest check exists there). Note: `PlanarCore`'s
@@ -118,16 +118,16 @@ so users only need `Pkg.add("Planar")`. Status and remaining requirements:
    comment on the commit/PR
    `@JuliaRegistrator register subdir=PlanarCore` (exact monorepo syntax,
    confirmed in the Registrator README) — repeat for each package.
-   Order: `PlanarCore` → `StrategyStats` → `Planar` → `FeatureSelection` →
-   `DownloadTool` → `Python` → `StrategyTools` → `PlanarOptim` → `PlanarDev`.
+   Order: `PlanarCore` → `StrategyStats` → `Planar` → `PlanarFeatureSelection` →
+   `DownloadTool` → `PlanarPython` → `StrategyTools` → `PlanarOptim` → `PlanarDev`.
    Caveat: automerge's "repo URL ends with `/Name.jl.git`" check only matches
    `Planar` (the monorepo is `Planar.jl`); the other packages go through manual
    registry review — normal for monorepo subdir registrations.
 7. **UUIDs — DONE, keep stable.** `PlanarCore`'s old UUID (`a1b2c3d4-…`)
    collided with the registered `WildlandFire` package, so it (and
-   FeatureSelection's placeholder) were replaced with freshly generated UUIDs
+   PlanarFeatureSelection's placeholder) were replaced with freshly generated UUIDs
    (commit `29ab5a27`): PlanarCore `a475c859-e357-4be2-a5e3-43038ab4b158`,
-   FeatureSelection `799974c5-219d-476a-ada7-be492421c276`. They are the
+   PlanarFeatureSelection `799974c5-219d-476a-ada7-be492421c276`. They are the
    packages' permanent identities — never regenerate.
 
 ### 1.5 Development inside the repo

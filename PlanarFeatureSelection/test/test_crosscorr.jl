@@ -1,7 +1,7 @@
 using Test
 using DataFrames
 using PlanarCore.TimeTicks: TimeFrame, @tf_str, DateRange, dt, @dt_str
-using FeatureSelection: center_data, lagsbytf, DFT
+using PlanarFeatureSelection: center_data, lagsbytf, DFT
 
 @testset "crosscorr.jl tests" failfast=true begin
     @testset "lagsbytf function" begin

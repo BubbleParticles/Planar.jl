@@ -93,7 +93,7 @@ Pkg.add("Planar")
   subtree tarball from the pushed tree SHA.
 - The registry is append-only; never delete old versions.
 - Do NOT regenerate the package UUIDs (`a475c859-e357-4be2-a5e3-43038ab4b158`
-  = PlanarCore, `799974c5-219d-476a-ada7-be492421c276` = FeatureSelection) —
+  = PlanarCore, `799974c5-219d-476a-ada7-be492421c276` = PlanarFeatureSelection) —
   they are permanent identities.
 - `PlanarRegistry/` is gitignored in the monorepo; its git history lives in the
   separate registry repo.

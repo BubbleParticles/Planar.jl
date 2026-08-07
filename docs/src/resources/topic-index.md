@@ -392,7 +392,7 @@ Browse documentation by topic and category.
 - [Pbar](../API/pbar.md)
 - [Plotting](../plotting.md)
 - [Processing](../API/processing.md)
-- [Python](../API/python.md)
+- [PlanarPython](../API/python.md)
 - [Strategies](../API/strategies.md)
 - [Strategystats](../API/strategystats.md)
 - [Strategytools](../API/strategytools.md)

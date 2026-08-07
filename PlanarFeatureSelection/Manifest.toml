@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "6d58dad15c6c64106dee000a1f82cafa7c364781"
+project_hash = "b00de40716cce661f9d00aced4c5125a686e5f76"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "2d9c9a55f9c93e8887ad391fbae72f8ef55e1177"
@@ -291,12 +291,6 @@ deps = ["Test"]
 git-tree-sha1 = "d36f682e590a83d63d1c7dbd287573764682d12a"
 uuid = "460bff9d-24e4-43bc-9d9f-a8973cb893f4"
 version = "0.1.11"
-
-[[deps.FeatureSelection]]
-deps = ["Clustering", "DataStructures", "Distances", "Distributions", "GLM", "LinearAlgebra", "OnlineStats", "OnlineStatsBase", "OnlineTechnicalIndicators", "PlanarCore", "Statistics", "StatsBase", "TimeFrames"]
-path = ".."
-uuid = "799974c5-219d-476a-ada7-be492421c276"
-version = "0.1.0"
 
 [[deps.FilePathsBase]]
 deps = ["Compat", "Dates"]
@@ -691,9 +685,15 @@ weakdeps = ["REPL"]
 
 [[deps.PlanarCore]]
 deps = ["CSV", "CodecZlib", "ConcurrentCollections", "DataFrames", "DataFramesMeta", "DataStructures", "Dates", "Distributed", "DocStringExtensions", "FileWatching", "FunctionalCollections", "HTTP", "IterTools", "JSON", "JSON3", "LMDB", "Logging", "LoggingExtras", "MbedTLS", "OnlineStats", "OrderedCollections", "Pkg", "PrecompileTools", "Preferences", "Printf", "Random", "Reexport", "Rocket", "Serialization", "Statistics", "StatsBase", "TOML", "Term", "TimeFrames", "URIs", "WebSockets", "Zarr"]
-path = "../../PlanarCore"
+path = "../PlanarCore"
 uuid = "a475c859-e357-4be2-a5e3-43038ab4b158"
 version = "1.0.0"
+
+[[deps.PlanarFeatureSelection]]
+deps = ["Clustering", "DataStructures", "Distances", "Distributions", "GLM", "LinearAlgebra", "OnlineStats", "OnlineStatsBase", "OnlineTechnicalIndicators", "PlanarCore", "Statistics", "StatsBase", "TimeFrames"]
+path = "."
+uuid = "799974c5-219d-476a-ada7-be492421c276"
+version = "0.1.0"
 
 [[deps.PooledArrays]]
 deps = ["DataAPI", "Future"]

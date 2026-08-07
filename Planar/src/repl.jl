@@ -62,7 +62,7 @@ If the module is not already defined, it tries to activate the module's project 
 """
 function _activate_and_import(name, bind)
     proj_name = string(name)
-    # For FeatureSelection and other packages in the Planar.jl monorepo, look in parent dir of Planar.jl
+    # For PlanarFeatureSelection and other packages in the Planar.jl monorepo, look in parent dir of Planar.jl
     base_dir = dirname(dirname(dirname(pathof(Planar))))  # /Planar.jl
     proj_path = isfile(joinpath(proj_name, "Project.toml")) ? proj_name : joinpath(base_dir, proj_name)
     @assert isfile(joinpath(proj_path, "Project.toml"))
@@ -85,6 +85,6 @@ optim!() = _activate_and_import(:PlanarOptim, :opt)
 interactive!() = _activate_and_import(:PlanarOptim, :plni)
 @doc """ Activates and Imports the `DownloadTool` module. """
 scrape!() = _activate_and_import(:DownloadTool, :scr)
-feats!() = _activate_and_import(:FeatureSelection, :feats)
+feats!() = _activate_and_import(:PlanarFeatureSelection, :feats)
 
 export optim!, metrics!, analysis!, interactive!, scrape!, feats!

@@ -1,8 +1,8 @@
 @doc """
-Defines the Python module which sets up the Python interpreter and imports
+Defines the PlanarPython module which sets up the Python interpreter and imports
 required modules and constants.
 """
-module Python
+module PlanarPython
 
 using PrecompileTools: @compile_workload
 using DocStringExtensions
