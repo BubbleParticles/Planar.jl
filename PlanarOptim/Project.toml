@@ -1,10 +1,27 @@
+authors = ["zbc"]
 name = "PlanarOptim"
 uuid = "01937fd2-c099-442f-ae89-75fa208aad36"
 version = "0.1.0"
-authors = ["zbc"]
+license = "Apache-2.0"
+
+[compat]
+BlackBoxOptim = "0.6.10"
+DownloadTool = "0.1"
+Makie = "0.24.13"
+Optimization = "4.5.0"
+OptimizationBBO = "0.4.1"
+OptimizationCMAEvolutionStrategy = "0.3.0"
+OptimizationEvolutionary = "0.4.1"
+OptimizationManopt = "0.0.4"
+OptimizationOptimJL = "0.4.1"
+Planar = "1.7"
+PlanarCore = "1"
+Symbolics = "6.54.0"
+julia = "1.12"
 
 [deps]
 BlackBoxOptim = "a134a8b2-14d6-55f6-9291-3336d3ab0209"
+DownloadTool = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Optimization = "7f7a1694-90dd-40f0-9382-eb1efda571ba"
 OptimizationBBO = "3e6eede4-6085-4f62-9a71-46d9bc1eb92b"
@@ -18,29 +35,18 @@ PlanarCore = "a475c859-e357-4be2-a5e3-43038ab4b158"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-DownloadTool = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
+
+[extensions]
+BayesExt = "BayesianOptimization"
+
+[sources.Planar]
+path = "../Planar"
+
+[sources.PlanarCore]
+path = "../PlanarCore"
 
 [weakdeps]
 BayesianOptimization = "4c6ed407-134f-591c-93fa-e0f7c164a0ec"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 WGLMakie = "276b4fcb-3e11-5398-bf8b-a0c2d153d008"
-
-[sources]
-Planar = {path = "../Planar"}
-PlanarCore = {path = "../PlanarCore"}
-
-[extensions]
-BayesExt = "BayesianOptimization"
-
-[compat]
-DownloadTool = "0.1"
-Optimization = "4.5.0"
-OptimizationBBO = "0.4.1"
-OptimizationCMAEvolutionStrategy = "0.3.0"
-OptimizationEvolutionary = "0.4.1"
-OptimizationManopt = "0.0.4"
-OptimizationOptimJL = "0.4.1"
-Planar = "1.7"
-PlanarCore = "1"
-Symbolics = "6.54.0"

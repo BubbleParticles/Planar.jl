@@ -1,6 +1,7 @@
 name = "PlanarDev"
 uuid = "df15b565-ff7f-4c64-9bc8-38e9343ea891"
 version = "0.1.0"
+license = "Apache-2.0"
 authors = ["zbc"]
 
 [deps]

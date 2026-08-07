@@ -1,7 +1,16 @@
+authors = ["zbc"]
 name = "Python"
 uuid = "e8cdc95d-7257-4c38-ab0e-cc8a28c19776"
 version = "0.1.0"
-authors = ["zbc"]
+license = "Apache-2.0"
+
+[compat]
+DocStringExtensions = "0.9"
+PlanarCore = "1"
+PrecompileTools = "1"
+PythonCall = "0.9.35"
+Reexport = "1"
+julia = "1.12"
 
 [deps]
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
@@ -11,14 +20,8 @@ PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 
-[sources]
-PlanarCore = {path = "../PlanarCore"}
-[compat]
-DocStringExtensions = "0.9"
-PlanarCore = "1"
-PrecompileTools = "1"
-Reexport = "1"
-julia = "1.12"
-
 [extras]
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+
+[sources.PlanarCore]
+path = "../PlanarCore"

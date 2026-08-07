@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "2e12f9d974dc41c091b9383a0dceb8abbd991c6c"
+project_hash = "d5348a6d60f824042769ab29ea46c3c7e649bee6"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -726,7 +726,7 @@ weakdeps = ["REPL"]
     REPLExt = "REPL"
 
 [[deps.Planar]]
-deps = ["HTTP", "JSON3", "LRUCache", "MacroTools", "Pkg", "PlanarCore", "PrettyTables", "REPL", "Random", "Rocket", "Statistics", "StrategyStats", "Telegram", "TimeFrames", "URIs"]
+deps = ["DocStringExtensions", "Documenter", "HTTP", "JSON3", "LRUCache", "MacroTools", "Pkg", "PlanarCore", "PrettyTables", "REPL", "Random", "Rocket", "Statistics", "StrategyStats", "Suppressor", "Telegram", "TimeFrames", "URIs"]
 path = "."
 uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 version = "1.7.2"
