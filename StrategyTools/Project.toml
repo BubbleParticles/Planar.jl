@@ -16,7 +16,7 @@ Planar = {path = "../Planar"}
 PlanarCore = {path = "../PlanarCore"}
 StrategyStats = {path = "../StrategyStats"}
 [compat]
-OnlineTechnicalIndicators = "0.1.0"
+OnlineTechnicalIndicators = "0.1.2"
 Planar = "1.7"
 PlanarCore = "1"
 Statistics = "1"
