@@ -1,8 +1,7 @@
 # Execution Modes Guide
 
 
-
-This comprehensive guide covers Planar's three execution modes and how to safely transition between them. Learn how to develop [strategies](../guides/strategy-development.md) in [simulation](../guides/execution-modes.md#simulation-mode), validate them in paper mode, and deploy them for [live trading](../guides/execution-modes.md#live-mode) with proper risk management.
+This comprehensive guide covers Planar's three execution modes and how to safely transition between them. Learn how to develop [strategies](../guides/strategy-development.md) in [simulation](execution-modes.md#Simulation-Mode), validate them in paper mode, and deploy them for [live trading](execution-modes.md#Live-Mode) with proper risk management.
 
 ## Quick Navigation
 
@@ -24,11 +23,11 @@ This comprehensive guide covers Planar's three execution modes and how to safely
 
 - **[Strategy Development](strategy-development.md))** - Building trading [strategies](../guides/strategy-development.md)
 - **[Risk Management](../advanced/risk-management.md)** - Managing trading risks
-- **[optimization](../optimization.md)** - Parameter tuning and [backtesting](../guides/execution-modes.md#simulation-mode)
+- **[optimization](../optimization.md)** - Parameter tuning and [backtesting](execution-modes.md#Simulation-Mode)
 
 ## Mode Overview
 
-Planar supports three distinct execution modes, each designed for different stages of [strategy](../guides/strategy-development.md) development and deployment:
+Planar supports three distinct execution modes, each designed for different stages of [strategy](../guides/strategy-development.md) development and deployment.
 
 ### Mode Comparison Matrix
 
@@ -71,24 +70,7 @@ graph TD
 
 ## Simulation Mode
 
-Simulation mode (Sim) is designed for strategy development and [backtesting](../guides/execution-modes.md#simulation-mode) using historical data. It provides fast execution with no capital risk, making it ideal for initial development and [optimization](../optimization.md).
-
-### Basic Sim Mode Setup
-
-
-### Advanced Sim Configuration
-
-
-### Sim Mode Features
-
-#### Realistic Order Execution
-
-
-#### Performance Optimization
-
-
-#### Walk-Forward Analysis
-
+Simulation mode (Sim) is designed for strategy development and [backtesting](execution-modes.md#Simulation-Mode) using historical data. It provides fast execution with no capital risk, making it ideal for initial development and [optimization](../optimization.md).
 
 ### Sim Mode Best Practices
 
@@ -100,12 +82,6 @@ Simulation mode (Sim) is designed for strategy development and [backtesting](../
 ## Paper Mode
 
 Paper mode provides real-time simulation using live [market data](../guides/data-management.md) without risking actual capital. It's essential for validating strategies with current market conditions before live deployment.
-
-### Basic Paper Mode Setup
-
-
-### Advanced Paper Configuration
-
 
 ### Paper Mode Features
 
@@ -223,9 +199,6 @@ catch e
 end
 ```
 
-#### Performance Tracking
-
-
 ### Paper Mode Best Practices
 
 1. **Conservative Sizing**: Use smaller position sizes than in simulation
@@ -236,23 +209,6 @@ end
 ## Live Mode
 
 Live mode executes real trades with actual capital using [exchanges](../exchanges.md) APIs. This mode requires careful setup, comprehensive risk management, and continuous monitoring.
-
-### Basic Live Mode Setup
-
-
-### Advanced Live Configuration
-
-
-### Live Mode Features
-
-#### Real-Time Risk Management
-
-
-#### Emergency Procedures
-
-
-#### Event Tracing and Analysis
-
 
 ### Live Mode Best Practices
 
@@ -265,22 +221,6 @@ Live mode executes real trades with actual capital using [exchanges](../exchange
 ## Mode Transitions
 
 Safe transition between modes is crucial for successful strategy deployment. Each transition requires validation and configuration adjustments.
-
-### Sim to Paper Transition
-
-#### Pre-transition Validation
-
-
-#### Configuration Adjustments
-
-
-### Paper to Live Transition
-
-#### Comprehensive Validation
-
-
-#### Live Mode Preparation
-
 
 ### Gradual Deployment Strategy
 
@@ -364,9 +304,6 @@ end
 4. **Capital Limits**: Set strict daily and total loss limits
 5. **Emergency Procedures**: Have clear emergency stop procedures
 
-### Configuration Management
-
-
 ## Troubleshooting
 
 ### Common Issues by Mode
@@ -379,7 +316,7 @@ end
 - Use out-of-sample testing
 - Implement proper risk management
 
-**Problem**: Slow [backtest](../guides/execution-modes.md#simulation-mode) performance
+**Problem**: Slow [backtest](execution-modes.md#Simulation-Mode) performance
 **Solution**:
 - Enable parallel processing
 - Use data chunking

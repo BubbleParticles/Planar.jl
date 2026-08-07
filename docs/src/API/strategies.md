@@ -11,62 +11,11 @@ The `Strategy` type is the central component of the Planar framework. It encapsu
 - Cash and position tracking
 - Exchange connectivity
 
-## Core Types
-
-### Strategy Types
-
-
-### Usage Examples
-
-#### Creating a Strategy
-
-
-#### Accessing Strategy Information
-
-
-#### Working with Assets
-
-
 ## Strategy Interface Functions
 
 ### Core Interface
 
-The strategy interface defines the main entry points that your strategy must implement:
-
-
-#### Implementation Example
-
-
-## Cash and Position Management
-
-### Cash Functions
-
-
-### Position Information
-
-
-## Order Management
-
-### Order Access
-
-
-## Utility Functions
-
-### Strategy Identification
-
-
-### Thread Safety
-
-
-## Common Patterns
-
-### Data Loading Pattern
-
-
-### Error Handling Pattern
-
-
-### Performance Pattern
+The strategy interface defines the main entry points that your strategy must implement.
 
 
 ## Complete API Reference

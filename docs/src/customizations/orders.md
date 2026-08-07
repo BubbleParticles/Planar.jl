@@ -1,12 +1,12 @@
 ## Custom Orders
 
-This section demonstrates how to implement an OCO (One-Cancels-the-Other) order type for [simulation](../guides/execution-modes.md#simulation-mode) purposes:
+This section demonstrates how to implement an OCO (One-Cancels-the-Other) order type for [simulation](../guides/execution-modes.md#Simulation-Mode) purposes.
 
 
-We can base our implementation on the existing constructor for limit orders and modify it to meet the requirements of an OCO order:
+We can base our implementation on the existing constructor for limit orders and modify it to meet the requirements of an OCO order.
 
 
-Next, we introduce two `call!` functions to handle creating and updating simulated OCO orders:
+Next, we introduce two `call!` functions to handle creating and updating simulated OCO orders.
 
 
 ## Custom Instruments

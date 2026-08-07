@@ -44,8 +44,8 @@ The foundation of Planar, providing:
 
 #### Execution Modes
 Three distinct execution environments:
-- **SimMode**: Fast synchronous [backtesting](guides/execution-modes.md#simulation)-mode) with [OHLCV data](guides/../guides/data-management.md#ohlcv-data)
-- **PaperMode**: Real-time [simulation](guides/execution-modes.md#simulation-mode) with live data feeds
+- **SimMode**: Fast synchronous [backtesting](guides/execution-modes.md#Simulation-Mode)-mode) with [OHLCV data](guides/data-management.md#Data-Collection-Methods)
+- **PaperMode**: Real-time [simulation](guides/execution-modes.md#Simulation-Mode) with live data feeds
 - **LiveMode**: Actual trading with [exchanges](exchanges.md) APIs
 
 #### Data Pipeline
@@ -57,7 +57,7 @@ Comprehensive [data management](guides/../guides/data-management.md):
 
 #### Exchange Integration
 Unified [exchange](exchanges.md) interface:
-- **[CCXT](exchanges.md#ccxt-integration) Integration**: 100+ [exchange](exchanges.md) support via Ccxt.jl
+- **[CCXT](exchanges.md#CCXT-Integration) Integration**: 100+ [exchange](exchanges.md) support via Ccxt.jl
 - **Custom Exchanges**: Framework for implementing proprietary APIs
 - **Order Management**: Unified order types across exchanges
 
@@ -223,7 +223,7 @@ sequenceDiagram
 
 - **[Julia](https://julialang.org/) 1.11+**: Latest stable [Julia](https://julialang.org/) version
 - **Git**: With submodule support
-- **Python 3.8+**: For [CCXT](exchanges.md#ccxt-integration) integration (managed via CondaPkg)
+- **Python 3.8+**: For [CCXT](exchanges.md#CCXT-Integration) integration (managed via CondaPkg)
 - **Docker** (optional): For containerized development
 
 ### Initial Setup
@@ -247,9 +247,6 @@ export JULIA_NUM_THREADS=$(nproc)
 3. **Install Dependencies**:
 
 ### Development Environment
-
-#### Recommended Julia Setup
-
 
 #### IDE Configuration
 
@@ -310,7 +307,7 @@ Precompile workloads are driven by `PrecompileTools` via the `JULIA_PRECOMP` / `
 
 ### Method Invalidation Strategy
 
-The order of `using ...` statements when loading modules can influence method invalidation. To minimize invalidation, arrange the module imports starting with the ones most likely to cause invalidations to the ones least likely. For instance, placing `using Python` at the beginning can expedite loading times:
+The order of `using ...` statements when loading modules can influence method invalidation. To minimize invalidation, arrange the module imports starting with the ones most likely to cause invalidations to the ones least likely. For instance, placing `using Python` at the beginning can expedite loading times.
 
 
 Modules known for heavy invalidations:
@@ -320,12 +317,12 @@ Modules known for heavy invalidations:
 - Data (relies on Zarr and DataFrames)
 - Plots (depends on Makie)
 
-To reduce invalidations, include external modules in only one local package and then use that package as a dependency in other local packages. For instance, if `DataFrames` is a dependency of the local package `Data`, and you want to use `DataFrames` in the `Stats` package, do not add `DataFrames` to `Stats` dependencies. Instead, use `Data` and import `DataFrames` from there:
+To reduce invalidations, include external modules in only one local package and then use that package as a dependency in other local packages. For instance, if `DataFrames` is a dependency of the local package `Data`, and you want to use `DataFrames` in the `Stats` package, do not add `DataFrames` to `Stats` dependencies. Instead, use `Data` and import `DataFrames` from there.
 
 
 ### Handling Segfaults
 
-In rare cases involving complex multi-threaded scenarios, disable and re-enable the garbage collector (GC) around the loading of Planar to avoid segmentation faults:
+In rare cases involving complex multi-threaded scenarios, disable and re-enable the garbage collector (GC) around the loading of Planar to avoid segmentation faults.
 
 
 Refer to [PythonCall.jl issue #201](https://github.com/juliapy/PythonCall.jl/issues/201) for more details.
@@ -351,7 +348,7 @@ The order of `using` or `import` statements within packages is crucial. Always i
 ### Code Style and Standards
 
 #### Julia Formatting
-Planar uses JuliaFormatter with Blue style:
+Planar uses JuliaFormatter with Blue style.
 
 
 Configuration in `.JuliaFormatter.toml`:
@@ -375,18 +372,7 @@ remove_extra_newlines = true
 
 #### Documentation Standards
 
-All public functions must have docstrings:
-
-
-### Testing Patterns
-
-#### Unit Testing Structure
-
-
-#### Integration Testing
-
-
-#### Property-Based Testing
+All public functions must have docstrings.
 
 
 ### Extension Best Practices
@@ -426,9 +412,6 @@ julia = "1.11"
 
 3. **Module Definition**:
 
-#### Implementing Custom Strategies
-
-
 #### Performance Optimization Guidelines
 
 1. **Type Stability**:
@@ -446,9 +429,6 @@ julia = "1.11"
 2. **Interactive Debugging**:
 
 3. **Testing Utilities**:
-
-#### Performance Profiling
-
 
 ### Continuous Integration
 
@@ -510,9 +490,6 @@ jobs:
    - [ ] Update documentation
    - [ ] Create release tag
    - [ ] Build and test Docker images
-
-#### Documentation Updates
-
 
 ### Community Guidelines
 

@@ -1,26 +1,10 @@
 # Running in Live Mode
 
-A [exchange](../[exchanges](../exchanges.md) API defined by the [strategy](../guides/strategy-development.md). This mode executes real trades with actual capital, so proper [configuration](../config.md) and risk management are critical.
+An [exchange](../exchanges.md) API defined by the [strategy](../guides/strategy-development.md). This mode executes real trades with actual capital, so proper [configuration](../config.md) and risk management are critical.
 
 ## Initial Setup and Configuration
 
-To construct the [strategy](../guides/strategy-development.md), use the same methods as in [paper mode](paper.md), but with additional security considerations:
-
-
-### API Configuration and Security
-
-#### Exchange API Setup
-
-
-#### Security Best Practices
-
-
-### Comprehensive Live Trading Setup
-
-#### Basic Live Trading Configuration
-
-
-#### Advanced Multi-Asset Live Setup
+To construct the [strategy](../guides/strategy-development.md), use the same methods as in [paper mode](paper.md), but with additional security considerations.
 
 
 ## How Live Mode Works
@@ -38,27 +22,6 @@ Similar to other modes, the return value of a `call!` function for creating an o
 - `missing` if the order was successfully created but not immediately executed.
 - `nothing` if the order failed to be created, either because of local checks (e.g., not enough cash) or some other exchange error (e.g., API timeout).
 
-### Background Task Management
-
-#### Watcher Configuration
-
-
-#### Custom Watchers
-
-
-### Order Execution and State Management
-
-#### Order State Tracking
-
-
-### Risk Management and Monitoring
-
-#### Real-Time Risk Monitoring
-
-
-#### Emergency Procedures
-
-
 ## Timeouts and API Management
 
 If you don't want to wait for the order processing, you can pass a custom `waitfor` parameter which limits the amount of time we wait for API responses.
@@ -68,19 +31,6 @@ The `synced=true` flag is a last-ditch attempt that _force fetches_ updates from
 The local trades history might diverge from the data sourced from the exchange because not all exchanges support endpoints for fetching trades history or events, therefore trades are emulated from diffing order updates.
 
 The local state is *not persisted*. Nothing is saved or loaded from storage. Instead, we sync the most recent history of orders with their respective trades when the strategy starts running. (This behavior might change in the future if need arises.)
-
-### Advanced Timeout Configuration
-
-
-### API Rate Limiting and Management
-
-
-### Connection Management and Resilience
-
-
-### Logging and Alerting
-
-
 
 ## See Also
 
@@ -125,23 +75,13 @@ end
 
 ### Advanced Event Tracing
 
-#### Comprehensive Event Logging
-
-
 #### Replaying Events
 
-To replay events in a local [simulation](../guides/execution-modes.md#simulation-mode), use the `replay_from_trace!` function:
+To replay events in a local [simulation](../guides/execution-modes.md#Simulation-Mode), use the `replay_from_trace!` function.
 
 
 This function will reconstruct the state of the strategy based on the events recorded in the trace.
 
-#### Advanced Event Analysis
-
-
 #### Extracting Events
 
-To extract a subset of events or the last `n` events, use the `trace_tail` function:
-
-
-#### Event-Based Strategy Optimization
-
+To extract a subset of events or the last `n` events, use the `trace_tail` function.

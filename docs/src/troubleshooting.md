@@ -59,7 +59,6 @@ Before diving into specific issues, try these common solutions:
 2. Look for version incompatibilities in error messages
 3. Verify all submodules are properly updated
 
-**Solutions**:
 
 ### REPL Startup Issues
 
@@ -135,7 +134,6 @@ rm -rf ~/.julia/compiled
 2. Verify module precompilation status
 3. Look for debug/release mode mismatches
 
-**Solutions**:
 
 ## Python Integration Issues
 
@@ -148,7 +146,6 @@ rm -rf ~/.julia/compiled
 2. Verify Python package installation status
 3. Look for environment path issues
 
-**Solutions**:
 
 ### CondaPkg Environment Issues
 
@@ -175,7 +172,6 @@ rm -rf ~/.julia/compiled
 2. Verify async operation compatibility
 3. Look for memory management issues
 
-**Solutions**:
 
 ## Exchange Connection Issues
 
@@ -197,11 +193,10 @@ rm -rf ~/.julia/compiled
 **Symptoms**: Authentication errors, invalid API key messages, permission denied
 
 **Diagnostic Steps**:
-1. Verify API credentials in `[secrets.toml](config.md#secrets-management)`
+1. Verify API credentials in `[secrets.toml](config.md#Secrets-Management)`
 2. Check API key permissions on exchange
 3. Verify IP whitelist settings if applicable
 
-**Solutions**:
 
 ### Rate Limiting Issues
 
@@ -212,7 +207,6 @@ rm -rf ~/.julia/compiled
 2. Monitor API call frequency
 3. Verify exchange-specific limits
 
-**Solutions**:
 
 ## Data Storage and Management Issues
 
@@ -234,14 +228,13 @@ rm -rf ~/.julia/compiled
 
 ### Data Corruption Issues
 
-**Symptoms**: Segfaults when saving [OHLCV](guides/../guides/data-management.md#ohlcv-data), corrupted data reads, database errors
+**Symptoms**: Segfaults when saving [OHLCV](guides/data-management.md#Data-Collection-Methods), corrupted data reads, database errors
 
 **Diagnostic Steps**:
 1. Check for incomplete write operations
 2. Verify data integrity
 3. Look for concurrent access issues
 
-**Solutions**:
 
 ### LMDB Platform Compatibility
 
@@ -252,7 +245,6 @@ rm -rf ~/.julia/compiled
 2. Verify system dependencies
 3. Look for compilation errors
 
-**Solutions**:
 
 ### Data Fetching and Pipeline Issues
 
@@ -263,7 +255,6 @@ rm -rf ~/.julia/compiled
 2. Verify network connectivity
 3. Monitor data quality metrics
 
-**Solutions**:
 
 ## Plotting and Visualization Issues
 
@@ -276,7 +267,6 @@ rm -rf ~/.julia/compiled
 2. Verify graphics driver compatibility
 3. Test with different backends
 
-**Solutions**:
 
 ### Backend Installation and Configuration Issues
 
@@ -320,7 +310,6 @@ brew install --cask xquartz
 2. Monitor memory usage during plotting
 3. Verify backend performance characteristics
 
-**Solutions**:
 
 ### Interactive Features Not Working
 
@@ -331,7 +320,6 @@ brew install --cask xquartz
 2. Check if running in appropriate environment
 3. Test with simple interactive examples
 
-**Solutions**:
 
 ## Strategy Development and Execution Issues
 
@@ -344,7 +332,6 @@ brew install --cask xquartz
 2. Verify Project.toml configuration
 3. Look for syntax errors in strategy code
 
-**Solutions**:
 
 ### Strategy Execution Errors
 
@@ -355,7 +342,6 @@ brew install --cask xquartz
 2. Verify [market data](guides/../guides/data-management.md) availability
 3. Look for timing or synchronization issues
 
-**Solutions**:
 
 ### Order Execution Issues
 
@@ -366,7 +352,6 @@ brew install --cask xquartz
 2. Verify exchange connectivity and permissions
 3. Look for balance and margin issues
 
-**Solutions**:
 
 ## Development and Debugging Issues
 
@@ -390,7 +375,6 @@ brew install --cask xquartz
 }
 ```
 
-**Additional Debugging Tips**:
 
 ### Performance Debugging
 
@@ -401,7 +385,6 @@ brew install --cask xquartz
 2. Identify memory allocation hotspots
 3. Check for inefficient data operations
 
-**Solutions**:
 
 ## Environment and Configuration Issues
 
@@ -512,16 +495,12 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ### Strategy Execution Performance
 
-**Symptoms**: Slow [backtesting](guides/execution-modes.md#simulation)-mode), high CPU usage, long execution times
+**Symptoms**: Slow [backtesting](guides/execution-modes.md#Simulation-Mode)-mode), high CPU usage, long execution times
 
 **Diagnostic Steps**:
 1. Profile strategy execution to identify bottlenecks
 2. Check data access patterns and frequency
 3. Monitor memory allocation and garbage collection
-
-**Performance Profiling**:
-
-**Common Performance Issues and Solutions**:
 
 
 ### Memory Usage Optimization
@@ -533,10 +512,6 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 2. Identify memory leaks and excessive allocations
 3. Check for large object retention
 
-**Memory Profiling**:
-
-**Memory Optimization Techniques**:
-
 
 ### Data-Related Performance Issues
 
@@ -546,8 +521,6 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 1. Monitor I/O operations and disk usage
 2. Check data access patterns and caching
 3. Verify database configuration and indexing
-
-**Data Performance Optimization**:
 
 
 ### Optimization and Backtesting Performance
@@ -559,8 +532,6 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 2. Check parameter space size and search efficiency
 3. Monitor parallel execution utilization
 
-**Optimization Performance**:
-
 
 ### Parallel Processing and Threading
 
@@ -571,8 +542,6 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 2. Identify thread-safety issues
 3. Monitor synchronization overhead
 
-**Threading Optimization**:
-
 
 ### Plotting and Visualization Performance
 
@@ -582,14 +551,6 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 1. Check data size and plot complexity
 2. Monitor GPU/graphics memory usage
 3. Test different backends for performance
-
-**Plotting Performance Optimization**:
-
-
-### System Resource Monitoring
-
-**Tools and Techniques for Performance Monitoring**:
-
 
 
 ## See Also

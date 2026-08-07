@@ -11,7 +11,7 @@ By the end of this tutorial, you'll understand:
 
 - How Planar strategies are structured
 - The three core functions every strategy needs
-- How to add [technical indicators](../guides/strategy-development.md#technical-indicators)
+- How to add [technical indicators](../customizations/customizations.md#Custom-Indicators-and-Signals)
 - How to implement buy/sell logic
 - How to test and debug your strategy
 - How to analyze performance results
@@ -32,7 +32,7 @@ We'll create a strategy that:
 
 ## Step 1: Understanding Strategy Structure
 
-Every Planar strategy is a [Julia](https://julialang.org/) module with three core functions:
+Every Planar strategy is a [Julia](https://julialang.org/) module with three core functions.
 
 
 ### Function Parameters
@@ -61,12 +61,12 @@ touch src/MyFirstStrategy.jl
 
 ## Step 3: Define the Strategy Module
 
-Edit `src/MyFirstStrategy.jl`:
+Edit `src/MyFirstStrategy.jl`.
 
 
 ## Step 4: Implement Signal Setup
 
-Add the `setsignals!` function to initialize our indicators:
+Add the `setsignals!` function to initialize our indicators.
 
 
 ### Key Points:
@@ -79,7 +79,7 @@ Add the `setsignals!` function to initialize our indicators:
 
 ## Step 5: Implement Buy Logic
 
-Add the `isbuy` function:
+Add the `isbuy` function.
 
 
 ### Key Points:
@@ -90,7 +90,7 @@ Add the `isbuy` function:
 
 ## Step 6: Implement Sell Logic
 
-Add the `issell` function:
+Add the `issell` function.
 
 
 ## Step 7: Create Project Configuration
@@ -112,26 +112,12 @@ julia = "1.11"
 
 ## Step 8: Complete Strategy File
 
-Here's your complete `src/MyFirstStrategy.jl`:
+Here's your complete `src/MyFirstStrategy.jl`.
 
 
 ## Step 9: Test Your Strategy
 
-Now let's test the strategy:
-
-
-## Step 10: Comprehensive Performance Analysis
-
-### Basic Performance Metrics
-
-
-### Trade Analysis
-
-
-### Advanced Performance Metrics
-
-
-### Strategy Effectiveness Assessment
+Now let's test the strategy.
 
 
 ## Step 11: Debug and Improve Your Strategy
@@ -294,30 +280,16 @@ end
 
 **Problem: Poor performance**
 
-### Performance Optimization Techniques
-
-#### 1. Parameter Sensitivity Analysis
-
-#### 2. Market Condition Analysis
-
-## Step 12: Advanced Improvements
-
-### Add Stop Loss
-
-
-### Add Position Sizing
-
-
 ## Understanding Key Concepts
 
 ### Signal Validation
-Always check if indicators return valid values:
+Always check if indicators return valid values.
 
 ### Timeframes
-Indicators can use different [timeframes](../guides/data-management.md#timeframes):
+Indicators can use different [timeframes](../guides/data-management.md#Timeframe-Management).
 
 ### Strategy State
-Use `s.attrs` to store strategy-specific data:
+Use `s.attrs` to store strategy-specific data.
 
 
 ## See Also
@@ -328,15 +300,7 @@ Use `s.attrs` to store strategy-specific data:
 
 ## Next Steps: From Beginner to Advanced
 
-Congratulations! You've built your first custom Planar strategy from scratch. Here's your roadmap to becoming a sophisticated algorithmic trader:
-
-### Immediate Improvements (Next 1-2 Hours)
-
-#### 1. Optimize Your Current Strategy
-
-#### 2. Test Different Assets
-
-#### 3. Add Risk Management
+Congratulations! You've built your first custom Planar strategy from scratch. Here's your roadmap to becoming a sophisticated algorithmic trader.
 
 ### Short-term Learning (Next Week)
 
@@ -379,7 +343,7 @@ Scale your operations:
 
 #### 3. **Custom Indicators**
 Build proprietary signals:
-- Custom [technical indicators](../guides/strategy-development.md#technical-indicators)
+- Custom [technical indicators](../customizations/customizations.md#Custom-Indicators-and-Signals)
 - Machine learning integration
 - Alternative data sources
 - Signal combination techniques
@@ -410,7 +374,7 @@ Expand your reach:
 ## Learning Resources by Experience Level
 
 ### 📚 Beginner Resources
-- **[Strategy Examples](../strategy.md#examples)** - Study proven patterns
+- **[Strategy Examples](../strategy.md)** - Study proven patterns
 - **[Common Patterns](../common-patterns.md)** - Reusable strategy components
 - **[Troubleshooting Guide](../troubleshooting/index.md)** - Solve common issues
 
@@ -426,13 +390,13 @@ Expand your reach:
 
 ## Community and Support
 
-- **[Discord Community](../contacts.md#discord)** - Get help from other traders
-- **[GitHub Discussions](../contacts.md#github)** - Technical questions and feature requests
-- **[Example Strategies Repository](../contacts.md#examples)** - Community-contributed strategies
+- **[Discord Community](../contacts.md#Discord)** - Get help from other traders
+- **[GitHub Discussions](../contacts.md#Github)** - Technical questions and feature requests
+- **[Example Strategies Repository](../contacts.md)** - Community-contributed strategies
 
 ## Your Strategy Development Checklist
 
-Track your progress as you advance:
+Track your progress as you advance.
 
 ### ✅ Beginner Level (You are here!)
 - [x] Built first custom strategy
@@ -446,7 +410,7 @@ Track your progress as you advance:
 ### 🎯 Intermediate Level
 - [ ] Use systematic [parameter optimization](../optimization.md)
 - [ ] Implement multi-timeframe strategies
-- [ ] Deploy [paper trading](../guides/execution-modes.md#paper-mode)
+- [ ] Deploy [paper trading](../guides/execution-modes.md#Paper-Mode)
 - [ ] Build portfolio strategies
 - [ ] Create custom indicators
 - [ ] Understand statistical significance
@@ -470,10 +434,6 @@ Track your progress as you advance:
 6. **Backtest Extensively**: Test on different market conditions
 
 ## Common Patterns
-
-### Multi-Timeframe Analysis
-
-### Confirmation Signals
 
 ### Adaptive Parameters
 

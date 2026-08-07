@@ -1,34 +1,28 @@
 # Running a Backtest
 
-To perform a [backtest](../guides/execution-modes.md#simulationmode), you need to construct a [Strategy Documentation](../[strategy](../guides/strategy-development.md). Once the [strategy](../guides/strategy-development.md) is created, you can call the `start!` function on it to begin the [backtest](../guides/execution-modes.md#simulationmode).
+To perform a [backtest](../guides/execution-modes.md#Simulation-Mode), you need to construct a [Strategy Documentation](../guides/strategy-development.md). Once the [strategy](../guides/strategy-development.md) is created, you can call the `start!` function on it to begin the [backtest](../guides/execution-modes.md#Simulation-Mode).
 
 The entry function that is called in all modes is `call!(s::Strategy, ts::DateTime, ctx)`. This function takes three arguments:
 - `s`: The strategy object that you have created.
-- `ts`: The current date. In live mode, it is very close to `now()`, while in [simulation](../guides/execution-modes.md#simulation-mode) mode, it is the date of the iteration step.
+- `ts`: The current date. In live mode, it is very close to `now()`, while in [simulation](../guides/execution-modes.md#Simulation-Mode) mode, it is the date of the iteration step.
 - `ctx`: Additional context information that can be passed to the function.
 
-During the [backtest](../guides/execution-modes.md#simulation-mode), the `call!` function is responsible for executing the strategy's logic at each timestep. It is called repeatedly with updated values of `ts` until the backtest is complete.
+During the [backtest](../guides/execution-modes.md#Simulation-Mode), the `call!` function is responsible for executing the strategy's logic at each timestep. It is called repeatedly with updated values of `ts` until the backtest is complete.
 
 It is important to note that the `call!` function should be implemented in your strategy module according to your specific trading logic.
 
 ## Backtest Configuration
 
-Before running a backtest, you can configure various parameters to control the simulation behavior:
-
-### Time Range Configuration
-
-
-### Initial Capital and Position Sizing
-
+Before running a backtest, you can configure various parameters to control the simulation behavior.
 
 ### Performance Optimization Settings
 
-For large backtests, consider these [optimization](../optimization.md) settings:
+For large backtests, consider these [optimization](../optimization.md) settings.
 
 
 ## Basic Example
 
-Here is an example of how to use the `call!` function in a strategy module:
+Here is an example of how to use the `call!` function in a strategy module.
 
 
 Let's run a backtest.
@@ -44,19 +38,12 @@ Our backtest indicates that our strategy:
 
 ## Comprehensive Backtest Example
 
-Here's a more detailed example showing a complete [backtesting](../guides/execution-modes.md#simulation-mode) workflow:
+Here's a more detailed example showing a complete [backtesting](../guides/execution-modes.md#Simulation-Mode) workflow.
 
-
-## Advanced Backtesting Features
-
-### Multi-Timeframe Backtesting
-
-
-### Walk-Forward Analysis
 
 ## Tick-by-Tick Backtesting
 
-In addition to the candle-based [backtest](../guides/execution-modes.md#simulation-mode) described above, `SimMode` can replay the market's actual trade stream, trade by trade. Instead of iterating over candles and calling `call!` once per timestep, the backtest iterates over **every market trade** in global chronological order and calls `ping!` for each one.
+In addition to the candle-based [backtest](../guides/execution-modes.md#Simulation-Mode) described above, `SimMode` can replay the market's actual trade stream, trade by trade. Instead of iterating over candles and calling `call!` once per timestep, the backtest iterates over **every market trade** in global chronological order and calls `ping!` for each one.
 
 !!! note "Not an order-book simulation"
     Tick backtesting replays public trade prints. It does not reconstruct the order book — there is no bid/ask spread, no queue position, and no liquidity modeling.
@@ -120,10 +107,10 @@ Per tick, the backtester:
 
 # Orders
 
-To place a limit order within your strategy, you call `call!` just like any call to the executor. Here are the arguments:
+To place a limit order within your strategy, you call `call!` just like any call to the executor. Here are the arguments.
 
 
-Where `s` is your `Strategy{Sim, ...}` instance, `ai` is the `AssetInstance` to which the order refers (it should be one present in your `s.universe`). The `amount` is the quantity in base currency and `date` should be the one fed to the `call!` function. During [backtesting](../guides/execution-modes.md#simulation-mode), this would be the current timestamp being evaluated, and during [live trading](../guides/execution-modes.md#live-mode), it would be a recent timestamp. If you look at the example strategy, `ts` is _current_ and `ats` is _available_. The available timestamp `ats` is the one that matches the last candle that doesn't give you forward knowledge. The `date` given to the order call (`call!`) must always be the _current_ timestamp.
+Where `s` is your `Strategy{Sim, ...}` instance, `ai` is the `AssetInstance` to which the order refers (it should be one present in your `s.universe`). The `amount` is the quantity in base currency and `date` should be the one fed to the `call!` function. During [backtesting](../guides/execution-modes.md#Simulation-Mode), this would be the current timestamp being evaluated, and during [live trading](../guides/execution-modes.md#Live-Mode), it would be a recent timestamp. If you look at the example strategy, `ts` is _current_ and `ats` is _available_. The available timestamp `ats` is the one that matches the last candle that doesn't give you forward knowledge. The `date` given to the order call (`call!`) must always be the _current_ timestamp.
 
 A limit order call might return a trade if the order was queued correctly. If the trade hasn't completed the order, the order is queued in `s.buy/sellorders[ai]`. If `isnothing(trade)` is `true`, it means the order failed and was not scheduled. This can happen if the cost of the trade did not meet the asset limits, or there wasn't enough commitable cash. If instead `ismissing(trade)` is `true`, it means that the order was scheduled, but no trade has yet been performed. In backtesting, this happens if the price of the order is too low (buy) or too high (sell) for the current candle high/low prices.
 
@@ -135,18 +122,7 @@ In addition to GTC (Good Till Canceled) orders, there are also IOC (Immediate Or
 - **IOC (Immediate Or Cancel)**: This order must be executed immediately. Any portion of the order that cannot be filled immediately will be canceled. Useful for capturing immediate opportunities.
 - **FOK (Fill Or Kill)**: This order must be executed in its entirety or not at all. Ideal when you need exact position sizes.
 
-All three are subtypes of a limit order, `<: LimitOrder>`. You can create them by calling `call!` as shown below:
-
-
-### Comprehensive Order Examples
-
-#### Basic Limit Orders
-
-
-#### Advanced Order Strategies
-
-
-#### Order Management Patterns
+All three are subtypes of a limit order, `<: LimitOrder>`. You can create them by calling `call!` as shown below.
 
 
 ## Market Order Types
@@ -157,18 +133,7 @@ Market order types include:
 - **LiquidationOrder**: This order is similar to a MarketOrder, but its execution price might differ from the candle price due to forced liquidation mechanics.
 - **ReduceOnlyOrder**: This is a market order that is automatically triggered when manually closing a position. Only reduces existing positions, never increases them.
 
-All of these behave in the same way, except for the LiquidationOrder. For example, a ReduceOnlyOrder is triggered when manually closing a position, as shown below:
-
-
-### Market Order Examples
-
-#### Basic Market Orders
-
-
-#### Advanced Market Order Strategies
-
-
-#### Risk Management with Market Orders
+All of these behave in the same way, except for the LiquidationOrder. For example, a ReduceOnlyOrder is triggered when manually closing a position, as shown below.
 
 
 ## Market Orders
@@ -196,24 +161,9 @@ Slippage is factored into the trade execution process. Here's how it works for d
 
 ## Liquidations
 
-In [isolated margin](../guides/strategy-development.md#margin-modes) mode, liquidations are triggered by checking the `LIQUIDATION_BUFFER`. You can customize the buffer size by setting the value of the environment variable `PLANAR_LIQUIDATION_BUFFER`. This allows you to adjust the threshold at which liquidations are triggered.
+In [isolated margin](../guides/strategy-development.md#Margin-Modes) mode, liquidations are triggered by checking the `LIQUIDATION_BUFFER`. You can customize the buffer size by setting the value of the environment variable `PLANAR_LIQUIDATION_BUFFER`. This allows you to adjust the threshold at which liquidations are triggered.
 
-To obtain more accurate estimations, you can utilize the effective funding rate. This can be done by downloading the funding rate history using the `Fetch` module. By analyzing the funding rate history, you can gain insights into the funding costs associated with trading in [isolated margin](../guides/strategy-development.md#margin-modes) mode.
-
-### Liquidation Mechanics
-
-#### Liquidation Buffer Configuration
-
-
-#### Liquidation Price Calculation
-
-
-#### Liquidation Risk Management
-
-
-### Funding Rate Integration
-
-
+To obtain more accurate estimations, you can utilize the effective funding rate. This can be done by downloading the funding rate history using the `Fetch` module. By analyzing the funding rate history, you can gain insights into the funding costs associated with trading in [isolated margin](../guides/strategy-development.md#Margin-Modes) mode.
 
 ## See Also
 
@@ -232,17 +182,6 @@ It's crucial to note that the type of orders executed and the number of trades p
 
 Backtesting a strategy with margin will inevitably be slower due to the need to account for all the necessary calculations, such as position states and liquidation triggers.
 
-### Performance Optimization Guidelines
-
-#### Memory Management
-
-
-#### CPU Optimization
-
-
-#### I/O Optimization
-
-
 ### Performance Benchmarks
 
 | Strategy Type | Assets | Timeframe | Candles | Trades | Time | Memory |
@@ -251,9 +190,6 @@ Backtesting a strategy with margin will inevitably be slower due to the need to 
 | Complex Multi-TF | 10 | 1h/4h/1d | 12M | 15K | 45s | 6GB |
 | Margin Strategy | 5 | 15m | 8M | 25K | 120s | 4GB |
 | High-Freq | 1 | 1m | 2M | 50K | 30s | 1GB |
-
-### Profiling and Debugging
-
 
 ### Optimization Recommendations
 

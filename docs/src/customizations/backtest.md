@@ -9,7 +9,7 @@
 
 ## High-Frequency Trading (HFT) Backtesting Documentation
 
-The `SimMode` class, also known as the planar backtester, utilizes Open-High-Low-Close-Volume ([OHLCV](../guides/data-management.md#ohlcv-data)) data to simulate the execution of trades.
+The `SimMode` class, also known as the planar backtester, utilizes Open-High-Low-Close-Volume ([OHLCV](../guides/data-management.md#Data-Collection-Methods)) data to simulate the execution of trades.
 
 ### Reasons to Avoid Tick-by-Tick Backtesting
 Tick-by-tick backtesting may not be ideal due to several factors:
@@ -19,10 +19,10 @@ Tick-by-tick backtesting may not be ideal due to several factors:
 - **Computational Costs**: Intensive data and computational requirements may limit backtesting to a short time frame, insufficient for evaluating performance through different market conditions.
 
 ### Implementing HFT Backtesting
-Two approaches are available for HFT-style backtesting:
+Two approaches are available for HFT-style backtesting.
 
 #### Built-in Tick-Based Backtesting
-`SimMode` ships with a tick-based backtester that replays the market's trade stream trade by trade — no new execution mode is needed. See [Running a Backtest → Tick-by-Tick Backtesting](../engine/backtesting.md#tick-by-tick-backtesting) for the full details. In short:
+`SimMode` ships with a tick-based backtester that replays the market's trade stream trade by trade — no new execution mode is needed. See [Running a Backtest → Tick-by-Tick Backtesting](../engine/backtesting.md#Tick-by-Tick-Backtesting) for the full details. In short:
 
 - Each universe asset needs a tick `DataFrame` with `:timestamp`, `:price`, `:amount` columns (the schema returned by `Planar.Fetch.fetch_trades`), stored with `Planar.Instances.setticks!`.
 - The strategy implements `ping!(s, ctx, tick)` instead of `call!`.
@@ -33,5 +33,5 @@ ctx = TickContext(Sim(), TradeTickRange(s))
 start!(s, ctx)
 ```
 
-#### [OHLCV](../guides/data-management.md#ohlcv-data)-Based Approach
-- A simpler method involves using the [OHLCV](../guides/data-management.md#ohlcv-data) model with extremely short-duration candles, such as `1s` candles. The backtester processes time steps, typically using the [strategy](../guides/strategy-development.md)'s base [timeframe](../guides/data-management.md#timeframes). By selecting a `1s` [timeframe](../guides/data-management.md#timeframes) and supplying the corresponding candles, you can achieve the desired time resolution for your [backtest](../guides/execution-modes.md#simulation-mode).
+#### [OHLCV](../guides/data-management.md#Data-Collection-Methods)-Based Approach
+- A simpler method involves using the [OHLCV](../guides/data-management.md#Data-Collection-Methods) model with extremely short-duration candles, such as `1s` candles. The backtester processes time steps, typically using the [strategy](../guides/strategy-development.md)'s base [timeframe](../guides/data-management.md#Timeframe-Management). By selecting a `1s` [timeframe](../guides/data-management.md#Timeframe-Management) and supplying the corresponding candles, you can achieve the desired time resolution for your [backtest](../guides/execution-modes.md#Simulation-Mode).

@@ -8,7 +8,7 @@ In the next 15 minutes, you will:
 - ✅ Install and run Planar
 - ✅ Load a pre-built trading strategy  
 - ✅ Download real [market data](../guides/data-management.md)
-- ✅ Execute your first [backtest](../guides/execution-modes.md#simulation-mode)
+- ✅ Execute your first [backtest](../guides/execution-modes.md#Simulation-Mode)
 - ✅ View interactive results and performance metrics
 
 ## Prerequisites
@@ -72,7 +72,7 @@ Exchange: binance
 Asset: BTC/USDT
 ```
 
-**What this does**: Creates a simple [moving average](../guides/strategy-development.md#technical-indicators) strategy that trades Bitcoin.
+**What this does**: Creates a simple [moving average](../customizations/customizations.md#Custom-Indicators-and-Signals) strategy that trades Bitcoin.
 
 ## Step 4: Download Market Data (2 minutes)
 
@@ -127,7 +127,7 @@ end
 
 **✅ Success indicator**: A chart opens in your browser showing price data with colored trade markers.
 
-**⚠️ Plotting not working?** See [Installation Issues](../troubleshooting/installation-issues.md#plotting-backend-issues) for plotting setup solutions. Your backtest still worked!
+**⚠️ Plotting not working?** See [Installation Issues](../troubleshooting/installation-issues.md#Python-Integration-Problems) for plotting setup solutions. Your backtest still worked!
 
 ## Step 7: Analyze Performance (3 minutes)
 
@@ -138,7 +138,7 @@ end
 
 Congratulations! You just:
 
-1. **Loaded a strategy** - The QuickStart strategy uses [moving average](../guides/strategy-development.md#technical-indicators) crossovers to generate buy/sell signals
+1. **Loaded a strategy** - The QuickStart strategy uses [moving average](../customizations/customizations.md#Custom-Indicators-and-Signals) crossovers to generate buy/sell signals
 2. **Downloaded data** - Real [market data](../guides/data-management.md) from Binance for backtesting
 3. **Ran a simulation** - The strategy made trading decisions based on historical price movements
 4. **Visualized results** - Interactive plots show exactly when and why trades were made
@@ -148,7 +148,7 @@ Congratulations! You just:
 
 - **Strategy**: A Julia module that defines trading logic
 - **Universe**: The set of assets (trading pairs) your strategy trades
-- **[OHLCV](../guides/data-management.md#ohlcv-data) Data**: Open, High, Low, Close, Volume - the basic market data
+- **[OHLCV](../guides/data-management.md#Data-Collection-Methods) Data**: Open, High, Low, Close, Volume - the basic market data
 - **Backtest**: Running your strategy against historical data to see how it would have performed
 - **Simulation Mode**: Planar's default mode that simulates trades without real money
 
@@ -164,20 +164,20 @@ Now that you have Planar running:
 
 1. **[Complete Installation](installation.md)** - Set up a proper development environment
 2. **[Build Your First Strategy](first-strategy.md)** - Learn to create custom trading logic
-3. **[Explore Examples](../strategy.md#examples)** - Study more complex strategy patterns
+3. **[Explore Examples](../strategy.md)** - Study more complex strategy patterns
 4. **[Learn About Data](../data.md)** - Understand Planar's [data management](../guides/data-management.md) capabilities
 
 ## Quick Troubleshooting
 
-**❌ "Package not found" errors** → [Installation Issues](../troubleshooting/installation-issues.md#dependency-conflicts)
+**❌ "Package not found" errors** → [Installation Issues](../troubleshooting/installation-issues.md#Dependency-Issues)
 
-**❌ Plotting doesn't work** → [Installation Issues](../troubleshooting/installation-issues.md#plotting-backend-issues)
+**❌ Plotting doesn't work** → [Installation Issues](../troubleshooting/installation-issues.md#Python-Integration-Problems)
 - Skip plotting for now - your backtest still worked!
 - Try: `using GLMakie` instead of `WGLMakie`
 
-**❌ No data downloaded** → [Exchange Issues](../troubleshooting/exchange-issues.md#network-connectivity-problems)
+**❌ No data downloaded** → [Exchange Issues](../troubleshooting/exchange-issues.md#Connectivity-Issues)
 
-**❌ No trades executed** → [Strategy Problems](../troubleshooting/strategy-problems.md#signal-generation-problems)
+**❌ No trades executed** → [Strategy Problems](../troubleshooting/strategy-problems.md#Signal-Generation-Problems)
 ```julia
 # Activate Planar project
 import Pkg
@@ -205,7 +205,7 @@ catch e
 end
 ```
 
-**❌ Docker issues** → [Installation Issues](../troubleshooting/installation-issues.md#docker-installation-issues)
+**❌ Docker issues** → [Installation Issues](../troubleshooting/installation-issues.md#Docker-Issues)
 ```bash
 # Restart Docker and try again
 docker system prune
@@ -216,11 +216,11 @@ docker run -it --rm docker.io/bubbleparticles/planar-sysimage-optim julia
 
 ## 🎉 Congratulations!
 
-You just completed your first algorithmic trading backtest! Here's what you accomplished:
+You just completed your first algorithmic trading backtest! Here's what you accomplished.
 
 ✅ **Ran a real trading strategy** on actual Bitcoin market data  
 
-✅ **Executed simulated trades** based on [technical indicators](../guides/strategy-development.md#technical-indicators)  
+✅ **Executed simulated trades** based on [technical indicators](../customizations/customizations.md#Custom-Indicators-and-Signals)  
 
 ✅ **Analyzed performance** with profit/loss and win rates  
 
@@ -231,7 +231,7 @@ You just completed your first algorithmic trading backtest! Here's what you acco
 ### Immediate Next Steps (Choose One)
 1. **[Build Your Own Strategy](first-strategy.md)** *(20 min)* - Create a custom RSI strategy from scratch
 2. **[Complete Installation](installation.md)** *(10 min)* - Set up a proper development environment  
-3. **[Explore Examples](../strategy.md#examples)** - Study more complex strategies
+3. **[Explore Examples](../strategy.md)** - Study more complex strategies
 
 ### When You're Ready for More
 - **[Strategy Development Guide](../guides/strategy-development.md)** - Advanced patterns and best practices

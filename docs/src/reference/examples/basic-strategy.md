@@ -13,12 +13,6 @@ This example demonstrates the fundamental structure of a Planar strategy. Use th
 **Complexity:** Beginner  
 **Prerequisites:** Understanding of [Getting Started Guide](../../getting-started/index.md)
 
-## Complete Example
-
-
-## Usage Example
-
-
 ## Key Components Explained
 
 ### 1. Module Declaration
@@ -42,10 +36,6 @@ This example demonstrates the fundamental structure of a Planar strategy. Use th
 - Contains the core trading decision logic
 
 ## Customization Guide
-
-### Adding New Parameters
-
-### Adding More Assets
 
 ### Adding Technical Indicators
 ```julia
@@ -122,16 +112,6 @@ s = strategy(:BasicStrategy, Paper())
 load_ohlcv(s)
 start!(s)
 ```
-
-### 3. Parameter Testing
-
-## Common Patterns
-
-### Error Handling
-
-### Logging and Debugging
-
-### Data Validation
 
 ## Next Steps
 

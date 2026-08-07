@@ -5,7 +5,7 @@ This section provides comprehensive documentation for all Planar.jl modules and 
 ## Core Modules
 
 ### [Data Management](../data.md)
-Data structures, persistence, and [OHLCV data](../guides/data-management.md#ohlcv-data) handling.
+Data structures, persistence, and [OHLCV data](../guides/data-management.md#Data-Collection-Methods) handling.
 
 ### [Engine](engine.md)
 Core execution engine for backtesting, paper trading, and live trading.

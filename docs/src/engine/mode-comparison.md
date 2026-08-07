@@ -6,8 +6,8 @@ This guide provides a comprehensive comparison of Planar's three execution modes
 
 Planar supports three distinct execution modes, each designed for different stages of [strategy](../guides/strategy-development.md) development and deployment:
 
-- **Sim Mode (Simulation/Backtesting)**: Historical data [simulation](../guides/execution-modes.md#simulation-mode) for [strategy](../guides/strategy-development.md) development and testing
-- **Paper Mode**: Real-time [simulation](../guides/execution-modes.md#simulation-mode) with live [market data](../guides/data-management.md) but no actual trades
+- **Sim Mode (Simulation/Backtesting)**: Historical data [simulation](../guides/execution-modes.md#Simulation-Mode) for [strategy](../guides/strategy-development.md) development and testing
+- **Paper Mode**: Real-time [simulation](../guides/execution-modes.md#Simulation-Mode) with live [market data](../guides/data-management.md) but no actual trades
 - **Live Mode**: Real trading with actual capital and [exchanges](../exchanges.md) APIs
 
 ## Detailed Mode Comparison
@@ -97,54 +97,6 @@ graph TD
     M --> N[Full Deployment]
 ```
 
-### Sim to Paper Transition
-
-#### Pre-transition Checklist
-
-
-#### Configuration Adjustments
-
-
-### Paper to Live Transition
-
-#### Comprehensive Validation
-
-
-#### Live Mode Preparation
-
-
-## Common Pitfalls and How to Avoid Them
-
-### Sim Mode Pitfalls
-
-#### 1. Overfitting to Historical Data
-
-#### 2. Unrealistic Execution Assumptions
-
-### Paper Mode Pitfalls
-
-#### 1. Ignoring Market Impact
-
-#### 2. Over-optimizing on Current Market Conditions
-
-### Live Mode Pitfalls
-
-#### 1. Insufficient Capital Management
-
-#### 2. Inadequate Risk Management
-
-## Best Practices for Mode Transitions
-
-### 1. Gradual Transition Approach
-
-
-### 2. Validation Gates
-
-
-### 3. Configuration Management
-
-
-
 ## See Also
 
 - **[Exchanges](../exchanges.md)** - Exchange integration and configuration
@@ -159,4 +111,4 @@ graph TD
 ### Cross-Mode Performance Tracking
 
 
-This comprehensive mode comparison and transition guide provides traders with the knowledge needed to safely and effectively move their [strategies](../guides/strategy-development.md) from development through to [live trading](../guides/execution-modes.md#live-mode), while avoiding common pitfalls and maintaining proper risk management throughout the process.
+This comprehensive mode comparison and transition guide provides traders with the knowledge needed to safely and effectively move their [strategies](../guides/strategy-development.md) from development through to [live trading](../guides/execution-modes.md#Live-Mode), while avoiding common pitfalls and maintaining proper risk management throughout the process.
