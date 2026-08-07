@@ -102,9 +102,9 @@ function call!(t::Type{<:SC}, config, ::LoadStrategy)
         ##  whatever method to load the data, e.g.
         # pair = first(marketsid(s))
         # quote_currency = string(nameof(s.cash))
-        # data = DownloadTool.BinanceData.binanceload(pair; quote_currency)
+        # data = PlanarDownloadTool.BinanceData.binanceload(pair; quote_currency)
         # Engine.stub!(s.universe, data)
-        # NOTE: `DownloadTool` is not imported by default, if you want to use it here you
+        # NOTE: `PlanarDownloadTool` is not imported by default, if you want to use it here you
         # have to add it manually to the strategy.
         # Recommended to just stub the data with a function defined in the REPL
     else

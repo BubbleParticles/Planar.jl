@@ -9,7 +9,7 @@ using PlanarCore.Misc: @lev!, @margin!
 export @margin!, @lev!
 
 if !isdefined(@__MODULE__, :an)
-    const sst = StrategyStats
+    const sst = PlanarStrategyStats
 end
 
 macro setup(exc)

@@ -9,28 +9,33 @@ This comprehensive guide covers Planar's architecture, development setup, contri
 Planar follows a modular architecture with clear separation of concerns:
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      Application Layer                                  │
-├─────────────────────────────────────────────────────────────────────────┤
-│  Planar.jl (Engine, LiveMode, PaperMode,   │  PlanarOptim.jl            │
-│   Watchers, Remote)                        │  (Plotting)                │
-├─────────────────────────────────────────────────────────────────────────┤
-│                    Strategy Layer                                       │
-├─────────────────────────────────────────────────────────────────────────┤
-│  Strategies.jl    │   User Strategies    │ StrategyStats/               │
-│                   │                      │ StrategyTools                │
-├─────────────────────────────────────────────────────────────────────────┤
-│                    Foundation Layer                                     │
-├─────────────────────────────────────────────────────────────────────────┤
-│  PlanarCore (Lang, TimeTicks, Pbar, Misc, Ccxt,                         │
-│   ExchangeTypes, Data, Instruments, Processing, Exchanges,              │
-│   Fetch, OrderTypes, Instances, Collections, Strategies,                │
-│   Simulations, Executors, SimMode, Metrics, Stubs)                      │
-├─────────────────────────────────────────────────────────────────────────┤
-│                    Tooling Layer                                        │
-├─────────────────────────────────────────────────────────────────────────┤
-│  DownloadTool  │  PlanarPython  │  PlanarFeatureSelection │  PlanarDev  │
-└─────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Application Layer                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Planar.jl (Engine, LiveMode, PaperMode,   │  PlanarOptim.jl                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│   Watchers, Remote)                        │  (Plotting)                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                Strategy Layer                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  Strategies.jl    │   User Strategies    │ PlanarStrategyStats/             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                   │                      │ PlanarStrategyTools              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                               Foundation Layer                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  PlanarCore (Lang, TimeTicks, Pbar, Misc, Ccxt,                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│   ExchangeTypes, Data, Instruments, Processing, Exchanges,                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│   Fetch, OrderTypes, Instances, Collections, Strategies,                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│   Simulations, Executors, SimMode, Metrics, Stubs)                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                Tooling Layer                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  PlanarDownloadTool  │  PlanarPython  │  PlanarFeatureSelection │  PlanarDev│
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Core Components

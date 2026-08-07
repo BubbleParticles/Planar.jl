@@ -6,7 +6,7 @@ module Planar
     include("submodules/Engine.jl")
     using PlanarCore.Misc: TYPEDSIGNATURES
     using Pkg: Pkg as Pkg
-    using StrategyStats
+    using PlanarStrategyStats
     # Logging macros used by strategy environment
     include("logmacros.jl")
     # Re-exports for backward compat

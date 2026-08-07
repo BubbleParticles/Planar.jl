@@ -6,7 +6,7 @@ The Data module provides comprehensive storage and management of [OHLCV](guides/
 ## Quick Navigation
 
 - **[Storage Architecture](#Storage-Architecture)** - Understanding Zarr and LMDB backends
-- **[Historical Data](#Historical-Data-with-DownloadTool)** - Using DownloadTool for bulk data collection
+- **[Historical Data](#Historical-Data-with-PlanarDownloadTool)** - Using PlanarDownloadTool for bulk data collection
 - **[Real-Time Data](#Real-Time-Data-with-Fetch)** - Fetching live data from exchanges
 - **[Live Streaming](#Live-Data-Streaming-with-Watchers)** - Continuous data monitoring
 
@@ -71,15 +71,15 @@ ZarrInstance/
 
 Planar provides multiple methods for collecting market data, each optimized for different use cases.
 
-## Historical Data with DownloadTool
+## Historical Data with PlanarDownloadTool
 
-The DownloadTool module provides access to historical data archives from major exchanges, offering the most efficient method for obtaining large amounts of historical data.
+The PlanarDownloadTool module provides access to historical data archives from major exchanges, offering the most efficient method for obtaining large amounts of historical data.
 
 **Supported Exchanges**: Binance and Bybit archives
 
-### Advanced DownloadTool Examples
+### Advanced PlanarDownloadTool Examples
 
-Download multiple symbols and filter by quote currency using `DownloadTool.binancesyms()` and `DownloadTool.selectsyms()`.
+Download multiple symbols and filter by quote currency using `PlanarDownloadTool.binancesyms()` and `PlanarDownloadTool.selectsyms()`.
 
 ### Market Types and Frequencies
 

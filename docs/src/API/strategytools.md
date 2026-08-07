@@ -1,9 +1,9 @@
-# StrategyTools
+# PlanarStrategyTools
 
 This module implements routines common to many [strategies](../guides/strategy-development.md).
 
 ```@autodocs
-Modules = [StrategyTools]
+Modules = [PlanarStrategyTools]
 ```
 
 

@@ -1,0 +1,32 @@
+authors = ["zbc"]
+name = "PlanarDownloadTool"
+uuid = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
+version = "0.1.0"
+license = "Apache-2.0"
+
+[compat]
+CSV = "0.10.16"
+CodecZlib = "0.7.8"
+Comonicon = "1.0.8"
+EzXML = "1.2.3"
+HTTP = "1.5"
+PlanarCore = "1"
+URIs = "1.6.1"
+ZipFile = "0.10.1"
+julia = "1.12"
+
+[deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+CodecZlib = "944b1d66-785c-5afd-91f1-9de20f533193"
+Comonicon = "863f3e99-da2a-4334-8734-de3dacbe5542"
+EzXML = "8f5d6c58-4d21-5cfd-889c-e3ad7ee6a615"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
+PlanarCore = "a475c859-e357-4be2-a5e3-43038ab4b158"
+URIs = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
+ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
+
+[sources.PlanarCore]
+path = "../PlanarCore"
+
+[weakdeps]
+DBnomics = "3114853a-1e9b-44f2-8156-91b1682c6b69"

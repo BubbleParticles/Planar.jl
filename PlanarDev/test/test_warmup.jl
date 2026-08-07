@@ -26,7 +26,7 @@ function test_init_sim_warmup()
         using .egn.Strategies: Strategies as st
         using .egn.TimeTicks: Minute, Day, Hour
         PlanarDev.@environment!
-        PlanarDev.tools!()  # Load StrategyTools
+        PlanarDev.tools!()  # Load PlanarStrategyTools
     end
 
     @testset "InitSimWarmup Tests" begin
@@ -94,7 +94,7 @@ function test_sim_warmup_basic()
         using .egn.TimeTicks: Minute, Day, Hour
         using .egn.Instances: AssetInstance
         PlanarDev.@environment!
-        PlanarDev.tools!()  # Load StrategyTools
+        PlanarDev.tools!()  # Load PlanarStrategyTools
     end
 
     @testset "SimWarmup Basic Tests" begin
@@ -156,7 +156,7 @@ function test_warmup_edge_cases()
         using .egn.Strategies: Strategies as st
         using .egn.TimeTicks: Minute, Day, Hour
         PlanarDev.@environment!
-        PlanarDev.tools!()  # Load StrategyTools
+        PlanarDev.tools!()  # Load PlanarStrategyTools
     end
 
     @testset "Warmup Edge Cases" begin
@@ -217,7 +217,7 @@ function test_warmup_attributes()
         using .egn.Strategies: Strategies as st
         using .egn.TimeTicks: Minute, Day, Hour
         PlanarDev.@environment!
-        PlanarDev.tools!()  # Load StrategyTools
+        PlanarDev.tools!()  # Load PlanarStrategyTools
     end
 
     @testset "Warmup Attributes Tests" begin
@@ -265,7 +265,7 @@ function test_warmup()
         using PlanarDev.Planar.Engine: Engine as egn
         using .egn.Strategies: Strategies as st
         PlanarDev.@environment!
-        PlanarDev.tools!()  # Load StrategyTools
+        PlanarDev.tools!()  # Load PlanarStrategyTools
     end
 
     @testset failfast=FAILFAST "warmup" begin

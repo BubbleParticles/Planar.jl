@@ -23,7 +23,7 @@ The project follows a modular Julia package structure with each major component 
 - **`Fetch/`**: Data fetching and pipeline management
 - **`Processing/`**: Data processing and transformation utilities
 - **`Metrics/`**: Performance measurement and analysis tools
-- **`StrategyStats/`**: Strategy-specific statistics and reporting
+- **`PlanarStrategyStats/`**: Strategy-specific statistics and reporting
 
 ### Utilities & Support
 - **`Instruments/`**: Financial instrument definitions
@@ -38,7 +38,7 @@ The project follows a modular Julia package structure with each major component 
 - **`Plotting/`**: Visualization and charting capabilities
 - **`Watchers/`**: Market monitoring and alerting
 - **`Remote/`**: Remote control and communication (Telegram bot)
-- **`DownloadTool/`**: Web scraping utilities for data collection
+- **`PlanarDownloadTool/`**: Web scraping utilities for data collection
 
 ## Configuration & User Files
 

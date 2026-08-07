@@ -4,7 +4,7 @@ macro in_repl()
     quote
         @eval begin
             Misc.clearpypath!()
-            sst = StrategyStats
+            sst = PlanarStrategyStats
             using PlanarOptim.Plotting: plotone, @plotone
             using Misc: config, @margin!, @margin!!
         end
@@ -13,14 +13,14 @@ macro in_repl()
 end
 
 function analyze!()
-    @eval using StrategyStats, PlanarOptim.Plotting
+    @eval using PlanarStrategyStats, PlanarOptim.Plotting
 end
 
 function user!()
     @eval include(joinpath(@__DIR__, "user.jl"))
     @eval using Misc: config
     @eval export results, exc, config
-    @eval sst = StrategyStats
+    @eval sst = PlanarStrategyStats
     nothing
 end
 
@@ -77,14 +77,14 @@ end
 
 @doc """ Imports the `Metrics` module. """
 metrics!() = module!(:Metrics, :ss)
-@doc """ Imports the `StrategyStats` module. """
-analysis!() = module!(:StrategyStats, :sst)
+@doc """ Imports the `PlanarStrategyStats` module. """
+analysis!() = module!(:PlanarStrategyStats, :sst)
 @doc """ Activates and Imports the `PlanarOptim` module. """
 optim!() = _activate_and_import(:PlanarOptim, :opt)
 @doc """ Activates and Imports the `PlanarOptim` module (formerly PlanarInteractive). """
 interactive!() = _activate_and_import(:PlanarOptim, :plni)
-@doc """ Activates and Imports the `DownloadTool` module. """
-scrape!() = _activate_and_import(:DownloadTool, :scr)
+@doc """ Activates and Imports the `PlanarDownloadTool` module. """
+scrape!() = _activate_and_import(:PlanarDownloadTool, :scr)
 feats!() = _activate_and_import(:PlanarFeatureSelection, :feats)
 
 export optim!, metrics!, analysis!, interactive!, scrape!, feats!

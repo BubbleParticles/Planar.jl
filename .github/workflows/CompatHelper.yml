@@ -30,8 +30,8 @@ jobs:
           import CompatHelper
           CompatHelper.main(; subdirs = [
             "Planar", "PlanarCore", "PlanarDev", "PlanarOptim",
-            "StrategyStats", "StrategyTools", "PlanarFeatureSelection",
-            "DownloadTool", "PlanarPython",
+            "PlanarStrategyStats", "PlanarStrategyTools", "PlanarFeatureSelection",
+            "PlanarDownloadTool", "PlanarPython",
           ])
         shell: julia --color=yes {0}
         env:

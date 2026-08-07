@@ -46,7 +46,7 @@ end
 
 function default_data_loader(load_func=nothing)
     @eval Main begin
-        using DownloadTool: DownloadTool as scr
+        using PlanarDownloadTool: PlanarDownloadTool as scr
         let f = @something $(load_func) scr.BinanceData.binanceload
             (pairs, qc; kwargs...) -> f(pairs; quote_currency=qc, kwargs...)
         end
@@ -147,7 +147,7 @@ togglewatch!(s, enable=true) = begin
 end
 
 using Planar: _activate_and_import
-tools!() = _activate_and_import(:StrategyTools, :stt)
+tools!() = _activate_and_import(:PlanarStrategyTools, :stt)
 
 function _doinit()
     # no deferred initialization needed
