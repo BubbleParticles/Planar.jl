@@ -24,8 +24,8 @@ This section provides comprehensive documentation for all Planar.jl modules and 
 ### Analysis & Optimization
 - **[Metrics](../../metrics.md)** - Performance metrics and analysis
 - **[Optimization](../../optimization.md)** - Parameter optimization and hyperparameter tuning
-- **[Strategy Tools](../../API/strategytools.md)** - Utilities for strategy development
-- **[Strategy Statistics](../../API/strategystats.md)** - Statistical analysis of strategy performance
+- **[PlanarStrategyTools](../../API/strategytools.md)** - Utilities for strategy development
+- **[PlanarStrategyStats](../../API/strategystats.md)** - Statistical analysis of strategy performance
 
 ### Visualization & Utilities
 - **[Plotting](../../plotting.md)** - Charting and visualization functions

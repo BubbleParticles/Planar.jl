@@ -4,10 +4,10 @@ JSON3 = "0f8b85d8-7281-11e9-16c2-39a750bddbf1"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 PlanarCore = "a475c859-e357-4be2-a5e3-43038ab4b158"
-StrategyStats = "d4fe19c2-883d-48d3-92d7-80b36677371b"
+PlanarStrategyStats = "d4fe19c2-883d-48d3-92d7-80b36677371b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
 Planar = {path = ".."}
 PlanarCore = {path = "../../PlanarCore"}
-StrategyStats = {path = "../../StrategyStats"}
+PlanarStrategyStats = {path = "../../PlanarStrategyStats"}

@@ -197,8 +197,8 @@
                 "Data Architecture Overview",
                 "Storage Hierarchy",
                 "Data Collection Methods",
-                "Historical Data with DownloadTool",
-                "Advanced DownloadTool Examples",
+                "Historical Data with PlanarDownloadTool",
+                "Advanced PlanarDownloadTool Examples",
                 "Market Types and Frequencies",
                 "Error Handling and Data Validation",
                 "Real-Time Data with Fetch",
@@ -1728,7 +1728,7 @@
             "content_length": 891
         },
         {
-            "excerpt": "StrategyStats Library for common strategy signals generation. See Also - Strategy Development - Guide: Strategy development and implementation - Optimization - Strategy development and implementation",
+            "excerpt": "PlanarStrategyStats Library for common strategy signals generation. See Also - Strategy Development - Guide: Strategy development and implementation - Optimization - Strategy development and implementation",
             "difficulty": "intermediate",
             "keywords": [
                 "strategy",
@@ -1752,14 +1752,14 @@
             "url": "/API/strategystats.html",
             "category": "reference",
             "headings": [
-                "StrategyStats",
+                "PlanarStrategyStats",
                 "See Also"
             ],
             "title": "strategystats",
             "content_length": 199
         },
         {
-            "excerpt": "StrategyTools This module implements routines common to many strategies. See Also - Strategy Development - Guide: Strategy development and implementation - Optimization - Strategy development and ...",
+            "excerpt": "PlanarStrategyTools This module implements routines common to many strategies. See Also - Strategy Development - Guide: Strategy development and implementation - Optimization - Strategy development and ...",
             "difficulty": "intermediate",
             "keywords": [
                 "also",
@@ -1785,7 +1785,7 @@
             "url": "/API/strategytools.html",
             "category": "reference",
             "headings": [
-                "StrategyTools",
+                "PlanarStrategyTools",
                 "See Also"
             ],
             "title": "strategytools",
@@ -2779,7 +2779,7 @@
                 "Data Collection Methods",
                 "Choosing the Right Method",
                 "Historical Data Collection",
-                "Bybit DownloadTool",
+                "Bybit PlanarDownloadTool",
                 "Real-Time Data Fetching",
                 "Data Validation and Quality Checks",
                 "Live Data Streaming",

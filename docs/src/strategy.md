@@ -390,8 +390,8 @@ e Also
 ### API Reference
 - **[Strategy API](API/strategies.md)** - Complete strategy function reference
 - **[Engine API](API/engine.md)** - Core engine functions
-- **[Strategy Tools](API/../API/strategytools.md)** - Utility functions for strategies
-- **[Strategy Stats](API/../API/strategystats.md)** - Performance analysis functions
+- **[PlanarStrategyTools](API/../API/strategytools.md)** - Utility functions for strategies
+- **[PlanarStrategyStats](API/../API/strategystats.md)** - Performance analysis functions
 
 ### Support
 - **[Troubleshooting](troubleshooting/index.md)** - Common strategy development issues

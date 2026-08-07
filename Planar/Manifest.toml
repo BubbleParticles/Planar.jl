@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "d5348a6d60f824042769ab29ea46c3c7e649bee6"
+project_hash = "1814b9e4d8d3805d1c8014ad9d8a1cae1bf023b4"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -726,7 +726,7 @@ weakdeps = ["REPL"]
     REPLExt = "REPL"
 
 [[deps.Planar]]
-deps = ["DocStringExtensions", "Documenter", "HTTP", "JSON3", "LRUCache", "MacroTools", "Pkg", "PlanarCore", "PrettyTables", "REPL", "Random", "Rocket", "Statistics", "StrategyStats", "Suppressor", "Telegram", "TimeFrames", "URIs"]
+deps = ["DocStringExtensions", "Documenter", "HTTP", "JSON3", "LRUCache", "MacroTools", "Pkg", "PlanarCore", "PlanarStrategyStats", "PrettyTables", "REPL", "Random", "Rocket", "Statistics", "Suppressor", "Telegram", "TimeFrames", "URIs"]
 path = "."
 uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 version = "1.7.2"
@@ -736,6 +736,21 @@ deps = ["CSV", "CodecZlib", "ConcurrentCollections", "DataFrames", "DataFramesMe
 path = "../PlanarCore"
 uuid = "a475c859-e357-4be2-a5e3-43038ab4b158"
 version = "1.0.0"
+
+[[deps.PlanarStrategyStats]]
+deps = ["DataFrames", "Logging", "OnlineTechnicalIndicators", "PlanarCore", "Statistics"]
+path = "../PlanarStrategyStats"
+uuid = "d4fe19c2-883d-48d3-92d7-80b36677371b"
+version = "0.1.0"
+
+    [deps.PlanarStrategyStats.extensions]
+    CorrExt = ["CausalityTools", "StatsBase", "StatsModels", "EffectSizes"]
+
+    [deps.PlanarStrategyStats.weakdeps]
+    CausalityTools = "01837fd2-c099-442f-ae89-75fa208aad36"
+    EffectSizes = "e248de7e-9197-5860-972e-353a2af44d75"
+    StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+    StatsModels = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
 
 [[deps.PooledArrays]]
 deps = ["DataAPI", "Future"]
@@ -951,21 +966,6 @@ version = "2.2.1"
     [deps.StatsFuns.weakdeps]
     ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
     InverseFunctions = "3587e190-3f89-42d0-90ee-14403ec27112"
-
-[[deps.StrategyStats]]
-deps = ["DataFrames", "Logging", "OnlineTechnicalIndicators", "PlanarCore", "Statistics"]
-path = "../StrategyStats"
-uuid = "d4fe19c2-883d-48d3-92d7-80b36677371b"
-version = "0.1.0"
-
-    [deps.StrategyStats.extensions]
-    CorrExt = ["CausalityTools", "StatsBase", "StatsModels", "EffectSizes"]
-
-    [deps.StrategyStats.weakdeps]
-    CausalityTools = "01837fd2-c099-442f-ae89-75fa208aad36"
-    EffectSizes = "e248de7e-9197-5860-972e-353a2af44d75"
-    StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
-    StatsModels = "3eaba693-59b7-5ba5-a881-562e759f1c8d"
 
 [[deps.StringManipulation]]
 deps = ["PrecompileTools"]

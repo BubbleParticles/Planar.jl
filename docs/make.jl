@@ -56,8 +56,8 @@ get(ENV, "PLANAR_DOCS_LOADED", "false") == "true" || begin
     use(:Planar, "Planar")
     use(:PlanarOptim, "PlanarOptim")
     use(:PlanarPython, "PlanarPython")
-    use(:StrategyTools, "StrategyTools")
-    use(:StrategyStats, "StrategyStats")
+    use(:PlanarStrategyTools, "PlanarStrategyTools")
+    use(:PlanarStrategyStats, "PlanarStrategyStats")
     using PlanarCore.Data.DataStructures
     @eval using Base: Timer
     # Bind submodules with short names for @docs/@ref resolution
@@ -164,8 +164,8 @@ makedocs(;
                 "Python Integration" => "API/python.md",
                 "Metrics" => "API/metrics.md",
                 "Strategies" => "API/strategies.md",
-                "Strategy Tools" => "API/strategytools.md",
-                "Strategy Stats" => "API/strategystats.md",
+                "PlanarStrategyTools" => "API/strategytools.md",
+                "PlanarStrategyStats" => "API/strategystats.md",
             ],
             "Configuration" => "config.md",
             "Glossary" => "disambiguation.md",

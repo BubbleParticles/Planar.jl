@@ -40,7 +40,7 @@ DataFrames
 Devdocs
 Dfutils
 Documenter
-DownloadTool
+PlanarDownloadTool
 Drawdown
 EXC
 Eval
@@ -118,10 +118,10 @@ Scalable
 SemVer
 SimMode
 Sortino
-StrategyStats
-StrategyTools
-Strategystats
-Strategytools
+PlanarStrategyStats
+PlanarStrategyTools
+PlanarStrategyStats
+PlanarStrategyTools
 TF
 TLS
 TTL

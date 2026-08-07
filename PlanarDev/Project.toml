@@ -10,7 +10,7 @@ Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 PlanarCore = "a475c859-e357-4be2-a5e3-43038ab4b158"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
-DownloadTool = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
+PlanarDownloadTool = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
 
 [extras]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
@@ -20,23 +20,23 @@ JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 Mocking = "78c3b35d-d492-501b-9361-3d52fe80e533"
 PlanarOptim = "01937fd2-c099-442f-ae89-75fa208aad36"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
-StrategyStats = "d4fe19c2-883d-48d3-92d7-80b36677371b"
-StrategyTools = "bc793e09-ff97-408c-9766-388aa928ad5c"
+PlanarStrategyStats = "d4fe19c2-883d-48d3-92d7-80b36677371b"
+PlanarStrategyTools = "bc793e09-ff97-408c-9766-388aa928ad5c"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [sources]
 Planar = {path = "../Planar"}
 PlanarCore = {path = "../PlanarCore"}
 PlanarOptim = {path = "../PlanarOptim"}
-StrategyStats = {path = "../StrategyStats"}
-StrategyTools = {path = "../StrategyTools"}
-DownloadTool = {path = "../DownloadTool"}
+PlanarStrategyStats = {path = "../PlanarStrategyStats"}
+PlanarStrategyTools = {path = "../PlanarStrategyTools"}
+PlanarDownloadTool = {path = "../PlanarDownloadTool"}
 
 [compat]
 Aqua = "0.8.16"
 CSV = "0.10.16"
 DataFrames = "1.8.2"
-DownloadTool = "0.1"
+PlanarDownloadTool = "0.1"
 JSON = "1.6.1"
 Mocking = "0.8.1"
 Planar = "1.7"
@@ -44,7 +44,7 @@ PlanarCore = "1"
 PlanarOptim = "0.1"
 Reexport = "1"
 Revise = "3.16.1"
-StrategyStats = "0.1"
+PlanarStrategyStats = "0.1"
 TOML = "1.0.3"
 julia = "1.12"
 

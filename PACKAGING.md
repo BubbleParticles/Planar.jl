@@ -118,8 +118,8 @@ so users only need `Pkg.add("Planar")`. Status and remaining requirements:
    comment on the commit/PR
    `@JuliaRegistrator register subdir=PlanarCore` (exact monorepo syntax,
    confirmed in the Registrator README) — repeat for each package.
-   Order: `PlanarCore` → `StrategyStats` → `Planar` → `PlanarFeatureSelection` →
-   `DownloadTool` → `PlanarPython` → `StrategyTools` → `PlanarOptim` → `PlanarDev`.
+   Order: `PlanarCore` → `PlanarStrategyStats` → `Planar` → `PlanarFeatureSelection` →
+   `PlanarDownloadTool` → `PlanarPython` → `PlanarStrategyTools` → `PlanarOptim` → `PlanarDev`.
    Caveat: automerge's "repo URL ends with `/Name.jl.git`" check only matches
    `Planar` (the monorepo is `Planar.jl`); the other packages go through manual
    registry review — normal for monorepo subdir registrations.

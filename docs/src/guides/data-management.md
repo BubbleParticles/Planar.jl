@@ -7,7 +7,7 @@ This comprehensive guide covers Planar's [data management](../guides/data-manage
 
 - **[Storage Architecture](#Storage-Architecture)** - Understanding Zarr and LMDB backends
 - **[Data Collection Methods](#Data-Collection-Methods)** - Overview of collection approaches
-- **[Historical Data](#Historical-Data-Collection)** - Using DownloadTool for bulk data collection
+- **[Historical Data](#Historical-Data-Collection)** - Using PlanarDownloadTool for bulk data collection
 - **[Real-Time Data](#Real-Time-Data-Fetching)** - Fetching live data from [exchanges](../exchanges.md)
 - **[Live Streaming](../watchers/watchers.md)** - Continuous data monitoring with Watchers
 - **[Custom Data Sources](#Custom-Data-Sources)** - Integrating your own data
@@ -76,24 +76,24 @@ Planar provides multiple methods for collecting market data, each optimized for 
 
 | Method | Use Case | Speed | Data Range | Rate Limits |
 |--------|----------|-------|------------|-------------|
-| **DownloadTool** | Historical bulk data | Fast | Months/Years | None |
+| **PlanarDownloadTool** | Historical bulk data | Fast | Months/Years | None |
 | **Fetch** | Recent data, gap filling | Medium | Days/Weeks | High |
 | **Watchers** | Real-time streaming | Real-time | Live only | Low |
 
 ### Choosing the Right Method
 
-- **Use DownloadTool** for initial historical data collection and [backtesting](execution-modes.md#Simulation-Mode) datasets
+- **Use PlanarDownloadTool** for initial historical data collection and [backtesting](execution-modes.md#Simulation-Mode) datasets
 - **Use Fetch** for recent data updates and filling gaps in historical data
 - **Use Watchers** for [live trading](execution-modes.md#Live-Mode) and real-time analysis
 
 **⚠️ Data collection issues?** See [Performance Issues: Data-Related](../troubleshooting/performance-issues.md#Data-Performance) for slow loading and database problems, or [Exchange Issues](../troubleshooting/exchange-issues.md) for connectivity problems.
 ## Historical Data Collection
 
-The DownloadTool module provides access to historical data archives from major exchanges, offering the most efficient method for obtaining large amounts of historical data.
+The PlanarDownloadTool module provides access to historical data archives from major exchanges, offering the most efficient method for obtaining large amounts of historical data.
 
 **Supported Exchanges**: Binance and Bybit archives
 
-### Bybit DownloadTool
+### Bybit PlanarDownloadTool
 
 
 !!! warning "Download Caching"
