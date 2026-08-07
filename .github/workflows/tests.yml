@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [DownloadTool, FeatureSelection, Planar, PlanarCore, PlanarDev, PlanarOptim, Python, StrategyStats, StrategyTools]
+        package: [DownloadTool, PlanarFeatureSelection, Planar, PlanarCore, PlanarDev, PlanarOptim, PlanarPython, StrategyStats, StrategyTools]
     runs-on: ubuntu-latest
     env:
       CCXT_GATEWAY_DISABLE: "true"
@@ -164,7 +164,7 @@ jobs:
       if: always()
       uses: julia-actions/julia-processcoverage@v1
       with:
-        directories: PlanarCore/src,Planar/src,PlanarOptim/src,Python/src,StrategyStats/src,StrategyTools/src
+        directories: PlanarCore/src,Planar/src,PlanarOptim/src,PlanarPython/src,StrategyStats/src,StrategyTools/src
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       if: always()
@@ -336,7 +336,7 @@ jobs:
       if: always()
       uses: julia-actions/julia-processcoverage@v1
       with:
-        directories: PlanarCore/src,Planar/src,PlanarOptim/src,Python/src,StrategyStats/src,StrategyTools/src
+        directories: PlanarCore/src,Planar/src,PlanarOptim/src,PlanarPython/src,StrategyStats/src,StrategyTools/src
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       if: always()

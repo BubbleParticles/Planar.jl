@@ -55,7 +55,7 @@ get(ENV, "PLANAR_DOCS_LOADED", "false") == "true" || begin
     use(:PlanarCore, "PlanarCore")
     use(:Planar, "Planar")
     use(:PlanarOptim, "PlanarOptim")
-    use(:Python, "Python")
+    use(:PlanarPython, "PlanarPython")
     use(:StrategyTools, "StrategyTools")
     use(:StrategyStats, "StrategyStats")
     using PlanarCore.Data.DataStructures

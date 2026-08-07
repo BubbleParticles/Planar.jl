@@ -1,6 +1,6 @@
 using Test
 using LinearAlgebra
-using FeatureSelection: ratio!, ratio, roc_ratio
+using PlanarFeatureSelection: ratio!, ratio, roc_ratio
 
 @testset "ratio.jl tests" failfast=true begin
     @testset "ratio! function" begin

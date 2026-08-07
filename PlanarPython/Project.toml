@@ -1,5 +1,5 @@
 authors = ["zbc"]
-name = "Python"
+name = "PlanarPython"
 uuid = "e8cdc95d-7257-4c38-ab0e-cc8a28c19776"
 version = "0.1.0"
 license = "Apache-2.0"

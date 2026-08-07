@@ -1,4 +1,4 @@
-module FeatureSelection
+module PlanarFeatureSelection
 
 using PlanarCore.Lang
 using PlanarCore.TimeTicks
@@ -42,4 +42,4 @@ export find_lead_lag_pairs, detect_correlation_regime, find_cointegrated_prices
 export pairs_trading_signal_step, pairs_trading_signals
 export ratio!, ratio, roc_ratio, roc_ratio!
 
-end # module FeatureSelection
+end # module PlanarFeatureSelection

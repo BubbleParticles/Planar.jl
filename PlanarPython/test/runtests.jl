@@ -1,10 +1,10 @@
-module PythonTests
+module PlanarPythonTests
 
 using Test
-using Python
-using Python: islist, isdict
+using PlanarPython
+using PlanarPython: islist, isdict
 
-@testset "Python" begin
+@testset "PlanarPython" begin
     @testset "islist with Julia types" begin
         @test islist([1, 2, 3]) == true
         @test islist(Vector{Int}()) == true
@@ -25,15 +25,15 @@ using Python: islist, isdict
     end
 
     @testset "exports" begin
-        @test isdefined(Python, :clearpypath!)
-        @test isdefined(Python, :pytryfloat)
-        @test isdefined(Python, Symbol("@pymodule"))
-        @test isdefined(Python, Symbol("@pystr"))
-        @test isdefined(Python, :pytofloat)
-        @test isdefined(Python, :pyisnonzero)
-        @test isdefined(Python, :pydicthash)
-        @test isdefined(Python, :islist)
-        @test isdefined(Python, :isdict)
+        @test isdefined(PlanarPython, :clearpypath!)
+        @test isdefined(PlanarPython, :pytryfloat)
+        @test isdefined(PlanarPython, Symbol("@pymodule"))
+        @test isdefined(PlanarPython, Symbol("@pystr"))
+        @test isdefined(PlanarPython, :pytofloat)
+        @test isdefined(PlanarPython, :pyisnonzero)
+        @test isdefined(PlanarPython, :pydicthash)
+        @test isdefined(PlanarPython, :islist)
+        @test isdefined(PlanarPython, :isdict)
     end
 end
 

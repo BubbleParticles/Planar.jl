@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "af7b605b18b7bb8033a3de33ecdcbd9245a1294c"
+project_hash = "17c6ed0812fa995e098dc79fed9e676663abbcc6"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "2d9c9a55f9c93e8887ad391fbae72f8ef55e1177"
@@ -679,6 +679,12 @@ path = "../PlanarCore"
 uuid = "a475c859-e357-4be2-a5e3-43038ab4b158"
 version = "1.0.0"
 
+[[deps.PlanarPython]]
+deps = ["Dates", "DocStringExtensions", "PlanarCore", "PrecompileTools", "PythonCall", "Reexport"]
+path = "."
+uuid = "e8cdc95d-7257-4c38-ab0e-cc8a28c19776"
+version = "0.1.0"
+
 [[deps.PooledArrays]]
 deps = ["DataAPI", "Future"]
 git-tree-sha1 = "36d8b4b899628fb92c2749eb488d884a926614d3"
@@ -726,12 +732,6 @@ version = "0.1.6"
 git-tree-sha1 = "4fbbafbc6251b883f4d2705356f3641f3652a7fe"
 uuid = "43287f4e-b6f4-7ad1-bb20-aadabca52c3d"
 version = "1.4.0"
-
-[[deps.Python]]
-deps = ["Dates", "DocStringExtensions", "PlanarCore", "PrecompileTools", "PythonCall", "Reexport"]
-path = "."
-uuid = "e8cdc95d-7257-4c38-ab0e-cc8a28c19776"
-version = "0.1.0"
 
 [[deps.PythonCall]]
 deps = ["CondaPkg", "Dates", "Libdl", "MacroTools", "Markdown", "Preferences", "Serialization", "Tables", "UnsafePointers"]

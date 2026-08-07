@@ -5,7 +5,7 @@ using TOML
 
 pkgs = [
     "PlanarCore", "PlanarOptim", "PlanarDev", "Planar",
-    "DownloadTool", "FeatureSelection", "StrategyTools",
+    "DownloadTool", "PlanarFeatureSelection", "StrategyTools",
     "StrategyStats"
 ]
 
