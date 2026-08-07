@@ -5,7 +5,7 @@ version = "0.1.0"
 
 [deps]
 Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
-PlanarCore = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+PlanarCore = "a475c859-e357-4be2-a5e3-43038ab4b158"
 
 [strategy]
 include_file = "src/TickStrat.jl"
