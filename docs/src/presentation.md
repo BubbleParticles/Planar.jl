@@ -16,3 +16,5 @@ join(lines[start_idx+1:stop_idx-1]) |> Markdown.parse
 end
 
 ```
+
+See the [Comparison with other frameworks](comparison.md) for a feature-by-feature breakdown.
