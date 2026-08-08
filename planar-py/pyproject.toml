@@ -9,6 +9,9 @@ authors = [
     {name = "Planar contributors"}
 ]
 keywords = ["trading", "backtesting", "crypto", "ccxt", "planar", "julia"]
+dependencies = [
+    "ccxt-gateway>=0.1.0",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",

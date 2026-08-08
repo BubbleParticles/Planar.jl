@@ -16,8 +16,11 @@ jobs:
           python-version: '3.12'
       - name: Install build tooling
         run: pip install build
-      - name: Build sdist and wheel
+      - name: Build planar-trader sdist and wheel
         working-directory: planar-py
+        run: python -m build --outdir ../dist
+      - name: Build ccxt-gateway sdist and wheel
+        working-directory: ccxt-gateway
         run: python -m build --outdir ../dist
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

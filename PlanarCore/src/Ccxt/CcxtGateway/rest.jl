@@ -4,6 +4,7 @@ using HTTP
 using JSON3
 using OrderedCollections
 using ..Types
+import TOML
 using Base: ReentrantLock
 
 export GatewayClient, build_url
@@ -302,6 +303,22 @@ end
 const _gateway_use_ssl = Ref(true)  # set by _check_gateway_up or spawn_gateway
 _gateway_use_ssl_on_change() = (isassigned(_default_client) && (_default_client[] = GatewayClient(; use_ssl=_gateway_use_ssl[])))
 const _default_client = Ref{GatewayClient}()
+
+# Returns the shared GatewayClient, (re)starting the gateway and syncing the SSL
+# flag on first use. `_ensure_gateway_running` is a no-op during precompilation
+# (Base.generating_output) so this never triggers an install/Pkg.add.
+function default_client()
+    if !isassigned(_default_client)
+        _ensure_gateway_running()
+        _default_client[] = GatewayClient(; use_ssl=_gateway_use_ssl[])
+    else
+        _ensure_gateway_running()
+        if _default_client[].use_ssl != _gateway_use_ssl[]
+            _default_client[] = GatewayClient(; use_ssl=_gateway_use_ssl[])
+        end
+    end
+    _default_client[]
+end
 const _gateway_pid = Ref{Union{Int, Nothing}}(nothing)
 const _gateway_init_lock = ReentrantLock()
 const _gateway_initialized = Ref(false)
@@ -368,60 +385,219 @@ function _ensure_gateway_running()
         end
         _gateway_initialized[] = true
     end
+    return nothing
 end
 
-# Paths for PID and lock files — computed relative to this file's location
+# Cache dir for runtime gateway files (PID file, SSL cert). Mirrors the
+# resolution in ccxt_gateway.daemon_gateway so the PID file the daemon writes
+# is where Julia looks it up. Set CCXT_GATEWAY_CACHE_DIR to override.
 function _rest_gateway_dir()
-    normpath(joinpath(dirname(dirname(dirname(dirname(@__DIR__)))), "ccxt-gateway", ".cache"))
+    env = get(ENV, "CCXT_GATEWAY_CACHE_DIR", "")
+    !isempty(env) && return env
+    base = get(ENV, "XDG_CACHE_HOME",
+        Sys.iswindows() ? get(ENV, "LOCALAPPDATA", homedir()) :
+        joinpath(homedir(), ".cache"))
+    joinpath(base, "ccxt-gateway")
 end
 const REST_GATEWAY_DIR = _rest_gateway_dir()
-mkpath(REST_GATEWAY_DIR)  # ensure directory exists for tests and gateway startup
+mkpath(REST_GATEWAY_DIR)
 const REST_GATEWAY_PIDFILE = joinpath(REST_GATEWAY_DIR, "ccxt_gateway.pid")
 const REST_GATEWAY_LOCKFILE = joinpath(REST_GATEWAY_DIR, "ccxt_gateway.lock")
-function default_client()
-    if !isassigned(_default_client)
-        _ensure_gateway_running()
-        _default_client[] = GatewayClient(; use_ssl=_gateway_use_ssl[])
+
+_venv_python(venv_dir::String) =
+    Sys.iswindows() ? joinpath(venv_dir, "Scripts", "python.exe") :
+    joinpath(venv_dir, "bin", "python")
+
+# Read `[ccxt-gateway] venv = "path"` from the active/strategy Project.toml.
+# Resolved relative to that Project.toml directory. Returns the venv dir as an
+# absolute path, or `nothing`.
+function _configured_venv_dir(start::AbstractString=abspath(pwd()))
+    candidates = String[]
+    ap = Base.active_project()
+    isempty(ap) || push!(candidates, ap)
+    cur = start
+    while true
+        p = joinpath(cur, "Project.toml")
+        isfile(p) && push!(candidates, p)
+        parent = dirname(cur)
+        parent == cur && break
+        cur = parent
+    end
+    for p in unique(candidates)
+        toml = try TOML.parsefile(p) catch; continue end
+        gw = get(toml, "ccxt-gateway", nothing)
+        (gw isa Dict) || continue
+        v = get(gw, "venv", nothing)
+        (v isa AbstractString && !isempty(v)) || continue
+        return isabspath(v) ? v : normpath(joinpath(dirname(p), v))
+    end
+    return nothing
+end
+
+# Ordered venv directories to probe for a working gateway Python.
+function _local_venv_dirs()
+    dirs = String[]
+    c = _configured_venv_dir()
+    c !== nothing && push!(dirs, c)
+    ap = Base.active_project()
+    if !isempty(ap)
+        pd = dirname(ap)
+        push!(dirs, joinpath(pd, ".venv"))
+        push!(dirs, joinpath(pd, "venv"))
+    end
+    gw = get(ENV, "CCXT_GATEWAY_VENV", "")
+    !isempty(gw) && push!(dirs, gw)
+    gwdir = get(ENV, "CCXT_GATEWAY_DIR", "")
+    isempty(gwdir) || push!(dirs, joinpath(gwdir, ".venv"))
+    unique!(dirs)
+end
+
+# Find a Python interpreter able to run the gateway. If no existing venv / system
+# Python has ccxt-gateway installed and `install` is true, install it (uv
+# preferred, pip fallback). Set `install=false` to probe without side effects
+# (e.g. during precompilation).
+#
+# When `_local_gateway_source()` finds the in-repo `ccxt-gateway` source tree
+# (dev mode, e.g. running from the git clone), that tree takes priority: probes
+# only accept an interpreter whose `ccxt_gateway` import resolves into the
+# local tree, and installs are editable so local Python edits are picked up on
+# the next gateway restart. In released installs (no local tree found), any
+# working ccxt-gateway is accepted and installs come from PyPI. A relative
+# source path is honored, resolved against cwd.
+function _find_gateway_python(; install::Bool=true)
+    local_source = _local_gateway_source()
+    for vd in _local_venv_dirs()
+        py = _venv_python(vd)
+        isfile(py) || continue
+        _check_gateway_python(py) || continue
+        (local_source === nothing || _python_uses_local_source(py, local_source)) && (return py)
+    end
+    sys = _find_system_python()
+    if sys !== nothing && _check_gateway_python(sys) &&
+            (local_source === nothing || _python_uses_local_source(sys, local_source))
+        return sys
+    end
+    install || error(
+        "ccxt-gateway is not installed. Set `CCXT_GATEWAY_DIR` to a checked-out " *
+        "ccxt-gateway tree, declare `[ccxt-gateway] venv = \"...\"` in your " *
+        "strategy Project.toml, install the `ccxt-gateway` pip package, or " *
+        "let Planar install it on first exchange use.")
+    return _install_gateway_python()
+end
+
+# True when `python_exe`'s `ccxt_gateway` package resolves into `local_source`
+# (the in-repo tree) — i.e. an editable install of the dev checkout rather than
+# a site-packages copy from PyPI.
+function _python_uses_local_source(python_exe::String, local_source::String)
+    try
+        out = readchomp(pipeline(
+            `$python_exe -c "import ccxt_gateway, os; print(os.path.realpath(ccxt_gateway.__file__))"`;
+            stderr=devnull))
+        path = normpath(strip(out))
+        # `abspath` resolves a relative source path against cwd, matching how
+        # uv/pip would resolve `--editable <relative>` at install time.
+        startswith(path, normpath(abspath(local_source)))
+    catch
+        false
+    end
+end
+
+# True when `dir` is the ccxt-gateway package source tree: it carries a
+# pyproject.toml whose `[project] name` identifies it as the gateway package.
+# A directory merely *named* `ccxt-gateway` is not sufficient.
+function _is_ccxt_gateway_tree(dir::AbstractString)
+    pp = joinpath(dir, "pyproject.toml")
+    isfile(pp) || return false
+    try
+        toml = TOML.parsefile(pp)
+        prj = get(toml, "project", nothing)
+        return prj isa Dict && get(prj, "name", nothing) == "ccxt-gateway"
+    catch
+        return false
+    end
+end
+
+# Locate the in-repo `ccxt-gateway` source tree (Planar.jl/ccxt-gateway).
+# Installing from this path (rather than the PyPI name, which is only available
+# after a release publish) lets the gateway be installed offline / pre-release
+# from the repository checkout that ships alongside the Julia code. Returns the
+# verified tree path if found (identity checked via its pyproject.toml), else
+# `nothing` to install the `ccxt-gateway` pip package from PyPI.
+function _local_gateway_source()
+    # Walk up from this file (PlanarCore/src/Ccxt/CcxtGateway/rest.jl):
+    # `dirname` x5 lands at the repo root that contains `ccxt-gateway/`.
+    # `abspath` guards against the module being loaded via a relative include
+    # path (normal loads resolve `@__FILE__` to an absolute path already).
+    cur = dirname(dirname(dirname(dirname(dirname(abspath(@__FILE__))))))
+    while true
+        cand = joinpath(cur, "ccxt-gateway")
+        _is_ccxt_gateway_tree(cand) && return cand
+        parent = dirname(cur)
+        parent == cur && break
+        cur = parent
+    end
+    return nothing
+end
+
+function _install_gateway_python()
+    # Venv target: explicit CCXT_GATEWAY_VENV override > Project.toml
+    # `[ccxt-gateway] venv` > active project's .venv. Matches the probe order
+    # in `_local_venv_dirs` so an env-pinned venv is reused, not recreated.
+    env_venv = get(ENV, "CCXT_GATEWAY_VENV", "")
+    vd = isempty(env_venv) ? _configured_venv_dir() : env_venv
+    if vd === nothing
+        ap = Base.active_project()
+        pd = isempty(ap) ? abspath(pwd()) : dirname(ap)
+        vd = joinpath(pd, ".venv")
+    end
+    mkpath(vd)
+    py = _venv_python(vd)
+
+    # Create the venv: uv venv (preferred), else python3 -m venv.
+    venv_ok = false
+    if Sys.which("uv") !== nothing
+        try
+            rm(vd; recursive=true, force=true)
+            run(`uv venv $vd`)
+            venv_ok = isfile(py)
+        catch e
+            @debug "uv venv failed ($e), falling back to python3 -m venv"
+        end
+    end
+    if !venv_ok
+        sys = _find_system_python()
+        sys === nothing && error("No Python on PATH to create a venv for ccxt-gateway")
+        try
+            run(`$sys -m venv $vd`)
+            venv_ok = isfile(py)
+        catch e
+            error("python3 venv creation failed: $e")
+        end
+    end
+    # Install the gateway: when a verified in-repo source tree is present (dev
+    # mode) install it EDITABLE so local Python edits are live on the next
+    # gateway restart; otherwise install the `ccxt-gateway` pip package from
+    # PyPI.
+    install_source = _local_gateway_source()
+    install_args = install_source === nothing ? ("ccxt-gateway",) : ("--editable", install_source)
+    if Sys.which("uv") !== nothing
+        try
+            run(`uv pip install --python $py --quiet $install_args`)
+        catch e
+            @debug "uv pip install failed ($e), falling back to pip"
+            run(`$py -m pip install --quiet $install_args`)
+        end
     else
-        # Gateway may have been started/SSL-detected after precompilation cached the client.
-        # Re-check SSL setting and invalidate if stale.
-        _ensure_gateway_running()
-        if _default_client[].use_ssl != _gateway_use_ssl[]
-            _default_client[] = GatewayClient(; use_ssl=_gateway_use_ssl[])
-        end
+        run(`$py -m pip install --quiet $install_args`)
     end
-    _default_client[]
+
+    _check_gateway_python(py) ||
+        error("ccxt-gateway installed into $vd but Python check failed (missing uvicorn or ccxt_gateway)")
+    @info "Installed ccxt-gateway into $vd"
+    return py
 end
 
-function _find_gateway_file(relpath::String)
-    paths = String[]
-    try
-        p = normpath(joinpath(dirname(pathof(Ccxt)), "..", "..", "ccxt-gateway", relpath))
-        push!(paths, p)
-    catch
-    end
-    try
-        p = normpath(joinpath(dirname(Base.active_project()), "..", "ccxt-gateway", relpath))
-        push!(paths, p)
-    catch
-    end
-    env_dir = get(ENV, "CCXT_GATEWAY_DIR", "")
-    if !isempty(env_dir)
-        push!(paths, normpath(joinpath(env_dir, relpath)))
-    end
-    for base in (homedir(), homedir() * "/dev/Planar.jl", "/project", "/var/home/fra/dev/Planar.jl", pwd())
-        push!(paths, normpath(joinpath(base, "ccxt-gateway", relpath)))
-    end
-    for p in paths
-        if isfile(p)
-            @debug "Found $relpath at $p"
-            return p
-        end
-        @debug "Searching for $relpath: $p — not found"
-    end
-    error("File not found: $relpath (searched: $(join(unique(paths), ", ")))")
-end
-
+# Verify `python_exe` runs a working CPython interpreter.
 function _check_python_works(python_exe::String)
     try
         run(pipeline(`$python_exe -c "import decimal; import asyncio; import json"`; stderr=devnull))
@@ -432,10 +608,7 @@ function _check_python_works(python_exe::String)
     end
 end
 
-# Full health check: stdlib AND the packages the gateway daemon needs at
-# import time (uvicorn + the ccxt_gateway package itself). A venv that passes
-# `_check_python_works` but lacks these would spawn a daemon that dies at
-# import — which in turn breaks exchange subprocess spawning (404s).
+# True when `python_exe` can import the gateway runtime (uvicorn + ccxt_gateway).
 function _check_gateway_python(python_exe::String)
     _check_python_works(python_exe) || return false
     try
@@ -447,232 +620,8 @@ function _check_gateway_python(python_exe::String)
     end
 end
 
-function _fix_venv_pyvenv_cfg(venv_cfg::String)
-    system_python = _find_system_python()
-    system_python === nothing && return false
-    system_bin_dir = dirname(system_python)
-    try
-        cfg = read(venv_cfg, String)
-        new_home = "home = $system_bin_dir"
-        if occursin(r"^home\s*="m, cfg)
-            cfg = replace(cfg, r"^home\s*=.*"m => new_home)
-        else
-            cfg = new_home * "\n" * cfg
-        end
-        write(venv_cfg, cfg)
-        @debug "Fixed pyvenv.cfg home -> $system_bin_dir"
-        return true
-    catch e
-        @debug "Failed to fix pyvenv.cfg: $e"
-        return false
-    end
-end
-
-function _ensure_gateway_venv(gateway_dir::String)
-    venv_dir = normpath(joinpath(gateway_dir, ".venv"))
-    venv_python = normpath(joinpath(venv_dir, "bin", "python"))
-    venv_cfg = normpath(joinpath(venv_dir, "pyvenv.cfg"))
-    # Fast path: venv fully intact AND functional (stdlib + gateway deps)
-    if isfile(venv_python) && _check_gateway_python(venv_python)
-        @debug "Venv python found and verified at $venv_python"
-        return venv_python
-    end
-    # Venv exists but broken — `uv sync` is the sanctioned repair (uv.lock is
-    # the source of truth). It rebuilds a CONSISTENT venv: matching interpreter
-    # AND all deps. The legacy pyvenv.cfg/symlink surgery below swapped in the
-    # system interpreter without regard for the venv's site-packages version,
-    # producing permanently broken version-mismatched venvs (AGENTS.md #54).
-    if isdir(venv_dir)
-        @debug "Venv exists at $venv_dir but is broken; repairing via uv sync..."
-        if _run_uv_sync(gateway_dir)
-            if isfile(venv_python) && _check_gateway_python(venv_python)
-                @debug "Venv repaired via uv sync at $venv_python"
-                return venv_python
-            end
-            @debug "uv sync ran but venv still not functional at $venv_python"
-        end
-    end
-    # uv unavailable or sync left the venv unusable — legacy manual repair.
-    # Only applied when the fallback interpreter matches the venv's
-    # site-packages version; a mismatched venv is recreated below instead.
-    if isdir(venv_dir) && isfile(venv_cfg)
-        vver = _venv_python_version(venv_dir)
-        sys_py = _find_system_python()
-        if sys_py !== nothing && (vver === nothing || _python_version(sys_py) == vver)
-            if _fix_venv_pyvenv_cfg(venv_cfg) && _check_gateway_python(venv_python)
-                @debug "Venv repaired via pyvenv.cfg fix at $venv_python"
-                return venv_python
-            end
-        end
-        _repair_venv_python(venv_dir)
-        if isfile(venv_python) && _check_gateway_python(venv_python)
-            @debug "Venv repaired via symlink fix at $venv_python"
-            return venv_python
-        end
-    end
-    # No valid venv — recreate
-    @debug "Recreating absent venv at $venv_dir..."
-    if islink(venv_dir)
-        @debug "Removing stale symlink at $venv_dir (target: $(readlink(venv_dir)))"
-        try rm(venv_dir) catch end
-    end
-    try
-        @debug "Trying uv venv..."
-        run(`uv venv --clear $venv_dir`)
-        run(`uv pip install --python $venv_dir --quiet -e $gateway_dir`)
-        @debug "Venv created with uv successfully"
-        if !_check_gateway_python(venv_python)
-            @debug "uv venv produced broken Python, falling back to python3..."
-            error("uv Python is broken")
-        end
-    catch e
-        @debug "uv approach failed ($e), falling back to python3 -m venv..."
-        try rm(venv_dir; recursive=true) catch end
-        try
-            run(`python3 -m venv $venv_dir`)
-            run(`$venv_dir/bin/pip install --quiet --no-input -e $gateway_dir`)
-            @debug "Venv created with python3 successfully"
-        catch e2
-            @debug "python3 -m venv failed ($e2), trying without ensurepip..."
-            try rm(venv_dir; recursive=true) catch end
-            run(`python3 -m venv --without-pip $venv_dir`)
-            run(`uv pip install --python $venv_dir --quiet -e $gateway_dir`)
-            @debug "Venv created with python3 (--without-pip) + uv pip install"
-        end
-    end
-    isfile(venv_python) || error("Failed to create venv at $venv_dir")
-    _check_gateway_python(venv_python) || error("Created venv at $venv_dir has broken Python (system python3 may be missing modules)")
-    return venv_python
-end
-
-# The ccxt-gateway venv is project-managed: uv.lock is the source of truth.
-# Run `uv sync` inside the project dir so the venv matches the lockfile —
-# this repairs venvs whose packages are missing or stale (e.g. uvicorn absent
-# even though the stdlib python check in `_ensure_gateway_venv` passes).
-# uv's output is captured and silenced; a small @warn is emitted only when
-# the sync actually changed the venv. Returns whether uv sync succeeded.
-function _run_uv_sync(gateway_dir::String)
-    uv = Sys.which("uv")
-    uv === nothing && return false
-    out = IOBuffer()
-    ok = try
-        run(pipeline(setenv(`$uv sync`; dir=gateway_dir); stdout=out, stderr=out))
-        true
-    catch e
-        @warn "uv sync failed for ccxt-gateway venv at $gateway_dir ($e):\n$(String(take!(out)))"
-        false
-    end
-    if ok && _venv_resynced(String(take!(out)))
-        @warn "ccxt-gateway venv resynchronized via uv sync (packages changed)"
-    end
-    ok
-end
-
-# True when `uv sync` output indicates the venv was actually modified
-# (package add/remove/update lines) rather than already in sync.
-_venv_resynced(out::String) = occursin(r"(?m)^\s*[+-]\s|Installed|Removed|Updated|Downgraded|Uninstalled", out)
-
-function _sync_gateway_venv(gateway_dir::String)
-    _run_uv_sync(gateway_dir) || return _ensure_gateway_venv(gateway_dir)
-    venv_python = normpath(joinpath(gateway_dir, ".venv", "bin", "python"))
-    if isfile(venv_python) && _check_gateway_python(venv_python)
-        @debug "ccxt-gateway venv synced via uv sync at $venv_python"
-        return venv_python
-    end
-    @debug "uv sync ran but venv python not functional at $venv_python; falling back to repair"
-    _ensure_gateway_venv(gateway_dir)
-end
-
-function _sync_gateway_venv()
-    try
-        daemon_script = _find_gateway_file("daemon_gateway.py")
-        _sync_gateway_venv(dirname(daemon_script))
-    catch e
-        @warn "ccxt-gateway venv sync skipped (gateway dir not found): $e"
-        nothing
-    end
-end
-
-function _repair_venv_python(venv_dir::String)
-    vver = _venv_python_version(venv_dir)
-    # Remove venv-internal symlinks to avoid loops (e.g. python3 -> python)
-    # but keep the main `python` symlink if it points to a valid real file.
-    for name in ["python3", "python3.11", "python3.12", "python3.13", "python3.14"]
-        candidate = normpath(joinpath(venv_dir, "bin", name))
-        if islink(candidate)
-            target = try readlink(candidate) catch; "" end
-            if startswith(target, "python") || !isfile(candidate)
-                try rm(candidate) catch end
-            end
-        end
-    end
-    # If `python` exists, check it resolves to a working interpreter
-    python_link = normpath(joinpath(venv_dir, "bin", "python"))
-    if isfile(python_link) && !islink(python_link)
-        return  # Real python binary exists — nothing to repair
-    end
-    if islink(python_link)
-        target = try readlink(python_link) catch; "" end
-        # If it points to a relative name within the venv, it may be stale
-        if startswith(target, "python")
-            try rm(python_link) catch end
-        elseif isfile(python_link) && _python_matches_venv(venv_dir, python_link, vver)
-            return  # Absolute symlink to a matching working python — OK
-        end
-    end
-    # Try each candidate — must be a REAL file (not a venv-internal symlink)
-    # whose version matches the venv's site-packages. A mismatched interpreter
-    # breaks every package import (AGENTS.md #54).
-    for candidate in ["python3", "python3.11", "python3.12", "python3.13", "python3.14"]
-        exe = normpath(joinpath(venv_dir, "bin", candidate))
-        if isfile(exe) && !islink(exe) && _python_matches_venv(venv_dir, exe, vver)
-            @debug "Found valid python at $exe; symlinking bin/python -> $candidate"
-            try rm(python_link) catch end
-            try symlink(candidate, python_link) catch end
-            return
-        end
-    end
-    # No valid python in venv — try system (only when the version matches;
-    # otherwise leave the venv broken so it falls through to the recreate path,
-    # which rebuilds it consistently)
-    system_python = _find_system_python()
-    if system_python !== nothing && _python_matches_venv(venv_dir, system_python, vver)
-        @debug "Symlinking bin/python -> $system_python"
-        try rm(python_link) catch end
-        try symlink(system_python, python_link) catch end
-    end
-end
-
-# The venv's site-packages python version (dir name under lib/), or nothing
-# when the venv has no lib/pythonX.Y directory.
-function _venv_python_version(venv_dir::String)
-    lib = normpath(joinpath(venv_dir, "lib"))
-    isdir(lib) || return nothing
-    for name in readdir(lib)
-        m = match(r"^python(\d+\.\d+)$", name)
-        m !== nothing && return m[1]
-    end
-    nothing
-end
-
-function _python_version(exe::String)
-    try
-        ver = readchomp(pipeline(`$exe -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"`; stderr=devnull))
-        ver = strip(ver)
-        occursin(r"^\d+\.\d+$", ver) ? ver : nothing
-    catch
-        nothing
-    end
-end
-
-# Whether `exe`'s interpreter version matches the venv's site-packages.
-# `vver === nothing` (no lib dir) accepts any interpreter.
-function _python_matches_venv(venv_dir::String, exe::String, vver::Union{Nothing,String})
-    vver === nothing && return true
-    pyver = _python_version(exe)
-    pyver !== nothing && pyver == vver
-end
-
+# _check_python_works / _check_gateway_python / _find_system_python /
+# _kill_process_on_port below — shared by the gateway-env resolution above.
 function _find_system_python()
     for candidate in ["python3", "python3.14", "python3.13", "python3.12", "python3.11"]
         exe = Sys.which(candidate)
@@ -756,31 +705,27 @@ function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
             catch
             end
         end
-        
-        # Find the daemon script
-        @debug "spawn_gateway: locating daemon_gateway.py..."
-        daemon_script = _find_gateway_file("daemon_gateway.py")
-        @debug "Found gateway daemon at $daemon_script"
-        gateway_dir = dirname(daemon_script)
-        @debug "Gateway directory: $gateway_dir"
-        
-        # Find the venv python (may be a broken symlink if cache is shared)
-        @debug "spawn_gateway: ensuring venv..."
-        python_cmd = _ensure_gateway_venv(gateway_dir)
-        @debug "Using python: $python_cmd"
-        
-        # Run the daemon script — capture output so user can see errors
+
+        # Locate a Python interpreter with ccxt-gateway installed, installing
+        # it from PyPI (uv preferred, pip fallback) on first use. Skipped
+        # during precompilation (Base.generating_output) to avoid network on
+        # `Pkg.add`; the gateway is started lazily on first exchange use anyway.
+        @debug "spawn_gateway: resolving gateway Python..."
+        allow_install = !Base.generating_output()
+        python_cmd = _find_gateway_python(; install=allow_install)
+        @info "Planar will use ccxt-gateway via $(python_cmd)"
+
+        # Run the daemon module — capture output so user can see errors.
         @debug "spawn_gateway: truncating gateway log..."
         try open("/tmp/gateway.log", "w") do f; end catch end
         # Pass idle timeout env to gateway subprocess
         if haskey(ENV, "CCXT_GATEWAY_IDLE_TIMEOUT_MINUTES")
             withenv("CCXT_GATEWAY_IDLE_TIMEOUT_MINUTES" => ENV["CCXT_GATEWAY_IDLE_TIMEOUT_MINUTES"]) do
-                run(pipeline(`$python_cmd $daemon_script`, stdout="/tmp/gateway.log", stderr="/tmp/gateway.log"), wait=false)
+                run(pipeline(`$python_cmd -m ccxt_gateway.daemon_gateway`, stdout="/tmp/gateway.log", stderr="/tmp/gateway.log"), wait=false)
             end
         else
-            run(pipeline(`$python_cmd $daemon_script`, stdout="/tmp/gateway.log", stderr="/tmp/gateway.log"), wait=false)
+            run(pipeline(`$python_cmd -m ccxt_gateway.daemon_gateway`, stdout="/tmp/gateway.log", stderr="/tmp/gateway.log"), wait=false)
         end
-        
         # Wait for pidfile AND gateway responsiveness
         pidfile = REST_GATEWAY_PIDFILE
         seen_log_lines = 0

@@ -51,16 +51,16 @@ The repository provides a `resolve.jl` helper that includes utilities for depend
 
 ### Python Gateway Test Suite
 
-The ccxt-gateway has its own Python test suite in `/project/ccxt-gateway/tests/`. Use the `.venv` to run it:
+The ccxt-gateway has its own Python test suite in `./ccxt-gateway/tests/`. Use the `.venv` to run it:
 
 ```bash
-cd /project/ccxt-gateway && .venv/bin/pytest
+cd ./ccxt-gateway && .venv/bin/pytest
 ```
 
-The Julia Ccxt package tests are run via:
+The Julia Ccxt package tests (part of the PlanarCore suite, `./PlanarCore/test/Ccxt/`) are run via:
 
 ```bash
-cd /project/Ccxt && julia --project=. -e 'using Pkg; Pkg.test()'
+cd ./PlanarCore && julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
 ---
