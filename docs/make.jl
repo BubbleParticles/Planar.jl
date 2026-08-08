@@ -99,7 +99,8 @@ makedocs(;
     pages=[
         "Introduction" => [
             "Overview" => "presentation.md",
-            "What is Planar?" => "index.md"
+            "What is Planar?" => "index.md",
+            "Comparison with other frameworks" => "comparison.md",
         ],
         "Getting Started" => [
             "Overview" => "getting-started/index.md",
