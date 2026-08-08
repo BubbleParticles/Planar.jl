@@ -11,16 +11,19 @@ using ..Misc.ConcurrentCollections: ConcurrentDict
 using ..Misc.Lang: @lget!, Option
 using ..Misc.DocStringExtensions
 
-# Use CcxtGateway for HTTP-based ccxt communication
+# Use CcxtGateway for HTTP-based ccxt communication. Runtime dirs/PID files are
+# canonical in the Rest submodule (`_rest_gateway_dir` → CCXT_GATEWAY_CACHE_DIR /
+# XDG / LOCALAPPDATA, mirroring ccxt_gateway.daemon_gateway) so there is a
+# single resolver. Aliased here so downstream code can use the unqualified
+# `Ccxt.GATEWAY_PIDFILE`.
 include("CcxtGateway/CcxtGateway.jl")
 using .CcxtGateway
+using .CcxtGateway.Rest: REST_GATEWAY_PIDFILE, REST_GATEWAY_LOCKFILE
 
 const MARKETS_PATH = joinpath(DATA_PATH, "markets")
-
-@doc "Gateway runtime directory (PID file, lock file)."
-const GATEWAY_DIR = joinpath(dirname(dirname(dirname(@__DIR__))), "ccxt-gateway", ".cache")
-const GATEWAY_PIDFILE = joinpath(GATEWAY_DIR, "ccxt_gateway.pid")
-const GATEWAY_LOCKFILE = joinpath(GATEWAY_DIR, "ccxt_gateway.lock")
+const GATEWAY_DIR = CcxtGateway.Rest._rest_gateway_dir()
+const GATEWAY_PIDFILE = REST_GATEWAY_PIDFILE
+const GATEWAY_LOCKFILE = REST_GATEWAY_LOCKFILE
 
 function _with_gateway_lock(f::Function)
     mkpath(dirname(GATEWAY_LOCKFILE))
