@@ -74,9 +74,6 @@ Other frameworks achieve low code duplication by completely abstracting away ord
 
 <!-- PRESENTATION END -->
 
-## Comparison
-See the [Comparison with other frameworks](docs/src/comparison.md) in the documentation.
-
 ## Install
 ### With docker
 For developing strategies:
