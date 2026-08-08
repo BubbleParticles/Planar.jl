@@ -63,29 +63,6 @@ Other frameworks achieve low code duplication by completely abstracting away ord
 - Can download data from external archives in parallel, and has API wrappers for crypto APIs.
 - Can still easily call into python (with async support!) if you wish
 
-## Comparison
-Here's a comparison of features with other popular trading frameworks:
-
-> ⚠️ This table might be imprecise or outdated (please file an [issue](https://github.com/defnlnotme/Planar.jl/issues) for improvements)
-
-| _Feature_                     | *Planar*   | [*Freqtrade*](https://github.com/freqtrade/freqtrade) | [*Hummingbot*](https://github.com/hummingbot/hummingbot) | [*OctoBot*](https://github.com/Drakkar-Software/OctoBot) | [*Jesse*](https://github.com/jesse-ai/jesse) | [*Nautilus*](https://github.com/nautechsystems/nautilus_trader) | [*Backtrader*](https://github.com/mementum/backtrader) |
-|-------------------------------|:------------:|:-----------------------------------------------------:|:--------------------------------------------------------:|:--------------------------------------------------------:|:--------------------------------------------:|:---------------------------------------------------------------:|:------------------------------------------------------:|
-| 🔴 Paper/Live execution       | ✔️            | ✔️                                                     | ✔️                                                        | ✔️                                                        | 〰️                                           | 〰️                                                              | 〰️                                                     |
-| 🎛 Remote control              | ✔️            | ✔️                                                     | ✔️                                                        | ✔️                                                        | ❌                                           | ❌                                                              | ❌                                                     |
-| 💾 Data Management            | ✔️            | ✔️                                                     | ❌                                                       | ❌                                                       | ❌                                           | ❌                                                              | ✔️                                                      |
-| ⚡ Fast & flexible backtester | ✔️            | ❌                                                    | ❌                                                       | ❌                                                       | ❌                                           | ✔️                                                               | ❌                                                     |
-| 📈 DEX support                | ❌ (planned) | ❌                                                    | ✔️                                                        | ❌                                                       | ✔️                                            | ❌                                                              | ❌                                                     |
-| 💰 Margin/Leverage            | ✔️            | ❌                                                    | ❌                                                       | ✔️                                                        | ✔️                                            | ✔️                                                               | ❌                                                     |
-| 🔍 Optimization               | ✔️            | ✔️                                                     | ❌                                                       | ✔️                                                        | ✔️                                            | ❌                                                              | ❌                                                     |
-| 📊 Plotting                   | ✔️            | ✔️                                                     | ❌                                                       | ✔️                                                        | ✔️                                            | ❌                                                              | 〰️                                                     |
-| 🖥 Dashboard                   | ❌           | ✔️                                                     | ✔️                                                        | ✔️                                                        | ❌                                           | ❌                                                              | ❌                                                     |
-| 📡 Live feeds                 | ✔️            | ❌                                                    | ❌                                                       | ❌                                                       | ❌                                           | ✔️                                                               | ✔️                                                      |
-| 🛡 Bias hardened               | ✔️            | ✔️                                                     | ❌                                                       | ❌                                                       | ❌                                           | ❌                                                              | ❌                                                     |
-| 🔧 Customizable               | ✔️            | ❌                                                    | ✔️                                                        | ❌                                                       | ❌                                           | ✔️                                                               | ❌                                                     |
-| 🪛 Composable                 | ✔️            | ❌                                                    | ❌                                                       | ❌                                                       | ❌                                           | ✔️                                                               | ✔️                                                      |
-| 🔁 Low code duplication       | ✔️            | ✔️                                                     | ❌                                                       | ✔️                                                        | ❌                                           | ✔️                                                               | ❌                                                     |
-| ⚓ By-Simulation              | ✔️            | ❌                                                    | ❌                                                       | ❌                                                       | ❌                                           | ❌                                                              | ❌                                                     |
-
 ## System Recommendations
 
 | 🪙 Symbols | 💾 RAM | 🧠 CPU |
@@ -96,6 +73,9 @@ Here's a comparison of features with other popular trading frameworks:
 *Note: OHLCV data can be shared among strategies.*
 
 <!-- PRESENTATION END -->
+
+## Comparison
+See the [Comparison with other frameworks](docs/src/comparison.md) in the documentation.
 
 ## Install
 ### With docker
