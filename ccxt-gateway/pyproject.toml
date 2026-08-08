@@ -77,3 +77,4 @@ include = [
 
 [project.scripts]
 ccxt-gateway = "ccxt_gateway.main:main"
+ccxt-gateway-daemon = "ccxt_gateway.daemon_gateway:main"
