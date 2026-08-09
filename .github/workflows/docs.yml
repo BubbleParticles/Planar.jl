@@ -60,9 +60,15 @@ jobs:
       - name: CONDAPKG env var
         run: |
           echo "JULIA_CONDAPKG_ENV=$GITHUB_WORKSPACE/.conda" >> $GITHUB_ENV
-      - name: Instantiate Planar with manifest
+      - name: Install docs dependencies in global env
         run: |
-          julia --project=Planar -e 'using Pkg; Pkg.instantiate(; manifest=true)'
+          julia -e 'using Pkg; Pkg.add(["Documenter", "DocStringExtensions", "Suppressor", "Test"])'
+      - name: Add local packages to global env
+        run: |
+          julia -e '
+            using Pkg
+            Pkg.add(["Planar", "PlanarCore", "PlanarStrategyStats", "PlanarStrategyTools", "PlanarOptim", "PlanarPython"])
+          '
       - name: Build docs
         run: |
           sudo apt-get install -y xauth
