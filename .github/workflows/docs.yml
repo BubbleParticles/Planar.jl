@@ -60,10 +60,13 @@ jobs:
       - name: CONDAPKG env var
         run: |
           echo "JULIA_CONDAPKG_ENV=$GITHUB_WORKSPACE/.conda" >> $GITHUB_ENV
+      - name: Instantiate Planar with manifest
+        run: |
+          julia --project=Planar -e 'using Pkg; Pkg.instantiate(; manifest=true)'
       - name: Build docs
         run: |
           sudo apt-get install -y xauth
-          julia --startup-file=no --project=Planar docs/make.jl
+          julia --startup-file=no --project=. docs/make.jl
       - name: Checkout PlanarWebsite
         if: ${{ env.PLANETARWEBSITE_DEPLOY_TOKEN != '' }}
         uses: actions/checkout@v4
