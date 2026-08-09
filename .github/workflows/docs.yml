@@ -64,9 +64,6 @@ jobs:
         run: |
           sudo apt-get install -y xauth
           julia --startup-file=no --project=docs docs/setup.jl
-      - name: Instantiate docs project
-        run: |
-          julia --startup-file=no --project=docs -e 'using Pkg; Pkg.instantiate()'
       - name: Build docs
         run: |
           julia --startup-file=no --project=docs docs/make.jl
