@@ -4,6 +4,7 @@ if get(ENV, "CI", "false") == "true"
 end
 using Pkg: Pkg
 Pkg.activate("Planar")
+push!(LOAD_PATH, "@stdlib")
 let dse = expanduser("~/.julia/environments/v$(VERSION.major).$(VERSION.minor)/")
     if dse ∉ LOAD_PATH
         push!(LOAD_PATH, dse)
