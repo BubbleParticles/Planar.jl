@@ -60,20 +60,10 @@ jobs:
       - name: CONDAPKG env var
         run: |
           echo "JULIA_CONDAPKG_ENV=$GITHUB_WORKSPACE/.conda" >> $GITHUB_ENV
-      - name: Develop Planar and deps in global env
-        run: |
-          julia -e '
-            using Pkg
-            Pkg.develop("Planar")
-            Pkg.develop("PlanarCore")
-            Pkg.develop("PlanarStrategyStats")
-            Pkg.add(["Documenter", "DocStringExtensions", "Suppressor", "Test"])
-            Pkg.instantiate()
-          '
       - name: Build docs
         run: |
           sudo apt-get install -y xauth
-          julia --startup-file=no docs/make.jl
+          julia --startup-file=no --project=Planar docs/make.jl
       - name: Checkout PlanarWebsite
         if: ${{ env.PLANETARWEBSITE_DEPLOY_TOKEN != '' }}
         uses: actions/checkout@v4
