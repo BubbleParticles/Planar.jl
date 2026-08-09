@@ -62,7 +62,7 @@ jobs:
           echo "JULIA_CONDAPKG_ENV=$GITHUB_WORKSPACE/.conda" >> $GITHUB_ENV
       - name: Check Test availability
         run: |
-          julia --project=Planar -e 'using Test; println("Test available")'
+          julia --project=Planar -e 'push!(LOAD_PATH, "@stdlib"); using Test; println("Test available")'
       - name: Build docs
         run: |
           sudo apt-get install -y xauth
