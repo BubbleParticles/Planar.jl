@@ -3,8 +3,8 @@ let tries = 0
         try
             include("noprecomp.jl")
             using Pkg
-            Pkg.activate("Planar")
-            Pkg.add(["Documenter", "DocStringExtensions", "Suppressor", "Test"])
+            Pkg.activate("docs")
+            Pkg.add(["Documenter", "DocStringExtensions", "Suppressor"])
             Pkg.instantiate()
             Pkg.precompile()
             Pkg.precompile()
