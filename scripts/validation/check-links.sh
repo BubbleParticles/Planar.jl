@@ -56,7 +56,7 @@ check_external_links() {
         echo "Checking external links in: $file"
         
         # Extract HTTP/HTTPS links
-        grep -o 'https\?://[^)]*' "$file" | sort -u | while read -r url; do
+        grep -oE 'https?://[^)"'\'']*' "$file" | sort -u | while read -r url; do
             # Clean up URL (remove trailing punctuation and Julia string terminators)
             clean_url=$(echo "$url" | sed 's/[.,;)]$//; s/"$//; s/'"'"'$//')
             
