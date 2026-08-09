@@ -67,7 +67,12 @@ jobs:
         run: |
           julia -e '
             using Pkg
-            Pkg.add(["Planar", "PlanarCore", "PlanarStrategyStats", "PlanarStrategyTools", "PlanarOptim", "PlanarPython"])
+            Pkg.add(PackageSpec(path="PlanarCore"))
+            Pkg.add(PackageSpec(path="PlanarStrategyStats"))
+            Pkg.add(PackageSpec(path="PlanarStrategyTools"))
+            Pkg.add(PackageSpec(path="PlanarOptim"))
+            Pkg.add(PackageSpec(path="PlanarPython"))
+            Pkg.add(PackageSpec(path="Planar"))
           '
       - name: Build docs
         run: |
