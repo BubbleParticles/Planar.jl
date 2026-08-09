@@ -62,7 +62,7 @@ jobs:
           echo "JULIA_CONDAPKG_ENV=$GITHUB_WORKSPACE/.conda" >> $GITHUB_ENV
       - name: Add stdlib registry
         run: |
-          julia -e 'using Pkg; Pkg.Registry.add(Pkg.RegistrySpec(name="stdlib", uuid=Base.UUID("00000000-0000-0000-0000-000000000000"), url="stdlib"))'
+          julia -e 'using Pkg; Pkg.Registry.add_stdlib()'
       - name: Add Test to Planar project
         run: |
           julia --project=Planar -e 'using Pkg; Pkg.add("Test")'
