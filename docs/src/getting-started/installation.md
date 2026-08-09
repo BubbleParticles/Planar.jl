@@ -83,7 +83,7 @@ cd mybot
 planar run MyStrategy --mode sim
 ```
 
-See [PACKAGING.md](../../../PACKAGING.md) for details on the Julia registry and
+See [PACKAGING.md](https://github.com/defnlnotme/Planar.jl/blob/main/PACKAGING.md) for details on the Julia registry and
 PyPI publishing workflow.
 
 ## Project Setup
