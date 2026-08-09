@@ -2,10 +2,12 @@
 if get(ENV, "CI", "false") == "true"
     include("noprecomp.jl")
 end
+using Pkg: Pkg
+Pkg.activate("Planar")
 push!(LOAD_PATH, "@stdlib")
 using Documenter, DocStringExtensions, Suppressor
 
-# Modules - load directly from depot (no project activation needed)
+# Modules
 using Planar
 using PlanarCore
 using PlanarOptim
