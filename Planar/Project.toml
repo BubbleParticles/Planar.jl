@@ -6,6 +6,7 @@ version = "1.7.2"
 license = "Apache-2.0"
 
 [compat]
+Test = "1"
 DocStringExtensions = "0.9.5"
 Documenter = "1.17.0"
 HTTP = "1.11.0"
@@ -28,6 +29,7 @@ URIs = "1"
 julia = "1.12"
 
 [deps]
+Test = "8dfed614-e22c-5e08-85e1-65a5234f0b40"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
