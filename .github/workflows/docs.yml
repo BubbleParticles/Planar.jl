@@ -60,9 +60,9 @@ jobs:
       - name: CONDAPKG env var
         run: |
           echo "JULIA_CONDAPKG_ENV=$GITHUB_WORKSPACE/.conda" >> $GITHUB_ENV
-      - name: Check Test availability
+      - name: Instantiate Planar with manifest
         run: |
-          julia --project=Planar -e 'push!(LOAD_PATH, "@stdlib"); using Test; println("Test available")'
+          julia --project=Planar -e 'using Pkg; Pkg.instantiate(; manifest=true)'
       - name: Build docs
         run: |
           sudo apt-get install -y xauth
