@@ -74,12 +74,6 @@ jobs:
           ref: main
           path: planetarysite
           token: ${{ env.PLANETARWEBSITE_DEPLOY_TOKEN }}
-      - name: Checkout gh-pages branch (fallback)
-        if: ${{ env.PLANETARWEBSITE_DEPLOY_TOKEN == '' }}
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: ghpages
       - name: Deploy docs to PlanarWebsite
         if: ${{ env.PLANETARWEBSITE_DEPLOY_TOKEN != '' }}
         run: |
@@ -94,16 +88,3 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git commit -m "Update documentation"
           git push origin main
-      - name: Deploy docs (gh-pages fallback)
-        if: ${{ env.PLANETARWEBSITE_DEPLOY_TOKEN == '' }}
-        run: |
-          cd ghpages
-          rm -rf ./*
-          cp -r ../docs/build/* .
-          touch ./.nojekyll
-          git add .nojekyll
-          git add .
-          git config --local user.email "github-actions@users.noreply.github.com"
-          git config --local user.name "GitHub Actions"
-          git commit -m "Update documentation"
-          git push origin gh-pages
