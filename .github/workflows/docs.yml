@@ -60,28 +60,19 @@ jobs:
       - name: CONDAPKG env var
         run: |
           echo "JULIA_CONDAPKG_ENV=$GITHUB_WORKSPACE/.conda" >> $GITHUB_ENV
-      - name: Install docs dependencies in global env
+      - name: Add stdlib registry
         run: |
-          julia -e 'using Pkg; Pkg.add(["Documenter", "DocStringExtensions", "Suppressor", "Test"])'
-      - name: Add local packages to global env
+          julia -e 'using Pkg; Pkg.Registry.add(Pkg.RegistrySpec(name="stdlib", uuid=Base.UUID("00000000-0000-0000-0000-000000000000"), url="stdlib"))'
+      - name: Add Test to Planar project
         run: |
-          julia -e '
-            using Pkg
-            Pkg.develop(PackageSpec(path="PlanarCore"))
-            Pkg.develop(PackageSpec(path="PlanarStrategyStats"))
-            Pkg.develop(PackageSpec(path="PlanarStrategyTools"))
-            Pkg.develop(PackageSpec(path="PlanarOptim"))
-            Pkg.develop(PackageSpec(path="PlanarPython"))
-            Pkg.develop(PackageSpec(path="Planar"))
-          '
-      - name: Remove global env project files
+          julia --project=Planar -e 'using Pkg; Pkg.add("Test")'
+      - name: Instantiate Planar
         run: |
-          rm -f ~/.julia/environments/v1.12/Project.toml
-          rm -f ~/.julia/environments/v1.12/Manifest.toml
+          julia --project=Planar -e 'using Pkg; Pkg.instantiate()'
       - name: Build docs
         run: |
           sudo apt-get install -y xauth
-          julia --startup-file=no docs/make.jl
+          julia --startup-file=no --project=Planar docs/make.jl
       - name: Checkout PlanarWebsite
         if: ${{ env.PLANETARWEBSITE_DEPLOY_TOKEN != '' }}
         uses: actions/checkout@v4
