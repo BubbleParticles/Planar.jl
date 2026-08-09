@@ -77,7 +77,7 @@ jobs:
       - name: Build docs
         run: |
           sudo apt-get install -y xauth
-          julia --startup-file=no --project=. docs/make.jl
+          julia --startup-file=no docs/make.jl
       - name: Checkout PlanarWebsite
         if: ${{ env.PLANETARWEBSITE_DEPLOY_TOKEN != '' }}
         uses: actions/checkout@v4
