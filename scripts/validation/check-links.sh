@@ -24,6 +24,10 @@ check_internal_links() {
         grep -o '\[.*\](.*\.md[^)]*)' "$file" | while read -r link; do
             # Extract the file path from the link
             link_path=$(echo "$link" | sed 's/.*](\([^)]*\)).*/\1/' | sed 's/#.*//')
+            # Skip external links (handled by check_external_links)
+            if [[ "$link_path" == http://* ]] || [[ "$link_path" == https://* ]]; then
+                continue
+            fi
             
             # Convert relative path to absolute
             if [[ "$link_path" == /* ]]; then
@@ -53,8 +57,8 @@ check_external_links() {
         
         # Extract HTTP/HTTPS links
         grep -o 'https\?://[^)]*' "$file" | sort -u | while read -r url; do
-            # Clean up URL (remove trailing punctuation)
-            clean_url=$(echo "$url" | sed 's/[.,;)]$//')
+            # Clean up URL (remove trailing punctuation and Julia string terminators)
+            clean_url=$(echo "$url" | sed 's/[.,;)]$//; s/"$//; s/'"'"'$//')
             
             # Check if URL is accessible
             if ! curl -s --head --fail "$clean_url" > /dev/null 2>&1; then
