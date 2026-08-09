@@ -74,6 +74,10 @@ jobs:
             Pkg.develop(PackageSpec(path="PlanarPython"))
             Pkg.develop(PackageSpec(path="Planar"))
           '
+      - name: Remove global env project files
+        run: |
+          rm -f ~/.julia/environments/v1.12/Project.toml
+          rm -f ~/.julia/environments/v1.12/Manifest.toml
       - name: Build docs
         run: |
           sudo apt-get install -y xauth
