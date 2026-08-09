@@ -32,6 +32,7 @@ jobs:
     env:
       CI: true
       JULIA_VERSION: 1.12
+      PLANETARWEBSITE_DEPLOY_TOKEN: ${{ secrets.PLANETARWEBSITE_DEPLOY_TOKEN }}
     permissions: write-all
 
     steps:
@@ -66,12 +67,35 @@ jobs:
       - name: Build docs
         run: |
           julia --startup-file=no --project=docs docs/make.jl
-      - name: Checkout gh-pages branch
+      - name: Checkout PlanarWebsite
+        if: ${{ env.PLANETARWEBSITE_DEPLOY_TOKEN != '' }}
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: planetarysite
+          token: ${{ env.PLANETARWEBSITE_DEPLOY_TOKEN }}
+      - name: Checkout gh-pages branch (fallback)
+        if: ${{ env.PLANETARWEBSITE_DEPLOY_TOKEN == '' }}
         uses: actions/checkout@v4
         with:
           ref: gh-pages
           path: ghpages
-      - name: Deploy docs
+      - name: Deploy docs to PlanarWebsite
+        if: ${{ env.PLANETARWEBSITE_DEPLOY_TOKEN != '' }}
+        run: |
+          cd planetarysite
+          rm -rf public/docs
+          mkdir -p public/docs
+          cp -r ../docs/build/* public/docs/
+          touch ./.nojekyll
+          git add .nojekyll
+          git add .
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git commit -m "Update documentation"
+          git push origin main
+      - name: Deploy docs (gh-pages fallback)
+        if: ${{ env.PLANETARWEBSITE_DEPLOY_TOKEN == '' }}
         run: |
           cd ghpages
           rm -rf ./*
