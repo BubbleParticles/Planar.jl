@@ -377,7 +377,7 @@ version = "1.10.0"
 
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
-uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+uuid = "8dfed614-e22c-5e08-85e1-65a5234f0b40"
 version = "1.11.0"
 
 [[deps.TranscodingStreams]]
