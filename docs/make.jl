@@ -3,7 +3,9 @@ if get(ENV, "CI", "false") == "true"
     include("noprecomp.jl")
 end
 using Pkg: Pkg
-Pkg.activate("Planar")
+if get(ENV, "CI", "false") != "true"
+    Pkg.activate("Planar")
+end
 push!(LOAD_PATH, "@stdlib")
 let dse = expanduser("~/.julia/environments/v$(VERSION.major).$(VERSION.minor)/")
     if dse ∉ LOAD_PATH
