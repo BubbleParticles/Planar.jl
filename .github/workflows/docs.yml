@@ -60,9 +60,6 @@ jobs:
       - name: CONDAPKG env var
         run: |
           echo "JULIA_CONDAPKG_ENV=$GITHUB_WORKSPACE/.conda" >> $GITHUB_ENV
-      - name: Add Test to Planar project
-        run: |
-          julia --project=Planar -e 'using Pkg; Pkg.add("Test")'
       - name: Instantiate Planar
         run: |
           julia --project=Planar -e 'using Pkg; Pkg.instantiate()'
