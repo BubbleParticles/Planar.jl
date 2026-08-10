@@ -58,7 +58,7 @@ Each asset's tick stream is a `DataFrame` with three columns:
 | `:price` | `DFT` | Trade price |
 | `:amount` | `DFT` | Traded quantity |
 
-`Planar.Fetch.fetch_trades` returns exactly this schema (paginating the exchange's `fetchTrades` through the ccxt gateway, sorted oldest-first and de-duplicated on exact `(timestamp, price, amount)` triples), and `Planar.Instances.setticks!` stores a tick `DataFrame` on an `AssetInstance`:
+`Planar.Fetch.fetch_trades` returns exactly this schema (paginating the exchange's `fetchTrades` through the ccxt gateway, sorted oldest-first and deduplicated on exact `(timestamp, price, amount)` triples), and `Planar.Instances.setticks!` stores a tick `DataFrame` on an `AssetInstance`:
 
 ```julia
 using Planar

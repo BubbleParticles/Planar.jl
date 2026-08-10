@@ -11,6 +11,7 @@ Backends
 Backtest
 Backtesting
 Backtests
+Backtrader
 Benchmarking
 Binance
 Bollinger
@@ -18,6 +19,7 @@ Bybit
 CCTX
 CDN
 CHANGELOG
+CLI
 CLS
 CairoMakie
 Calmar
@@ -29,6 +31,7 @@ Coinbase
 Coingecko
 Coinmarketcap
 Coinpaprika
+Composable
 CondaPkg
 Config
 Customizable
@@ -48,6 +51,7 @@ ExchangeError
 ExchangeID
 FID
 FOK
+Freqtrade
 FXAA
 GC
 GLMakie
@@ -85,6 +89,7 @@ NetworkError
 NoMargin
 NotHedged
 OCO
+OctoBot
 OKX
 OpenGL
 OptSession
@@ -100,12 +105,14 @@ Pbar
 Perps
 Planar's
 PlanarDev
+PlanarPython
 PnL
 PowerShell
 Pre
 Precompilation
 Precompile
 PythonCall
+PyPI
 QuickStart
 REPL
 Rebalancing
@@ -177,7 +184,9 @@ dict
 dicts
 direnv
 docstrings
+deduplicated
 downsampling
+drawdown
 enum
 enums
 env
@@ -222,6 +231,7 @@ precompilation
 precompile
 programmatically
 px
+ramped
 qc
 rebalancing
 recompiles
