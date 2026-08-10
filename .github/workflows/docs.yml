@@ -71,6 +71,7 @@ jobs:
         if: ${{ env.PLANARWEBSITE_TOKEN != '' }}
         uses: actions/checkout@v4
         with:
+          repository: defnlnotme/planarwebsite
           ref: main
           path: planetarysite
           token: ${{ env.PLANARWEBSITE_TOKEN }}
