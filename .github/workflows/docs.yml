@@ -32,7 +32,7 @@ jobs:
     env:
       CI: true
       JULIA_VERSION: 1.12
-      PLANETARWEBSITE_DEPLOY_TOKEN: ${{ secrets.PLANETARWEBSITE_DEPLOY_TOKEN }}
+      PLANARWEBSITE_TOKEN: ${{ secrets.PLANARWEBSITE_TOKEN }}
     permissions: write-all
 
     steps:
@@ -68,14 +68,14 @@ jobs:
           sudo apt-get install -y xauth
           julia --startup-file=no --project=Planar docs/make.jl
       - name: Checkout gh-pages branch
-        if: ${{ env.PLANETARWEBSITE_DEPLOY_TOKEN == '' }}
+        if: ${{ env.PLANARWEBSITE_TOKEN == '' }}
         uses: actions/checkout@v4
         with:
           ref: gh-pages
           path: planetarysite
 
       - name: Deploy docs to gh-pages
-        if: ${{ env.PLANETARWEBSITE_DEPLOY_TOKEN == '' }}
+        if: ${{ env.PLANARWEBSITE_TOKEN == '' }}
         run: |
           cd planetarysite
           rm -rf public/docs
@@ -89,14 +89,14 @@ jobs:
           git commit -m "Update documentation"
           git push origin gh-pages
       - name: Checkout PlanarWebsite
-        if: ${{ env.PLANETARWEBSITE_DEPLOY_TOKEN != '' }}
+        if: ${{ env.PLANARWEBSITE_TOKEN != '' }}
         uses: actions/checkout@v4
         with:
           ref: main
           path: planetarysite
-          token: ${{ env.PLANETARWEBSITE_DEPLOY_TOKEN }}
+          token: ${{ env.PLANARWEBSITE_TOKEN }}
       - name: Deploy docs to PlanarWebsite
-        if: ${{ env.PLANETARWEBSITE_DEPLOY_TOKEN != '' }}
+        if: ${{ env.PLANARWEBSITE_TOKEN != '' }}
         run: |
           cd planetarysite
           rm -rf public/docs
