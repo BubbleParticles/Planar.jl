@@ -3,7 +3,7 @@ Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 PlanarOptim = "01937fd2-c099-442f-ae89-75fa208aad36"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-Test = "8dfed614-e22c-5e08-85e1-65a5234f0b40"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [sources]
 Planar = {path = "../../Planar"}
