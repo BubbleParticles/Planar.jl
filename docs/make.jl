@@ -4,22 +4,73 @@ if get(ENV, "CI", "false") == "true"
 end
 using Pkg: Pkg
 Pkg.activate("Planar")
-push!(LOAD_PATH, "@stdlib")
+let dse = expanduser("~/.julia/environments/v$(VERSION.major).$(VERSION.minor)/")
+    if dse ∉ LOAD_PATH
+        push!(LOAD_PATH, dse)
+    end
+end
 using Documenter, DocStringExtensions, Suppressor
 
 # Modules
 using Planar
-using PlanarCore
-using PlanarOptim
-using PlanarPython
-using PlanarStrategyTools
-using PlanarStrategyStats
-using PlanarCore.Data.DataStructures
-@eval using Base: Timer
-# Bind submodules with short names for @docs/@ref resolution
-@eval const Metrics = PlanarCore.Metrics
-@eval const Strategies = PlanarCore.Strategies
-@eval const Engine = Planar.Engine
+project_path = dirname(dirname(Pkg.project().path))
+function use(name, args...; activate=false)
+    activate_and_import() = begin
+        prev = Pkg.project().path
+        try
+            Pkg.activate(path)
+            Pkg.instantiate()
+            mod = Base.require(Main, name)
+            isdefined(Main, name) || Core.eval(Main, :(const $name = $mod))
+        catch
+        end
+        Pkg.activate(prev)
+    end
+
+    path = joinpath(project_path, args...)
+    @suppress if activate
+        activate_and_import()
+    else
+        try
+            if endswith(args[end], ".jl")
+                include(path)
+                @eval using .$name
+            else
+                path ∉ LOAD_PATH && push!(LOAD_PATH, path)
+                Pkg.instantiate()
+                # `@eval using` inside a function does not reliably bind the
+                # module in Main on a cold cache (fresh CI depot). Load
+                # explicitly via `require` and bind the module binding.
+                mod = Base.require(Main, name)
+                isdefined(Main, name) || Core.eval(Main, :(const $name = $mod))
+            end
+        catch
+            activate_and_import()
+        end
+    end
+end
+
+if isempty(get(ENV, "PLANAR_DOCS_SKIP_BUILD", ""))
+    withenv("PLANAR_DOCS_SKIP_BUILD" => "true") do
+        run(`$(Base.julia_cmd()) --project=Planar docs/make.jl`)
+    end
+end
+
+get(ENV, "PLANAR_DOCS_LOADED", "false") == "true" || begin
+    use(:PlanarCore, "PlanarCore")
+    use(:Planar, "Planar")
+    use(:PlanarOptim, "PlanarOptim")
+    use(:PlanarPython, "PlanarPython")
+    use(:PlanarStrategyTools, "PlanarStrategyTools")
+    use(:PlanarStrategyStats, "PlanarStrategyStats")
+    using PlanarCore.Data.DataStructures
+    @eval using Base: Timer
+    # Bind submodules with short names for @docs/@ref resolution
+    @eval const Metrics = PlanarCore.Metrics
+    @eval const Strategies = PlanarCore.Strategies
+    @eval const Engine = Planar.Engine
+    ENV["LOADED"] = "true"
+end
 
 function filter_strategy(t)
     try
@@ -32,6 +83,8 @@ function filter_strategy(t)
         false
     end
 end
+
+get(ENV, "PLANAR_DOCS_SKIP_BUILD", "") == "true" && exit()
 
 # Read version from Planar/Project.toml
 function get_planar_version()
