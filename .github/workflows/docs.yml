@@ -67,27 +67,6 @@ jobs:
         run: |
           sudo apt-get install -y xauth
           julia --startup-file=no --project=Planar docs/make.jl
-      - name: Checkout gh-pages branch
-        if: ${{ env.PLANARWEBSITE_TOKEN == '' }}
-        uses: actions/checkout@v4
-        with:
-          ref: gh-pages
-          path: planetarysite
-
-      - name: Deploy docs to gh-pages
-        if: ${{ env.PLANARWEBSITE_TOKEN == '' }}
-        run: |
-          cd planetarysite
-          rm -rf public/docs
-          mkdir -p public/docs
-          cp -r ../docs/build/* public/docs/
-          touch ./.nojekyll
-          git add .nojekyll
-          git add .
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git commit -m "Update documentation"
-          git push origin gh-pages
       - name: Checkout PlanarWebsite
         if: ${{ env.PLANARWEBSITE_TOKEN != '' }}
         uses: actions/checkout@v4
