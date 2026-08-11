@@ -1,6 +1,6 @@
 [project]
 name = "ccxt-gateway"
-version = "0.1.0"
+dynamic = ["version"]
 description = "High-performance self-hosted gateway for 100+ crypto exchanges via CCXT"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -54,8 +54,12 @@ asyncio_mode = "strict"
 testpaths = ["tests"]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+raw-options = { search_parent_directories = true }
 
 [dependency-groups]
 dev = [
