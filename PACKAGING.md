@@ -175,6 +175,12 @@ PyPI project settings ("Publishing" → add the GitHub repository
 `BubbleParticles/Planar.jl` as a trusted publisher for the `planar-trader`
 project). A `PYPI_API_TOKEN` secret also works if you prefer token auth.
 
+**The tag determines the published version** (both packages derive their version
+from the nearest git tag via hatch-vcs; `py-v1.2.3` → version `1.2.3`, `v1.2.3` →
+`1.2.3`). The tag must be a valid PEP 440 version — do not reuse a version that
+was already published to the target index, PyPI rejects duplicate versions.
+Untagged builds (e.g. local `uv build`) get a `X.Y.Z.devN+g<sha>` dev version.
+
 ```bash
 git tag py-v0.1.0 && git push origin py-v0.1.0   # TestPyPI
 git tag v1.7.2 && git push origin v1.7.2         # PyPI (also triggers docker + registry flows)
