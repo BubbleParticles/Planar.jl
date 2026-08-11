@@ -153,5 +153,3 @@ using Planar  # or PlanarOptim for plotting and optimization
 julia --project=PlanarDev/ -e 'import Pkg; Pkg.instantiate(); Pkg.test()'
 
 Read the :book: documentation ([link](https://bubbleparticles.github.io/Planar.jl/)) to learn how to get started with the bot.
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/A0A81M3SML)
