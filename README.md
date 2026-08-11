@@ -7,7 +7,7 @@
 
 
 <div align="center">
-  <img src="docs/src/assets/logo_small.png" alt="Planar.jl Logo" />
+  <img src="docs/src/assets/planar_logo.svg" alt="Planar.jl Logo" width="200" />
   <br>
   <em>Planar, advanced solutions for demanding practitioners</em>
 </div>
