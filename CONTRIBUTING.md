@@ -284,7 +284,7 @@ Contributors are recognized in:
 ## Questions?
 
 If you have questions about contributing:
-- Check the [documentation](https://defnlnotme.github.io/Planar.jl/)
+- Check the [documentation](https://planar.pages.dev/docs/)
 - Open a GitHub Discussion
 - Join our Discord server
 - Review existing issues and PRs
