@@ -10,4 +10,9 @@ project (native strategy authoring in Python is planned, see
 https://github.com/BubbleParticles/Planar.jl/issues/7).
 """
 
-__version__ = "0.1.0"
+try:
+    from importlib.metadata import PackageNotFoundError, version as _metadata_version
+
+    __version__ = _metadata_version("planar-trader")
+except PackageNotFoundError:
+    __version__ = "0.0.0"
