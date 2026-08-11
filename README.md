@@ -1,4 +1,4 @@
-[![build-status-docs](https://github.com/bubbleparticles/Planar.jl/actions/workflows/docs.yml/badge.svg?branch=master)](https://bubbleparticles.github.io/Planar.jl/)
+[![build-status-docs](https://github.com/bubbleparticles/Planar.jl/actions/workflows/docs.yml/badge.svg?branch=master)](https://planar.pages.dev/docs/)
 [![docs-tests](https://github.com/bubbleparticles/Planar.jl/actions/workflows/docs-tests.yml/badge.svg?branch=master)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/docs-tests.yml)
 [![build-status-docker](https://github.com/bubbleparticles/Planar.jl/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/build.yml)
 [![tests](https://github.com/bubbleparticles/Planar.jl/actions/workflows/tests.yml/badge.svg?branch=master)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/tests.yml)
@@ -152,4 +152,4 @@ using Planar  # or PlanarOptim for plotting and optimization
 
 julia --project=PlanarDev/ -e 'import Pkg; Pkg.instantiate(); Pkg.test()'
 
-Read the :book: documentation ([link](https://bubbleparticles.github.io/Planar.jl/)) to learn how to get started with the bot.
+Read the :book: documentation ([link](https://planar.pages.dev/docs/)) to learn how to get started with the bot.

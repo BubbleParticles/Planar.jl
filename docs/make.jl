@@ -185,6 +185,8 @@ makedocs(;
     format=Documenter.HTML(;
         sidebar_sitename=false,
         repolink="https://github.com/BubbleParticles/Planar.jl",
+        canonical="https://planar.pages.dev/docs/",
+        assets=["assets/julia-theme.css"],
         inventory_version=planar_version,
         size_threshold_ignore=[
             "watchers/watchers.md", "API/instances.md", "API/executors.md"
