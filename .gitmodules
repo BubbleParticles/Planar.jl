@@ -1,0 +1,3 @@
+[submodule "user/strategies"]
+	path = user/strategies
+	url = https://github.com/BubbleParticles/PlanarStrategies.git
