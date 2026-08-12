@@ -1,4 +1,4 @@
-name: pypi
+name: pypi-ccxt
 
 on:
   push:
@@ -18,8 +18,8 @@ jobs:
           python-version: '3.12'
       - name: Install build tooling
         run: pip install build
-      - name: Build planarjl-py sdist and wheel
-        working-directory: planarjl-py
+      - name: Build ccxt-gateway sdist and wheel
+        working-directory: ccxt-gateway
         run: python -m build --outdir ../dist
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
