@@ -70,11 +70,14 @@ Pkg.add("Planar")
    ```
 3. **Publish** — either path:
    - Manual: `cd planarjl-py && uv publish` (uses PyPI token).
-   - CI (`.github/workflows/pypi.yml`): tag `py-v<version>` → TestPyPI, tag
-     `v<version>` → PyPI. Auth is API tokens: repo secrets `PYPI_API_TOKEN`
-     (pypi.org) and `TESTPYPI_API_TOKEN` (test.pypi.org) — PyPI and TestPyPI
-     are separate accounts, each token needs its own. Do a TestPyPI run before
-     the real release; TestPyPI rejects a version already uploaded to it.
+   - CI (`.github/workflows/pypi.yml` for `planarjl-py`,
+     `.github/workflows/pypi-ccxt.yml` for `ccxt-gateway` — one workflow per
+     package, because a trusted-publisher config can only serve one PyPI
+     project): tag `py-v<version>` → TestPyPI, tag `v<version>` → PyPI. Auth
+     is OIDC trusted publishing (registered per project per index, see
+     PACKAGING.md §2.2); API tokens (`PYPI_API_TOKEN` / `TESTPYPI_API_TOKEN`)
+     are the fallback. Do a TestPyPI run before the real release; TestPyPI
+     rejects a version already uploaded to it.
      ```bash
      git tag py-v0.1.1 && git push origin py-v0.1.1   # TestPyPI
      git tag v1.7.2 && git push origin v1.7.2         # PyPI
