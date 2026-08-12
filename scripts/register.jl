@@ -1,9 +1,9 @@
 #!/usr/bin/env julia
 # scripts/register.jl — build/update the custom registry for the Planar.jl monorepo.
 #
-# The Planar.jl monorepo hosts nine Julia packages (Planar, PlanarCore, …). They are
-# not part of the General registry, so to `Pkg.add("Planar")` users need a custom
-# registry that points at the monorepo. This script generates (or updates) that
+# The Planar.jl monorepo hosts nine Julia packages (Planar, PlanarCore, …), eight of
+# which are registered here. PlanarCore is served by the General registry instead
+# (see the PACKAGES list note below). This script generates (or updates) the custom
 # registry from the git tree of this repository.
 #
 # How it works
@@ -35,8 +35,11 @@ const DEFAULT_REPO_URL = "https://github.com/BubbleParticles/Planar.jl.git"
 const DEFAULT_REGISTRY_REPO = "https://github.com/BubbleParticles/PlanarRegistry.git"
 
 # All packages hosted in the monorepo, in registration order.
+# NOTE: PlanarCore is intentionally NOT listed — it is already registered on the
+# General registry (uuid a475c859, version 1.0.0, same monorepo subdir). Registering
+# it here too makes Pkg.add fail with "hash mismatch in registries" when both
+# registries are installed, so it must stay out of this custom registry.
 const PACKAGES = [
-    "PlanarCore",
     "PlanarStrategyStats",
     "Planar",
     "PlanarFeatureSelection",
