@@ -2,7 +2,7 @@
 
 Trigger: user asks to publish or update the Planar Julia registry (`PlanarRegistry`),
 release a new version to `Pkg.add("Planar")` users, or publish/update the PyPI
-package (`planar-trader`).
+package (`planarjl-py`).
 
 Follow-up: after the release, verify with a fresh-environment install
 (see Verification below); report the tag and the registry commit.
@@ -58,18 +58,18 @@ Pkg.Registry.add(RegistrySpec(url="https://github.com/BubbleParticles/PlanarRegi
 Pkg.add("Planar")
 ```
 
-## PyPI release flow (`planar-trader`)
+## PyPI release flow (`planarjl-py`)
 
-1. **Bump `planar-py/pyproject.toml`** version (keep in sync with the Julia
+1. **Bump `planarjl-py/pyproject.toml`** version (keep in sync with the Julia
    release or bump independently).
 2. **Run the tests and build before publishing**:
    ```bash
-   cd planar-py
+   cd planarjl-py
    .venv-test/bin/python -m pytest -q          # 8 hermetic tests, no julia needed
-   uv build                                     # dist/planar_trader-<v>-py3-none-any.whl + .tar.gz
+   uv build                                     # dist/planarjl_py-<v>-py3-none-any.whl + .tar.gz
    ```
 3. **Publish** — either path:
-   - Manual: `cd planar-py && uv publish` (uses PyPI token/OIDC).
+   - Manual: `cd planarjl-py && uv publish` (uses PyPI token/OIDC).
    - CI (`.github/workflows/pypi.yml`): tag `py-v<version>` → TestPyPI, tag
      `v<version>` → PyPI (trusted publishing via OIDC; enabled once in the PyPI
      project settings for `BubbleParticles/Planar.jl`).
@@ -77,13 +77,13 @@ Pkg.add("Planar")
      git tag py-v0.1.1 && git push origin py-v0.1.1   # TestPyPI
      git tag v1.7.2 && git push origin v1.7.2         # PyPI
      ```
-   - Note: the PyPI distribution name is `planar-trader` (`planar` is taken);
+   - Note: the PyPI distribution name is `planarjl-py` (`planar` is taken);
      the CLI is `planar`, import is `planar_trader`.
 
 ## Verification
 
 - **Registry**: fresh project, `julia --project=/tmp/x -e 'using Pkg; Pkg.Registry.add(RegistrySpec(url="https://github.com/BubbleParticles/PlanarRegistry.git")); Pkg.add("Planar")'`, then `using Planar` must load.
-- **pip**: fresh venv `uv pip install dist/planar_trader-<v>-*.whl` then `planar version` and `planar run --help` must work.
+- **pip**: fresh venv `uv pip install dist/planarjl_py-<v>-*.whl` then `planar version` and `planar run --help` must work.
 
 ## Constraints
 

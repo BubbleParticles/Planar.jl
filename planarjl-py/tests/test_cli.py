@@ -1,4 +1,4 @@
-"""Tests for the planar-trader CLI (hermetic — no julia/network required)."""
+"""Tests for the planarjl-py CLI (hermetic — no julia/network required)."""
 
 import argparse
 import subprocess
@@ -35,7 +35,7 @@ def fake_run(monkeypatch):
 def test_version_reports_cli_and_julia(capsys):
     assert cli.cmd_version(argparse.Namespace()) == 0
     out = capsys.readouterr().out
-    assert "planar-trader" in out
+    assert "planarjl-py" in out
     assert "julia:" in out
 
 

@@ -4,7 +4,7 @@
 
 Publishes Planar updates: regenerates the custom Julia registry
 (`scripts/register.jl`, then push `PlanarRegistry/`) and publishes the
-`planar-trader` PyPI package.
+`planarjl-py` PyPI package.
 
 **Usage:** bump+tag with `release-version`, then `julia scripts/register.jl --ref v<version> --commit`
 from the monorepo root, push the registry, then `uv publish` or tag-based CI.

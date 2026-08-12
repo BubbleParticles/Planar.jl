@@ -1,5 +1,5 @@
 #!/usr/bin/env julia
-# run_strategy.jl — bundled with the `planar-trader` pip package.
+# run_strategy.jl — bundled with the `planarjl-py` pip package.
 #
 # Loads a strategy by name from the current project (user/planar.toml) and runs
 # it in the requested mode. Mirrors scripts/run_single.jl in the Planar.jl repo.
