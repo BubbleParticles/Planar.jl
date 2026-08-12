@@ -66,5 +66,5 @@ matches the tag. Auth is OIDC trusted publishing (`PYPI_API_TOKEN` /
 `TESTPYPI_API_TOKEN` secrets are the token fallback):
 
 ```bash
-git tag py-v1.7.2 && git push origin py-v1.7.2
+git tag py-v1.8.0 && git push origin py-v1.8.0
 ```
