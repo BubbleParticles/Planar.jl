@@ -60,8 +60,11 @@ uv build              # build the sdist + wheel
 ## Publishing
 
 See `PACKAGING.md` at the repository root. CI publishes to TestPyPI on `py-v*`
-tags and to PyPI on `v*` tags (set the `PYPI_API_TOKEN` repository secret):
+tags and to PyPI on `v*` tags; the version is synced to the Planar Julia
+release (same `vX.Y.Z`), and the workflow verifies the built wheel version
+matches the tag. Auth is OIDC trusted publishing (`PYPI_API_TOKEN` /
+`TESTPYPI_API_TOKEN` secrets are the token fallback):
 
 ```bash
-git tag py-v0.1.0 && git push origin py-v0.1.0
+git tag py-v1.7.2 && git push origin py-v1.7.2
 ```
