@@ -21,6 +21,15 @@ jobs:
       - name: Build ccxt-gateway sdist and wheel
         working-directory: ccxt-gateway
         run: python -m build --outdir ../dist
+      - name: Verify version matches tag
+        run: |
+          tag_ver="${GITHUB_REF_NAME#py-v}"
+          tag_ver="${tag_ver#v}"
+          wheel_ver="$(unzip -p dist/*.whl '*/METADATA' | sed -n 's/^Version: //p')"
+          if [ "$wheel_ver" != "$tag_ver" ]; then
+            echo "::error::wheel version $wheel_ver does not match tag $tag_ver"
+            exit 1
+          fi
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:

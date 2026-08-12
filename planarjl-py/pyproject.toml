@@ -10,7 +10,7 @@ authors = [
 ]
 keywords = ["trading", "backtesting", "crypto", "ccxt", "planar", "julia"]
 dependencies = [
-    "ccxt-gateway>=0.1.0",
+    "ccxt-gateway>=1.7.2",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
