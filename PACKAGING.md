@@ -168,16 +168,28 @@ or, with a PyPI API token:
 uv publish --token "$(cat ~/.pypi-token)"
 ```
 
-CI does this automatically: the `.github/workflows/pypi.yml` workflow builds the
-package, publishes to TestPyPI on tags matching `py-v*`, and to PyPI on `v*`
-tags. Auth is PyPI API tokens — one per index, because PyPI and TestPyPI are
-separate accounts with separate tokens: set a repository secret `PYPI_API_TOKEN`
-(pypi.org) and a `TESTPYPI_API_TOKEN` (test.pypi.org). Each token needs the
-"upload packages" scope for both `planarjl-py` and `ccxt-gateway` (or use an
-all-projects token). PyPI *trusted publishing* (OIDC) is an alternative if you
-prefer no token: enable it once in the PyPI project settings ("Publishing" →
-add the GitHub repository `BubbleParticles/Planar.jl` as a trusted publisher
-for the `planarjl-py` project).
+CI does this automatically. Two tag-triggered workflows, one per package —
+PyPI allows a trusted publisher configuration (repository + workflow +
+environment) on **exactly one** project, so a single workflow cannot publish
+both packages:
+
+| Workflow | Package | TestPyPI (`py-v*` tags) | PyPI (`v*` tags) |
+|---|---|---|---|
+| `pypi.yml` | `planarjl-py` | job `publish-testpypi` (env `testpypi`) | job `publish-pypi` (env `pypi`) |
+| `pypi-ccxt.yml` | `ccxt-gateway` | job `publish-testpypi` (env `testpypi`) | job `publish-pypi` (env `pypi`) |
+
+Auth is PyPI *trusted publishing* (OIDC). For each project on each index
+("Publishing" → add a pending publisher): GitHub, repository
+`BubbleParticles/Planar.jl`, **workflow name = the workflow file from the
+table**, environment as in the table — four registrations total. The first
+successful upload activates a pending publisher.
+
+Token auth remains as the fallback: repository secrets `PYPI_API_TOKEN` and
+`TESTPYPI_API_TOKEN` are still set. To switch a workflow back to tokens, add
+`password: ${{ secrets.PYPI_API_TOKEN }}` (resp. `TESTPYPI_API_TOKEN` for the
+testpypi job) to the publish step and drop the job's
+`permissions: id-token: write`. PyPI and TestPyPI are separate accounts — each
+token only works on its own index.
 
 **The tag determines the published version** (both packages derive their version
 from the nearest git tag via hatch-vcs; `py-v1.2.3` → version `1.2.3`, `v1.2.3` →
