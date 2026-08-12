@@ -60,8 +60,8 @@ Pkg.add("Planar")
 
 ## PyPI release flow (`planarjl-py`)
 
-1. **Bump `planarjl-py/pyproject.toml`** version (keep in sync with the Julia
-   release or bump independently).
+1. **Pick the version** — it comes from the git tag, not pyproject.toml
+   (`version` is dynamic, derived via hatch-vcs from the nearest tag).
 2. **Run the tests and build before publishing**:
    ```bash
    cd planarjl-py
@@ -69,10 +69,12 @@ Pkg.add("Planar")
    uv build                                     # dist/planarjl_py-<v>-py3-none-any.whl + .tar.gz
    ```
 3. **Publish** — either path:
-   - Manual: `cd planarjl-py && uv publish` (uses PyPI token/OIDC).
+   - Manual: `cd planarjl-py && uv publish` (uses PyPI token).
    - CI (`.github/workflows/pypi.yml`): tag `py-v<version>` → TestPyPI, tag
-     `v<version>` → PyPI (trusted publishing via OIDC; enabled once in the PyPI
-     project settings for `BubbleParticles/Planar.jl`).
+     `v<version>` → PyPI. Auth is API tokens: repo secrets `PYPI_API_TOKEN`
+     (pypi.org) and `TESTPYPI_API_TOKEN` (test.pypi.org) — PyPI and TestPyPI
+     are separate accounts, each token needs its own. Do a TestPyPI run before
+     the real release; TestPyPI rejects a version already uploaded to it.
      ```bash
      git tag py-v0.1.1 && git push origin py-v0.1.1   # TestPyPI
      git tag v1.7.2 && git push origin v1.7.2         # PyPI
