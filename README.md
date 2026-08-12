@@ -113,10 +113,10 @@ existed, remove the old copy first: `Pkg.rm("Planar")`.)
 
 ### Via pip (planar CLI)
 
-The `planar` command-line driver is on PyPI as `planar-trader`:
+The `planar` command-line driver is on PyPI as `planarjl-py`:
 
 ```bash
-pip install planar-trader
+pip install planarjl-py
 planar init mybot
 cd mybot
 planar run MyStrategy --mode sim

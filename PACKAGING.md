@@ -5,10 +5,10 @@ Planar is distributed through two channels:
 | Channel | Artifact | Users |
 |---|---|---|
 | Julia registry | `Planar` + 8 companion packages (custom registry, General later) | `Pkg.add("Planar")` |
-| PyPI | `planar-trader` (Python driver for the Julia engine) | `pip install planar-trader` |
+| PyPI | `planarjl-py` (Python driver for the Julia engine) | `pip install planarjl-py` |
 
 The repository is a monorepo: nine Julia packages live in subdirectories
-(`Planar/`, `PlanarCore/`, …) and the Python driver lives in `planar-py/`.
+(`Planar/`, `PlanarCore/`, …) and the Python driver lives in `planarjl-py/`.
 
 ---
 
@@ -139,11 +139,11 @@ install (no `[sources]`) resolves internal deps from the registry.
 
 ---
 
-## 2. pip distribution (`planar-trader`)
+## 2. pip distribution (`planarjl-py`)
 
-`pip install planar-trader` provides the `planar` CLI, which drives the Planar
+`pip install planarjl-py` provides the `planar` CLI, which drives the Planar
 Julia engine (backtests, strategy runs) from Python. The PyPI name `planar` is
-taken by an unrelated package, hence `planar-trader`.
+taken by an unrelated package, hence `planarjl-py`.
 
 > Note: native *strategy authoring in Python* (the item #7 milestone) does not
 > exist yet — strategies are written in Julia and executed through the CLI. The
@@ -152,15 +152,15 @@ taken by an unrelated package, hence `planar-trader`.
 ### 2.1 Building the package
 
 ```bash
-cd planar-py
+cd planarjl-py
 uv build            # or: python -m build
-# dist/planar_trader-<version>-py3-none-any.whl, dist/planar_trader-<version>.tar.gz
+# dist/planarjl_py-<version>-py3-none-any.whl, dist/planarjl_py-<version>.tar.gz
 ```
 
 ### 2.2 Publishing to PyPI
 
 ```bash
-cd planar-py
+cd planarjl-py
 uv publish --publish-url https://upload.pypi.org/legacy/   # test: https://test.pypi.org/legacy/
 ```
 or, with a PyPI API token:
@@ -170,10 +170,14 @@ uv publish --token "$(cat ~/.pypi-token)"
 
 CI does this automatically: the `.github/workflows/pypi.yml` workflow builds the
 package, publishes to TestPyPI on tags matching `py-v*`, and to PyPI on `v*`
-tags. Publishing uses PyPI *trusted publishing* (OIDC) — enable it once in the
-PyPI project settings ("Publishing" → add the GitHub repository
-`BubbleParticles/Planar.jl` as a trusted publisher for the `planar-trader`
-project). A `PYPI_API_TOKEN` secret also works if you prefer token auth.
+tags. Auth is PyPI API tokens — one per index, because PyPI and TestPyPI are
+separate accounts with separate tokens: set a repository secret `PYPI_API_TOKEN`
+(pypi.org) and a `TESTPYPI_API_TOKEN` (test.pypi.org). Each token needs the
+"upload packages" scope for both `planarjl-py` and `ccxt-gateway` (or use an
+all-projects token). PyPI *trusted publishing* (OIDC) is an alternative if you
+prefer no token: enable it once in the PyPI project settings ("Publishing" →
+add the GitHub repository `BubbleParticles/Planar.jl` as a trusted publisher
+for the `planarjl-py` project).
 
 **The tag determines the published version** (both packages derive their version
 from the nearest git tag via hatch-vcs; `py-v1.2.3` → version `1.2.3`, `v1.2.3` →
@@ -189,12 +193,12 @@ git tag v1.7.2 && git push origin v1.7.2         # PyPI (also triggers docker + 
 ### 2.3 Using the package
 
 ```bash
-pip install planar-trader
+pip install planarjl-py
 planar init mybot            # create a project, add the registry, Pkg.add("Planar")
 cd mybot
 planar run MyStrategy --mode sim --exchange binanceusdm --sandbox
 planar version
 ```
 
-`planar init` requires Julia ≥ 1.12 on `PATH`. See `planar-py/README.md` for the
+`planar init` requires Julia ≥ 1.12 on `PATH`. See `planarjl-py/README.md` for the
 full CLI reference.
