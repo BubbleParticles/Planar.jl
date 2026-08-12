@@ -230,7 +230,6 @@ wheels = [
 
 [[package]]
 name = "ccxt-gateway"
-version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -295,7 +294,7 @@ requires-dist = [
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.0" },
     { name = "uvloop", specifier = ">=0.20.0" },
 ]
-provides-extras = ["server", "dev"]
+provides-extras = ["dev", "server"]
 
 [package.metadata.requires-dev]
 dev = [
