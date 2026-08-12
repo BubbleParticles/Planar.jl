@@ -193,12 +193,18 @@ token only works on its own index.
 
 **The tag determines the published version** (both packages derive their version
 from the nearest git tag via hatch-vcs; `py-v1.2.3` → version `1.2.3`, `v1.2.3` →
-`1.2.3`). The tag must be a valid PEP 440 version — do not reuse a version that
-was already published to the target index, PyPI rejects duplicate versions.
-Untagged builds (e.g. local `uv build`) get a `X.Y.Z.devN+g<sha>` dev version.
+`1.2.3`). **Versions are synced to the Planar Julia release**: use the same
+version as the Planar Julia package (currently `1.7.2`, bumped by
+`scripts/tag.jl`), so `planarjl-py`, `ccxt-gateway` and `Planar` all carry the
+same version. Keep the `ccxt-gateway>=X.Y.Z` dependency floor in
+`planarjl-py/pyproject.toml` in step with that version. The tag must be a valid
+PEP 440 version — do not reuse a version that was already published to the
+target index, PyPI rejects duplicate versions. Untagged builds (e.g. local
+`uv build`) get a `X.Y.Z.devN+g<sha>` dev version. Both workflows verify the
+built wheel version matches the tag and fail the build on mismatch.
 
 ```bash
-git tag py-v0.1.0 && git push origin py-v0.1.0   # TestPyPI
+git tag py-v1.7.2 && git push origin py-v1.7.2   # TestPyPI
 git tag v1.7.2 && git push origin v1.7.2         # PyPI (also triggers docker + registry flows)
 ```
 

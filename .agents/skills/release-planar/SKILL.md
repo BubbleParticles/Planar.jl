@@ -79,7 +79,7 @@ Pkg.add("Planar")
      are the fallback. Do a TestPyPI run before the real release; TestPyPI
      rejects a version already uploaded to it.
      ```bash
-     git tag py-v0.1.1 && git push origin py-v0.1.1   # TestPyPI
+     git tag py-v1.7.2 && git push origin py-v1.7.2   # TestPyPI
      git tag v1.7.2 && git push origin v1.7.2         # PyPI
      ```
    - Note: the PyPI distribution name is `planarjl-py` (`planar` is taken);
