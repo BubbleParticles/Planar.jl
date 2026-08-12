@@ -1,5 +1,5 @@
 [project]
-name = "planar-trader"
+name = "planarjl-py"
 dynamic = ["version"]
 description = "Python driver for the Planar trading framework (Julia engine)"
 readme = "README.md"

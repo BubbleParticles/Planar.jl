@@ -29,7 +29,7 @@ PLANAR_TOML_TEMPLATE = """\
 
 def cmd_version(_args: argparse.Namespace) -> int:
     """Print the CLI and engine versions."""
-    print(f"planar-trader {__version__} (planar CLI)")
+    print(f"planarjl-py {__version__} (planar CLI)")
     try:
         print(f"julia: {find_julia()}")
     except PlanarError as err:

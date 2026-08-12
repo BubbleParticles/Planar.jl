@@ -1,13 +1,13 @@
-# planar-trader
+# planarjl-py
 
 Python driver for the [Planar](https://github.com/BubbleParticles/Planar.jl)
 trading framework. Planar is a Julia framework for building trading bots —
 backtesting, paper and live execution on 100+ exchanges through CCXT.
 
-`pip install planar-trader` gives you the `planar` command, which bootstraps a
+`pip install planarjl-py` gives you the `planar` command, which bootstraps a
 Planar project and runs strategies from Python by driving the Julia engine.
 
-> The PyPI name `planar` is taken by an unrelated package, hence `planar-trader`.
+> The PyPI name `planar` is taken by an unrelated package, hence `planarjl-py`.
 > Native *strategy authoring in Python* is the open milestone of
 > [issue #7](https://github.com/BubbleParticles/Planar.jl/issues/7); today
 > strategies are written in Julia and executed through this CLI.
@@ -20,7 +20,7 @@ Planar project and runs strategies from Python by driving the Julia engine.
 ## Usage
 
 ```bash
-pip install planar-trader
+pip install planarjl-py
 
 # Bootstrap a project: adds the Planar registry, installs the Planar package,
 # and creates the user/ layout (first run downloads packages).
@@ -51,7 +51,7 @@ strategy authoring), or copy any strategy from the
 ## Development
 
 ```bash
-cd planar-py
+cd planarjl-py
 uv sync --extra dev    # or: pip install -e .[dev]
 pytest
 uv build              # build the sdist + wheel

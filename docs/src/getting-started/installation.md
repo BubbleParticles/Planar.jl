@@ -69,10 +69,10 @@ manual install first (`Pkg.rm("Planar")` in the project where you added it).
 
 ### Method 4: pip (planar CLI)
 
-The `planar` command-line driver is distributed on PyPI as `planar-trader`:
+The `planar` command-line driver is distributed on PyPI as `planarjl-py`:
 
 ```bash
-pip install planar-trader
+pip install planarjl-py
 ```
 
 It bootstraps a project, installs the Julia packages, and runs strategies:
