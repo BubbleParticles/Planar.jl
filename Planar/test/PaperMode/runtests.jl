@@ -3,6 +3,7 @@ module Runtests
 using Test
 using Planar
 using Planar.PaperMode
+using PlanarCore
 using HTTP, JSON3
 
 const DateTime = PaperMode.DateTime
@@ -98,6 +99,47 @@ function make_asset_instance(exc)
     )
 end
 
+# A real exchange sets `exc._trace` to an EventTrace (see PlanarCore constructors);
+# the mock exchange is built without one, and `event!` (called by _doping on
+# strategy start/stop) pushes to it. A no-op backend keeps the engine path live.
+struct _MockTrace end
+Base.push!(::_MockTrace, v; kwargs...) = v
+
+# A minimal strategy module whose `call!` (invoked by the monitor loop as a ping)
+# just counts invocations — no live exchange, no orders, no positions.
+module MonitorStrat
+using PlanarCore
+using PlanarCore.Misc: Paper, DFT
+using PlanarCore.Strategies: Strategy
+import PlanarCore.Strategies: call!
+using PlanarCore.SimMode: DateTime
+
+const pings = Ref(0)
+function reset!()
+    pings[] = 0
+end
+
+function call!(
+    s::Strategy{Paper, :MonitorStrat, E, M, C} where {E, M, C},
+    current_time::DateTime, ctx,
+)
+    pings[] += 1
+    return :ping
+end
+end
+
+function _make_paper_strategy(exc, ai)
+    uni = PlanarCore.Collections.AssetCollection([ai])
+    cfg = PlanarCore.Strategies.Instances.Misc.Config(;
+        qc=:USDT, initial_cash=10000.0, sandbox=true,
+    )
+    PlanarCore.Strategies.Strategy(
+        MonitorStrat, PlanarCore.Misc.Paper(), NoMargin(),
+        PaperMode.SimMode.TimeFrame(PaperMode.SimMode.Millisecond(0)), exc, uni;
+        config=cfg,
+    )
+end
+
 @testset "PaperMode" begin
 
 @testset "_asdate (orders/limit.jl)" begin
@@ -157,5 +199,30 @@ end
     @test occursin("hello papermode", str)
     @test occursin("20", str)
 end
+@testset "monitor/restart loop drives ping and self-stops (_doping)" begin
+    # Drives the real PaperMode monitor-loop body (_doping) with a gateway-free
+    # Strategy{Paper} and a mock exchange. The loop should ping the strategy,
+    # then self-stop because there are no open orders or positions.
+    MonitorStrat.reset!()
+    exc = make_mock_exchange()
+    exc._trace = _MockTrace()
+    # Route getexchange!(:test) to the mock so _doping's event!/exchange()
+    # calls resolve locally and never touch the live gateway (same stub-cache
+    # mechanism the SimMode suite uses to avoid spawning a gateway).
+    PaperMode.Instances.Exchanges.ExchangeTypes.sb_exchanges[(:test, "")] = exc
+    ai = make_asset_instance(exc)
+    s = _make_paper_strategy(exc, ai)
+    # Mark the strategy running so _doping enters its loop (normally done by start!).
+    s[:is_running] = Ref(true)
+    PaperMode._doping(s; throttle=0.001)
+    # The loop pinged the strategy at least once via call!/ping!.
+    @test MonitorStrat.pings[] >= 1
+    # It self-stopped because orderscount(s) == 0 && isempty(s.holdings).
+    @test PaperMode.isrunning(s) == false
+    @test s[:is_running][] == false
+    # start/stop events were recorded on the exchange trace.
+    @test haskey(s.attrs, :is_stop)
+end
+
 end  # @testset PaperMode
 end  # module Runtests
