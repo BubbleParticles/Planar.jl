@@ -23,6 +23,8 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0.0",
     "packaging>=24.0",
+    "fastmcp>=2.0.0",
+    "tomli-w>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -82,3 +84,4 @@ include = [
 [project.scripts]
 ccxt-gateway = "ccxt_gateway.main:main"
 ccxt-gateway-daemon = "ccxt_gateway.daemon_gateway:main"
+planar-mcp-server = "ccxt_gateway.mcp_server:main"
