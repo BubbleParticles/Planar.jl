@@ -60,6 +60,39 @@ function ping!(s::Strategy{Sim}, ctx::TickContext, tick::TradeTick)
 end
 end
 
+# A minimal strategy module that places a *limit* order (not a market order
+# like TickStrat) on its first BTC tick. Its `ping!` is constrained to this
+# module's strategy type, so it is dispatched in preference to TickStrat.ping!
+# and the engine fills the limit order via the real order-simulation path as
+# subsequent ticks cross the limit.
+module LimitFillStrat
+using PlanarCore
+using PlanarCore.Misc: Sim, DFT
+using PlanarCore.Strategies: Strategy
+import PlanarCore.Strategies: ping!
+using PlanarCore.Executors: call!
+using PlanarCore.Instances: raw
+using PlanarCore.SimMode
+using PlanarCore.SimMode.OrderTypes: Buy
+
+const placed = Ref(false)
+function reset!()
+    placed[] = false
+end
+
+function ping!(
+    s::Strategy{Sim,:LimitFillStrat,E,M,C} where {E,M,C},
+    ctx::TickContext, tick::TradeTick,
+)
+    if raw(tick.asset) == "BTC/USDT" && !placed[]
+        placed[] = true
+        # Queue a limit buy at 103: it fills when a later tick price <= 103.
+        call!(s, tick.asset, SimMode.OrderTypes.LimitOrder{Buy}; amount=1.0, price=DFT(103.0), date=tick.timestamp)
+    end
+    nothing
+end
+end
+
 # ---- helpers ----
 _market_buy(; p=100.0, a=1.0) = Order(_asset, _eid, Order{OT.MarketOrderType{Buy}}; price=p, amount=a, date=_dt)
 _market_sell(; p=100.0, a=1.0) = Order(_asset, _eid, Order{OT.MarketOrderType{Sell}}; price=p, amount=a, date=_dt)
@@ -195,6 +228,12 @@ function _make_tick_exchange(name::Symbol)
 end
 
 _mock_exc = _make_tick_exchange(:test)
+# A real exchange sets `exc._trace` to an EventTrace (see constructors.jl); the
+# mock exchange is built without one. `event!` pushes AssetEvents to `_trace`
+# on order errors, so we give it a no-op backend to keep the engine path live.
+struct _MockTrace end
+Base.push!(::_MockTrace, v; kwargs...) = v
+_mock_exc._trace = _MockTrace()
 # route getexchange!(:test) / Strategies.reset!(s) to the mock — no gateway spawn
 ExchangeTypes.sb_exchanges[(:test, "")] = _mock_exc
 
@@ -247,6 +286,19 @@ function _make_tick_strategy(ais)
     # zero-period timeframe → WarmupPeriod() == Millisecond(0) → no ticks skipped
     Strategies.Strategy(
         @__MODULE__, SimMode.Sim(), SimMode.NoMargin(), SimMode.TimeFrame(SimMode.Millisecond(0)), _mock_exc, uni;
+        config=cfg,
+    )
+end
+
+# A LimitFillStrat strategy: the module arg must be the `LimitFillStrat`
+# submodule (not the enclosing Runtests) so its constrained `ping!` dispatches
+# during the backtest loop and places a limit order that the engine fills.
+function _make_limit_fill_strategy(ais)
+    uni = Collections.AssetCollection(ais)
+    cfg = Config(; qc=:USDT, initial_cash=10000.0, sandbox=true)
+    Strategies.Strategy(
+        LimitFillStrat, SimMode.Sim(), SimMode.NoMargin(),
+        SimMode.TimeFrame(SimMode.Millisecond(0)), _mock_exc, uni;
         config=cfg,
     )
 end
@@ -472,6 +524,29 @@ end
     # tick-mode flags cleaned up
     @test !haskey(s.attrs, :sim_tick_mode)
     @test !haskey(s.attrs, :sim_current_tick)
+end
+
+# LimitFillStrat is defined at the top level of this module (above this testset),
+# where Julia permits `module` declarations.
+
+@testset "limit order fills during tick backtest (SimMode/backtest.jl)" begin
+    # Drives the real SimMode tick-backtest engine with seeded tick data and
+    # asserts on the actual simulation output: a limit order placed during the
+    # backtest is filled by the engine's order-simulation as ticks cross it.
+    LimitFillStrat.reset!()
+    ai = _make_tick_ai("BTC/USDT"; tick_df=_make_ticks(100; price0=100.0))
+    s = _make_limit_fill_strategy([ai])
+    r = SimMode.TradeTickRange(s)
+    ctx = SimMode.TickContext(SimMode.Sim(), r)
+    SimMode.start!(s, ctx)
+    # The strategy places a limit buy @103 during tick 1's ping!. The backtest
+    # loop runs update! (order fill-check) *before* ping! (order placement), so
+    # the order is first eligible on the next tick: tick 2 has price 102 (ticks
+    # are price0+i = 100+i → tick 1 = 101, tick 2 = 102), which is <= the 103
+    # limit, and the engine fills it there at the tick price.
+    tr = SimMode.OrderTypes.trades(ai)
+    @test length(tr) == 1
+    @test tr[1].price == SimMode.DFT(102.0)
 end
 
 end  # @testset SimMode
