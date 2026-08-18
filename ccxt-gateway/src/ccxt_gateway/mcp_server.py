@@ -16,6 +16,7 @@ import select
 import subprocess
 import tempfile
 import threading
+import time
 from pathlib import Path
 from typing import Any, Optional
 
@@ -42,6 +43,9 @@ DEFAULT_RUN_JL = os.environ.get("PLANAR_RUN_JL", "/Planar.jl/scripts/run.jl")
 DEFAULT_JULIA = os.environ.get("JULIA_BIN", "julia")
 DEFAULT_TEST_TIMEOUT = float(os.environ.get("PLANAR_TEST_TIMEOUT", "300"))
 DEFAULT_RUN_TIMEOUT = float(os.environ.get("PLANAR_RUN_TIMEOUT", "60"))
+# Idle sessions (no eval/revise within this many seconds) are reaped. Override
+# via the SessionManager ``idle_timeout`` constructor arg or PLANAR_SESSION_IDLE_TIMEOUT.
+DEFAULT_SESSION_IDLE_TIMEOUT = 3600.0
 
 # ---------------------------------------------------------------------------
 # Pure-logic helpers (no MCP / no network dependency)
@@ -446,7 +450,7 @@ end
 class Session:
     """Bookkeeping for one running Julia session subprocess."""
 
-    __slots__ = ("id", "proc", "bootfile", "project")
+    __slots__ = ("id", "proc", "bootfile", "project", "last_active")
 
     def __init__(self, id: str, proc: subprocess.Popen, bootfile: str, project):
         self.id = id
@@ -462,7 +466,12 @@ class SessionError(Exception):
 class SessionManager:
     """Spawn and drive isolated, persistent Julia REPL sessions."""
 
-    def __init__(self, julia: Optional[str] = None, boot_template: Optional[str] = None):
+    def __init__(
+        self,
+        julia: Optional[str] = None,
+        boot_template: Optional[str] = None,
+        idle_timeout: Optional[float] = None,
+    ):
         self.julia = julia or DEFAULT_JULIA
         self._boot_template = boot_template or _BOOT_TEMPLATE
         self._bootfile: Optional[str] = None
@@ -470,6 +479,17 @@ class SessionManager:
         self._counter = 0
         self.start_timeout = 90.0
         self.eval_timeout = 60.0
+        # Idle sessions (no eval/revise within idle_timeout seconds) are reaped.
+        # Override via the constructor arg or PLANAR_SESSION_IDLE_TIMEOUT.
+        if idle_timeout is None:
+            idle_timeout = os.environ.get("PLANAR_SESSION_IDLE_TIMEOUT")
+            idle_timeout = (
+                float(idle_timeout)
+                if idle_timeout is not None
+                else DEFAULT_SESSION_IDLE_TIMEOUT
+            )
+        self.idle_timeout = idle_timeout
+        self._lock = threading.Lock()
 
     # -- bootstrap file ----------------------------------------------------
     def _ensure_bootfile(self) -> str:
@@ -561,14 +581,23 @@ class SessionManager:
         except Exception:
             proc.kill()
             raise
-        self._counter += 1
-        sid = f"session-{self._counter}"
-        self._sessions[sid] = Session(sid, proc, boot, project)
+        # Drop any sessions that have already gone idle before registering a
+        # new one (reap_idle_sessions manages its own lock, so call it before
+        # we take the registration lock below).
+        self.reap_idle_sessions()
+
+        with self._lock:
+            self._counter += 1
+            sid = f"session-{self._counter}"
+            sess = Session(sid, proc, boot, project)
+            sess.last_active = time.monotonic()
+            self._sessions[sid] = sess
         return sid
 
     def stop_session(self, sid: str) -> dict[str, Any]:
         """Terminate a session and its Julia process."""
-        sess = self._sessions.pop(sid, None)
+        with self._lock:
+            sess = self._sessions.pop(sid, None)
         if sess is None:
             return {"session": sid, "stopped": False, "error": "unknown session"}
         proc = sess.proc
@@ -585,14 +614,36 @@ class SessionManager:
 
     def list_sessions(self) -> dict[str, dict[str, Any]]:
         """Return active sessions keyed by id."""
+        with self._lock:
+            items = list(self._sessions.items())
         return {
             sid: {
                 "session": sid,
                 "pid": s.proc.pid,
                 "project": s.project,
             }
-            for sid, s in self._sessions.items()
+            for sid, s in items
         }
+
+    def reap_idle_sessions(self) -> list[str]:
+        """Terminate sessions idle longer than ``idle_timeout`` and unregister them.
+
+        A session is idle when no eval/revise has refreshed its ``last_active``
+        timestamp within ``idle_timeout`` seconds. Returns the ids that were
+        reaped. Reuses ``stop_session`` for the kill path (unchanged), and holds
+        the session-map lock only while snapshotting the stale ids so a slow
+        kill cannot block concurrent evals/starts.
+        """
+        now = time.monotonic()
+        with self._lock:
+            stale = [
+                sid
+                for sid, s in self._sessions.items()
+                if now - s.last_active > self.idle_timeout
+            ]
+        for sid in stale:
+            self.stop_session(sid)
+        return stale
 
     def _get(self, sid: str) -> Session:
         sess = self._sessions.get(sid)
@@ -611,6 +662,10 @@ class SessionManager:
         data = code.encode("utf-8")
         try:
             sess = self._get(sid)
+            # Touch last_active at eval start so an in-flight eval is treated as
+            # active and is never reaped mid-computation.
+            with self._lock:
+                sess.last_active = time.monotonic()
             proc = sess.proc
             proc.stdin.write(b"EVAL " + str(len(data)).encode() + b"\n")
             proc.stdin.write(data)
