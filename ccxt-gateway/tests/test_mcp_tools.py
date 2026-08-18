@@ -17,6 +17,7 @@ from __future__ import annotations
 import os
 import shutil
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -24,6 +25,7 @@ import pytest
 try:  # pragma: no cover - import shim for editable/installed layouts
     from ccxt_gateway.mcp_server import (
         SESSION_MANAGER,
+        SessionManager,
         deploy_strategy_tool,
         eval_in_session_tool,
         list_sessions_tool,
@@ -39,6 +41,7 @@ except ImportError:  # pragma: no cover
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
     from ccxt_gateway.mcp_server import (  # type: ignore
         SESSION_MANAGER,
+        SessionManager,
         deploy_strategy_tool,
         eval_in_session_tool,
         list_sessions_tool,
@@ -228,3 +231,94 @@ def test_revise_tool_unavailable_structured_error(tmp_path, monkeypatch):
         assert "Revise unavailable" in rv["error"]
     finally:
         stop_session_tool(sid)
+
+
+# ---------------------------------------------------------------------------
+# Idle-session reaping (auto-stop Julia REPLs after inactivity)
+# ---------------------------------------------------------------------------
+
+
+def test_session_idle_timeout_config_sources():
+    """idle_timeout is read from the constructor arg and PLANAR_SESSION_IDLE_TIMEOUT."""
+    # Explicit constructor arg wins.
+    mgr = SessionManager(idle_timeout=12.5)
+    assert mgr.idle_timeout == 12.5
+
+    # Env var is consulted at construction time when no arg is given.
+    import os as _os
+
+    _os.environ["PLANAR_SESSION_IDLE_TIMEOUT"] = "77"
+    try:
+        mgr_env = SessionManager()
+        assert mgr_env.idle_timeout == 77.0
+    finally:
+        _os.environ.pop("PLANAR_SESSION_IDLE_TIMEOUT", None)
+
+    # Missing env + no arg falls back to the module default.
+    mgr_default = SessionManager()
+    assert mgr_default.idle_timeout == _mcp.DEFAULT_SESSION_IDLE_TIMEOUT
+
+
+def test_idle_session_is_reaped():
+    """A session idle past the TTL is killed and dropped from the registry."""
+    if not HAS_JULIA:
+        pytest.skip("julia not on PATH")
+    mgr = SessionManager(idle_timeout=0.05)
+    sid = mgr.start_session()
+    # Hold a handle to the process before it is reaped so we can confirm death.
+    proc = mgr._sessions[sid].proc
+    try:
+        assert sid in mgr.list_sessions()
+        # Outlive the TTL with no activity.
+        time.sleep(0.3)
+        reaped = mgr.reap_idle_sessions()
+        assert sid in reaped
+        # The session is gone from the registry ...
+        assert sid not in mgr.list_sessions()
+        # ... and the Julia process is actually dead, not merely unregistered.
+        assert proc.poll() is not None
+    finally:
+        # Best-effort cleanup in case the assertion above failed mid-way.
+        if sid in mgr.list_sessions():
+            mgr.stop_session(sid)
+
+
+def test_active_session_survives_reap():
+    """A session eval'd within the TTL stays alive and keeps its process."""
+    if not HAS_JULIA:
+        pytest.skip("julia not on PATH")
+    mgr = SessionManager(idle_timeout=0.3)
+    sid = mgr.start_session()
+    proc = mgr._sessions[sid].proc
+    try:
+        # Touch activity (eval refreshes last_active at the start of the call).
+        r = mgr.eval_in_session(sid, "1 + 1")
+        assert r["ok"] is True
+        # Reap immediately after activity: the clock was just reset.
+        reaped = mgr.reap_idle_sessions()
+        assert sid not in reaped
+        assert sid in mgr.list_sessions()
+        assert proc.poll() is None
+    finally:
+        mgr.stop_session(sid)
+
+
+def test_activity_resets_idle_clock():
+    """A mid-life eval extends the session past an earlier would-be expiry."""
+    if not HAS_JULIA:
+        pytest.skip("julia not on PATH")
+    mgr = SessionManager(idle_timeout=0.2)
+    sid = mgr.start_session()
+    proc = mgr._sessions[sid].proc
+    try:
+        mgr.eval_in_session(sid, "1 + 1")
+        # Wait most of the TTL, then re-assert activity before it lapses.
+        time.sleep(0.15)
+        mgr.eval_in_session(sid, "2 + 2")
+        # Now the session was active 0.15s ago (< TTL); it must survive.
+        reaped = mgr.reap_idle_sessions()
+        assert sid not in reaped
+        assert sid in mgr.list_sessions()
+        assert proc.poll() is None
+    finally:
+        mgr.stop_session(sid)
