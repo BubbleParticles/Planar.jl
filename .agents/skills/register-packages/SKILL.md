@@ -76,8 +76,14 @@ Comment on the tagged commit in `BubbleParticles/Planar.jl`:
 - **`test/Project.toml` must not have `name`/`uuid`/`version`/`authors`** — Registrator treats such files as nested packages and fails precompilation.
 - **Placeholder UUIDs cause collisions** — strategy packages `QuickStart` and `StrategyFramework` both had UUID `a1b2c3d4-e5f6-7890-abcd-ef1234567890` which collides with `WildlandFire` in General. Fix: generate unique UUIDs with `julia -e 'using UUIDs; println(uuid4())'`.
 - **Wrong dep UUIDs in Project.toml** — `QuickStart` and `StrategyFramework` used `Optim = "01837..."` (PlanarStrategyStats's UUID, not the real Optim package) and `StrategyTools` (an alias for `PlanarStrategyTools`). Fix: remove unused `Optim` dep, rename `StrategyTools` → `PlanarStrategyTools`, update source imports.
-- **After registration errors, merge dependent PRs first** — if a package errors with "X not found in registry", it means package X's PR on `JuliaRegistries/General` hasn't been merged yet. Merge it, then re-trigger the failed registration.
-- **Do NOT regenerate UUIDs** for already-registered packages (PlanarCore, etc.) — they are permanent identities (see `PACKAGING.md` §1.4.7).
+- **MUST wait for dependency PRs to merge before registering downstream packages** — JuliaRegistrator validates every dep's UUID against the *merged* General registry (not pending PRs). If package X's PR on `JuliaRegistries/General` is still OPEN, any package depending on X will error with "X not found in registry". The sequence is:
+  1. Register Level 0 packages (PlanarStrategyStats, PlanarFeatureSelection, PlanarDownloadTool, PlanarPython)
+  2. **Wait for their PRs to be merged** into JuliaRegistries/General
+  3. Register Level 1 (Planar) — triggers only after PlanarStrategyStats is merged
+  4. **Wait for Planar's PR to be merged**
+  5. Register Level 2 (PlanarStrategyTools, PlanarOptim, PlanarDev)
+  6. **Wait for Planar's PR to be merged** (PlanarOptim also needs PlanarDownloadTool)
+  7. Register PlanarStrategies packages on the PlanarStrategies repo — only after Planar (and PlanarOptim) are merged
 
 ## PlanarStrategies registration
 
