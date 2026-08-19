@@ -39,3 +39,14 @@ Only the highest-level arg is needed: `tag_repo(minor=1, patch=0)` bumps minor. 
 - **Working directory must be clean** — the script errors if there are uncommitted changes.
 - **Do NOT remove `recurse_projects` from `scripts/tag.jl`**: syncing all project manifests is required for correct dependency resolution after a version bump. If `Pkg.resolve()` fails, fix the root cause (stale compat bounds, missing entries in manifests), don't skip the traversal.
 - **Excluded from traversal**: `test`, `docs`, `deps`, `.conda`, `.CondaPkg`, `.git`, `user`, `PlanarOptim`, `Plotting` — these contain external packages that may not be resolvable in this workspace.
+
+## After tagging — also create the GitHub release
+
+After running the release script (which creates the `v<version>` tag), create the
+corresponding GitHub release so the release page stays in sync:
+
+```bash
+gh release create v<version> --repo BubbleParticles/Planar.jl --title "v<version>" --notes "Release notes"
+```
+
+Then proceed with the registry and PyPI steps in `release-planar`.

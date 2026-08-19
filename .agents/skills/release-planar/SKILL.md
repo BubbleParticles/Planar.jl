@@ -27,12 +27,16 @@ Run **everything from the `Planar.jl` monorepo root** (the source of truth):
    ```
    This bumps `Planar/Project.toml`, syncs all sub-project manifests, commits,
    and tags `v<version>`. Do NOT remove `recurse_projects` from `scripts/tag.jl`.
-2. **Push the tag and branch** — users download tarballs for the tree SHA, so
+2. **Create the GitHub release** (before pushing the registry, since the registry references the tagged commit on GitHub):
+   ```bash
+    gh release create v<version> --repo BubbleParticles/Planar.jl --title "v<version>" --notes "Release notes"
+   ```
+3. **Push the tag and branch** — users download tarballs for the tree SHA, so
    the commit must be on GitHub before the registry references it:
    ```bash
    git push origin master --tags
    ```
-3. **Regenerate the registry** from the monorepo root:
+4. **Regenerate the registry** from the monorepo root:
    ```bash
    julia scripts/register.jl --ref v<version> --commit
    ```
@@ -44,7 +48,7 @@ Run **everything from the `Planar.jl` monorepo root** (the source of truth):
    - Other flags: `--registry <path>` (output elsewhere), `--repo-url <url>`
      (override the monorepo URL), `--registry-repo <url>` (override the registry
      repo URL).
-4. **Publish the registry**:
+5. **Publish the registry**:
    ```bash
    cd PlanarRegistry
    git push                       # first time: git remote add origin https://github.com/BubbleParticles/PlanarRegistry.git && git push -u origin master
@@ -84,6 +88,27 @@ Pkg.add("Planar")
      ```
    - Note: the PyPI distribution name is `planarjl-py` (`planar` is taken);
      the CLI is `planar`, import is `planar_trader`.
+
+## Website changelog (planarwebsite)
+
+After publishing the registry/PyPI release, update the public changelog on the
+marketing site so users see the new version there too.
+
+- **Repo**: `https://github.com/defnlnotme/planarwebsite` (Next.js static export; Cloudflare Pages builds on push to `main`, or run `npm run deploy` for a manual `wrangler pages deploy`).
+- **File**: `src/lib/changelog.ts` — prepend a new entry to the `releases` array (newest first):
+  ```ts
+  {
+    version: 'v<version>',
+    date: '<YYYY-MM-DD>',
+    title: '<short release title>',
+    highlights: [
+      'one-line summary of a notable change',
+      'another notable change',
+    ],
+  },
+  ```
+- The `Release` shape is `{ version, date, title, highlights: string[] }` (see the existing entries for style). Keep the title short and the highlights to the user-visible headline changes.
+- Commit and push (or deploy). Verify the entry appears at `https://planar.pages.dev/changelog`.
 
 ## Verification
 
