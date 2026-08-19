@@ -107,15 +107,15 @@ done
 
 | Package | PR | Status |
 |---------|-----|--------|
-| PlanarStrategyStats v0.1.0 | [General/165040](https://github.com/JuliaRegistries/General/pull/165040) | OPEN — needs merge |
-| PlanarFeatureSelection v0.1.0 | [General/165041](https://github.com/JuliaRegistries/General/pull/165041) | OPEN — needs merge |
-| PlanarPython v0.1.0 | [General/165042](https://github.com/JuliaRegistries/General/pull/165042) | OPEN — needs merge |
-| PlanarDownloadTool v0.1.0 | [General/165044](https://github.com/JuliaRegistries/General/pull/165044) | OPEN — needs merge |
-| Planar | — | ❌ Failed (PlanarStrategyStats not merged yet) |
-| PlanarStrategyTools | — | ❌ Failed (Planar not registered yet) |
-| PlanarOptim | — | ❌ Failed (Planar not registered yet) |
-| PlanarDev | — | ❌ Failed (Planar not registered yet) |
-| PlanarStrategies (12 pkgs) | — | ⏳ Comments triggered, JuliaRegistrator not installed on PlanarStrategies repo |
+| PlanarStrategyStats v0.1.0 | [General/165040](https://github.com/JuliaRegistries/General/pull/165040) | **All checks PASS** — waiting for merge |
+| PlanarFeatureSelection v0.1.0 | [General/165041](https://github.com/JuliaRegistries/General/pull/165041) | **All checks PASS** — waiting for merge |
+| PlanarPython v0.1.0 | [General/165042](https://github.com/JuliaRegistries/General/pull/165042) | **All checks PASS** (fixed precompile) — waiting for merge |
+| PlanarDownloadTool v0.1.0 | [General/165044](https://github.com/JuliaRegistries/General/pull/165044) | **All checks PASS** — waiting for merge |
+| Planar | — | ❌ Blocked (needs PlanarStrategyStats merged first) |
+| PlanarStrategyTools | — | ❌ Blocked (needs Planar merged first) |
+| PlanarOptim | — | ❌ Blocked (needs Planar merged first) |
+| PlanarDev | — | ❌ Blocked (needs Planar merged first) |
+| PlanarStrategies (12 pkgs) | — | ⏳ Comments triggered, JuliaRegistrator not installed on PlanarStrategies repo; also needs Planar/PlanarOptim in General |
 
 ## After registration
 
