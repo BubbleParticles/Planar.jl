@@ -4,22 +4,24 @@
 
 ## Overview
 
-Registers monospace Julia packages to the custom `PlanarRegistry` (and optionally General) by triggering `@JuliaRegistrator` on GitHub. `PlanarCore` is already on the General registry and is **not** re-registered here (see `PACKAGING.md` §1.4).
+Registers monorepo Julia packages to the General registry by triggering `@JuliaRegistrator` on GitHub commit comments. `PlanarCore` is already on the General registry and is **not** re-registered here (see `PACKAGING.md` §1.4 and `scripts/register.jl:38-41`).
 
 ## Registration order
 
 After `PlanarCore` (on General), packages are registered in dependency order:
 
-1. **PlanarStrategyStats**
-2. **Planar**
-3. **PlanarFeatureSelection**
-4. **PlanarDownloadTool**
-5. **PlanarPython**
-6. **PlanarStrategyTools**
-7. **PlanarOptim**
-8. **PlanarDev**
+| Level | Package | Depends on (must be merged first) |
+|-------|---------|-----------------------------------|
+| 0 | **PlanarStrategyStats** | PlanarCore ✓ |
+| 0 | **PlanarFeatureSelection** | PlanarCore ✓ |
+| 0 | **PlanarDownloadTool** | PlanarCore ✓ |
+| 0 | **PlanarPython** | PlanarCore ✓ |
+| 1 | **Planar** | PlanarCore ✓, PlanarStrategyStats |
+| 2 | **PlanarStrategyTools** | Planar |
+| 2 | **PlanarOptim** | Planar, PlanarDownloadTool |
+| 2 | **PlanarDev** | Planar |
 
-This order is sourced from `scripts/register.jl` (`PACKAGES` constant). Each package's deps are already in the registry by the time it is registered.
+This order is sourced from `scripts/register.jl` (`PACKAGES` constant). Level 0 packages can be registered simultaneously; Level 1 must wait for PlanarStrategyStats's PR to merge; Level 2 must wait for Planar's PR to merge.
 
 `PlanarStrategies` (external, at `github.com/BubbleParticles/PlanarStrategies`) is registered separately at the end — strategies depend on the engine, not vice versa.
 
@@ -37,7 +39,7 @@ bash .agents/skills/register-packages/register-packages.sh Planar PlanarDev
 
 ### Via Registrator comment directly (manual)
 
-Comment on the tagged commit (or PR) in `BubbleParticles/Planar.jl`:
+Comment on the tagged commit in `BubbleParticles/Planar.jl`:
 
 ```
 @JuliaRegistrator register subdir=PlanarCore
@@ -64,15 +66,34 @@ Comment on the tagged commit (or PR) in `BubbleParticles/Planar.jl`:
 
 - **Commit must be pushed before registering** — `Pkg.add` downloads a tarball from `api.github.com`, so the tree SHA must exist on GitHub.
 - **Version must be unique** across all registries — Registrator rejects re-registration of an already-published version.
-- **Non-General weakdeps block extensions** — Registrator validates UUIDs in `[weakdeps]`/`[extensions]` against General. Packages not in General (e.g. `CausalityTools`, `EffectSizes` in `PlanarStrategyStats`) cause registration to fail. Fix: **remove the `[extensions]`/`[weakdeps]` blocks entirely** and delete the extension file, since (a) `Pkg.test` cannot resolve non-General extras either, and (b) the extension code degrades gracefully when the functions are unavailable (e.g. `gridbbands`'s `corr::Symbol` arg falls back to no post-processing). Do NOT move to `[extras]`/`[targets]` — `Pkg.test` will still fail trying to resolve them. Check a package's deps against General with: `julia -e 'using Pkg; r=Pkg.Registry.reachable_registries()[1]; println(haskey(r, UUID("...")) ? "FOUND" : "MISSING")'`.
+- **Non-General weakdeps block extensions** — Registrator validates UUIDs in `[weakdeps]`/`[extensions]` against General. Packages not in General (e.g. `CausalityTools`, `EffectSizes` in `PlanarStrategyStats`, `DBnomics` in `PlanarDownloadTool`) cause registration to fail. Fix: **remove the `[weakdeps]`/`[extensions]` blocks entirely** and delete the extension file, since (a) `Pkg.test` cannot resolve non-General extras either, and (b) the extension code degrades gracefully when the functions are unavailable (e.g. `gridbbands`'s `corr::Symbol` arg falls back to no post-processing). Do NOT move to `[extras]`/`[targets]` — `Pkg.test` will still fail trying to resolve them. Check a package's deps against General with:
+  ```julia
+  using Pkg, UUIDs
+  r = Pkg.Registry.reachable_registries()[1]
+  haskey(r, UUID("01837fd2-c099-442f-ae89-75fa208aad36"))  # CausalityTools
+  ```
 - **Compat entries must be present** — `julia`, each external `[dep]`, and each `[weakdeps]` entry must have a `[compat]` row. Missing compat triggers a Registrator error.
 - **`test/Project.toml` must not have `name`/`uuid`/`version`/`authors`** — Registrator treats such files as nested packages and fails precompilation.
+- **After registration errors, merge dependent PRs first** — if a package errors with "X not found in registry", it means package X's PR on `JuliaRegistries/General` hasn't been merged yet. Merge it, then re-trigger the failed registration.
 - **Do NOT regenerate UUIDs** — they are permanent identities (see `PACKAGING.md` §1.4.7).
+
+## Current status
+
+| Package | PR | Status |
+|---------|-----|--------|
+| PlanarStrategyStats v0.1.0 | [General/165040](https://github.com/JuliaRegistries/General/pull/165040) | OPEN — needs merge |
+| PlanarFeatureSelection v0.1.0 | [General/165041](https://github.com/JuliaRegistries/General/pull/165041) | OPEN — needs merge |
+| PlanarPython v0.1.0 | [General/165042](https://github.com/JuliaRegistries/General/pull/165042) | OPEN — needs merge |
+| PlanarDownloadTool v0.1.0 | [General/165044](https://github.com/JuliaRegistries/General/pull/165044) | OPEN — needs merge |
+| Planar | — | ❌ Failed (PlanarStrategyStats not merged yet) |
+| PlanarStrategyTools | — | ❌ Failed (Planar not registered yet) |
+| PlanarOptim | — | ❌ Failed (Planar not registered yet) |
+| PlanarDev | — | ❌ Failed (Planar not registered yet) |
 
 ## After registration
 
-- Registrator auto-creates a PR on the target registry (`General` or `PlanarRegistry`)
-- Merge the PR (automerge usually handles this if compat/license/name checks pass)
+- Merge the open PRs on `JuliaRegistries/General` (manual review required; only `Planar` qualifies for automerge due to repo URL matching)
+- After merge, re-run the script for the next dependency level
 - Verify with a fresh environment:
   ```julia
   using Pkg
