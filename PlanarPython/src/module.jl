@@ -25,7 +25,13 @@ function _setup!()
         using PythonCall.C.CondaPkg: envdir, add_pip, resolve
 
         env_path = if $isprecomp
-            realpath(ENV["JULIA_CONDAPKG_ENV"])
+            # During precompilation, JULIA_CONDAPKG_ENV may be set but path may not exist on CI
+            try
+                realpath(ENV["JULIA_CONDAPKG_ENV"])
+            catch
+                # Fallback to envdir() if realpath fails (e.g., path doesn't exist on CI)
+                envdir()
+            end
         else
             envdir()
         end
