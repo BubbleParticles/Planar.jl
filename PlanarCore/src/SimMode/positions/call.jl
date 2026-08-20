@@ -12,14 +12,14 @@ const _PROTECTIONS_WARNING = """
     we can't ensure that all exchanges have such protections in place.
 """
 
-function singlewaycheck(s, ai, t)
+function singlewaycheck(s, ii, t)
     pside = positionside(t)
     opside = opposite(pside)
     # HACK: see Instances `status!`
-    if isopen(ai, opside) && !iszero(ai, opside)
+    if isopen(ii, opside) && !iszero(ii, opside)
         return false
     end
-    for (_, o) in orders(s, ai)
+    for (_, o) in orders(s, ii)
         if positionside(o) == opside
             return false
         end
@@ -30,17 +30,17 @@ end
 @doc "Creates a simulated limit order, updating a levarged position."
 function call!(
     s::IsolatedStrategy{Sim},
-    ai::MarginInstance,
+    ii::MarginInstance,
     t::Type{<:AnyLimitOrder};
     amount,
     kwargs...,
 )
-    !singlewaycheck(s, ai, t) && return nothing
+    !singlewaycheck(s, ii, t) && return nothing
     fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
-    o = create_sim_limit_order(s, t, ai; amount, order_kwargs...)
+    o = create_sim_limit_order(s, t, ii; amount, order_kwargs...)
     return if !isnothing(o)
-        t = order!(s, o, o.date, ai; fees_kwarg...)
-        @deassert abs(committed(o)) > DFT(0.0) || pricetime(o) ∉ keys(orders(s, ai, o))
+        t = order!(s, o, o.date, ii; fees_kwarg...)
+        @deassert abs(committed(o)) > DFT(0.0) || pricetime(o) ∉ keys(orders(s, ii, o))
         t
     end
 end
@@ -50,42 +50,42 @@ $_PROTECTIONS_WARNING
 """
 function call!(
     s::IsolatedStrategy{Sim},
-    ai::MarginInstance,
+    ii::MarginInstance,
     t::Type{<:AnyMarketOrder};
     amount,
     date,
     kwargs...,
 )
-    !singlewaycheck(s, ai, t) && return nothing
+    !singlewaycheck(s, ii, t) && return nothing
     fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
-    o = create_sim_market_order(s, t, ai; amount, date, order_kwargs...)
+    o = create_sim_market_order(s, t, ii; amount, date, order_kwargs...)
     isnothing(o) && return nothing
-    marketorder!(s, o, ai, amount; date, fees_kwarg...)
+    marketorder!(s, o, ii, amount; date, fees_kwarg...)
 end
 
 @doc "Closes a leveraged position."
 function call!(
     s::MarginStrategy{<:Union{Paper,Sim}},
-    ai::MarginInstance,
+    ii::MarginInstance,
     side::ByPos,
     date,
     ::PositionClose;
     kwargs...,
 )::Bool
-    call!(s, ai, CancelOrders(); t=BuyOrSell)
-    v = close_position!(s, ai, side, date; kwargs...)
+    call!(s, ii, CancelOrders(); t=BuyOrSell)
+    v = close_position!(s, ii, side, date; kwargs...)
     if !v
-        @error "close_position! returned false (failed to close position)" ai=scalar(ai) side
-        throw(ArgumentError("Failed to close position for $ai on side $side"))
+        @error "close_position! returned false (failed to close position)" ii=scalar(ii) side
+        throw(ArgumentError("Failed to close position for $ii on side $side"))
     end
-    @deassert !isopen(ai, side)
+    @deassert !isopen(ii, side)
     v
 end
 
 @doc "Closes all strategy positions"
 function call!(s::MarginStrategy{Sim}, side::ByPos, date, ::PositionClose; kwargs...)
     LittleDict(
-        ai => call!(s, ai, side, date, PositionClose(); kwargs...) for ai in s.universe
+        ii => call!(s, ii, side, date, PositionClose(); kwargs...) for ii in s.universe
     )
 end
 
@@ -99,18 +99,18 @@ The leverage is not updated when the position has pending orders or is open (and
 "
 function call!(
     s::MarginStrategy{<:Union{Sim,Paper}},
-    ai::MarginInstance,
+    ii::MarginInstance,
     lev,
     ::UpdateLeverage;
     pos::PositionSide,
     kwargs...,
 )
-    if isopen(ai, pos) || hasorders(s, ai, pos)
+    if isopen(ii, pos) || hasorders(s, ii, pos)
         false
     else
-        leverage!(ai, _lev_value(lev), pos)
-        @deassert isapprox(leverage(ai, pos), _lev_value(lev), atol=1e-1) (
-            leverage(ai, pos), lev
+        leverage!(ii, _lev_value(lev), pos)
+        @deassert isapprox(leverage(ii, pos), _lev_value(lev), atol=1e-1) (
+            leverage(ii, pos), lev
         )
         true
     end

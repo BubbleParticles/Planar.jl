@@ -13,8 +13,8 @@ _istriggered(o::AnyLimitOrder{Sell}, price) = price >= o.price
 _istriggered(::AnyMarketOrder, args...) = true
 
 @doc "Use the base currency volume from the ticker."
-function _basevol(ai)
-    tkr = ticker!(ai.asset.raw, ai.exchange)
+function _basevol(ii)
+    tkr = ticker!(ii.asset.raw, ii.exchange)
     # Debug - log what we got
     @debug "ticker result" tkr_type=typeof(tkr) tkr_keys=isa(tkr, AbstractDict) ? keys(tkr) : "not-a-dict"
     # Convert to AbstractDict if needed
@@ -45,11 +45,11 @@ function _basevol(ai)
         return one(DFT)
     end
 end
-function _ticker_volume(ai)
-    (Ref(apply(tf"1d", now())), Ref(zero(DFT)), Ref(_basevol(ai)))
+function _ticker_volume(ii)
+    (Ref(apply(tf"1d", now())), Ref(zero(DFT)), Ref(_basevol(ii)))
 end
 
-_paper_liquidity(s, ai) = @lget! s[:paper_liquidity] ai _ticker_volume(ai)
+_paper_liquidity(s, ii) = @lget! s[:paper_liquidity] ii _ticker_volume(ii)
 @doc """ Limits the volume of order execution to the daily limit of the asset.
 
 $(TYPEDSIGNATURES)
@@ -60,15 +60,15 @@ The function uses the `@lget!` macro to get the values of `day_vol`, `taken_vol`
 The function also uses the `_basevol` and `_ticker_volume` functions to get the base volume and ticker volume respectively.
 
 """
-function volumecap!(s, ai; amount)
+function volumecap!(s, ii; amount)
     # Validate amount > 0
     amount <= zero(DFT) && return false
     # Check there is enough liquidity
-    day_vol, taken_vol, total_vol = _paper_liquidity(s, ai)
+    day_vol, taken_vol, total_vol = _paper_liquidity(s, ii)
     let this_day = apply(tf"1d", now())
         if this_day > day_vol[]
             day_vol[] = this_day
-            total_vol[] = _basevol(ai)
+            total_vol[] = _basevol(ii)
             taken_vol[] = 0.0
         end
     end
@@ -92,10 +92,10 @@ function volumecap!(s, ai; amount)
 end
 
 @doc """ Release a previously reserved volume capacity."""
-function volrelease!(s, ai; amount)
+function volrelease!(s, ii; amount)
     # Validate amount > 0
     amount <= zero(DFT) && return false
-    day_vol, taken_vol, total_vol = _paper_liquidity(s, ai)
+    day_vol, taken_vol, total_vol = _paper_liquidity(s, ii)
     while true
         current_taken = taken_vol[]
         new_taken = max(DFT(0), current_taken - amount)
@@ -107,8 +107,8 @@ function volrelease!(s, ai; amount)
     end
 end
 
-function orderbook_side(ai, t::Type{<:Order})
-    ob = orderbook(ai.exchange, raw(ai); limit=100)
+function orderbook_side(ii, t::Type{<:Order})
+    ob = orderbook(ii.exchange, raw(ii); limit=100)
     side = ifelse(t <: AnyBuyOrder, :asks, :bids)
     @debug "papermode: obside" t side
     getproperty(ob, side)
@@ -125,13 +125,13 @@ If the order is a Fill or Kill (FOK) order and the volume is less than the order
 The function updates the taken volume after each order.
 
 """
-function from_orderbook(obside, s, ai, o::Order; amount, date)
-    _, taken_vol, total_vol = _paper_liquidity(s, ai)
+function from_orderbook(obside, s, ii, o::Order; amount, date)
+    _, taken_vol, total_vol = _paper_liquidity(s, ii)
     n_prices = length(obside)
     # Gracefully handle empty orderbook
     if n_prices <= 0
         @debug "paper from ob: empty orderbook"
-        volrelease!(s, ai; amount=amount)
+        volrelease!(s, ii; amount=amount)
         return zero(DFT), zero(DFT), nothing
     end
     price_idx = max(1, trunc(Int, taken_vol[] * n_prices / total_vol[]))
@@ -141,7 +141,7 @@ function from_orderbook(obside, s, ai, o::Order; amount, date)
     islimit = o isa AnyLimitOrder
     if islimit && !_istriggered(o, this_price)
         @debug "paper from ob: limit order not triggered" this_price o
-        volrelease!(s, ai; amount=amount)
+        volrelease!(s, ii; amount=amount)
         return zero(DFT), zero(DFT), nothing
     end
     # calculate the vwap based on how much orderbook we sweep
@@ -157,7 +157,7 @@ function from_orderbook(obside, s, ai, o::Order; amount, date)
         # exceeds the limit order avg_price
         if islimit && !_istriggered(o, ob_price)
             @debug "paper from ob: limit order partially filled" o.price this_price amount this_vol avg_price
-            volrelease!(s, ai; amount=amount - this_vol)
+            volrelease!(s, ii; amount=amount - this_vol)
             break
         end
         inc_vol = min(ob_vol, amount - this_vol)
@@ -167,28 +167,28 @@ function from_orderbook(obside, s, ai, o::Order; amount, date)
     # Gracefully handle zero volume edge case
     if this_vol <= zero(DFT)
         @debug "paper from ob: zero volume"
-        volrelease!(s, ai; amount=amount)
+        volrelease!(s, ii; amount=amount)
         return zero(DFT), zero(DFT), nothing
     end
     avg_price /= this_vol
     ob_trade::Union{Nothing,<:Trade} = nothing
     if o isa AnyFOKOrder && this_vol < amount
         @debug "paper from ob: fok order no volume" o.price this_price amount this_vol
-        cancel!(s, o, ai; err=NotEnoughLiquidity())
+        cancel!(s, o, ii; err=NotEnoughLiquidity())
         # Release the reserved volume since FOK order failed
-        volrelease!(s, ai; amount=amount)
+        volrelease!(s, ii; amount=amount)
         return avg_price, zero(DFT), nothing
     end
     prev_cash = s.cash.value
     ob_trade = trade!(
-        s, o, ai; date, price=avg_price, actual_amount=this_vol, slippage=false
+        s, o, ii; date, price=avg_price, actual_amount=this_vol, slippage=false
     )
     @debug "paper from ob:" s.cash.value - avg_price prev_cash this_vol ob_trade.value
     if isnothing(ob_trade)
         @debug "paper from ob: trade failed" o.price this_price amount this_vol
-        cancel!(s, o, ai; err=OrderFailed((; o, obside)))
+        cancel!(s, o, ii; err=OrderFailed((; o, obside)))
         # Release the reserved volume since trade failed
-        volrelease!(s, ai; amount=amount)
+        volrelease!(s, ii; amount=amount)
     end
     # Gracefully handle edge case instead of asserting
     if !(o.amount ≈ this_vol) &&

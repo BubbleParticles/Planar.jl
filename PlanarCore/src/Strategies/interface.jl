@@ -1,4 +1,4 @@
-using ..OrderTypes: OrderError, AssetEvent, event!
+using ..OrderTypes: OrderError, InstrumentEvent, event!
 
 ## Strategy interface
 @doc "Called on each timestep iteration, possible multiple times.
@@ -36,8 +36,8 @@ call!(::Strategy, ::ResetStrategy) = nothing
 @doc "How much lookback data the strategy needs. $(TYPEDSIGNATURES)"
 call!(s::Strategy, ::WarmupPeriod) = s.timeframe.period
 @doc "When an order is canceled the strategy is pinged with an order error. $(TYPEDSIGNATURES)"
-call!(s::Strategy, ::Order, err::OrderError, ::AssetInstance; kwargs...) =
-    event!(exchange(s), AssetEvent, :order_error, s; err)
+call!(s::Strategy, ::Order, err::OrderError, ::InstrumentInstance; kwargs...) =
+    event!(exchange(s), InstrumentEvent, :order_error, s; err)
 @doc "Market symbols that populate the strategy universe"
 call!(::Type{<:Strategy}, ::StrategyMarkets)::Vector{String} = String[]
 @doc "Called before the strategy is started. $(TYPEDSIGNATURES)"

@@ -36,7 +36,7 @@ end
 @doc """Records an event in the exchange's trace. """
 event!(v, args...; kwargs...) = event!(exchange(v), args...; kwargs...)
 
-struct AssetEvent{E} <: ExchangeEvent{E}
+struct InstrumentEvent{E} <: ExchangeEvent{E}
     tag::Symbol
     group::Symbol
     data::NamedTuple
@@ -101,7 +101,7 @@ $(FIELDS)
     ```
 """
 struct Order{
-    T<:OrderType{S} where {S<:OrderSide},A<:AbstractAsset,E<:ExchangeID,P<:PositionSide
+    T<:OrderType{S} where {S<:OrderSide},A<:AbstractInstrument,E<:ExchangeID,P<:PositionSide
 }
     asset::A
     exc::E
@@ -135,11 +135,11 @@ function Order(
     id="",
     tag="",
     kwargs...,
-) where {T<:OrderType,A<:AbstractAsset,E<:ExchangeID,P<:PositionSide}
+) where {T<:OrderType,A<:AbstractInstrument,E<:ExchangeID,P<:PositionSide}
     Order{T,A,E,P}(a, e, date, price, amount, id, tag, attrs)
 end
 function Order(
-    a, e, ::Type{Order{T,<:AbstractAsset,<:ExchangeID,P}}; kwargs...
+    a, e, ::Type{Order{T,<:AbstractInstrument,<:ExchangeID,P}}; kwargs...
 ) where {T<:OrderType,P<:PositionSide}
     Order(a, e, Order{T}, P; kwargs...)
 end
@@ -194,12 +194,12 @@ const IncreaseOrder{A,E} = Union{BuyOrder{A,E},ShortSellOrder{A,E}}
 @doc "An order that decreases the size of a position."
 const ReduceOrder{A,E} = Union{SellOrder{A,E},ShortBuyOrder{A,E}}
 @doc "A Market Order type that liquidates a position."
-const LiquidationOrder{S,P,A<:AbstractAsset,E<:ExchangeID} = Order{LiquidationType{S},A,E,P}
+const LiquidationOrder{S,P,A<:AbstractInstrument,E<:ExchangeID} = Order{LiquidationType{S},A,E,P}
 @doc "A Market Order type called when manually closing a position (to sell the holdings)."
-const LongReduceOnlyOrder{A<:AbstractAsset,E<:ExchangeID} = Order{
+const LongReduceOnlyOrder{A<:AbstractInstrument,E<:ExchangeID} = Order{
     ForcedOrderType{Sell},A,E,Long
 }
-const ShortReduceOnlyOrder{A<:AbstractAsset,E<:ExchangeID} = Order{
+const ShortReduceOnlyOrder{A<:AbstractInstrument,E<:ExchangeID} = Order{
     ForcedOrderType{Buy},A,E,Short
 }
 const ReduceOnlyOrder = Union{LongReduceOnlyOrder,ShortReduceOnlyOrder}
@@ -229,8 +229,8 @@ macro deforders(types...)
         push!(
             out.args,
             quote
-                const $type{S<:OrderSide,A<:AbstractAsset,E<:ExchangeID} = $long_orderexpr
-                const $short_type{S<:OrderSide,A<:AbstractAsset,E<:ExchangeID} =
+                const $type{S<:OrderSide,A<:AbstractInstrument,E<:ExchangeID} = $long_orderexpr
+                const $short_type{S<:OrderSide,A<:AbstractInstrument,E<:ExchangeID} =
                     $short_orderexpr
                 export $type, $short_type
             end,
@@ -249,14 +249,14 @@ ordertype(::Type{<:Order{T}}) where {T<:OrderType} = T
 @doc """Get the `PositionSide` of an order """
 function positionside(
     ::Union{Type{O},O}
-) where {O<:Order{T,<:AbstractAsset,<:ExchangeID,P}} where {T,P}
+) where {O<:Order{T,<:AbstractInstrument,<:ExchangeID,P}} where {T,P}
     P
 end
 positionside(::Union{P,Type{P}}) where {P<:PositionSide} = P
 @doc """Get the price and time of an order """
 pricetime(o::Order) = (price=o.price, time=o.date)
 @doc """Get the `ExchangeID` of an order """
-exchangeid(::Order{<:OrderType,<:AbstractAsset,E}) where {E<:ExchangeID} = E
+exchangeid(::Order{<:OrderType,<:AbstractInstrument,E}) where {E<:ExchangeID} = E
 commit!(args...; kwargs...) = error("not implemented")
 @doc """Get the opposite side of an order """
 opposite(::Type{Buy}) = Sell
@@ -303,10 +303,10 @@ const BySide{S<:OrderSide} = Union{
 }
 @doc "A type representing any order with a specific position side"
 const AnyOrderPos{P<:PositionSide} =
-    Union{O,Type{O}} where {O<:Order{<:OrderType,<:AbstractAsset,<:ExchangeID,P}}
+    Union{O,Type{O}} where {O<:Order{<:OrderType,<:AbstractInstrument,<:ExchangeID,P}}
 @doc "A type representing any trade with a specific position side"
 const AnyTradePos{P<:PositionSide} =
-    Union{T,Type{T}} where {T<:Trade{<:OrderType,<:AbstractAsset,<:ExchangeID,P}}
+    Union{T,Type{T}} where {T<:Trade{<:OrderType,<:AbstractInstrument,<:ExchangeID,P}}
 @doc "Dispatch by `PositionSide` or by an `Order` or `Trade` with the same position side as parameter."
 const ByPos{P<:PositionSide} = Union{P,Type{P},AnyOrderPos{P},AnyTradePos{P}}
 
@@ -341,7 +341,7 @@ export orderside, positionside, pricetime, islong, isshort, ispos, isimmediate, 
 export liqside, sidetopos, opposite
 export event!,
     ExchangeEvent,
-    AssetEvent,
+    InstrumentEvent,
     StrategyEvent,
     PositionEvent,
     PositionUpdated,

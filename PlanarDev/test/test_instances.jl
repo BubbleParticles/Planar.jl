@@ -8,7 +8,7 @@ macro asset_constructor(asset=PlanarDev.Planar.Engine.Instruments.@a_str("BTC/US
         e = PlanarDev.Planar.Engine.Exchanges.getexchange!(:binance)
         eid = e.id
         M = $margin()
-        ai = PlanarDev.Planar.Engine.Instances.AssetInstance(a, PlanarDev.Planar.Engine.Data.Dict(PlanarDev.Planar.Engine.TimeTicks.TimeFrames.@tf_str("1m") => PlanarDev.Planar.Engine.Data.DataFrame()), e, M; PlanarDev.Planar.Engine.Instances.DEFAULT_FIELDS...)
+        ii = PlanarDev.Planar.Engine.Instances.InstrumentInstance(a, PlanarDev.Planar.Engine.Data.Dict(PlanarDev.Planar.Engine.TimeTicks.TimeFrames.@tf_str("1m") => PlanarDev.Planar.Engine.Data.DataFrame()), e, M; PlanarDev.Planar.Engine.Instances.DEFAULT_FIELDS...)
     end
     e = esc(e)
 end
@@ -16,7 +16,7 @@ end
 macro order_constructor()
     e = quote
     o = Planar.Engine.Executors.basicorder(
-        ai,
+        ii,
         100,
         1,
         Ref(100),
@@ -30,28 +30,28 @@ end
 
 function test_asset_instance()
     @asset_constructor()
-    @test ai.asset == a"BTC/USDT"
-    @test ai.data isa SortedDict{TimeFrame,DataFrame,Base.Order.ForwardOrdering}
-    @test ai.history isa SortedArray{AnyTrade{typeof(a),typeof(eid)},1}
-    @test isempty(ai.history)
-    @test ai.lock isa SafeLock
-    @test ai.cash isa CCash{typeof(eid)}
-    @test ai.cash_committed isa CCash{typeof(eid)}
-    @test ai.exchange == getexchange!(:binance)
-    @test ai.longpos == nothing
-    @test ai.shortpos == nothing
-    @test ai.lastpos[] == nothing
-    @test inst.marginmode(ai) == NoMargin()
-    @test inst.ishedged(ai) == false
+    @test ii.asset == a"BTC/USDT"
+    @test ii.data isa SortedDict{TimeFrame,DataFrame,Base.Order.ForwardOrdering}
+    @test ii.history isa SortedArray{AnyTrade{typeof(a),typeof(eid)},1}
+    @test isempty(ii.history)
+    @test ii.lock isa SafeLock
+    @test ii.cash isa CCash{typeof(eid)}
+    @test ii.cash_committed isa CCash{typeof(eid)}
+    @test ii.exchange == getexchange!(:binance)
+    @test ii.longpos == nothing
+    @test ii.shortpos == nothing
+    @test ii.lastpos[] == nothing
+    @test inst.marginmode(ii) == NoMargin()
+    @test inst.ishedged(ii) == false
 
     @test_throws MethodError @asset_constructor(a"BTC/USDT", Cross)
     @asset_constructor(d"BTC/USDT:USDT", Cross)
-    @test inst.marginmode(ai) == Cross()
-    @test inst.ishedged(ai) == false
+    @test inst.marginmode(ii) == Cross()
+    @test inst.ishedged(ii) == false
     @test_throws AssertionError @asset_constructor(d"BTC/USDT:USDT", CrossHedged)
     @asset_constructor(d"BTC/USDT:USDT", Isolated)
-    @test inst.marginmode(ai) == Isolated()
-    @test inst.ishedged(ai) == false
+    @test inst.marginmode(ii) == Isolated()
+    @test inst.ishedged(ii) == false
 end
 
 function test_positions_function()
@@ -78,33 +78,33 @@ function test_hash_function()
     a = a"BTC/USDT"
     e = getexchange!(:binance)
     M = NoMargin()
-    ai = AssetInstance(a, Dict(), e, M; inst.DEFAULT_FIELDS...)
-    @test inst._hashtuple(ai) == (Instruments._hashtuple(a)..., e.id)
-    @test hash(ai) == hash(inst._hashtuple(ai))
-    @test hash(ai, UInt(123)) == hash(inst._hashtuple(ai), UInt(123))
+    ii = InstrumentInstance(a, Dict(), e, M; inst.DEFAULT_FIELDS...)
+    @test inst._hashtuple(ii) == (Instruments._hashtuple(a)..., e.id)
+    @test hash(ii) == hash(inst._hashtuple(ii))
+    @test hash(ii, UInt(123)) == hash(inst._hashtuple(ii), UInt(123))
 end
 
 function test_lock_function()
     @asset_constructor()
 
-    @test lock(ai) === nothing
-    @test islocked(ai) === true
-    @test unlock(ai) === nothing
-    @test islocked(ai) === false
+    @test lock(ii) === nothing
+    @test islocked(ii) === true
+    @test unlock(ii) === nothing
+    @test islocked(ii) === false
 end
 
 function test_broadcastable_function()
     @asset_constructor()
 
-    @test Broadcast.broadcastable(ai) isa Ref
-    @test Broadcast.broadcastable(ai).x === ai
+    @test Broadcast.broadcastable(ii) isa Ref
+    @test Broadcast.broadcastable(ii).x === ii
 end
 
 function test_propertynames_function()
     @asset_constructor()
 
-    @test propertynames(ai) == (fieldnames(AssetInstance)..., :ohlcv, :funding)
-    @test fieldnames(AssetInstance) == (
+    @test propertynames(ii) == (fieldnames(InstrumentInstance)..., :ohlcv, :funding)
+    @test fieldnames(InstrumentInstance) == (
         :attrs,
         :asset,
         :data,
@@ -125,233 +125,233 @@ end
 
 function test_makerfees_function()
     @asset_constructor()
-    @test makerfees(ai) == ai.fees.maker
+    @test makerfees(ii) == ii.fees.maker
 end
 
 function test_minfees_function()
     @asset_constructor()
-    @test minfees(ai) == ai.fees.min
+    @test minfees(ii) == ii.fees.min
 end
 
 function test_maxfees_function()
     @asset_constructor()
-    @test maxfees(ai) == ai.fees.max
+    @test maxfees(ii) == ii.fees.max
 end
 
 function test_exchangeid_function()
     @asset_constructor()
-    @test exchangeid(ai) == ExchangeID{:binance}
+    @test exchangeid(ii) == ExchangeID{:binance}
 end
 
 function test_exchange_function()
     @asset_constructor()
-    @test exchange(ai) == getexchange!(:binance)
+    @test exchange(ii) == getexchange!(:binance)
 end
 
 function test_position_function()
     @asset_constructor()
-    @test_throws MethodError position(ai, Long())
-    @test_throws MethodError position(ai, Short())
-    @test_throws MethodError position(ai)
+    @test_throws MethodError position(ii, Long())
+    @test_throws MethodError position(ii, Short())
+    @test_throws MethodError position(ii)
     @asset_constructor(d"BTC/USDT:USDT", Isolated)
-    @test position(ai, Long()) isa inst.LongPosition
-    @test position(ai, Short()) isa inst.ShortPosition
-    @test position(ai) === nothing
-    @test position(ai, Long()) == ai.longpos
-    @test position(ai, Short()) == ai.shortpos
-    @test position(ai) == ai.lastpos[]
+    @test position(ii, Long()) isa inst.LongPosition
+    @test position(ii, Short()) isa inst.ShortPosition
+    @test position(ii) === nothing
+    @test position(ii, Long()) == ii.longpos
+    @test position(ii, Short()) == ii.shortpos
+    @test position(ii) == ii.lastpos[]
 end
 
 function test_trades_function()
     @asset_constructor()
-    @test trades(ai) === ai.history
-    @test trades(ai) isa SortedArray{AnyTrade{typeof(a),typeof(eid)},1}
-    @test isempty(trades(ai))
+    @test trades(ii) === ii.history
+    @test trades(ii) isa SortedArray{AnyTrade{typeof(a),typeof(eid)},1}
+    @test isempty(trades(ii))
 end
 
 function test_timestamp_function()
     @asset_constructor()
-    @test inst.timestamp(ai) == inst._history_timestamp(ai)
-    @test inst.timestamp(ai, Long()) == DateTime(0)
+    @test inst.timestamp(ii) == inst._history_timestamp(ii)
+    @test inst.timestamp(ii, Long()) == DateTime(0)
     @asset_constructor(d"BTC/USDT:USDT", Isolated)
-    @test inst.timestamp(ai, Long()) == inst.timestamp(position(ai, Long()))
-    @test inst.timestamp(ai, Short()) == inst.timestamp(position(ai, Short()))
-    @test inst.timestamp(ai) == DateTime(0)
+    @test inst.timestamp(ii, Long()) == inst.timestamp(position(ii, Long()))
+    @test inst.timestamp(ii, Short()) == inst.timestamp(position(ii, Short()))
+    @test inst.timestamp(ii) == DateTime(0)
 end
 
 function test_leverage_function()
     @asset_constructor()
-    @test leverage(ai) == 1.0
-    @test leverage(ai, Long()) == 1.0
-    @test leverage(ai, Short()) == 1.0
+    @test leverage(ii) == 1.0
+    @test leverage(ii, Long()) == 1.0
+    @test leverage(ii, Short()) == 1.0
     @asset_constructor(d"BTC/USDT:USDT", Isolated)
-    @test leverage(ai, Long()) == leverage(position(ai, Long())) == 1.0
-    @test leverage(ai, Short()) == leverage(position(ai, Short())) == 1.0
+    @test leverage(ii, Long()) == leverage(position(ii, Long())) == 1.0
+    @test leverage(ii, Short()) == leverage(position(ii, Short())) == 1.0
 end
 
 function test_marginmode_function()
     @asset_constructor()
-    @test marginmode(ai) == NoMargin()
-    @test marginmode(ai) == typeof(ai).parameters[3]()
-    @test marginmode(ai, Long()) == typeof(ai).parameters[3]()
-    @test marginmode(ai, Short()) == typeof(ai).parameters[3]()
-    ai = @asset_constructor(d"BTC/USDT:USDT", Isolated)
-    @test marginmode(ai, Long()) == marginmode(position(ai, Long()))
-    @test marginmode(ai, Short()) == marginmode(position(ai, Short()))
+    @test marginmode(ii) == NoMargin()
+    @test marginmode(ii) == typeof(ii).parameters[3]()
+    @test marginmode(ii, Long()) == typeof(ii).parameters[3]()
+    @test marginmode(ii, Short()) == typeof(ii).parameters[3]()
+    ii = @asset_constructor(d"BTC/USDT:USDT", Isolated)
+    @test marginmode(ii, Long()) == marginmode(position(ii, Long()))
+    @test marginmode(ii, Short()) == marginmode(position(ii, Short()))
 end
 
 function test_ishedged_function()
     @asset_constructor()
-    @test inst.ishedged(ai) == false
+    @test inst.ishedged(ii) == false
     @test_throws AssertionError @asset_constructor(d"BTC/USDT:USDT", CrossHedged) # 
 end
 
 function test_tier_function()
     @asset_constructor()
-    @test_throws MethodError inst.tier(ai)
+    @test_throws MethodError inst.tier(ii)
     @asset_constructor(d"BTC/USDT:USDT", Isolated)
-    @test_throws MethodError inst.tier(ai, Long())
-    @test_throws MethodError inst.tier(ai, Short())
-    @test inst.tier(ai, 1, Long())[1] == 1
-    @test inst.tier(ai, 1e8, Short())[1] == nothing
+    @test_throws MethodError inst.tier(ii, Long())
+    @test_throws MethodError inst.tier(ii, Short())
+    @test inst.tier(ii, 1, Long())[1] == 1
+    @test inst.tier(ii, 1e8, Short())[1] == nothing
 end
 
 function test_posside_function()
     @asset_constructor()
-    @test inst.posside(ai) == Long()
+    @test inst.posside(ii) == Long()
     @asset_constructor(d"BTC/USDT:USDT", Isolated)
-    @test inst.posside(ai) == nothing
-    @test inst.posside(position(ai, Long)) == Long()
-    @test inst.posside(position(ai, Short)) == Short()
+    @test inst.posside(ii) == nothing
+    @test inst.posside(position(ii, Long)) == Long()
+    @test inst.posside(position(ii, Short)) == Short()
 end
 
 function test_position_field_accessors()
     @asset_constructor(d"BTC/USDT:USDT", Isolated)
-    @test inst.entryprice(ai, 0, Long()) == 0.0
-    @test inst.entryprice(ai, 0, Short()) == 0.0
-    @test inst.notional(ai, Long()) == 0.0
-    @test inst.notional(ai, Short()) == 0.0
-    @test inst.margin(ai, Long()) == 0.0
-    @test inst.margin(ai, Short()) == 0.0
-    @test inst.cash(ai, Long()) == 0.0
-    @test inst.cash(ai, Short()) == 0.0
-    @test inst.committed(ai, Long()) == 0.0
-    @test inst.committed(ai, Short()) == 0.0
-    @test_throws MethodError inst.pnl(ai, Long()) == 0.0
-    @test_throws MethodError inst.pnl(ai, Short()) == 0.0
-    @test inst.pnl(ai, Long(), 0) == 0.0
-    @test inst.pnl(ai, Short(), 0) == 0.0
-    @test inst.pnl(ai, Long(), 100) == 0.0
-    @test inst.pnl(ai, Short(), 100) == 0.0
-    cash!(cash(ai, Long()), 100.0)
-    @test cash(ai, Long()) == 100.0
-    cash!(cash(ai, Short()), 2.0)
-    @test cash(ai, Short()) == 2.0
-    p = position(ai, Long())
+    @test inst.entryprice(ii, 0, Long()) == 0.0
+    @test inst.entryprice(ii, 0, Short()) == 0.0
+    @test inst.notional(ii, Long()) == 0.0
+    @test inst.notional(ii, Short()) == 0.0
+    @test inst.margin(ii, Long()) == 0.0
+    @test inst.margin(ii, Short()) == 0.0
+    @test inst.cash(ii, Long()) == 0.0
+    @test inst.cash(ii, Short()) == 0.0
+    @test inst.committed(ii, Long()) == 0.0
+    @test inst.committed(ii, Short()) == 0.0
+    @test_throws MethodError inst.pnl(ii, Long()) == 0.0
+    @test_throws MethodError inst.pnl(ii, Short()) == 0.0
+    @test inst.pnl(ii, Long(), 0) == 0.0
+    @test inst.pnl(ii, Short(), 0) == 0.0
+    @test inst.pnl(ii, Long(), 100) == 0.0
+    @test inst.pnl(ii, Short(), 100) == 0.0
+    cash!(cash(ii, Long()), 100.0)
+    @test cash(ii, Long()) == 100.0
+    cash!(cash(ii, Short()), 2.0)
+    @test cash(ii, Short()) == 2.0
+    p = position(ii, Long())
     entryprice!(p, 80.0)
-    ai.longpos.status[] = PositionOpen()
-    p = position(ai, Short())
+    ii.longpos.status[] = PositionOpen()
+    p = position(ii, Short())
     entryprice!(p, 60.0)
-    ai.shortpos.status[] = PositionOpen()
-    @test entryprice(ai, 10.0, Long()) == 80.0
-    @test entryprice(ai, 10.0, Short()) == 60.0
-    @test inst.pnl(ai, Long(), 80.0) == 0.0
-    @test inst.pnl(ai, Long(), 60.0) == -2000.0
-    @test inst.pnl(ai, Long(), 100.0) == 2000.0
-    @test inst.pnlpct(ai, Long(), 0.0) == -1.0
-    @test inst.pnlpct(ai, Long(), 81.0) == 0.0125
-    @test inst.pnlpct(ai, Short(), 0.0) == 1.0
-    @test inst.pnlpct(ai, Short(), 40.0) == 1 / 3
-    @test inst.pnlpct(ai, Long(), 100.0) == 0.25
-    @test inst.pnlpct(ai, Short(), 100.0) == -2 / 3
-    @test inst.liqprice(ai, Long()) == 0.0
-    @test inst.liqprice(ai, Short()) == 0.0
+    ii.shortpos.status[] = PositionOpen()
+    @test entryprice(ii, 10.0, Long()) == 80.0
+    @test entryprice(ii, 10.0, Short()) == 60.0
+    @test inst.pnl(ii, Long(), 80.0) == 0.0
+    @test inst.pnl(ii, Long(), 60.0) == -2000.0
+    @test inst.pnl(ii, Long(), 100.0) == 2000.0
+    @test inst.pnlpct(ii, Long(), 0.0) == -1.0
+    @test inst.pnlpct(ii, Long(), 81.0) == 0.0125
+    @test inst.pnlpct(ii, Short(), 0.0) == 1.0
+    @test inst.pnlpct(ii, Short(), 40.0) == 1 / 3
+    @test inst.pnlpct(ii, Long(), 100.0) == 0.25
+    @test inst.pnlpct(ii, Short(), 100.0) == -2 / 3
+    @test inst.liqprice(ii, Long()) == 0.0
+    @test inst.liqprice(ii, Short()) == 0.0
 end
 
 function test_bankruptcy_function()
     @asset_constructor()
-    @test_throws MethodError inst.bankruptcy(ai, nothing)
+    @test_throws MethodError inst.bankruptcy(ii, nothing)
     @asset_constructor(d"BTC/USDT:USDT", Isolated)
-    @test inst.bankruptcy(ai, 100.0, Long()) == 0.0
-    @test inst.bankruptcy(ai, 100.0, Short()) == 200.0
-    cash!(cash(ai, Long()), 100.0)
-    leverage!(ai, 10.0, Long())
-    @test leverage(ai, Long()) == 10.0
-    @test ai.longpos.leverage[] == 10.0
-    @test inst.bankruptcy(ai, 100.0, Long()) == 90.0
-    leverage!(ai, 10.0, Short())
-    @test inst.leverage(ai, Short()) == 10.0
-    @test ai.shortpos.leverage[] == 10.0
-    @test inst.bankruptcy(ai, 100.0, Short()) == 110.0
+    @test inst.bankruptcy(ii, 100.0, Long()) == 0.0
+    @test inst.bankruptcy(ii, 100.0, Short()) == 200.0
+    cash!(cash(ii, Long()), 100.0)
+    leverage!(ii, 10.0, Long())
+    @test leverage(ii, Long()) == 10.0
+    @test ii.longpos.leverage[] == 10.0
+    @test inst.bankruptcy(ii, 100.0, Long()) == 90.0
+    leverage!(ii, 10.0, Short())
+    @test inst.leverage(ii, Short()) == 10.0
+    @test ii.shortpos.leverage[] == 10.0
+    @test inst.bankruptcy(ii, 100.0, Short()) == 110.0
 end
 
 function test_asset_instance_functions1()
-    ai = @asset_constructor()
+    ii = @asset_constructor()
 
     # Test asset, raw, ohlcv, ohlcv_dict, bc, qc functions
-    @test asset(ai) == ai.asset
-    @test raw(ai) == raw(ai.asset)
-    @test ohlcv(ai) == first(values(ai.data))
-    @test ohlcv_dict(ai) == ai.data
-    @test bc(ai) == ai.asset.bc
-    @test qc(ai) == ai.asset.qc
+    @test asset(ii) == ii.asset
+    @test raw(ii) == raw(ii.asset)
+    @test ohlcv(ii) == first(values(ii.data))
+    @test ohlcv_dict(ii) == ii.data
+    @test bc(ii) == ii.asset.bc
+    @test qc(ii) == ii.asset.qc
 
     # Test takerfees, makerfees, maxfees, minfees functions
-    @test takerfees(ai) == ai.fees.taker
-    @test makerfees(ai) == ai.fees.maker
-    @test maxfees(ai) == ai.fees.max
-    @test minfees(ai) == ai.fees.min
+    @test takerfees(ii) == ii.fees.taker
+    @test makerfees(ii) == ii.fees.maker
+    @test maxfees(ii) == ii.fees.max
+    @test minfees(ii) == ii.fees.min
 
     # Test exchangeid, exchange functions
-    @test exchangeid(ai) == typeof(ai).parameters[2]
-    @test exchange(ai) == ai.exchange
+    @test exchangeid(ii) == typeof(ii).parameters[2]
+    @test exchange(ii) == ii.exchange
 
     # Test position, posside, cash, committed functions
-    @test_throws MethodError position(ai, Long())
-    @test_throws MethodError position(ai, Short())
-    @test_throws MethodError position(ai)
+    @test_throws MethodError position(ii, Long())
+    @test_throws MethodError position(ii, Short())
+    @test_throws MethodError position(ii)
 
     # Test liqprice, leverage, bankruptcy, entryprice, price functions
-    @test_throws MethodError liqprice(ai, Long())
-    @test_throws MethodError liqprice(ai, Short())
-    @test_throws MethodError bankruptcy(ai, 100.0, Long())
-    @test_throws MethodError bankruptcy(ai, 100.0, Short())
-    @test_throws MethodError entryprice(ai, 100.0, Long())
-    @test_throws MethodError entryprice(ai, 100.0, Short())
+    @test_throws MethodError liqprice(ii, Long())
+    @test_throws MethodError liqprice(ii, Short())
+    @test_throws MethodError bankruptcy(ii, 100.0, Long())
+    @test_throws MethodError bankruptcy(ii, 100.0, Short())
+    @test_throws MethodError entryprice(ii, 100.0, Long())
+    @test_throws MethodError entryprice(ii, 100.0, Short())
 
     # Test additional, margin, maintenance functions
-    @test_throws MethodError additional(ai, Long())
-    @test_throws MethodError additional(ai, Short())
-    @test_throws MethodError margin(ai, Long())
-    @test_throws MethodError margin(ai, Short())
-    @test_throws MethodError maintenance(ai, Long())
-    @test_throws MethodError maintenance(ai, Short())
+    @test_throws MethodError additional(ii, Long())
+    @test_throws MethodError additional(ii, Short())
+    @test_throws MethodError margin(ii, Long())
+    @test_throws MethodError margin(ii, Short())
+    @test_throws MethodError maintenance(ii, Long())
+    @test_throws MethodError maintenance(ii, Short())
 
     # Test leverage, mmr, status! functions
-    @test_throws MethodError mmr(ai, 1000.0, Long())
-    @test_throws MethodError mmr(ai, 1000.0, Short())
-    @test_throws MethodError status!(ai, Long(), PositionOpen())
-    @test_throws MethodError status!(ai, Short(), PositionOpen())
+    @test_throws MethodError mmr(ii, 1000.0, Long())
+    @test_throws MethodError mmr(ii, 1000.0, Short())
+    @test_throws MethodError status!(ii, Long(), PositionOpen())
+    @test_throws MethodError status!(ii, Short(), PositionOpen())
 
     # Test value functions
-    @test value(ai) == ai.cash.value
-    @test_throws MethodError value(ai, Long())
-    @test_throws MethodError value(ai, Short())
+    @test value(ii) == ii.cash.value
+    @test_throws MethodError value(ii, Long())
+    @test_throws MethodError value(ii, Short())
 
     # Test pnl functions
-    @test_throws MethodError pnl(ai, Long(), 100.0)
-    @test_throws MethodError pnl(ai, Short(), 100.0)
+    @test_throws MethodError pnl(ii, Long(), 100.0)
+    @test_throws MethodError pnl(ii, Short(), 100.0)
 
     # Test pnlpct functions
-    @test_throws MethodError inst.pnlpct(ai, Long(), 100.0)
-    @test_throws MethodError inst.pnlpct(ai, Short(), 100.0)
+    @test_throws MethodError inst.pnlpct(ii, Long(), 100.0)
+    @test_throws MethodError inst.pnlpct(ii, Short(), 100.0)
 
     # Test lastprice functions
     price = 100.0
     amount = 100.0
     committed = Ref(100.0 * 100.0)
     o = ect.basicorder(
-        ai,
+        ii,
         price,
         amount,
         committed,
@@ -360,128 +360,128 @@ function test_asset_instance_functions1()
         date=DateTime(2020, 1, 1),
     )
     size = committed[]
-    fees = committed[] * ai.fees.taker
+    fees = committed[] * ii.fees.taker
     fees_base = ZERO
     t = Trade(o; date=DateTime(2020, 1, 2), amount, price, size, fees, fees_base)
-    push!(ai.history, t)
-    @test lastprice(ai, Val(:history)) == last(ai.history).price
-    @test lastprice(ai, DateTime(2020, 1, 1)) == lastprice(ai)
+    push!(ii.history, t)
+    @test lastprice(ii, Val(:history)) == last(ii.history).price
+    @test lastprice(ii, DateTime(2020, 1, 1)) == lastprice(ii)
 
     # Test timeframe function
-    @test timeframe(ai) == first(keys(ai.data))
+    @test timeframe(ii) == first(keys(ii.data))
 
     # Test instance and load! functions
-    @test instance(ai.exchange, ai.asset) isa AssetInstance
-    @test load!(ai) === nothing
+    @test instance(ii.exchange, ii.asset) isa InstrumentInstance
+    @test load!(ii) === nothing
 
     # Test similar function
-    sim_ai = similar(ai)
-    @test sim_ai isa AssetInstance
-    @test sim_ai.asset == ai.asset
-    @test sim_ai.exchange == ai.exchange
-    @test marginmode(sim_ai) == marginmode(ai)
-    @test ishedged(sim_ai) == ishedged(ai)
+    sim_ai = similar(ii)
+    @test sim_ai isa InstrumentInstance
+    @test sim_ai.asset == ii.asset
+    @test sim_ai.exchange == ii.exchange
+    @test marginmode(sim_ai) == marginmode(ii)
+    @test ishedged(sim_ai) == ishedged(ii)
 
     # Test stub! function (skipped due to TimeTicks isless bug comparing Millisecond vs Month in Julia 1.12)
-    @test_skip stub!(ai, da.empty_ohlcv())
+    @test_skip stub!(ii, da.empty_ohlcv())
 
 end
 function test_asset_instance_functions2()
     @asset_constructor(d"BTC/USDT:USDT", Isolated)
     # Test freecash functions
-    cash!(cash(inst.position(ai, Long())), 100.0)
-    cash!(cash(inst.position(ai, Short())), -200.0)
-    cash!(committed(ai, Long()), 10.0)
-    cash!(committed(ai, Short()), -20.0)
-    @test_throws ErrorException freecash(ai)
-    @test freecash(ai, Long()) == cash(ai, Long()) - committed(ai, Long())
-    @test freecash(ai, Short()) == cash(ai, Short()) - committed(ai, Short())
+    cash!(cash(inst.position(ii, Long())), 100.0)
+    cash!(cash(inst.position(ii, Short())), -200.0)
+    cash!(committed(ii, Long()), 10.0)
+    cash!(committed(ii, Short()), -20.0)
+    @test_throws ErrorException freecash(ii)
+    @test freecash(ii, Long()) == cash(ii, Long()) - committed(ii, Long())
+    @test freecash(ii, Short()) == cash(ii, Short()) - committed(ii, Short())
 
     # Test reset! functions
-    @test reset!(ai) === nothing
-    @test reset!(ai, Long()) === nothing
-    @test reset!(ai, Short()) === nothing
+    @test reset!(ii) === nothing
+    @test reset!(ii, Long()) === nothing
+    @test reset!(ii, Short()) === nothing
 
     # Test isdust functions
     @asset_constructor()
-    @test isdust(ai, 100.0) == (ai.cash.value * 100.0 < ai.limits.cost.min)
-    @test_throws MethodError isdust(ai, 100.0, Long())
-    @test_throws MethodError isdust(ai, 100.0, Short())
+    @test isdust(ii, 100.0) == (ii.cash.value * 100.0 < ii.limits.cost.min)
+    @test_throws MethodError isdust(ii, 100.0, Long())
+    @test_throws MethodError isdust(ii, 100.0, Short())
 
     # Test nondust functions
     @asset_constructor(d"BTC/USDT:USDT", Isolated)
-    pos = position(ai, Long())
+    pos = position(ii, Long())
     cash!(pos, 100.0)
-    ai.lastpos[] = pos
-    @test nondust(ai, 100.0) ==
-        (cash(ai).value * 100.0 >= ai.limits.cost.min ? cash(ai).value : 0.0)
-    @test nondust(ai, MarketOrder{Buy}, 101) == 100.0
-    @test nondust(ai, MarketOrder{Sell}, 101) == 100.0
+    ii.lastpos[] = pos
+    @test nondust(ii, 100.0) ==
+        (cash(ii).value * 100.0 >= ii.limits.cost.min ? cash(ii).value : 0.0)
+    @test nondust(ii, MarketOrder{Buy}, 101) == 100.0
+    @test nondust(ii, MarketOrder{Sell}, 101) == 100.0
 
     # Test iszero functions
     @asset_constructor()
-    @test iszero(ai, ai.cash.value) ==
-        (abs(ai.cash.value) < ai.limits.amount.min - eps(DFT))
-    @test iszero(ai, Long()) == (abs(ai.cash.value) < ai.limits.amount.min - eps(DFT))
-    @test iszero(ai, Short()) == (abs(ai.cash.value) < ai.limits.amount.min - eps(DFT))
-    @test iszero(ai) == (iszero(ai, Long()) && iszero(ai, Short()))
+    @test iszero(ii, ii.cash.value) ==
+        (abs(ii.cash.value) < ii.limits.amount.min - eps(DFT))
+    @test iszero(ii, Long()) == (abs(ii.cash.value) < ii.limits.amount.min - eps(DFT))
+    @test iszero(ii, Short()) == (abs(ii.cash.value) < ii.limits.amount.min - eps(DFT))
+    @test iszero(ii) == (iszero(ii, Long()) && iszero(ii, Short()))
 
     # Test approxzero functions
-    @test approxzero(ai, ai.cash.value) == iszero(ai, ai.cash.value)
+    @test approxzero(ii, ii.cash.value) == iszero(ii, ii.cash.value)
 
     # Test gtxzero, ltxzero functions
-    cash!(cash(ai), 100.0)
-    @test gtxzero(ai, ai.cash.value, Val(:amount)) ==
-        (ai.cash.value > ai.limits.amount.min + eps())
-    @test ltxzero(ai, ai.cash.value, Val(:amount)) ==
-        (ai.cash.value < ai.limits.amount.min + eps())
-    cash!(cash(ai), -2ai.limits.amount.min)
-    @test gtxzero(ai, ai.cash.value, Val(:amount)) == false
-    @test ltxzero(ai, ai.cash.value, Val(:amount)) == true
+    cash!(cash(ii), 100.0)
+    @test gtxzero(ii, ii.cash.value, Val(:amount)) ==
+        (ii.cash.value > ii.limits.amount.min + eps())
+    @test ltxzero(ii, ii.cash.value, Val(:amount)) ==
+        (ii.cash.value < ii.limits.amount.min + eps())
+    cash!(cash(ii), -2ai.limits.amount.min)
+    @test gtxzero(ii, ii.cash.value, Val(:amount)) == false
+    @test ltxzero(ii, ii.cash.value, Val(:amount)) == true
     v = 2ai.limits.price.min
-    @test gtxzero(ai, v, Val(:price)) == (v > ai.limits.price.min + eps())
-    @test ltxzero(ai, v, Val(:price)) == (v < ai.limits.price.min + eps())
+    @test gtxzero(ii, v, Val(:price)) == (v > ii.limits.price.min + eps())
+    @test ltxzero(ii, v, Val(:price)) == (v < ii.limits.price.min + eps())
     v = 2ai.limits.cost.min
-    @test gtxzero(ai, v, Val(:cost)) == (v > ai.limits.cost.min + eps())
-    @test ltxzero(ai, v, Val(:cost)) == (v < ai.limits.cost.min + eps())
+    @test gtxzero(ii, v, Val(:cost)) == (v > ii.limits.cost.min + eps())
+    @test ltxzero(ii, v, Val(:cost)) == (v < ii.limits.cost.min + eps())
     v = -2ai.limits.price.min
-    @test gtxzero(ai, v, Val(:price)) == (v > ai.limits.price.min + eps())
-    @test ltxzero(ai, v, Val(:price)) == (v < ai.limits.price.min + eps())
+    @test gtxzero(ii, v, Val(:price)) == (v > ii.limits.price.min + eps())
+    @test ltxzero(ii, v, Val(:price)) == (v < ii.limits.price.min + eps())
     v = -2ai.limits.cost.min
-    @test gtxzero(ai, v, Val(:cost)) == (v > ai.limits.cost.min + eps())
-    @test ltxzero(ai, v, Val(:cost)) == (v < ai.limits.cost.min + eps())
+    @test gtxzero(ii, v, Val(:cost)) == (v > ii.limits.cost.min + eps())
+    @test ltxzero(ii, v, Val(:cost)) == (v < ii.limits.cost.min + eps())
 
     # Test isapprox functions
-    @test isapprox(ai, ai.cash.value, ai.cash.value, Val(:amount)) == true
-    @test isapprox(ai, 100.0, 100.0, Val(:price)) == true
+    @test isapprox(ii, ii.cash.value, ii.cash.value, Val(:amount)) == true
+    @test isapprox(ii, 100.0, 100.0, Val(:price)) == true
 
     # Test isequal functions
-    @test isequal(ai, ai.cash.value, ai.cash.value, Val(:amount)) == true
-    @test isequal(ai, 100.0, 100.0, Val(:price)) == true
+    @test isequal(ii, ii.cash.value, ii.cash.value, Val(:amount)) == true
+    @test isequal(ii, 100.0, 100.0, Val(:price)) == true
 
     # Test @_round, @rprice, @ramount macros
-    @test (@rprice 100.0) == mi.toprecision(100.0, ai.precision.price)
-    @test (@ramount 100.0) == mi.toprecision(100.0, ai.precision.amount)
+    @test (@rprice 100.0) == mi.toprecision(100.0, ii.precision.price)
+    @test (@ramount 100.0) == mi.toprecision(100.0, ii.precision.amount)
 
     # Test candlelast functions
     df = da.empty_ohlcv()
     push!(df, Lang.fromstruct(da.default_value(da.Candle)))
-    ai.data[tf"1m"] = df
-    @test candlelast(ai, first(keys(ai.data)), DateTime(2020, 1, 1)) ==
-        da.Candle(last(ai.data[first(keys(ai.data))])...)
-    @test candlelast(ai) == da.Candle(last(ai.data[first(keys(ai.data))])...)
+    ii.data[tf"1m"] = df
+    @test candlelast(ii, first(keys(ii.data)), DateTime(2020, 1, 1)) ==
+        da.Candle(last(ii.data[first(keys(ii.data))])...)
+    @test candlelast(ii) == da.Candle(last(ii.data[first(keys(ii.data))])...)
 
     # Test Order function
-    @test_throws UndefKeywordError Order(ai, MarketOrder{Buy})
-    @test Order(ai, MarketOrder{Buy}, date=DateTime(2020, 1, 1), price=10.0, amount=1.0) isa Order
+    @test_throws UndefKeywordError Order(ii, MarketOrder{Buy})
+    @test Order(ii, MarketOrder{Buy}, date=DateTime(2020, 1, 1), price=10.0, amount=1.0) isa Order
 
     # Test print and show functions
     io = IOBuffer()
-    print(io, ai)
+    print(io, ii)
     @test String(take!(io)) == "BTC/USDT~[-0.2(μ)]{Binance}"
-    show(io, "text/plain", ai)
+    show(io, "text/plain", ii)
     @test !isempty(String(take!(io)))
-    show(io, ai)
+    show(io, ii)
     @test !isempty(String(take!(io)))
 end
 
@@ -489,39 +489,39 @@ function test_attr_functions()
     @asset_constructor()
 
     # Test attrs function
-    @test attrs(ai) isa Dict{Symbol,Any}
-    @test isempty(attrs(ai))
+    @test attrs(ii) isa Dict{Symbol,Any}
+    @test isempty(attrs(ii))
 
     # Test attr function
-    setattr!(ai, 42, :test_key)
-    @test attr(ai, :test_key) == 42
-    @test attr(ai, :non_existent_key, "default") == "default"
+    setattr!(ii, 42, :test_key)
+    @test attr(ii, :test_key) == 42
+    @test attr(ii, :non_existent_key, "default") == "default"
 
     # Test hasattr function
-    @test hasattr(ai, :test_key)
-    @test !hasattr(ai, :non_existent_key)
-    @test hasattr(ai, :test_key, :non_existent_key) == true
-    @test hasattr(ai, :non_existent_key1, :non_existent_key2) == false
+    @test hasattr(ii, :test_key)
+    @test !hasattr(ii, :non_existent_key)
+    @test hasattr(ii, :test_key, :non_existent_key) == true
+    @test hasattr(ii, :non_existent_key1, :non_existent_key2) == false
 
     # Test attr! function
-    @test attr!(ai, :new_key, "new_value") == "new_value"
-    @test attr(ai, :new_key) == "new_value"
+    @test attr!(ii, :new_key, "new_value") == "new_value"
+    @test attr(ii, :new_key) == "new_value"
 
     # Test setattr! function
-    setattr!(ai, "updated_value", :test_key)
-    @test attr(ai, :test_key) == "updated_value"
+    setattr!(ii, "updated_value", :test_key)
+    @test attr(ii, :test_key) == "updated_value"
 
     # Test modifyattr! function
-    @test_throws MethodError modifyattr!(ai, 10, +, :test_key)
+    @test_throws MethodError modifyattr!(ii, 10, +, :test_key)
 
     # Test multiple keys
-    # setattr!(ai, 100, :key1, :key2, :key3)
-    # @test attr(ai, :key1) == 100
-    # @test attr(ai, :key2) == 100
-    # @test attr(ai, :key3) == 100
+    # setattr!(ii, 100, :key1, :key2, :key3)
+    # @test attr(ii, :key1) == 100
+    # @test attr(ii, :key2) == 100
+    # @test attr(ii, :key3) == 100
 
     # Test attrs function with multiple keys
-    # @test attrs(ai, :key1, :key2, :non_existent) == (100, 100, nothing)
+    # @test attrs(ii, :key1, :key2, :non_existent) == (100, 100, nothing)
 
     println("All attr functions tests passed!")
 end

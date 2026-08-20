@@ -21,8 +21,8 @@ using PlanarCore.SimMode: AnyMarketOrder, AnyLimitOrder
 import PlanarCore.Executors: call!
 import PlanarCore.Misc: start!, stop!, isrunning, sleep_pad, LOGGING_GROUPS, kill_task
 
-@doc "A constant `TradesCache` that is a dictionary mapping `AssetInstance` to a circular buffer of `CcxtTrade`."
-const TradesCache = Dict{AssetInstance,CircularBuffer{CcxtTrade}}()
+@doc "A constant `TradesCache` that is a dictionary mapping `InstrumentInstance` to a circular buffer of `CcxtTrade`."
+const TradesCache = Dict{InstrumentInstance,CircularBuffer{CcxtTrade}}()
 
 _maintf(s) = string(s.timeframe)
 _opttf(s) = string(attr(s, :timeframe, nothing))

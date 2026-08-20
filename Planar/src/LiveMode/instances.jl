@@ -1,27 +1,27 @@
-using .Instances: AssetInstance, Position
+using .Instances: InstrumentInstance, Position
 using .Exchanges: is_pair_active
 using .Data.DFUtils: firstdate, lastdate, dateindex, colnames, nrow, setcols!
 using .TimeTicks: dt
 import .Instances: lastprice
 import .Executors: priceat
-isactive(ai::AssetInstance) = is_pair_active(raw(ai), exchange(ai))
+isactive(ii::InstrumentInstance) = is_pair_active(raw(ii), exchange(ii))
 
 @doc """ Fetches the price of an asset at a specific date.
 
 $(TYPEDSIGNATURES)
 
-The function `priceat` retrieves the price of a given asset (`ai`) at a specified date (`date`), using a specific strategy (`s`).
+The function `priceat` retrieves the price of a given asset (`ii`) at a specified date (`date`), using a specific strategy (`s`).
 The price is fetched from the opening, high, low, or closing price of the asset, as specified by the `step` parameter (default is `:open`).
 The symbol for the asset is determined by the `sym` parameter (default is the raw value of the asset instance).
 The function uses the `fetch_candles` method to retrieve the price data and returns the price as a float.
 If the price data cannot be fetched, the function returns `nothing`.
 """
-function priceat(s::Strategy, ai::AssetInstance, date::DateTime; step=:open, sym=raw(ai))
-    timeframe = first(exchange(ai).timeframes)
+function priceat(s::Strategy, ii::InstrumentInstance, date::DateTime; step=:open, sym=raw(ii))
+    timeframe = first(exchange(ii).timeframes)
     since = dtstamp(date)
     try
         resp = fetch_candles(s, sym; since, timeframe, limit=1)
-        @assert !isempty(resp) "Couldn't fetch candles for $(raw(ai)) at date $(date)"
+        @assert !isempty(resp) "Couldn't fetch candles for $(raw(ii)) at date $(date)"
         candle = resp[1]
         @assert Int(candle[1]) |> dt >= date
         idx = if step == :open
@@ -40,19 +40,19 @@ function priceat(s::Strategy, ai::AssetInstance, date::DateTime; step=:open, sym
     end
 end
 
-Exchanges.ticker!(ai::AssetInstance) = Exchanges.ticker!(raw(ai), exchange(ai))
+Exchanges.ticker!(ii::InstrumentInstance) = Exchanges.ticker!(raw(ii), exchange(ii))
 @doc """ Fetches the last price of an asset.
 
 $(TYPEDSIGNATURES)
 
-This function retrieves the last price of a given asset (`ai`) for a specific side (`bs`).
+This function retrieves the last price of a given asset (`ii`) for a specific side (`bs`).
 It first attempts to get the price from the ticker of the asset.
 If the price is not available, it falls back to the last price from the ticker if `last_fallback` is set to `true`.
 The function returns the price as a float or `nothing` if the price cannot be fetched.
 """
-function lastprice(ai::AssetInstance, bs::BySide; last_fallback=true)
-    tk = Exchanges.ticker!(ai)
-    eid = exchangeid(ai)
+function lastprice(ii::InstrumentInstance, bs::BySide; last_fallback=true)
+    tk = Exchanges.ticker!(ii)
+    eid = exchangeid(ii)
     side_str = _ccxtorderside(bs)
     price = resp_ticker_price(tk, eid, side_str)
     if isnothing(price)
@@ -68,16 +68,16 @@ end
 
 $(TYPEDSIGNATURES)
 
-This function retrieves the last price of a given asset (`ai`) for a specific side (`bs`) from the order book.
+This function retrieves the last price of a given asset (`ii`) for a specific side (`bs`) from the order book.
 It fetches the order book for the asset and checks if it is a dictionary.
 If it is, it asserts that the symbol of the asset matches the symbol in the order book.
 Then, it retrieves the list of prices for the specified side from the order book.
 If the list exists, it returns the first price in the list as a float.
 """
-function lastprice(s, ai::AssetInstance, bs::BySide, ::Val{:ob})
-    ob = fetch_l2ob(s, ai)
+function lastprice(s, ii::InstrumentInstance, bs::BySide, ::Val{:ob})
+    ob = fetch_l2ob(s, ii)
     if isdict(ob)
-        @deassert get_string(ob, "symbol") == raw(ai)
+        @deassert get_string(ob, "symbol") == raw(ii)
         side_list = get(ob, string(_ccxtobside(bs)), nothing)
         if islist(side_list)
             if !isempty(side_list)
@@ -87,8 +87,8 @@ function lastprice(s, ai::AssetInstance, bs::BySide, ::Val{:ob})
     end
 end
 
-function lastprice(s, ai::AssetInstance, bs::BySide)
-    @something lastprice(ai, bs, last_fallback=false) lastprice(s, ai, bs, Val(:ob)) lastprice(s, ai, opposite(bs), Val(:ob)) lastprice(ai, bs, last_fallback=true)
+function lastprice(s, ii::InstrumentInstance, bs::BySide)
+    @something lastprice(ii, bs, last_fallback=false) lastprice(s, ii, bs, Val(:ob)) lastprice(s, ii, opposite(bs), Val(:ob)) lastprice(ii, bs, last_fallback=true)
 end
 
 updates_dict(s) = @lget! s.attrs :updated_at Dict{Tuple{Vararg{Symbol}},DateTime}()
@@ -103,8 +103,8 @@ The timeframe `tf` for the update can be specified, with the default being the t
 """
 function update!(f::Function, s::RTStrategy, cols::Vararg{Symbol}; tf=s.timeframe)
     updates = updates_dict(s)
-    for ai in s.universe
-        update!(f, s, ai, cols; updates, tf)
+    for ii in s.universe
+        update!(f, s, ii, cols; updates, tf)
     end
 end
 
@@ -144,12 +144,12 @@ The timeframe `tf` for the update can be specified, with the default being the t
 function update!(
     f::Function,
     s::RTStrategy,
-    ai::AssetInstance,
+    ii::InstrumentInstance,
     cols::Vararg{Symbol};
     updates=updates_dict(s),
     tf=s.timeframe,
 )
-    ohlcv = @lget! ohlcv_dict(ai) tf empty_ohlcv(s, ai)
+    ohlcv = @lget! ohlcv_dict(ii) tf empty_ohlcv(s, ii)
     @debug "ohlcv update" _module = LogOHLCV objectid(ohlcv)
     last_update = @lget! updates cols typemin(DateTime)
     if !isempty(ohlcv)

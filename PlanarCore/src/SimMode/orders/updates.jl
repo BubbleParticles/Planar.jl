@@ -26,8 +26,8 @@ This function pushes all orders from side_orders into all_orders. It collapses a
 
 """
 _dopush!(side_orders, all_orders) =
-    for (ai, ords) in side_orders
-        push!(all_orders, (ai, ords))
+    for (ii, ords) in side_orders
+        push!(all_orders, (ii, ords))
     end
 
 @doc """Pushes orders from `ai_orders` into the simulation `s` at the specified `date`.
@@ -37,13 +37,13 @@ $(TYPEDSIGNATURES)
 This function iterates over each order in `ai_orders` and checks if it is already queued in the simulation `s`.
 If not, it calls the `order!` function to add the order to the simulation at the specified `date`.
 """
-_docall!(s, ai, ai_orders, date) =
+_docall!(s, ii, ai_orders, date) =
     for o in collect(ai_orders)
-        isqueued(o, s, ai) || continue
+        isqueued(o, s, ii) || continue
         try
-            order!(s, o, date, ai)
+            order!(s, o, date, ii)
         catch e
-            @error "Error processing order" order=o asset=ai date=date exception=(e, catch_backtrace())
+            @error "Error processing order" order=o asset=ii date=date exception=(e, catch_backtrace())
         end
     end
 
@@ -55,8 +55,8 @@ This function iterates over each order in `all_orders` and calls `_docall!` to a
 
 """
 _doall!(s, all_orders, date) =
-    for (ai, ords) in all_orders
-        _docall!(s, ai, ords, date)
+    for (ii, ords) in all_orders
+        _docall!(s, ii, ords, date)
     end
 
 @doc """Iterates over all pending orders checking for new fills. 
@@ -124,30 +124,30 @@ s.attrs[:sim_update_mode] = UpdateOrdersShuffled()
 function update!(s::Strategy{Sim}, date, ::UpdateOrders)
     _check_update_date(s, date)
     positions!(s, date)
-    for (ai, ords) in s.sellorders
+    for (ii, ords) in s.sellorders
         @ifdebug prev_sell_price = DFT(0.0)
         for (pt, o) in collect(ords) # Prefetch the orders since `order!` can unqueue
             @ifdebug @deassert prev_sell_price <= pt.price
             # Need to check again if it is queued in case of liquidation events
-            isqueued(o, s, ai) || continue
+            isqueued(o, s, ii) || continue
             try
-                order!(s, o, date, ai)
+                order!(s, o, date, ii)
             catch e
-                @error "Error processing sell order" order=o asset=ai date=date exception=(e, catch_backtrace())
+                @error "Error processing sell order" order=o asset=ii date=date exception=(e, catch_backtrace())
             end
             @ifdebug prev_sell_price = pt.price
         end
     end
-    for (ai, ords) in s.buyorders
+    for (ii, ords) in s.buyorders
         @ifdebug prev_buy_price = DFT(Inf)
         for (pt, o) in collect(ords) # Prefetch the orders since `order!` can unqueue
             @ifdebug @deassert prev_buy_price >= pt.price
             # Need to check again if it is queued in case of liquidation events
-            isqueued(o, s, ai) || continue
+            isqueued(o, s, ii) || continue
             try
-                order!(s, o, date, ai)
+                order!(s, o, date, ii)
             catch e
-                @error "Error processing buy order" order=o asset=ai date=date exception=(e, catch_backtrace())
+                @error "Error processing buy order" order=o asset=ii date=date exception=(e, catch_backtrace())
             end
             @ifdebug prev_buy_price = pt.price
         end
@@ -169,15 +169,15 @@ checked — that asset's tick price is the only price that can have moved. No
 price-based liquidation: `isliquidatable` is `Paper`/`Live` only), no `_lastupdate!`.
 """
 function update!(s::Strategy{Sim}, tick::TradeTick, ::UpdateOrdersTick)
-    ai = tick.asset
-    for ords in (get(s.sellorders, ai, nothing), get(s.buyorders, ai, nothing))
+    ii = tick.asset
+    for ords in (get(s.sellorders, ii, nothing), get(s.buyorders, ii, nothing))
         isnothing(ords) && continue
         for (_, o) in collect(ords) # Prefetch the orders since a fill can unqueue
-            isqueued(o, s, ai) || continue
+            isqueued(o, s, ii) || continue
             try
-                _maybe_fill_tick!(s, o, ai, tick)
+                _maybe_fill_tick!(s, o, ii, tick)
             catch e
-                @error "Error processing order" order=o asset=ai date=tick.timestamp exception=(e, catch_backtrace())
+                @error "Error processing order" order=o asset=ii date=tick.timestamp exception=(e, catch_backtrace())
             end
         end
     end
@@ -193,16 +193,16 @@ A non-triggered FOK/IOC order is canceled (mirrors `limitorder_ifprice!`); other
 stay queued. Triggered orders fill at the exact tick price with `slippage=false` and
 `actual_amount=unfilled(o)`, so limit orders can fill partially across successive ticks.
 """
-function _maybe_fill_tick!(s::Strategy{Sim}, o::AnyLimitOrder, ai, tick::TradeTick)
+function _maybe_fill_tick!(s::Strategy{Sim}, o::AnyLimitOrder, ii, tick::TradeTick)
     triggered =
         o isa AnyLimitOrder{Buy} ? tick.price <= o.price : tick.price >= o.price
     if !triggered
         if o isa Union{AnyFOKOrder,AnyIOCOrder}
-            cancel!(s, o, ai; err=NotMatched(o.price, tick.price, DFT(0.0), DFT(0.0)))
+            cancel!(s, o, ii; err=NotMatched(o.price, tick.price, DFT(0.0), DFT(0.0)))
         end
         return nothing
     end
     trade!(
-        s, o, ai; date=tick.timestamp, price=tick.price, actual_amount=unfilled(o), slippage=false
+        s, o, ii; date=tick.timestamp, price=tick.price, actual_amount=unfilled(o), slippage=false
     )
 end

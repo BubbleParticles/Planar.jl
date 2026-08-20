@@ -156,14 +156,14 @@ function pairs_trading_signals(
     tail=lagsbytf(tf),
 )
     # Get asset instances from strategy
-    ai1 = asset_bysym(s, asset1_sym)
-    ai2 = asset_bysym(s, asset2_sym)
+    ii1 = asset_bysym(s, asset1_sym)
+    ii2 = asset_bysym(s, asset2_sym)
     # Check if assets exist in strategy
-    isnothing(ai1) && error("Asset $asset1_sym not found in strategy")
-    isnothing(ai2) && error("Asset $asset2_sym not found in strategy")
+    isnothing(ii1) && error("Instrument $asset1_sym not found in strategy")
+    isnothing(ii2) && error("Instrument $asset2_sym not found in strategy")
     # Get price data from asset instances at specified timeframe
-    df1 = ai1.data[tf]
-    df2 = ai2.data[tf]
+    df1 = ii1.data[tf]
+    df2 = ii2.data[tf]
     # Apply tail if provided (before computing common_dates)
     if tail !== nothing
         df1 = @view df1[(end - tail + 1):end, :]
@@ -245,12 +245,12 @@ function pairs_trading_signal_step!(
     s, asset1_sym, asset2_sym, ts_idx; lookback=20, zscore_threshold=2.0, tf=s.timeframe
 )
     state = pairs_trading_state(s, asset1_sym, asset2_sym)
-    ai1 = asset_bysym(s, asset1_sym)
-    ai2 = asset_bysym(s, asset2_sym)
-    isnothing(ai1) && return nothing
-    isnothing(ai2) && return nothing
-    df1 = ai1.data[tf]
-    df2 = ai2.data[tf]
+    ii1 = asset_bysym(s, asset1_sym)
+    ii2 = asset_bysym(s, asset2_sym)
+    isnothing(ii1) && return nothing
+    isnothing(ii2) && return nothing
+    df1 = ii1.data[tf]
+    df2 = ii2.data[tf]
     # This uses dataframes indexing based on dates defined in Data.DFUtils
     idx1 = @view df1[ts_idx, :]
     idx2 = @view df2[ts_idx, :]

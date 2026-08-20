@@ -12,11 +12,11 @@ using .ect.Lang: PrecompileTools, @preset, @precomp, @ignore
         nothing
     end
     if !isnothing(s)
-        ai = first(s.universe)
+        ii = first(s.universe)
         @precomp @ignore begin
-            resample_trades(ai, tf"1d")
+            resample_trades(ii, tf"1d")
             resample_trades(s, tf"1d")
-            trades_balance(ai; tf=tf"1d")
+            trades_balance(ii; tf=tf"1d")
             trades_balance(s; tf=tf"1d")
         end
     end

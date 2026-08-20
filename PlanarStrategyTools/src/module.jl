@@ -9,7 +9,7 @@ using PlanarCore.Data.DFUtils: dateindex, firstdate
 using PlanarCore.Instruments: raw
 using PlanarCore.OrderTypes
 using PlanarCore.Instances: Instances as inst, ohlcv, ohlcv_dict, posside, collateral, trades, exchangeid
-using PlanarCore.Strategies: strategy, Strategy, AssetInstance, SimStrategy, RTStrategy, marketsid
+using PlanarCore.Strategies: strategy, Strategy, InstrumentInstance, SimStrategy, RTStrategy, marketsid
 using PlanarCore.Strategies: freecash, current_total, volumeat, closeat
 using PlanarCore.Executors: Context
 using Planar.LiveMode: asset_tasks, empty_ohlcv

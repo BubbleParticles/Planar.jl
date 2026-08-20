@@ -699,7 +699,7 @@ end
         @test hasmethod(Exchanges.ticker!, Tuple{Any, Exchange})
     end
 
-    @testset "ticker! shortcut for AbstractAsset" begin
+    @testset "ticker! shortcut for AbstractInstrument" begin
         @test hasmethod(Exchanges.ticker!, Tuple{Any, Exchange})
     end
 end

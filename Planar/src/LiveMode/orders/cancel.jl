@@ -8,8 +8,8 @@ It can optionally confirm if the cancellation was successful.
 If the confirmation fails or if any error occurs during the process, a warning is issued and the function returns false.
 
 """
-function live_cancel(s, ai; ids=(), side=BuyOrSell, confirm=false, since=nothing)
-    eid = exchangeid(ai)
+function live_cancel(s, ii; ids=(), side=BuyOrSell, confirm=false, since=nothing)
+    eid = exchangeid(ii)
     all = isempty(ids)
     (func, kwargs) = if side === BuyOrSell && all
         (cancel_all_orders, (;))
@@ -18,7 +18,7 @@ function live_cancel(s, ai; ids=(), side=BuyOrSell, confirm=false, since=nothing
             cancel_orders,
             (;
                 ids=if all
-                    (resp_order_id(resp, eid) for resp in fetch_open_orders(s, ai; side))
+                    (resp_order_id(resp, eid) for resp in fetch_open_orders(s, ii; side))
                 else
                     ids
                 end,
@@ -27,34 +27,34 @@ function live_cancel(s, ai; ids=(), side=BuyOrSell, confirm=false, since=nothing
         )
     end
     done = try
-        resp = func(s, ai; kwargs...)
+        resp = func(s, ii; kwargs...)
         if resp isa Exception
-            @warn "live cancel: failed" ai = raw(ai) resp @caller
+            @warn "live cancel: failed" ii = raw(ii) resp @caller
             false
         elseif isnothing(resp)
             @debug "live cancel: response is nothing" _module = LogCancelOrder @caller
             true
         elseif isdict(resp)
-            if resptobool(exchange(ai), resp)
+            if resptobool(exchange(ii), resp)
                 true
             else
-                @warn "live cancel: failed (wrong status code)" ai = raw(ai) resp
+                @warn "live cancel: failed (wrong status code)" ii = raw(ii) resp
                 false
             end
         elseif islist(resp)
             true
         else
-            @warn "live cancel: failed (unhandled response)" ai = raw(ai) resp
+            @warn "live cancel: failed (unhandled response)" ii = raw(ii) resp
             false
         end
     catch e
         e isa InterruptException && rethrow(e)
-        @warn "live cancel: failed (exception)" ai = raw(ai)
+        @warn "live cancel: failed (exception)" ii = raw(ii)
         @debug_backtrace LogCancelOrder
         return false
     end
     if done && confirm
-        open_orders = fetch_open_orders(s, ai; since=if !isnothing(since)
+        open_orders = fetch_open_orders(s, ii; since=if !isnothing(since)
             dtstamp(since)
         end)
         if side === BuyOrSell
@@ -75,11 +75,11 @@ function live_cancel(s, ai; ids=(), side=BuyOrSell, confirm=false, since=nothing
     done
 end
 
-function cancel!(s::LiveStrategy, o::Order, ai; err, kwargs...)
-    if isqueued(o, s, ai) || ordertype(o) <: MarketOrderType
-        decommit!(s, o, ai, true)
-        delete!(s, ai, o)
-        st.call!(s, o, err, ai)
-        event!(ai, AssetEvent, :order_local_cancel, s; order=o, err)
+function cancel!(s::LiveStrategy, o::Order, ii; err, kwargs...)
+    if isqueued(o, s, ii) || ordertype(o) <: MarketOrderType
+        decommit!(s, o, ii, true)
+        delete!(s, ii, o)
+        st.call!(s, o, err, ii)
+        event!(ii, InstrumentEvent, :order_local_cancel, s; order=o, err)
     end
 end

@@ -108,7 +108,7 @@ module Planar
             using .Data.DataStructures: CircularBuffer
             using .Misc: after, before, rangeafter, rangebefore, LittleDict, DFT
             using .Misc: istaskrunning, start_task, stop_task
-            using .inst: AssetInstance, asset, ohlcv, ohlcv_dict, raw, lastprice, bc, qc
+            using .inst: InstrumentInstance, asset, ohlcv, ohlcv_dict, raw, lastprice, bc, qc
             using .inst: takerfees, makerfees, maxfees, minfees
             using .inst: ishedged, cash, committed, instance, isdust, nondust
             using .pln.Engine.LiveMode: updated_at!, @retry

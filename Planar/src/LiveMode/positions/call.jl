@@ -20,7 +20,7 @@ The function returns the trade or leverage update status.
 """
 function Executors.call!(
     s::MarginStrategy{Live},
-    ai::MarginInstance,
+    ii::MarginInstance,
     lev,
     ::UpdateLeverage;
     pos::PositionSide,
@@ -28,24 +28,24 @@ function Executors.call!(
     atol=1e-1,
     force=false,
 )::Bool
-    @lock ai if isopen(ai, pos) || hasorders(s, ai, pos)
-        @warn "call leverage: can't update leverage when position is open or has pending orders" ai s n_orders = orderscount(s, ai) isopen(ai, pos)
+    @lock ii if isopen(ii, pos) || hasorders(s, ii, pos)
+        @warn "call leverage: can't update leverage when position is open or has pending orders" ii s n_orders = orderscount(s, ii) isopen(ii, pos)
         false
     else
         new_lev = _lev_value(lev)
         since = TimeTicks.now()
-        this_pos = position(ai, pos)
+        this_pos = position(ii, pos)
         prev_lev = leverage(this_pos)
         issameval = isapprox(prev_lev, new_lev; atol)
         # First update on exchange
         if (force || !issameval) &&
-            leverage!(exchange(ai), new_lev, raw(ai); timeout=throttle(s))
+            leverage!(exchange(ii), new_lev, raw(ii); timeout=throttle(s))
             leverage!(this_pos, new_lev)
-            event!(ai, LeverageUpdated(:leverage_updated, s, this_pos; from_value=prev_lev))
+            event!(ii, LeverageUpdated(:leverage_updated, s, this_pos; from_value=prev_lev))
             if synced
                 # wait for lev update from watcher
-                live_position(s, ai, pos; since, synced=true, force)
-                isapprox(leverage(ai, pos), new_lev; atol)
+                live_position(s, ii, pos; since, synced=true, force)
+                isapprox(leverage(ii, pos), new_lev; atol)
             else
                 true
             end
@@ -61,27 +61,27 @@ $(TYPEDSIGNATURES)
 
 This macro checks if there are any open positions on the opposite side in an isolated trading strategy.
 If an open position is found, it issues a warning and returns `nothing`.
-The check is performed for the current trade type `t` and the associated asset instance `ai`.
+The check is performed for the current trade type `t` and the associated asset instance `ii`.
 
 """
 macro isolated_position_check()
     ex = quote
         p = positionside(t)
-        if !singlewaycheck(s, ai, t)
-            @debug "call: double direction order in non hedged mode" ai position(ai) order_type =
+        if !singlewaycheck(s, ii, t)
+            @debug "call: double direction order in non hedged mode" ii position(ii) order_type =
                 t
             return nothing
         end
         side_dict = get_positions(s, opposite(p))
-        pup = get(side_dict, raw(ai), nothing)
+        pup = get(side_dict, raw(ii), nothing)
         if !isnothing(pup)
             if !pup.read[]
-                waitsync(ai)
+                waitsync(ii)
             end
-            if pup.date >= timestamp(ai, opposite(p)) &&
+            if pup.date >= timestamp(ii, opposite(p)) &&
                 !pup.closed[] &&
-                _ccxt_isposopen(pup.resp, exchangeid(ai))
-                @warn "call: double direction order in non hedged mode (from resp)" position(ai) order_type = t
+                _ccxt_isposopen(pup.resp, exchangeid(ii))
+                @warn "call: double direction order in non hedged mode (from resp)" position(ii) order_type = t
                 @debug "call: isolated check" _module = LogPos resp = pup.resp
                 return nothing
             end
@@ -96,34 +96,34 @@ _warnpos(p) = @warn "$p Orders are not allowed, other pos ($(opposite(p))) is st
 
 $(TYPEDSIGNATURES)
 
-This function executes a limit order in a live trading strategy, given a strategy `s`, an asset instance `ai`, and a trade type `t`.
+This function executes a limit order in a live trading strategy, given a strategy `s`, an asset instance `ii`, and a trade type `t`.
 It checks for open positions on the opposite side and places the order if none exist.
 The function returns the trade or leverage update status.
 
 """
 function Executors.call!(
     s::IsolatedStrategy{Live},
-    ai::MarginInstance,
+    ii::MarginInstance,
     t::Type{<:AnyLimitOrder};
     amount,
-    price=lastprice(ai),
+    price=lastprice(ii),
     waitfor=Second(5),
     skipchecks=false,
     synced=true,
     kwargs...,
 )
-    @lock ai begin
+    @lock ii begin
         skipchecks || @isolated_position_check
         @timeout_start
         order_kwargs = withoutkws(:fees; kwargs)
         trade = _live_limit_order(
-            s, ai, t; skipchecks, amount, price, waitfor, synced, kwargs=order_kwargs
+            s, ii, t; skipchecks, amount, price, waitfor, synced, kwargs=order_kwargs
         )
         if synced && trade isa Trade
-            @debug "call margin limit order: syncing" ai t
-            waitsync(ai; since=trade.date, waitfor=@timeout_now)
+            @debug "call margin limit order: syncing" ii t
+            waitsync(ii; since=trade.date, waitfor=@timeout_now)
             live_sync_position!(
-                s, ai, posside(trade); force=true, since=trade.date, waitfor=@timeout_now
+                s, ii, posside(trade); force=true, since=trade.date, waitfor=@timeout_now
             )
         end
         trade
@@ -134,14 +134,14 @@ end
 
 $(TYPEDSIGNATURES)
 
-This function executes a market order in a live trading strategy, given a strategy `s`, an asset instance `ai`, and a trade type `t`.
+This function executes a market order in a live trading strategy, given a strategy `s`, an asset instance `ii`, and a trade type `t`.
 It checks for open positions on the opposite side and places the order if none exist.
 The function returns the trade or leverage update status.
 
 """
 function Executors.call!(
     s::IsolatedStrategy{Live},
-    ai::MarginInstance,
+    ii::MarginInstance,
     t::Type{<:AnyMarketOrder};
     amount,
     waitfor=Second(5),
@@ -149,17 +149,17 @@ function Executors.call!(
     synced=true,
     kwargs...,
 )
-    @lock ai begin
+    @lock ii begin
         skipchecks || @isolated_position_check
         @timeout_start
         order_kwargs = withoutkws(:fees; kwargs)
         trade = _live_market_order(
-            s, ai, t; skipchecks, amount, synced, waitfor, kwargs=order_kwargs
+            s, ii, t; skipchecks, amount, synced, waitfor, kwargs=order_kwargs
         )
         if synced && trade isa Trade
-            waitsync(ai, since=trade.date, waitfor=@timeout_now)
+            waitsync(ii, since=trade.date, waitfor=@timeout_now)
             live_sync_position!(
-                s, ai, posside(trade); since=trade.date, waitfor=@timeout_now
+                s, ii, posside(trade); since=trade.date, waitfor=@timeout_now
             )
         end
         trade
@@ -169,128 +169,128 @@ end
 _close_order_bypos(::Short) = ShortMarketOrder{Buy}
 _close_order_bypos(::Long) = MarketOrder{Sell}
 
-function _posclose_cancel(s, ai, t, pside, waitfor)
-    @debug "call pos close: cancel orders" _module = LogPosClose ai pside
-    if hasorders(s, ai, pside)
-        if !call!(s, ai, CancelOrders(); t=BuyOrSell, synced=true, waitfor)
-            @warn "call pos close: failed to cancel orders" ai t
+function _posclose_cancel(s, ii, t, pside, waitfor)
+    @debug "call pos close: cancel orders" _module = LogPosClose ii pside
+    if hasorders(s, ii, pside)
+        if !call!(s, ii, CancelOrders(); t=BuyOrSell, synced=true, waitfor)
+            @warn "call pos close: failed to cancel orders" ii t
         end
     end
 end
 
-function _posclose_maybesync(s, ai, pside, waitfor)
-    @debug "call pos close: sync position" _module = LogPosClose ai pside
+function _posclose_maybesync(s, ii, pside, waitfor)
+    @debug "call pos close: sync position" _module = LogPosClose ii pside
     @timeout_start
-    update = live_position(s, ai, pside; since=timestamp(ai, pside) - Millisecond(1), waitfor=@timeout_now)
+    update = live_position(s, ii, pside; since=timestamp(ii, pside) - Millisecond(1), waitfor=@timeout_now)
     if isnothing(update)
-        @warn "call pos close: no position update (resetting)" ai pside
-        if isopen(ai, pside)
-            reset!(ai, pside)
+        @warn "call pos close: no position update (resetting)" ii pside
+        if isopen(ii, pside)
+            reset!(ii, pside)
         end
         return (update, true)
     end
     # ensure the last update is read
     if !(update.read[])
         @warn "call pos close: outdated position state (syncing)." amount = resp_position_contracts(
-            update.resp, exchangeid(ai)
+            update.resp, exchangeid(ii)
         )
-        waitsync(ai; since=update.date, waitfor=@timeout_now)
-        live_sync_position!(s, ai, pside, update)
+        waitsync(ii; since=update.date, waitfor=@timeout_now)
+        live_sync_position!(s, ii, pside, update)
     end
     return (update, false)
 end
 
-function _posclose_waitsync(s, ai, pside, waitfor)
-    @debug "call pos close: wait for orders" _module = LogPosClose ai pside
-    if !waitordclose(s, ai, waitfor)
-        @error "call pos close: orders still pending" ai orderscount(s, ai) cash(ai) committed(
-            ai
+function _posclose_waitsync(s, ii, pside, waitfor)
+    @debug "call pos close: wait for orders" _module = LogPosClose ii pside
+    if !waitordclose(s, ii, waitfor)
+        @error "call pos close: orders still pending" ii orderscount(s, ii) cash(ii) committed(
+            ii
         )
     end
     # with no orders in flight the local state should be up to date
-    return if !isopen(ai, pside)
-        @warn "call pos close: not open locally" ai pside
+    return if !isopen(ii, pside)
+        @warn "call pos close: not open locally" ii pside
         true
     else
         false
     end
 end
 
-function _posclose_amount(s, ai, pside; kwargs)
+function _posclose_amount(s, ii, pside; kwargs)
     _, this_kwargs = splitkws(:reduce_only, :tag; kwargs)
-    amount = cash(ai, pside) |> abs
-    @debug "call pos close: get amount" _module = LogPosClose ai pside amount
-    @deassert resp_position_contracts(live_position(s, ai).resp, exchangeid(ai)) == amount
+    amount = cash(ii, pside) |> abs
+    @debug "call pos close: get amount" _module = LogPosClose ii pside amount
+    @deassert resp_position_contracts(live_position(s, ii).resp, exchangeid(ii)) == amount
     return amount, this_kwargs
 end
 
-function _posclose_trade(s, ai; t, pside, amount, waitfor, this_kwargs)
-    @debug "call pos close: trade" _module = LogPosClose ai pside t
+function _posclose_trade(s, ii; t, pside, amount, waitfor, this_kwargs)
+    @debug "call pos close: trade" _module = LogPosClose ii pside t
     @timeout_start
     close_trade = call!(
-        s, ai, t; amount, reduce_only=true, tag="position_close", waitfor, this_kwargs...
+        s, ii, t; amount, reduce_only=true, tag="position_close", waitfor, this_kwargs...
     )
     if close_trade isa Trade
         (close_trade.date, false)
     elseif isnothing(close_trade)
         # check sync again
-        pup = live_position(s, ai, pside; force=true, waitfor=@timeout_now)
+        pup = live_position(s, ii, pside; force=true, waitfor=@timeout_now)
         (
             DateTime(0),
-            if !isopen(ai, pside)
+            if !isopen(ii, pside)
                 @deassert isnothing(pup) || pup.closed[]
                 true
             else
-                @error "call pos close: failed to reduce position to zero" ai pside t
+                @error "call pos close: failed to reduce position to zero" ii pside t
                 false
             end,
         )
     else
         @warn "call pos close: closing order delay" orders = collect(
-            values(s, ai, orderside(t))
-        ) ai t
-        (false, timestamp(ai, pside) + Millisecond(1))
+            values(s, ii, orderside(t))
+        ) ii t
+        (false, timestamp(ii, pside) + Millisecond(1))
     end
 end
 
-function _posclose_order(s, ai, pside, since, waitfor)
-    @debug "call pos close: order" _module = LogPosClose ai pside
+function _posclose_order(s, ii, pside, since, waitfor)
+    @debug "call pos close: order" _module = LogPosClose ii pside
     @timeout_start
-    if !waitposclose(s, ai, pside; waitfor=@timeout_now, force=true)
-        @debug "call pos close: timedout" _module = LogPosClose pside ai
+    if !waitposclose(s, ii, pside; waitfor=@timeout_now, force=true)
+        @debug "call pos close: timedout" _module = LogPosClose pside ii
     end
-    waitsync(ai; since, waitfor=@timeout_now)
-    live_sync_position!(s, ai, pside; since, overwrite=true, waitfor=@timeout_now)
-    if @lock ai isopen(ai, pside)
-        pup = live_position(s, ai, pside; since, waitfor=@timeout_now)
+    waitsync(ii; since, waitfor=@timeout_now)
+    live_sync_position!(s, ii, pside; since, overwrite=true, waitfor=@timeout_now)
+    if @lock ii isopen(ii, pside)
+        pup = live_position(s, ii, pside; since, waitfor=@timeout_now)
         @debug "call pos close: still open (local) position" _module = LogPosClose since pside date = get(
             pup, :date, nothing
         )
-        ensure_marginmode(s, ai)
+        ensure_marginmode(s, ii)
         false
     else
-        ensure_marginmode(s, ai)
+        ensure_marginmode(s, ii)
         true
     end
 end
 
-function _posclose_lastcheck(s, ai, pside, t, since, waitfor)
-    @debug "call pos close: last check" _module = LogPosClose ai pside
+function _posclose_lastcheck(s, ii, pside, t, since, waitfor)
+    @debug "call pos close: last check" _module = LogPosClose ii pside
     @timeout_start
     # trade still pending 
-    if @lock ai isopen(ai, pside)
-        waitsync(ai; since, waitfor=@timeout_now)
+    if @lock ii isopen(ii, pside)
+        waitsync(ii; since, waitfor=@timeout_now)
         waitsync(s; since, waitfor=@timeout_now())
-        return if isopen(ai, pside)
-            @error "call pos close: still open orders (not a market order?)" ai pside t
-            ensure_marginmode(s, ai)
+        return if isopen(ii, pside)
+            @error "call pos close: still open orders (not a market order?)" ii pside t
+            ensure_marginmode(s, ii)
             false
         else
-            ensure_marginmode(s, ai)
+            ensure_marginmode(s, ii)
             true
         end
     else
-        ensure_marginmode(s, ai)
+        ensure_marginmode(s, ii)
         true
     end
 end
@@ -306,7 +306,7 @@ The function returns `true` if the position is successfully closed, `false` othe
 """
 function call!(
     s::MarginStrategy{Live},
-    ai::MarginInstance,
+    ii::MarginInstance,
     ::ByPos{P},
     date,
     ::PositionClose;
@@ -314,45 +314,45 @@ function call!(
     waitfor=Second(15),
     kwargs...,
 ) where {P<:PositionSide}
-    @lock ai begin
+    @lock ii begin
         pside = P()
         @timeout_start
 
         # cancel standing orders
-        _posclose_cancel(s, ai, t, pside, @timeout_now)
+        _posclose_cancel(s, ii, t, pside, @timeout_now)
         # give up if there is no remote position update
-        update, isclosed = _posclose_maybesync(s, ai, pside, @timeout_now)
+        update, isclosed = _posclose_maybesync(s, ii, pside, @timeout_now)
         if isclosed
-            ensure_marginmode(s, ai)
+            ensure_marginmode(s, ii)
             return true
         end
         # ensure no more orders are pending and return if pos is closed
-        if _posclose_waitsync(s, ai, pside, @timeout_now)
-            ensure_marginmode(s, ai)
+        if _posclose_waitsync(s, ii, pside, @timeout_now)
+            ensure_marginmode(s, ii)
             return true
         end
         # if still open, close manually with a reduce only order
         # get the amount necessary to close the position
-        amount, this_kwargs = _posclose_amount(s, ai, pside; kwargs)
+        amount, this_kwargs = _posclose_amount(s, ii, pside; kwargs)
         if iszero(amount)
             # Position closed after last check
             return true
         end
         since, isclosed = _posclose_trade(
-            s, ai; t, pside, amount, waitfor=@timeout_now(), this_kwargs
+            s, ii; t, pside, amount, waitfor=@timeout_now(), this_kwargs
         )
         # another check for close in case of failing trade
         if isclosed
-            ensure_marginmode(s, ai)
+            ensure_marginmode(s, ii)
             return true
         end
         # trade exec success, wait for completion
-        if waitordclose(s, ai, @timeout_now)
+        if waitordclose(s, ii, @timeout_now)
             # terminal check after closing trade
-            _posclose_order(s, ai, pside, since, @timeout_now)
+            _posclose_order(s, ii, pside, since, @timeout_now)
         else
             # closing trade still pending
-            _posclose_lastcheck(s, ai, pside, t, since, @timeout_now)
+            _posclose_lastcheck(s, ii, pside, t, since, @timeout_now)
         end
     end
 end

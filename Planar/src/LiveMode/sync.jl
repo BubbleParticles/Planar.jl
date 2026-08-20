@@ -32,8 +32,8 @@ end
 
 function live_sync_cash!(
     s::MarginStrategy{Live},
-    ai,
-    pside=get_position_side(s, ai);
+    ii,
+    pside=get_position_side(s, ii);
     waitfor=Second(5),
     pup=nothing,
     since=nothing,
@@ -43,26 +43,26 @@ function live_sync_cash!(
     kwargs...,
 )
     if isnothing(pup)
-        pup = live_position(s, ai, pside; since, force, synced, waitfor)
+        pup = live_position(s, ii, pside; since, force, synced, waitfor)
     end
     if pup isa PositionTuple
         func =
             () -> _live_sync_cash!(
-                s, ai, pside; waitfor, pup, since, force, synced, kwargs...
+                s, ii, pside; waitfor, pup, since, force, synced, kwargs...
             )
-        sendrequest!(ai, pup.date, func, ms(waitfor + Second(1)))
-    elseif isopen(ai, pside)
-        @warn "sync: no position structure" ai pside since force synced
+        sendrequest!(ii, pup.date, func, ms(waitfor + Second(1)))
+    elseif isopen(ii, pside)
+        @warn "sync: no position structure" ii pside since force synced
         if reset
-            @warn "sync: resetting asset" ai pside since force synced
-            reset!(ai, pside)
+            @warn "sync: resetting asset" ii pside since force synced
+            reset!(ii, pside)
         end
     end
 end
 
 function live_sync_cash!(
     s::NoMarginStrategy{Live},
-    ai,
+    ii,
     args...;
     waitfor=Second(5),
     bal=nothing,
@@ -72,13 +72,13 @@ function live_sync_cash!(
     kwargs...,
 )
     if isnothing(bal)
-        bal = live_balance(s, ai; waitfor, since, force, synced)
+        bal = live_balance(s, ii; waitfor, since, force, synced)
     end
     if bal isa BalanceSnapshot
-        this_f = () -> _live_sync_cash!(s, ai, args...; waitfor, synced, force, kwargs...)
-        sendrequest!(ai, bal.date, this_f, ms(waitfor + Second(1)))
+        this_f = () -> _live_sync_cash!(s, ii, args...; waitfor, synced, force, kwargs...)
+        sendrequest!(ii, bal.date, this_f, ms(waitfor + Second(1)))
     else
-        @warn "sync: no balance structure" ai since force synced
+        @warn "sync: no balance structure" ii since force synced
     end
 end
 
@@ -107,8 +107,8 @@ function order_from_event(s, ev)
     else
         @error "data: corrupted event trace, expected order" ev.event
     end
-    ai = st.asset_bysym(s, raw(o.asset))
-    o, ai
+    ii = st.asset_bysym(s, raw(o.asset))
+    o, ii
 end
 function trade_tuple(trade)
     timestamp = trade.timestamp
@@ -118,24 +118,24 @@ function trade_tuple(trade)
     (; timestamp, price, amount, asset)
 end
 
-function execute_trade!(s, o, ai, trade)
-    _update_from_trade!(s, ai, o, trade; actual_price=trade.price)
-    position!(s, ai, trade; check_liq=false)
-    isfilled(ai, o) && @assert !hasorders(s, ai, o.id) typeof(o), o isa AnyMarketOrder
+function execute_trade!(s, o, ii, trade)
+    _update_from_trade!(s, ii, o, trade; actual_price=trade.price)
+    position!(s, ii, trade; check_liq=false)
+    isfilled(ii, o) && @assert !hasorders(s, ii, o.id) typeof(o), o isa AnyMarketOrder
     track!(s, :replay_n_trades)
 end
 
 @doc "Returns the number of trades replayed."
-function replay_position!(s::SimStrategy, ai, o::Order)
-    this_pos = position(ai, o)
+function replay_position!(s::SimStrategy, ii, o::Order)
+    this_pos = position(ii, o)
     n = 0
     for t in trades(o)
-        # @assert !(t in trades(ai))
+        # @assert !(t in trades(ii))
         if t.date >= timestamp(this_pos)
-            position!(s, ai, t; check_liq=false)
+            position!(s, ii, t; check_liq=false)
             n += 1
         else
-            @warn "replay: trade date is older than position" ai o.id t.date timestamp(
+            @warn "replay: trade date is older than position" ii o.id t.date timestamp(
                 this_pos
             )
         end
@@ -218,10 +218,10 @@ function check_state(s::SimStrategy; orders_processed, orders_active)
         error("trace replay: duplicate closed orders")
     end
     for o in values(s, Val(:universe))
-        ai = st.asset_bysym(s, raw(o.asset))
-        if !(ai in s.holdings)
+        ii = st.asset_bysym(s, raw(o.asset))
+        if !(ii in s.holdings)
             error(
-                "trace replay: asset with orders not in holdings $ai $(o.id) filled: $(isfilled(ai, o))",
+                "trace replay: asset with orders not in holdings $ii $(o.id) filled: $(isfilled(ii, o))",
             )
         end
     end
@@ -234,10 +234,10 @@ function check_state(s::SimStrategy; orders_processed, orders_active)
             if ismissing(o)
                 error("trace replay: order not tracked $id")
             end
-            ai = st.asset_bysym(s, raw(orders_active[id].asset))
+            ii = st.asset_bysym(s, raw(orders_active[id].asset))
             @error "trace replay: order not in processed orders" id orders_active[id] hasorders(
-                s, ai, id
-            ) findorder(ai, id) length(closed_orders) length(open_orders) length(
+                s, ii, id
+            ) findorder(ii, id) length(closed_orders) length(open_orders) length(
                 replayed_orders
             ) length(orders_active) length(orders_processed) length(tracked_orders)
         end
@@ -316,10 +316,10 @@ end
 $(TYPEDSIGNATURES)
 """
 function trace_sync_position!(s::SimStrategy, tag::Symbol, ev::PositionUpdated)
-    ai = st.asset_bysym(s, ev.asset)
+    ii = st.asset_bysym(s, ev.asset)
     side, status = ev.side_status
-    ai = st.asset_bysym(s, ev.asset)
-    pos = position(ai, side)
+    ii = st.asset_bysym(s, ev.asset)
+    pos = position(ii, side)
     if !status
         reset!(pos)
         return nothing
@@ -337,8 +337,8 @@ end
 @doc """ Synchronizes a margin state from a MarginUpdated event.
 """
 function trace_sync_margin!(s::SimStrategy, ev::MarginUpdated)
-    ai = st.asset_bysym(s, ev.asset)
-    pos = position(ai, ev.side)
+    ii = st.asset_bysym(s, ev.asset)
+    pos = position(ii, ev.side)
     if timestamp(pos) > DateTime(0) && !isapprox(ev.from, margin(pos); rtol=1e-4)
         @warn "trace replay: margin update from value mismatch" ev.from margin(pos)
     end
@@ -354,10 +354,10 @@ end
 $(TYPEDSIGNATURES)
 """
 function trace_sync_leverage!(s::SimStrategy, ev::LeverageUpdated)
-    ai = st.asset_bysym(s, ev.asset)
-    pos = position(ai, ev.side)
-    if timestamp(ai) > DateTime(0) && !isapprox(ev.from, leverage(pos); rtol=1e-4)
-        @warn "trace replay: leverage update from value mismatch" timestamp(ai) ev.from leverage(
+    ii = st.asset_bysym(s, ev.asset)
+    pos = position(ii, ev.side)
+    if timestamp(ii) > DateTime(0) && !isapprox(ev.from, leverage(pos); rtol=1e-4)
+        @warn "trace replay: leverage update from value mismatch" timestamp(ii) ev.from leverage(
             pos
         )
     end
@@ -370,15 +370,15 @@ end
 $(TYPEDSIGNATURES)
 """
 function trace_create_order!(s::SimStrategy, ev; orders_active, orders_processed)
-    o, ai = order_from_event(s, ev)
-    @debug "trace replay: order created" ai o.id _module = LogTraceReplay
+    o, ii = order_from_event(s, ev)
+    @debug "trace replay: order created" ii o.id _module = LogTraceReplay
     @assert !haskey(orders_processed, o.id)
-    if hasorders(s, ai, o.id)
+    if hasorders(s, ii, o.id)
         @error "trace replay: order already exists" o.id o
         return nothing
     end
-    if trace_queue_order!(s, ai, o; replay=false)
-        if !isfilled(ai, o)
+    if trace_queue_order!(s, ii, o; replay=false)
+        if !isfilled(ii, o)
             orders_active[o.id] = o
         else
             orders_processed[o.id] = o
@@ -386,25 +386,25 @@ function trace_create_order!(s::SimStrategy, ev; orders_active, orders_processed
     end
 end
 
-function trace_queue_order!(s::SimStrategy, ai, o; replay=true)
-    hold!(s, ai, o)
-    prev_orders = length(orders(s, ai, o))
-    queue!(s, o, ai; skipcommit=true)
-    if length(orders(s, ai, o)) != prev_orders + 1 && !isfilled(ai, o)
+function trace_queue_order!(s::SimStrategy, ii, o; replay=true)
+    hold!(s, ii, o)
+    prev_orders = length(orders(s, ii, o))
+    queue!(s, o, ii; skipcommit=true)
+    if length(orders(s, ii, o)) != prev_orders + 1 && !isfilled(ii, o)
         if ordertype(o) <: MarketOrderType && o isa ReduceOnlyOrder
-            push!(s, ai, o) # market orders queue! does not dispatch for market orders in sim mode
+            push!(s, ii, o) # market orders queue! does not dispatch for market orders in sim mode
             track!(s, :replay_n_orders)
             true
         else
             @error "trace replay: order not queued" ordertype(o) o.id prev_orders length(
-                orders(s, ai, o)
+                orders(s, ii, o)
             )
             false
         end
     else
         if replay
-            n_replayed = replay_position!(s, ai, o)
-            append!(trades(ai), trades(o))
+            n_replayed = replay_position!(s, ii, o)
+            append!(trades(ii), trades(o))
             track!(s, :replay_n_trades, n_replayed)
         end
         track!(s, :replay_n_orders)
@@ -413,11 +413,11 @@ function trace_queue_order!(s::SimStrategy, ai, o; replay=true)
     end
 end
 
-function trace_replay_order!(s::SimStrategy, ai, o)
-    hold!(s, ai, o)
-    n_replayed = replay_position!(s, ai, o)
+function trace_replay_order!(s::SimStrategy, ii, o)
+    hold!(s, ii, o)
+    n_replayed = replay_position!(s, ii, o)
     new_trades = trades(o)[(end - n_replayed + 1):end]
-    append!(trades(ai), new_trades)
+    append!(trades(ii), new_trades)
     track!(s, :replay_n_trades, length(new_trades))
 end
 
@@ -428,8 +428,8 @@ $(TYPEDSIGNATURES)
 function trace_close_order!(
     s::SimStrategy, ev; replayed::Bool, orders_active, orders_processed
 )
-    o, ai = order_from_event(s, ev)
-    @debug "trace replay: order_closed" _module = LogTraceReplay o.id ai replayed
+    o, ii = order_from_event(s, ev)
+    @debug "trace replay: order_closed" _module = LogTraceReplay o.id ii replayed
     if replayed
         if haskey(orders_processed, o.id)
             @debug "trace replay: order_closed_replayed event for already closed order" _module =
@@ -437,31 +437,31 @@ function trace_close_order!(
             return nothing
             # an order that we don't know about
         elseif !haskey(orders_active, o.id)
-            @deassert !hasorders(s, ai, o.id)
-            if trace_queue_order!(s, ai, o; replay=false)
+            @deassert !hasorders(s, ii, o.id)
+            if trace_queue_order!(s, ii, o; replay=false)
                 orders_active[o.id] = o
             end
         end
-        trace_replay_order!(s, ai, o)
+        trace_replay_order!(s, ii, o)
     elseif !isempty(trades(o))
         @debug "trace replay: order_closed_replayed event for order with trades" _module =
-            LogTraceReplay ai o.id replayed isfilled(ai, o) typeof(o)
-        trace_replay_order!(s, ai, o)
+            LogTraceReplay ii o.id replayed isfilled(ii, o) typeof(o)
+        trace_replay_order!(s, ii, o)
     end
-    if isqueued(o, s, ai)
-        if isfilled(ai, o)
+    if isqueued(o, s, ii)
+        if isfilled(ii, o)
             trades_amount = _amount_from_trades(trades(o)) |> abs
-            if !isequal(ai, trades_amount, o.amount, Val(:amount))
+            if !isequal(ii, trades_amount, o.amount, Val(:amount))
                 @error "trace replay: unexpected closed order amount" o.id trades_amount o.amount unfilled(
                     o
                 )
             end
-            decommit!(s, o, ai)
-            delete!(s, ai, o)
+            decommit!(s, o, ii)
+            delete!(s, ii, o)
         else
             @error "trace replay: order_closed event can't be unfilled" o.id o.amount unfilled(
                 o
-            ) filled_amount(o) isfilled(ai, o) length(trades(o))
+            ) filled_amount(o) isfilled(ii, o) length(trades(o))
         end
     end
     delete!(orders_active, o.id)
@@ -470,12 +470,12 @@ end
 
 function trace_cancel_order!(s::SimStrategy, ev; orders_active, orders_processed)
     o = ev.event.data.order
-    ai = st.asset_bysym(s, raw(o.asset))
-    if isqueued(o, s, ai)
-        decommit!(s, o, ai, true)
-        delete!(s, ai, o)
+    ii = st.asset_bysym(s, raw(o.asset))
+    if isqueued(o, s, ii)
+        decommit!(s, o, ii, true)
+        delete!(s, ii, o)
         err = ev.event.data.err
-        st.call!(s, o, err, ai)
+        st.call!(s, o, err, ii)
     end
     delete!(orders_active, o.id)
     orders_processed[o.id] = o
@@ -491,13 +491,13 @@ function trace_execute_trade!(s::SimStrategy, ev; orders_processed, orders_activ
         @debug "trace replay: no trade in event" _module = LogTraceReplay ev
         return nothing
     end
-    ai = st.asset_bysym(s, raw(trade.order.asset))
-    @debug "trace replay: trade_created" _module = LogTraceReplay ai trade.order.id
+    ii = st.asset_bysym(s, raw(trade.order.asset))
+    @debug "trace replay: trade_created" _module = LogTraceReplay ii trade.order.id
     # average_price = ev.event.data.avgp
     # the version in orders_processed should have all trades in it
     order_proc = get(orders_processed, trade.order.id, nothing)
     if !isnothing(order_proc) # the order was closed, so should have all trades
-        if !hastrade(ai, order_proc, trade)
+        if !hastrade(ii, order_proc, trade)
             @error "trace replay: trade expected to be in order" trade.order.id order_proc.id length(
                 trades(order_proc)
             ) tradetuple(first(trades(order_proc))) tradetuple(trade)
@@ -505,19 +505,19 @@ function trace_execute_trade!(s::SimStrategy, ev; orders_processed, orders_activ
     else
         o = get(orders_active, trade.order.id, nothing) # check if the order exists
         if !isnothing(o) # the order is still open
-            if !hastrade(ai, o, trade) # execute the trade
-                execute_trade!(s, o, ai, trade)
+            if !hastrade(ii, o, trade) # execute the trade
+                execute_trade!(s, o, ii, trade)
             end
         else # the trade somewhat has a timestamp older than the order creation or the order event wasn't registered
             # enqueue the order and re-execute the trade
-            reset!(trade.order, ai)
-            hold!(s, ai, trade.order)
-            queue!(s, trade.order, ai; skipcommit=true)
-            execute_trade!(s, trade.order, ai, trade)
+            reset!(trade.order, ii)
+            hold!(s, ii, trade.order)
+            queue!(s, trade.order, ii; skipcommit=true)
+            execute_trade!(s, trade.order, ii, trade)
         end
     end
-    @debug "trace replay: trade executed" len = length(trades(ai))
-    if isfilled(ai, trade.order)
+    @debug "trace replay: trade executed" len = length(trades(ii))
+    if isfilled(ii, trade.order)
         delete!(orders_active, trade.order.id)
         orders_processed[trade.order.id] = trade.order
     end
@@ -551,13 +551,13 @@ $(TYPEDSIGNATURES)
 """
 function trace_asset_balance_update!(s::SimStrategy, ev)
     bal = ev.data.balance
-    ai = st.asset_bysym(s, bal.currency)
-    @debug "trace replay: asset balance update" _module = LogTraceReplay ai
-    if bal.currency == bc(ai)
+    ii = st.asset_bysym(s, bal.currency)
+    @debug "trace replay: asset balance update" _module = LogTraceReplay ii
+    if bal.currency == bc(ii)
         if isfinite(bal.free)
-            cash!(ai, bal.free)
+            cash!(ii, bal.free)
         else
-            @warn "asset cash: non finite" ai = raw(ai) bal
+            @warn "asset cash: non finite" ii = raw(ii) bal
         end
     else
         @error "trace replay: asset_balance_updated event missing balance" ev.data

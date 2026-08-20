@@ -5,7 +5,7 @@ using PlanarCore.Executors.Instances: Instances, Exchanges, Data, MarginInstance
 using PlanarCore.Instances
 using PlanarCore.Exchanges
 using PlanarCore.Exchanges: gettimeout, resptobool, islist, isdict
-using .st: Strategy, MarginStrategy, NoMarginStrategy, LiveStrategy, call!, RTStrategy, throttle, ExchangeAsset, universe, WarmupPeriod
+using .st: Strategy, MarginStrategy, NoMarginStrategy, LiveStrategy, call!, RTStrategy, throttle, ExchangeInstrument, universe, WarmupPeriod
 using ..PaperMode.OrderTypes
 using ..PaperMode.Misc
 using PlanarCore.Misc: Lang, LittleDict

@@ -51,9 +51,9 @@ baremodule LogTradeFetch end
 baremodule LogTraceReplay end
 baremodule LogEvents end
 
-macro inlock(ai, code)
+macro inlock(ii, code)
     ex = quote
-        @lock _internal_lock($ai) $code
+        @lock _internal_lock($ii) $code
     end
     esc(ex)
 end
@@ -96,11 +96,11 @@ end
 
 $(TYPEDSIGNATURES)
 
-This function stops all tasks associated with an asset `ai` in the strategy `s`. If the `reset` flag is set, it also clears the task queues and resets the asset's task queue length.
+This function stops all tasks associated with an asset `ii` in the strategy `s`. If the `reset` flag is set, it also clears the task queues and resets the asset's task queue length.
 
 """
-function stop_asset_tasks(s::RTStrategy, ai; reset=false)
-    tasks = asset_tasks(ai)
+function stop_asset_tasks(s::RTStrategy, ii; reset=false)
+    tasks = asset_tasks(ii)
     for (name, task) in tasks.byname
         stop_task(task)
     end
@@ -162,21 +162,21 @@ function reset_asset_tasks!(a, tasks)
     end
 end
 
-function _persistent_stop_asset_tasks(s, ai; reset, kwargs...)
+function _persistent_stop_asset_tasks(s, ii; reset, kwargs...)
     for _ in 1:10
         try
-            stop_asset_tasks(s, ai; reset, kwargs...)
+            stop_asset_tasks(s, ii; reset, kwargs...)
             return true
         catch e
             if e isa InterruptException
                 continue
             else
-                @error "strat: stop task failed" ai exception = e
+                @error "strat: stop task failed" ii exception = e
                 return false
             end
         end
     end
-    @warn "strat: stop asset tasks failed after 10 retries" ai
+    @warn "strat: stop asset tasks failed after 10 retries" ii
     false
 end
 
@@ -189,18 +189,18 @@ This function stops all tasks associated with all assets in the strategy `s`. If
 """
 function stop_all_asset_tasks(s::RTStrategy; reset=false, kwargs...)
     if reset
-        @sync for ai in s.universe
+        @sync for ii in s.universe
             @async try
-                stop_asset_tasks(s, ai; reset, kwargs...)
+                stop_asset_tasks(s, ii; reset, kwargs...)
             catch e
                 e isa InterruptException && rethrow(e)
-                @error "stop all asset tasks: asset failed" ai = raw(ai) exception = (e, catch_backtrace())
+                @error "stop all asset tasks: asset failed" ii = raw(ii) exception = (e, catch_backtrace())
                 rethrow(e)
             end
         end
     else
-        for ai in s.universe
-            _persistent_stop_asset_tasks(s, ai; reset, kwargs...)
+        for ii in s.universe
+            _persistent_stop_asset_tasks(s, ii; reset, kwargs...)
         end
     end
     @debug "strat: all asset tasks stopped" s = nameof(s)
@@ -278,12 +278,12 @@ function stop_all_tasks(s::RTStrategy; reset=true)
     @debug "strategy: stopping watch balance" _module = LogTasks s = nameof(s)
     stop_watch_balance!(s)
     @debug "strategy: stopping watch trades" _module = LogTasks s = nameof(s)
-    for ai in universe(s)
-        stop_watch_trades!(s, ai)
+    for ii in universe(s)
+        stop_watch_trades!(s, ii)
     end
     @debug "strategy: stopping watch orders" _module = LogTasks s = nameof(s)
-    for ai in universe(s)
-        stop_watch_orders!(s, ai)
+    for ii in universe(s)
+        stop_watch_orders!(s, ii)
     end
 
     # Stop any user-defined watchers stored in strategy attributes
@@ -327,17 +327,17 @@ function stop_all_tasks(s::RTStrategy; reset=true)
     @debug "strategy: stopped all tasks" _module = LogTasks s = nameof(s)
 end
 
-# const AssetOrder = Tuple{Order,AssetInstance}
+# const InstrumentOrder = Tuple{Order,InstrumentInstance}
 const TasksDict = LittleDict{Symbol,Task}
 const OrderTasksDict = Dict{Order,Task}
-@doc """ A dictionary of tasks associated with an `AssetInstance`.
+@doc """ A dictionary of tasks associated with an `InstrumentInstance`.
 
 - `byname`: tasks that are _asset wide_
 - `byorder` tasks that are per order (and therefore should never outlive the order)
 - `lock`: is held when starting or stopping new tasks
 - `queue`: currently unused
 """
-const AssetTasks = NamedTuple{
+const InstrumentTasks = NamedTuple{
     (:lock, :queue, :byname, :byorder),Tuple{SafeLock,Ref{Int},TasksDict,OrderTasksDict}
 }
 @doc """ A dictionary of tasks associated with a `Strategy`.
@@ -348,8 +348,8 @@ const AssetTasks = NamedTuple{
 const StrategyTasks = NamedTuple{(:lock, :queue, :tasks),Tuple{SafeLock,Ref{Int},TasksDict}}
 
 @doc """ Retrieves the task associated with an order. """
-function order_task(ai::AssetInstance, k)
-    tup = asset_tasks(ai)
+function order_task(ii::InstrumentInstance, k)
+    tup = asset_tasks(ii)
     @lock tup.lock get(tup.byorder, k, nothing)
 end
 
@@ -357,33 +357,33 @@ end
 
 $(TYPEDSIGNATURES)
 
-This function retrieves the task queue associated with an asset `ai` in the strategy `s`.
+This function retrieves the task queue associated with an asset `ii` in the strategy `s`.
 
 """
-asset_queue(ai::AssetInstance) = asset_tasks(ai).queue
+asset_queue(ii::InstrumentInstance) = asset_tasks(ii).queue
 
 @doc """ Retrieves tasks associated with a specific asset.
 
 $(TYPEDSIGNATURES)
 
-This function retrieves tasks associated with a specific asset `ai` in the strategy `s`. It returns a [`AssetTasks`](@ref) representing a collection of tasks associated with the asset.
+This function retrieves tasks associated with a specific asset `ii` in the strategy `s`. It returns a [`InstrumentTasks`](@ref) representing a collection of tasks associated with the asset.
 
 """
-function asset_tasks(ai::AssetInstance)
-    @something get(ai, :tasks, nothing) @inlock ai @lget! ai :tasks (;
+function asset_tasks(ii::InstrumentInstance)
+    @something get(ii, :tasks, nothing) @inlock ii @lget! ii :tasks (;
         lock=SafeLock(), queue=Ref(0), byname=TasksDict(), byorder=OrderTasksDict()
     )
 end
-function asset_task(ai::AssetInstance, k)
-    tup = asset_tasks(ai)
+function asset_task(ii::InstrumentInstance, k)
+    tup = asset_tasks(ii)
     @lock tup.lock begin
         get(tup.byname, k, nothing)
     end
 end
 
-function _set_task!(ai::AssetInstance, t::Task, k; kind::Symbol)
+function _set_task!(ii::InstrumentInstance, t::Task, k; kind::Symbol)
     if istaskrunning(t)
-        tasks = asset_tasks(ai)
+        tasks = asset_tasks(ii)
         @lock tasks.lock begin
             inc!(tasks.queue)
             try
@@ -397,12 +397,12 @@ function _set_task!(ai::AssetInstance, t::Task, k; kind::Symbol)
     end
 end
 
-function set_asset_task!(ai::AssetInstance, t::Task, k)
-    _set_task!(ai, t, k; kind=:byname)
+function set_asset_task!(ii::InstrumentInstance, t::Task, k)
+    _set_task!(ii, t, k; kind=:byname)
 end
 
-function set_order_task!(ai::AssetInstance, t::Task, k)
-    _set_task!(ai, t, k; kind=:byorder)
+function set_order_task!(ii::InstrumentInstance, t::Task, k)
+    _set_task!(ii, t, k; kind=:byorder)
 end
 
 @doc """ Retrieves tasks associated with a strategy.
@@ -498,15 +498,15 @@ end
 @doc """ Retrieves orders of an asset (open and closed). """
 fetch_orders(s, args...; kwargs...) = @retry s[:live_orders_func](args...; kwargs...)
 @doc """ Retrieves open orders of an asset. """
-function fetch_open_orders(s, ai=nothing, args...; kwargs...)
-    @retry s[:live_open_orders_func](ai, args...; kwargs...)
+function fetch_open_orders(s, ii=nothing, args...; kwargs...)
+    @retry s[:live_open_orders_func](ii, args...; kwargs...)
 end
 @doc """ Retrieves closed orders of an asset. """
 function fetch_closed_orders(s, args...; kwargs...)
     @retry s[:live_closed_orders_func](args...; kwargs...)
 end
-function fetch_positions(s, ai::AssetInstance, args...; kwargs...)
-    fetch_positions(s, (ai,), args...; kwargs...)
+function fetch_positions(s, ii::InstrumentInstance, args...; kwargs...)
+    fetch_positions(s, (ii,), args...; kwargs...)
 end
 @doc """ Retrieves positions of an asset. """
 function fetch_positions(s, args...; kwargs...)
@@ -514,7 +514,7 @@ function fetch_positions(s, args...; kwargs...)
 end
 @doc """ Retrieves all asset positions for a strategy. """
 fetch_positions(s; kwargs...) =
-    fetch_positions(s, ((ai for ai in s.universe)...,); kwargs...)
+    fetch_positions(s, ((ii for ii in s.universe)...,); kwargs...)
 @doc """ Cancels orders of an asset by order identifier. """
 cancel_orders(s, args...; kwargs...) = @retry s[:live_cancel_func](args...; kwargs...)
 @doc """ Cancels all orders of an asset. """
@@ -725,22 +725,22 @@ This function retrieves the positions associated with a strategy `s`. It achieve
 get_positions(s) = attr(watch_positions!(s; interval=st.throttle(s)), :view)
 get_positions(s, ::ByPos{Long}) = get_positions(s).long
 get_positions(s, ::ByPos{Short}) = get_positions(s).short
-get_positions(s, ai, bp::ByPos) = get(get_positions(s, bp), raw(ai), nothing)
-function get_positions(s, ai, side=nothing)
-    this_side = isnothing(side) ? get_position_side(s, ai) : side
-    get(get_positions(s, posside(this_side)), raw(ai), nothing)
+get_positions(s, ii, bp::ByPos) = get(get_positions(s, bp), raw(ii), nothing)
+function get_positions(s, ii, side=nothing)
+    this_side = isnothing(side) ? get_position_side(s, ii) : side
+    get(get_positions(s, posside(this_side)), raw(ii), nothing)
 end
 
-function posside_fallbacks(s::Strategy, ai)
-    if hasorders(s, ai)
-        @debug "No position open for $(raw(ai)), inferring from open orders" _module =
+function posside_fallbacks(s::Strategy, ii)
+    if hasorders(s, ii)
+        @debug "No position open for $(raw(ii)), inferring from open orders" _module =
             LogPos
-        posside(first(orders(s, ai)).second)
-    elseif length(trades(ai)) > 0
-        @debug "No position open for $(raw(ai)), inferring from last trade" _module = LogPos
-        posside(last(trades(ai)))
+        posside(first(orders(s, ii)).second)
+    elseif length(trades(ii)) > 0
+        @debug "No position open for $(raw(ii)), inferring from last trade" _module = LogPos
+        posside(last(trades(ii)))
     else
-        @debug "No position open for $(raw(ai)), defaulting to long" _module = LogPos
+        @debug "No position open for $(raw(ii)), defaulting to long" _module = LogPos
         Long()
     end
 end
@@ -750,9 +750,9 @@ $(TYPEDSIGNATURES)
 
 This function retrieves the position side of an asset with best effort.
 """
-function get_position_side(s, ai::AssetInstance)
+function get_position_side(s, ii::InstrumentInstance)
     try
-        sym = raw(ai)
+        sym = raw(ii)
         long, short, last = get_positions(s)
         last_pos = get(last, sym, missing)
         long_pos = get(long, sym, missing)
@@ -763,39 +763,39 @@ function get_position_side(s, ai::AssetInstance)
         if isshort(last_pos) && !ismissing(short_pos) && !short_pos.closed[]
             return Short()
         end
-        @something posside(ai) posside_fallbacks(s, ai)
+        @something posside(ii) posside_fallbacks(s, ii)
     catch e
         e isa InterruptException && rethrow(e)
         @error "get_position_side failed" exception = (e, catch_backtrace()) _module = LogPos
         Long()
     end
 end
-get_position_side(::NoMarginStrategy{Live}, ::AssetInstance) = Long()
+get_position_side(::NoMarginStrategy{Live}, ::InstrumentInstance) = Long()
 
 @doc """ Retrieves the timestamp for a specific asset instance in a strategy.
 
 $(TYPEDSIGNATURES)
 
-This function retrieves the most recent timestamp associated with a specific asset instance `ai` in a strategy `s`. If the `side` argument is not provided, it defaults to the position side of the asset instance.
+This function retrieves the most recent timestamp associated with a specific asset instance `ii` in a strategy `s`. If the `side` argument is not provided, it defaults to the position side of the asset instance.
 
 """
-function timestamp(s, ai::AssetInstance; side=posside(ai))
-    order_date = if hasorders(s, ai)
-        v = first(keys(s, ai)).time
-        @deassert v >= last(collect(keys(s, ai)))
+function timestamp(s, ii::InstrumentInstance; side=posside(ii))
+    order_date = if hasorders(s, ii)
+        v = first(keys(s, ii)).time
+        @deassert v >= last(collect(keys(s, ii)))
         v
     else
         DateTime(0)
     end
-    trade_date = if !isempty(trades(ai))
-        last(trades(ai)).date
+    trade_date = if !isempty(trades(ii))
+        last(trades(ii)).date
     else
         DateTime(0)
     end
     pos_date = if isnothing(side)
         DateTime(0)
     else
-        timestamp(ai, side)
+        timestamp(ii, side)
     end
     max(order_date, trade_date, pos_date)
 end
@@ -820,11 +820,11 @@ function stop!(s::LiveStrategy; kwargs...)
     @debug "stop! 3" _module = LogTasks
 end
 
-function _last_posside(ai)
-    ai_pos = position(ai)
+function _last_posside(ii)
+    ai_pos = position(ii)
     if isnothing(ai_pos)
         try
-            posside(last(trades(ai)))
+            posside(last(trades(ii)))
         catch e
             e isa InterruptException && rethrow(e)
             nothing

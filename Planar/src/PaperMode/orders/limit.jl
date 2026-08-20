@@ -29,19 +29,19 @@ If the order is triggered, it executes a trade for the minimum of the trade amou
 If the order is filled, it stops tracking the order.
 
 """
-function paper_limitorder!(s::PaperStrategy, ai, o::GTCOrder; kwargs...)
-    isfilled(ai, o) && return nothing
+function paper_limitorder!(s::PaperStrategy, ii, o::GTCOrder; kwargs...)
+    isfilled(ii, o) && return nothing
     throttle = attr(s, :throttle)
-    exc = ai.exchange
+    exc = ii.exchange
     pyfunc = first(exc, :watchTrades, :fetchTrades)
-    sym = ai.asset.raw
+    sym = ii.asset.raw
     backoff = Second(0)
     alive = Ref(true)
     # Create task WITHOUT starting it to avoid race condition
     task = @task begin
         try
             last_date = TimeTicks.DateTime(0)
-            while alive[] && isopen(ai, o)
+            while alive[] && isopen(ii, o)
                 trades = pyfunc(
                     sym;
                     since=ifelse(
@@ -68,18 +68,18 @@ function paper_limitorder!(s::PaperStrategy, ai, o::GTCOrder; kwargs...)
                             trade!(
                                 s,
                                 o,
-                                ai;
+                                ii;
                                 price,
                                 date=_asdate(t),
                                 actual_amount,
                                 slippage=false,
                                 kwargs...,
                             )
-                            isfilled(ai, o) && begin
+                            isfilled(ii, o) && begin
                                 alive[] = false
-                                _remove_paper_order_task!(s, ai, o)
+                                _remove_paper_order_task!(s, ii, o)
                                 # Release remaining reserved volume since order is filled
-                                volrelease!(s, ai; amount=abs(unfilled(o)))
+                                volrelease!(s, ii; amount=abs(unfilled(o)))
                                 break
                             end
                         end
@@ -88,20 +88,20 @@ function paper_limitorder!(s::PaperStrategy, ai, o::GTCOrder; kwargs...)
                 sleep_pad_interruptible(TimeTicks.now(), throttle, alive)
             end
             # Order closed/cancelled - release any remaining reserved volume
-            isopen(ai, o) || volrelease!(s, ai; amount=abs(unfilled(o)))
+            isopen(ii, o) || volrelease!(s, ii; amount=abs(unfilled(o)))
             return
         catch e
             e isa InterruptException && rethrow(e)
-            @error "paper_limitorder: error watching fills" exception = (e, catch_backtrace()) raw(ai)
+            @error "paper_limitorder: error watching fills" exception = (e, catch_backtrace()) raw(ii)
             alive[] = false
-            _remove_paper_order_task!(s, ai, o)
+            _remove_paper_order_task!(s, ii, o)
             # Release remaining reserved volume on error
-            volrelease!(s, ai; amount=abs(unfilled(o)))
+            volrelease!(s, ii; amount=abs(unfilled(o)))
         end
     end
     # Initialize task storage and register for cleanup BEFORE scheduling
     init_task(task, IdDict())
-    _register_paper_order_task!(s, ai, o, task, alive)
+    _register_paper_order_task!(s, ii, o, task, alive)
     schedule(task)
 end
 
@@ -115,57 +115,57 @@ If the order is not filled and is of type ImmediateOrderType, it cancels the ord
 For Good Till Canceled (GTC) orders, it queues them for execution using the `paper_limitorder!` function.
 
 """
-function create_paper_limit_order!(s, ai, t; amount, date, kwargs...)
-    if volumecap!(s, ai; amount)
+function create_paper_limit_order!(s, ii, t; amount, date, kwargs...)
+    if volumecap!(s, ii; amount)
     else
-        @debug "paper limit order: overcapacity" ai = raw(ai) amount liq = _paper_liquidity(
-            s, ai
+        @debug "paper limit order: overcapacity" ii = raw(ii) amount liq = _paper_liquidity(
+            s, ii
         )
         return nothing
     end
     fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
-    o = create_sim_limit_order(s, t, ai; amount, date, order_kwargs...)
+    o = create_sim_limit_order(s, t, ii; amount, date, order_kwargs...)
     isnothing(o) && begin
-        volrelease!(s, ai; amount)
+        volrelease!(s, ii; amount)
         return nothing
     end
     try
-        obside = orderbook_side(ai, t)
+        obside = orderbook_side(ii, t)
         trade = nothing
         if !isempty(obside)
-            _, _, trade = from_orderbook(obside, s, ai, o; o.amount, date)
+            _, _, trade = from_orderbook(obside, s, ii, o; o.amount, date)
             @debug "paper limit order: trade from orderbook" o.asset o.price o.amount trade
         end
         # Queue GTC orders
         if o isa AnyGTCOrder
             @debug "paper limit order: queuing gtc order" o o.asset o.price o.amount
-            paper_limitorder!(s, ai, o; fees_kwarg...)
+            paper_limitorder!(s, ii, o; fees_kwarg...)
             return @something trade missing
-        elseif !isfilled(ai, o) && ordertype(o) <: ImmediateOrderType
+        elseif !isfilled(ii, o) && ordertype(o) <: ImmediateOrderType
             @debug "paper limit order: canceling" o.asset ordertype(o) o.price o.amount
-            cancel!(s, o, ai; err=OrderCanceled(o))
-            volrelease!(s, ai; amount)
+            cancel!(s, o, ii; err=OrderCanceled(o))
+            volrelease!(s, ii; amount)
         end
         # return first trade (if any)
         return trade
     catch e
         e isa InterruptException && rethrow(e)
-        @error "paper limit order: failed" exception = (e, catch_backtrace()) raw(ai) asset = o.asset
-        !isfilled(ai, o) && cancel!(s, o, ai; err=OrderFailed(o))
-        volrelease!(s, ai; amount)
+        @error "paper limit order: failed" exception = (e, catch_backtrace()) raw(ii) asset = o.asset
+        !isfilled(ii, o) && cancel!(s, o, ii; err=OrderFailed(o))
+        volrelease!(s, ii; amount)
         return missing
     end
 end
 
-function _register_paper_order_task!(s, ai, o, task, alive)
-    tasks = @lget! attr(s, :paper_order_tasks) ai LittleDict{Order,Tuple{Task,Ref{Bool}},Vector}()
+function _register_paper_order_task!(s, ii, o, task, alive)
+    tasks = @lget! attr(s, :paper_order_tasks) ii LittleDict{Order,Tuple{Task,Ref{Bool}},Vector}()
     tasks[o] = (task, alive)
 end
 
-function _remove_paper_order_task!(s, ai, o)
+function _remove_paper_order_task!(s, ii, o)
     tasks = get(attr(s), :paper_order_tasks, nothing)
     if !isnothing(tasks)
-        ai_tasks = get(tasks, ai, nothing)
+        ai_tasks = get(tasks, ii, nothing)
         if !isnothing(ai_tasks)
             entry = get(ai_tasks, o, nothing)
             if !isnothing(entry)
@@ -173,16 +173,16 @@ function _remove_paper_order_task!(s, ai, o)
                 delete!(ai_tasks, o)
             end
             if isempty(ai_tasks)
-                delete!(tasks, ai)
+                delete!(tasks, ii)
             end
         end
     end
 end
 
-function stop_paper_order_tasks!(s, ai)
+function stop_paper_order_tasks!(s, ii)
     tasks = attr(s, :paper_order_tasks, nothing)
     if !isnothing(tasks)
-        ai_tasks = get(tasks, ai, nothing)
+        ai_tasks = get(tasks, ii, nothing)
         if !isnothing(ai_tasks)
             for (o, (task, alive)) in pairs(ai_tasks)
                 alive[] = false
@@ -191,15 +191,15 @@ function stop_paper_order_tasks!(s, ai)
                     wait(task, 10.0)
                 catch e
                     e isa InterruptException && rethrow(e)
-                    e isa TaskFailedException && @error "stop paper order task: failed" exception = (e, catch_backtrace()) raw(ai) o
-                    e isa TimeoutException && @debug "stop paper order task: timed out" raw(ai) o
+                    e isa TaskFailedException && @error "stop paper order task: failed" exception = (e, catch_backtrace()) raw(ii) o
+                    e isa TimeoutException && @debug "stop paper order task: timed out" raw(ii) o
                     if !istaskdone(task)
                         kill_task(task)
                     end
                 end
             end
             empty!(ai_tasks)
-            delete!(tasks, ai)
+            delete!(tasks, ii)
         end
     end
 end
@@ -207,8 +207,8 @@ end
 function stop_all_paper_order_tasks!(s)
     tasks = attr(s, :paper_order_tasks, nothing)
     if !isnothing(tasks)
-        for ai in collect(keys(tasks))  # Collect keys first to avoid mutation during iteration
-            stop_paper_order_tasks!(s, ai)
+        for ii in collect(keys(tasks))  # Collect keys first to avoid mutation during iteration
+            stop_paper_order_tasks!(s, ii)
         end
     end
 end
@@ -216,8 +216,8 @@ end
 function stop_paper_position_tasks!(s)
     tasks = attr(s, :paper_position_tasks, nothing)
     if !isnothing(tasks)
-        for ai in collect(keys(tasks))
-            ai_tasks = get(tasks, ai, nothing)
+        for ii in collect(keys(tasks))
+            ai_tasks = get(tasks, ii, nothing)
             if !isnothing(ai_tasks)
                 # Handle both old nested structure Dict{AI, Dict{AI, Tuple}} and new flat structure Dict{AI, Tuple}
                 if ai_tasks isa Dict
@@ -228,8 +228,8 @@ function stop_paper_position_tasks!(s)
                             wait(task, 10.0)
                         catch e
                             e isa InterruptException && rethrow(e)
-                            e isa TaskFailedException && @error "stop paper position task: failed" exception = (e, catch_backtrace()) raw(ai)
-                            e isa TimeoutException && @debug "stop paper position task: timed out" raw(ai)
+                            e isa TaskFailedException && @error "stop paper position task: failed" exception = (e, catch_backtrace()) raw(ii)
+                            e isa TimeoutException && @debug "stop paper position task: timed out" raw(ii)
                             if !istaskdone(task)
                                 kill_task(task)
                             end
@@ -243,8 +243,8 @@ function stop_paper_position_tasks!(s)
                         wait(task, 10.0)
                     catch e
                         e isa InterruptException && rethrow(e)
-                        e isa TaskFailedException && @error "stop paper position task: failed" exception = (e, catch_backtrace()) raw(ai)
-                        e isa TimeoutException && @debug "stop paper position task: timed out" raw(ai)
+                        e isa TaskFailedException && @error "stop paper position task: failed" exception = (e, catch_backtrace()) raw(ii)
+                        e isa TimeoutException && @debug "stop paper position task: timed out" raw(ii)
                         if !istaskdone(task)
                             kill_task(task)
                         end
@@ -252,7 +252,7 @@ function stop_paper_position_tasks!(s)
                 end
             end
             # Clean up the task entry
-            delete!(tasks, ai)
+            delete!(tasks, ii)
         end
     end
 end

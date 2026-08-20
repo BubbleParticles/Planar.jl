@@ -39,8 +39,8 @@ function select_ordertype(s::Strategy, os::Type{<:OrderSide}, p::PositionSide=Lo
     end
 end
 
-function price_from_trades(ai)
-    h = trades(ai)
+function price_from_trades(ii)
+    h = trades(ii)
     t = get(h, lastindex(h), missing)
     if !ismissing(t)
         t.price
@@ -55,8 +55,8 @@ $(TYPEDSIGNATURES)
 
 Depending on the order type symbol, additional keyword arguments are selected to define order parameters like price. This method specifically handles the `Buy` side logic by adjusting price based on closing value.
 """
-function select_orderkwargs(otsym::Symbol, ::Type{Buy}, ai, ats; incr=(buy=1.02, sell=0.99))
-    price = @coalesce price_from_trades(ai) closeat(ai, ats)
+function select_orderkwargs(otsym::Symbol, ::Type{Buy}, ii, ats; incr=(buy=1.02, sell=0.99))
+    price = @coalesce price_from_trades(ii) closeat(ii, ats)
     if otsym in (:gtc, :po)
         (; price=incr.buy * price)
     else
@@ -70,8 +70,8 @@ $(TYPEDSIGNATURES)
 
 Selects an order type `os` based on the strategy `s` and the position side `p`. The order type is determined by the `ordertype` attribute of the strategy.
 """
-function select_orderkwargs(otsym::Symbol, ::Type{Sell}, ai, ats; incr=(; buy=1.02, sell=0.99))
-    price = @coalesce price_from_trades(ai) closeat(ai, ats)
+function select_orderkwargs(otsym::Symbol, ::Type{Sell}, ii, ats; incr=(; buy=1.02, sell=0.99))
+    price = @coalesce price_from_trades(ii) closeat(ii, ats)
     if otsym in (:gtc, :po)
         (; price=incr.sell * price)
     else
@@ -85,11 +85,11 @@ $(TYPEDSIGNATURES)
 
 Checks if a trade was made recently by checking if the last trade time for the given asset instance is more recent than the current time frame. If no trades were made, it returns true.
 """
-function isrecenttrade(ai::AssetInstance, ats::DateTime, tf::TimeFrame; cd=tf)
-    ai_trades = trades(ai)
+function isrecenttrade(ii::InstrumentInstance, ats::DateTime, tf::TimeFrame; cd=tf)
+    ai_trades = trades(ii)
     last_trade_date = isempty(ai_trades) ? DateTime(0) : ai_trades[end].date
     if last_trade_date + cd > ats + tf
-        @debug "surge: skipping since recent trade" ai
+        @debug "surge: skipping since recent trade" ii
         true
     else
         false

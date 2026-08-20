@@ -10,10 +10,10 @@ test_collections() = @testset "collections" begin
     end
     prs = ["ETH/USDT", "BTC/USDT"]
     exc = Planar.Engine.Exchanges.getexchange!(Main.EXCHANGE)
-    let coll = Planar.Engine.Collections.AssetCollection()
+    let coll = Planar.Engine.Collections.InstrumentCollection()
         @test isempty(coll)
     end
-    coll = Planar.Engine.Collections.AssetCollection(prs; exc, margin=Planar.Engine.Misc.NoMargin())
+    coll = Planar.Engine.Collections.InstrumentCollection(prs; exc, margin=Planar.Engine.Misc.NoMargin())
     @test size(coll.data)[1] == length(prs)
     @test Planar.Engine.Instruments.raw.(coll.data.instance) == prs
     @test !isnothing(coll[q=:USDT])

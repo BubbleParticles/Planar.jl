@@ -3,12 +3,12 @@ using ..OrderTypes
 
 import ..Exchanges.ExchangeTypes: exchangeid, exchange
 using ..Exchanges: CurrencyCash, Data, TICKERS_CACHE10, markettype, @tickers!
-using ..OrderTypes: ByPos, AssetEvent, positionside, Instruments, ordertype
+using ..OrderTypes: ByPos, InstrumentEvent, positionside, Instruments, ordertype
 using .Data: load, zi, empty_ohlcv, DataFrame, DataStructures
 using .Data.DFUtils: daterange, timeframe
 import .Data: stub!
 using .Data.DataFrames: metadata, metadata!
-using .Instruments: Instruments, compactnum, AbstractAsset, Cash, add!, sub!, Misc
+using .Instruments: Instruments, compactnum, AbstractInstrument, Cash, add!, sub!, Misc
 import .Instruments: _hashtuple, cash!, cash, freecash, value, raw, bc, qc
 using .Misc: config, MarginMode, NoMargin, WithMargin, MM, DFT, toprecision, ZERO
 using .Misc: Lang, TimeTicks, SortedArray, SafeLock
@@ -28,9 +28,9 @@ baremodule InstancesLock end
 
 @doc """Defines the abstract type for an instance.
 
-The `AbstractInstance` type is a generic abstract type for an instance. It is parameterized by two types: `A`, which must be a subtype of `AbstractAsset`, and `E`, which must be a subtype of `ExchangeID`.
+The `AbstractInstance` type is a generic abstract type for an instance. It is parameterized by two types: `A`, which must be a subtype of `AbstractInstrument`, and `E`, which must be a subtype of `ExchangeID`.
 """
-abstract type AbstractInstance{A<:AbstractAsset,E<:ExchangeID} end
+abstract type AbstractInstance{A<:AbstractInstrument,E<:ExchangeID} end
 
 @doc "Defines a NamedTuple structure for limits, including leverage, amount, price, and cost, each of which is a subtype of Real."
 const Limits{T<:Real} = NamedTuple{(:leverage, :amount, :price, :cost),<:NTuple{4,MM{<:T}}}
@@ -58,9 +58,9 @@ include("positions.jl")
 
 $(FIELDS)
 
-An `AssetInstance` holds all known state about an exchange asset like `BTC/USDT`.
+An `InstrumentInstance` holds all known state about an exchange asset like `BTC/USDT`.
 """
-struct AssetInstance{T<:AbstractAsset,E<:ExchangeID,M<:MarginMode} <: AbstractInstance{T,E}
+struct InstrumentInstance{T<:AbstractInstrument,E<:ExchangeID,M<:MarginMode} <: AbstractInstance{T,E}
     "Genric dict for instance specific parameters."
     attrs::Dict{Symbol,Any}
     "The identifier of the asset."
@@ -90,16 +90,16 @@ struct AssetInstance{T<:AbstractAsset,E<:ExchangeID,M<:MarginMode} <: AbstractIn
     precision::Precision{<:Union{Int,DFT}}
     "The fees associated with the asset (from the exchange)."
     fees::Fees{DFT}
-    @doc """ Create an `AssetInstance` object.
+    @doc """ Create an `InstrumentInstance` object.
 
     $(TYPEDSIGNATURES)
 
-    This function constructs an `AssetInstance` with defined asset, data, exchange, margin, and optional parameters for limits, precision, and fees. It initializes long and short positions based on the provided margin and ensures that the margin is not hedged.
+    This function constructs an `InstrumentInstance` with defined asset, data, exchange, margin, and optional parameters for limits, precision, and fees. It initializes long and short positions based on the provided margin and ensures that the margin is not hedged.
 
     """
-    function AssetInstance(
+    function InstrumentInstance(
         a::A, data, e::Exchange{E}, margin::M; limits, precision, fees
-    ) where {A<:AbstractAsset,E<:ExchangeID,M<:MarginMode}
+    ) where {A<:AbstractInstrument,E<:ExchangeID,M<:MarginMode}
         @assert !ishedged(margin) "Hedged margin not yet supported."
         local longpos, shortpos
         longpos, shortpos = positions(M, a, limits, e)
@@ -135,19 +135,19 @@ struct AssetInstance{T<:AbstractAsset,E<:ExchangeID,M<:MarginMode} <: AbstractIn
 end
 
 @doc "A type alias representing an asset instance with no margin."
-const NoMarginInstance = AssetInstance{<:AbstractAsset,<:ExchangeID,NoMargin}
+const NoMarginInstance = InstrumentInstance{<:AbstractInstrument,<:ExchangeID,NoMargin}
 @doc "A type alias for an asset instance with either isolated or cross margin."
-const MarginInstance{M<:Union{Isolated,Cross}} = AssetInstance{
-    <:AbstractAsset,<:ExchangeID,M
+const MarginInstance{M<:Union{Isolated,Cross}} = InstrumentInstance{
+    <:AbstractInstrument,<:ExchangeID,M
 }
 @doc "A type alias for an asset instance with either isolated or cross hedged margin."
-const HedgedInstance{M<:Union{IsolatedHedged,CrossHedged}} = AssetInstance{
-    <:AbstractAsset,<:ExchangeID,M
+const HedgedInstance{M<:Union{IsolatedHedged,CrossHedged}} = InstrumentInstance{
+    <:AbstractInstrument,<:ExchangeID,M
 }
 @doc "A type alias representing an asset instance with cross margin."
-const CrossInstance{M<:CrossMargin} = AssetInstance{<:AbstractAsset,<:ExchangeID,M}
-@doc " Retrieve the margin mode of an `AssetInstance`. "
-marginmode(::AssetInstance{<:AbstractAsset,<:ExchangeID,M}, args...) where {M<:WithMargin} = M()
+const CrossInstance{M<:CrossMargin} = InstrumentInstance{<:AbstractInstrument,<:ExchangeID,M}
+@doc " Retrieve the margin mode of an `InstrumentInstance`. "
+marginmode(::InstrumentInstance{<:AbstractInstrument,<:ExchangeID,M}, args...) where {M<:WithMargin} = M()
 marginmode(::NoMarginInstance, args...) = NoMargin()
 
 @doc """ Generate positions for a specific margin mode.
@@ -157,7 +157,7 @@ $(TYPEDSIGNATURES)
 This function generates long and short positions for a given asset on a specific exchange. The number and size of the positions are determined by the `limits` argument and the margin mode `M`.
 
 """
-function positions(M::Type{<:MarginMode}, a::AbstractAsset, limits::Limits, e::Exchange)
+function positions(M::Type{<:MarginMode}, a::AbstractInstrument, limits::Limits, e::Exchange)
     if M == NoMargin
         nothing, nothing
     else
@@ -180,93 +180,93 @@ function positions(M::Type{<:MarginMode}, a::AbstractAsset, limits::Limits, e::E
     end
 end
 
-_external_lock(ai::AssetInstance) = getfield(ai, :lock)
-_internal_lock(ai::AssetInstance) = getfield(ai, :_internal_lock)
+_external_lock(ii::InstrumentInstance) = getfield(ii, :lock)
+_internal_lock(ii::InstrumentInstance) = getfield(ii, :_internal_lock)
 
-function _hashtuple(ai::AssetInstance)
+function _hashtuple(ii::InstrumentInstance)
     (
-        Instruments._hashtuple(getfield(ai, :asset))...,
-        getfield(getfield(ai, :exchange), :id),
+        Instruments._hashtuple(getfield(ii, :asset))...,
+        getfield(getfield(ii, :exchange), :id),
     )
 end
-Base.hash(ai::AssetInstance) = hash(_hashtuple(ai))
-Base.hash(ai::AssetInstance, h::UInt) = hash(_hashtuple(ai), h)
-function Base.propertynames(ai::AssetInstance)
-    (fieldnames(AssetInstance)..., :ohlcv, :funding, keys(attrs(ai))...)
+Base.hash(ii::InstrumentInstance) = hash(_hashtuple(ii))
+Base.hash(ii::InstrumentInstance, h::UInt) = hash(_hashtuple(ii), h)
+function Base.propertynames(ii::InstrumentInstance)
+    (fieldnames(InstrumentInstance)..., :ohlcv, :funding, keys(attrs(ii))...)
 end
-Base.Broadcast.broadcastable(s::AssetInstance) = Ref(s)
-function Base.lock(ai::AssetInstance)
-    @debug "instances: locking" _module = InstancesLock ai tid = Threads.threadid() f = @caller(10)
-    lock(getfield(ai, :lock))
-    @debug "instances: locked" _module = InstancesLock ai tid = Threads.threadid() f = @caller(10)
+Base.Broadcast.broadcastable(s::InstrumentInstance) = Ref(s)
+function Base.lock(ii::InstrumentInstance)
+    @debug "instances: locking" _module = InstancesLock ii tid = Threads.threadid() f = @caller(10)
+    lock(getfield(ii, :lock))
+    @debug "instances: locked" _module = InstancesLock ii tid = Threads.threadid() f = @caller(10)
 end
-Base.lock(f, ai::AssetInstance) = begin
-    l = getfield(ai, :lock)
-    lock(f, getfield(ai, :lock))
+Base.lock(f, ii::InstrumentInstance) = begin
+    l = getfield(ii, :lock)
+    lock(f, getfield(ii, :lock))
 end
-function Base.unlock(ai::AssetInstance)
-    unlock(getfield(ai, :lock))
-    @debug "instances: unlocked" _module = InstancesLock ai tid = Threads.threadid() f = @caller(10)
+function Base.unlock(ii::InstrumentInstance)
+    unlock(getfield(ii, :lock))
+    @debug "instances: unlocked" _module = InstancesLock ii tid = Threads.threadid() f = @caller(10)
 end
-Base.islocked(ai::AssetInstance) = islocked(getfield(ai, :lock))
-@doc " Get the cash value of a `AssetInstance`. "
-Base.float(ai::AssetInstance) = nothing
-Base.float(ai::NoMarginInstance) = cash(ai).value
-Base.float(ai::MarginInstance) =
-    let c = cash(ai)
+Base.islocked(ii::InstrumentInstance) = islocked(getfield(ii, :lock))
+@doc " Get the cash value of a `InstrumentInstance`. "
+Base.float(ii::InstrumentInstance) = nothing
+Base.float(ii::NoMarginInstance) = cash(ii).value
+Base.float(ii::MarginInstance) =
+    let c = cash(ii)
         if isnothing(c)
             0.0
         else
             c.value
         end
     end
-Base.abs(ai::MarginInstance) =
-    let pos = position(ai)
+Base.abs(ii::MarginInstance) =
+    let pos = position(ii)
         if isnothing(pos)
             0.0
         else
             abs(pos)
         end
     end
-Base.getindex(ai::AssetInstance, k::Symbol) = attr(ai, k)
-Base.get(ai::AssetInstance, keys::Tuple{Vararg{Symbol}}) = attr(ai, keys...)
-Base.get(ai::AssetInstance, k, v) = attr(ai, k, v)
-Base.setindex!(ai::AssetInstance, v, k::Symbol) = setattr!(ai, v, k)
-Base.setindex!(ai::AssetInstance, v, keys::Vararg{Symbol}) = setattr!(ai, v, keys...)
-Base.get!(ai::AssetInstance, k, v) = attr!(ai, k, v)
-Base.haskey(ai::AssetInstance, k::Symbol) = hasattr(ai, k)
-Base.keys(ai::AssetInstance) = keys(attrs(ai))
-Base.values(ai::AssetInstance) = values(attrs(ai))
+Base.getindex(ii::InstrumentInstance, k::Symbol) = attr(ii, k)
+Base.get(ii::InstrumentInstance, keys::Tuple{Vararg{Symbol}}) = attr(ii, keys...)
+Base.get(ii::InstrumentInstance, k, v) = attr(ii, k, v)
+Base.setindex!(ii::InstrumentInstance, v, k::Symbol) = setattr!(ii, v, k)
+Base.setindex!(ii::InstrumentInstance, v, keys::Vararg{Symbol}) = setattr!(ii, v, keys...)
+Base.get!(ii::InstrumentInstance, k, v) = attr!(ii, k, v)
+Base.haskey(ii::InstrumentInstance, k::Symbol) = hasattr(ii, k)
+Base.keys(ii::InstrumentInstance) = keys(attrs(ii))
+Base.values(ii::InstrumentInstance) = values(attrs(ii))
 
 posside(::NoMarginInstance) = Long()
-@doc "Get the position side of an `AssetInstance`. "
-posside(ai::MarginInstance) =
-    let pos = position(ai)
+@doc "Get the position side of an `InstrumentInstance`. "
+posside(ii::MarginInstance) =
+    let pos = position(ii)
         isnothing(pos) ? nothing : posside(pos)
     end
 _ishedged(::Union{T,Type{T}}) where {T<:MarginMode{H}} where {H} = H == Hedged
 # NOTE: wrap the function here to quickly overlay methods
 @doc "Check if the margin mode is hedged."
 ishedged(args...; kwargs...) = _ishedged(args...; kwargs...)
-@doc "Check if the `AssetInstance` is hedged."
-ishedged(ai::AssetInstance) = marginmode(ai) |> ishedged
-@doc "Check if the `AssetInstance` is open."
-isopen(ai::NoMarginInstance) = !iszero(ai)
-isopen(ai::MarginInstance) =
-    let po = position(ai)
+@doc "Check if the `InstrumentInstance` is hedged."
+ishedged(ii::InstrumentInstance) = marginmode(ii) |> ishedged
+@doc "Check if the `InstrumentInstance` is open."
+isopen(ii::NoMarginInstance) = !iszero(ii)
+isopen(ii::MarginInstance) =
+    let po = position(ii)
         !isnothing(po) && isopen(po)
     end
-@doc "Check if the `AssetInstance` is long."
-islong(ai::NoMarginInstance) = true
-@doc "Check if the `AssetInstance` is short."
-isshort(ai::NoMarginInstance) = false
-islong(ai::MarginInstance) =
-    let pos = position(ai)
+@doc "Check if the `InstrumentInstance` is long."
+islong(ii::NoMarginInstance) = true
+@doc "Check if the `InstrumentInstance` is short."
+isshort(ii::NoMarginInstance) = false
+islong(ii::MarginInstance) =
+    let pos = position(ii)
         isnothing(pos) && return false
         islong(pos)
     end
-isshort(ai::MarginInstance) =
-    let pos = position(ai)
+isshort(ii::MarginInstance) =
+    let pos = position(ii)
         isnothing(pos) && return false
         isshort(pos)
     end
@@ -275,37 +275,37 @@ isshort(ai::MarginInstance) =
 
 $(TYPEDSIGNATURES)
 
-This function checks if the position value of a given `AssetInstance` at a specific price is below the minimum limit for that asset. The position side `p` determines if it's a long or short position.
+This function checks if the position value of a given `InstrumentInstance` at a specific price is below the minimum limit for that asset. The position side `p` determines if it's a long or short position.
 
 """
-function isdust(ai::MarginInstance, price::Number, p::PositionSide)
-    pos = position(ai, p)
+function isdust(ii::MarginInstance, price::Number, p::PositionSide)
+    pos = position(ii, p)
     if isnothing(pos)
         return true
     end
     this_cash = cash(pos) |> value |> abs
-    if this_cash >= ai.limits.amount.min
+    if this_cash >= ii.limits.amount.min
         return false
     else
-        this_cash * price * leverage(pos) < ai.limits.cost.min
+        this_cash * price * leverage(pos) < ii.limits.cost.min
     end
 end
-function isdust(ai::MarginInstance, price::Number)
-    isdust(ai, price, Long()) && isdust(ai, price, Short())
+function isdust(ii::MarginInstance, price::Number)
+    isdust(ii, price, Long()) && isdust(ii, price, Short())
 end
-function isdust(ai::NoMarginInstance, price::Number)
-    this_cash = cash(ai) |> value |> abs
-    if this_cash >= ai.limits.amount.min
+function isdust(ii::NoMarginInstance, price::Number)
+    this_cash = cash(ii) |> value |> abs
+    if this_cash >= ii.limits.amount.min
         return false
     else
-        this_cash * price < ai.limits.cost.min
+        this_cash * price < ii.limits.cost.min
     end
 end
-function isdust(ai::AssetInstance, o::Type{<:Order}, price::Number)
+function isdust(ii::InstrumentInstance, o::Type{<:Order}, price::Number)
     if o <: ReduceOnlyOrder
         false
     else
-        invoke(isdust, Tuple{MarginInstance,Number,PositionSide}, ai, price, posside(ai))
+        invoke(isdust, Tuple{MarginInstance,Number,PositionSide}, ii, price, posside(ii))
     end
 end
 @doc """ Get the asset cash rounded to precision.
@@ -315,21 +315,21 @@ $(TYPEDSIGNATURES)
 This function returns the asset cash of a `MarginInstance` rounded according to the asset's precision. The position side `p` is determined by the `posside` function.
 
 """
-function nondust(ai::MarginInstance, price::Number, p=posside(ai))
-    pos = position(ai, p)
+function nondust(ii::MarginInstance, price::Number, p=posside(ii))
+    pos = position(ii, p)
     if isnothing(pos)
         return zero(price)
     end
     c = cash(pos)
     amt = c.value
-    abs(amt * price * leverage(pos)) < ai.limits.cost.min ? zero(amt) : amt
+    abs(amt * price * leverage(pos)) < ii.limits.cost.min ? zero(amt) : amt
 end
 
-function nondust(ai::MarginInstance, o::Type{<:Order}, price)
+function nondust(ii::MarginInstance, o::Type{<:Order}, price)
     if o <: ReduceOnlyOrder
-        cash(ai, o).value
+        cash(ii, o).value
     else
-        invoke(nondust, Tuple{MarginInstance,Number,PositionSide}, ai, price, posside(o))
+        invoke(nondust, Tuple{MarginInstance,Number,PositionSide}, ii, price, posside(o))
     end
 end
 
@@ -337,129 +337,129 @@ end
 
 $(TYPEDSIGNATURES)
 
-This function checks if a specified amount in base currency is considered zero with respect to an `AssetInstance`'s minimum limit. The amount is considered zero if it is less than the minimum limit minus a small epsilon value.
+This function checks if a specified amount in base currency is considered zero with respect to an `InstrumentInstance`'s minimum limit. The amount is considered zero if it is less than the minimum limit minus a small epsilon value.
 
 """
-function Base.iszero(ai::AssetInstance, v; atol=ai.limits.amount.min - eps(DFT))
+function Base.iszero(ii::InstrumentInstance, v; atol=ii.limits.amount.min - eps(DFT))
     isapprox(v, zero(DFT); atol)
 end
 @doc """ Check if the asset cash for a position side is zero.
 
 $(TYPEDSIGNATURES)
 
-This function checks if the cash value of an `AssetInstance` for a specific `PositionSide` is zero. This is used to determine if there are no funds in a certain position side (long or short).
+This function checks if the cash value of an `InstrumentInstance` for a specific `PositionSide` is zero. This is used to determine if there are no funds in a certain position side (long or short).
 
 """
-function Base.iszero(ai::AssetInstance, p::PositionSide)
-    let c = cash(ai, p)
+function Base.iszero(ii::InstrumentInstance, p::PositionSide)
+    let c = cash(ii, p)
         isnothing(c) && return true
-        isapprox(value(c), zero(DFT); atol=ai.limits.amount.min - eps(DFT))
+        isapprox(value(c), zero(DFT); atol=ii.limits.amount.min - eps(DFT))
     end
 end
 @doc """ Check if the asset cash is zero.
 
 $(TYPEDSIGNATURES)
 
-This function checks if the cash value of an `AssetInstance` is zero. This is used to determine if there are no funds in the asset.
+This function checks if the cash value of an `InstrumentInstance` is zero. This is used to determine if there are no funds in the asset.
 
 """
-function Base.iszero(ai::AssetInstance)
-    iszero(ai, Long()) && iszero(ai, Short())
+function Base.iszero(ii::InstrumentInstance)
+    iszero(ii, Long()) && iszero(ii, Short())
 end
-approxzero(ai::AssetInstance, args...; kwargs...) = iszero(ai, args...; kwargs...)
-@doc """ Check if an amount is greater than zero for an `AssetInstance`.
+approxzero(ii::InstrumentInstance, args...; kwargs...) = iszero(ii, args...; kwargs...)
+@doc """ Check if an amount is greater than zero for an `InstrumentInstance`.
 
 $(TYPEDSIGNATURES)
 
-This function checks if a specified amount `v` is greater than zero for an `AssetInstance`. It's used to validate the amount before performing operations on the asset.
+This function checks if a specified amount `v` is greater than zero for an `InstrumentInstance`. It's used to validate the amount before performing operations on the asset.
 
 """
-function gtxzero(ai::AssetInstance, v, ::Val{:amount})
-    gtxzero(v; atol=ai.limits.amount.min + eps())
+function gtxzero(ii::InstrumentInstance, v, ::Val{:amount})
+    gtxzero(v; atol=ii.limits.amount.min + eps())
 end
-@doc """ Check if an amount is less than zero for an `AssetInstance`.
+@doc """ Check if an amount is less than zero for an `InstrumentInstance`.
 
 $(TYPEDSIGNATURES)
 
-This function checks if a specified amount `v` is less than zero for an `AssetInstance`. It's used to validate the amount before performing operations on the asset.
+This function checks if a specified amount `v` is less than zero for an `InstrumentInstance`. It's used to validate the amount before performing operations on the asset.
 
 """
-function ltxzero(ai::AssetInstance, v, ::Val{:amount})
-    ltxzero(v; atol=ai.limits.amount.min + eps())
+function ltxzero(ii::InstrumentInstance, v, ::Val{:amount})
+    ltxzero(v; atol=ii.limits.amount.min + eps())
 end
-@doc """ Check if a price is greater than zero for an `AssetInstance`.
+@doc """ Check if a price is greater than zero for an `InstrumentInstance`.
 
 $(TYPEDSIGNATURES)
 
-This function checks if a specified price `v` is greater than zero for an `AssetInstance`. The price is considered greater than zero if it is above the minimum limit minus a small epsilon value.
+This function checks if a specified price `v` is greater than zero for an `InstrumentInstance`. The price is considered greater than zero if it is above the minimum limit minus a small epsilon value.
 
 """
-gtxzero(ai::AssetInstance, v, ::Val{:price}) = gtxzero(v; atol=ai.limits.price.min + eps())
-@doc """ Check if a price is less than zero for an `AssetInstance`.
+gtxzero(ii::InstrumentInstance, v, ::Val{:price}) = gtxzero(v; atol=ii.limits.price.min + eps())
+@doc """ Check if a price is less than zero for an `InstrumentInstance`.
 
 $(TYPEDSIGNATURES)
 
-This function checks if a specified price `v` is less than zero for an `AssetInstance`. The price is considered less than zero if it is below the minimum limit minus a small epsilon value.
+This function checks if a specified price `v` is less than zero for an `InstrumentInstance`. The price is considered less than zero if it is below the minimum limit minus a small epsilon value.
 
 """
-ltxzero(ai::AssetInstance, v, ::Val{:price}) = ltxzero(v; atol=ai.limits.price.min + eps())
-@doc """ Check if a cost is greater than zero for an `AssetInstance`.
+ltxzero(ii::InstrumentInstance, v, ::Val{:price}) = ltxzero(v; atol=ii.limits.price.min + eps())
+@doc """ Check if a cost is greater than zero for an `InstrumentInstance`.
 
 $(TYPEDSIGNATURES)
 
-This function checks if a specified cost `v` is greater than zero for an `AssetInstance`. The cost is considered greater than zero if it is above the minimum limit minus a small epsilon value.
+This function checks if a specified cost `v` is greater than zero for an `InstrumentInstance`. The cost is considered greater than zero if it is above the minimum limit minus a small epsilon value.
 
 """
-gtxzero(ai::AssetInstance, v, ::Val{:cost}) = gtxzero(v; atol=ai.limits.cost.min + eps())
-@doc """ Check if a cost is less than zero for an `AssetInstance`.
+gtxzero(ii::InstrumentInstance, v, ::Val{:cost}) = gtxzero(v; atol=ii.limits.cost.min + eps())
+@doc """ Check if a cost is less than zero for an `InstrumentInstance`.
 
 $(TYPEDSIGNATURES)
 
-This function checks if a specified cost `v` is less than zero for an `AssetInstance`. The cost is considered less than zero if it is below the minimum limit minus a small epsilon value.
+This function checks if a specified cost `v` is less than zero for an `InstrumentInstance`. The cost is considered less than zero if it is below the minimum limit minus a small epsilon value.
 
 """
-ltxzero(ai::AssetInstance, v, ::Val{:cost}) = ltxzero(v; atol=ai.limits.cost.min + eps())
-@doc """ Check if two amounts are approximately equal for an `AssetInstance`.
+ltxzero(ii::InstrumentInstance, v, ::Val{:cost}) = ltxzero(v; atol=ii.limits.cost.min + eps())
+@doc """ Check if two amounts are approximately equal for an `InstrumentInstance`.
 
 $(TYPEDSIGNATURES)
 
-This function checks if two specified amounts `v1` and `v2` are approximately equal for an `AssetInstance`. It's used to validate whether two amounts are similar considering small variations.
+This function checks if two specified amounts `v1` and `v2` are approximately equal for an `InstrumentInstance`. It's used to validate whether two amounts are similar considering small variations.
 
 """
 function Base.isapprox(
-    ai::AssetInstance, v1, v2, ::Val{:amount}; atol=ai.precision.amount + eps(DFT)
+    ii::InstrumentInstance, v1, v2, ::Val{:amount}; atol=ii.precision.amount + eps(DFT)
 )
     isapprox(value(v1), value(v2); atol)
 end
-@doc """ Check if two prices are approximately equal for an `AssetInstance`.
+@doc """ Check if two prices are approximately equal for an `InstrumentInstance`.
 
 $(TYPEDSIGNATURES)
 
-This function checks if two specified prices `v1` and `v2` are approximately equal for an `AssetInstance`. It's used to validate whether two prices are similar considering small variations.
+This function checks if two specified prices `v1` and `v2` are approximately equal for an `InstrumentInstance`. It's used to validate whether two prices are similar considering small variations.
 
 """
 function Base.isapprox(
-    ai::AssetInstance, v1, v2, ::Val{:price}; atol=ai.precision.price + eps(DFT)
+    ii::InstrumentInstance, v1, v2, ::Val{:price}; atol=ii.precision.price + eps(DFT)
 )
     isapprox(value(v1), value(v2); atol)
 end
 
-function Base.isequal(ai::AssetInstance, v1, v2, kind::Val{:amount})
-    isapprox(ai, v1, v2, kind; atol=ai.limits.amount.min - eps(DFT))
+function Base.isequal(ii::InstrumentInstance, v1, v2, kind::Val{:amount})
+    isapprox(ii, v1, v2, kind; atol=ii.limits.amount.min - eps(DFT))
 end
 
-function Base.isequal(ai::AssetInstance, v1, v2, kind::Val{:price})
-    isapprox(ai, v1, v2, kind; atol=ai.limits.price.min - eps(DFT))
+function Base.isequal(ii::InstrumentInstance, v1, v2, kind::Val{:price})
+    isapprox(ii, v1, v2, kind; atol=ii.limits.price.min - eps(DFT))
 end
 
-@doc """ Create an `AssetInstance` from a zarr instance.
+@doc """ Create an `InstrumentInstance` from a zarr instance.
 
 $(TYPEDSIGNATURES)
 
-This function constructs an `AssetInstance` by loading data from a zarr instance and requires an external constructor defined in `Engine`. The `MarginMode` can be specified, with `NoMargin` being the default.
+This function constructs an `InstrumentInstance` by loading data from a zarr instance and requires an external constructor defined in `Engine`. The `MarginMode` can be specified, with `NoMargin` being the default.
 
 """
-function instance(exc::Exchange, a::AbstractAsset, m::MarginMode=NoMargin(); zi=zi)
+function instance(exc::Exchange, a::AbstractInstrument, m::MarginMode=NoMargin(); zi=zi)
     data = Dict()
     @assert a.raw ∈ keys(exc.markets) "Market $(a.raw) not found on exchange $(exc.name)."
     for tf in config.timeframes
@@ -469,22 +469,22 @@ function instance(exc::Exchange, a::AbstractAsset, m::MarginMode=NoMargin(); zi=
         # nrow, etc.), so fall back to an empty DataFrame the watcher fills.
         data[tf] = isnothing(loaded) ? DataFrame() : loaded
     end
-    AssetInstance(a; data, exc, margin=m)
+    InstrumentInstance(a; data, exc, margin=m)
 end
 instance(a) = instance(exc, a)
 
-@doc """ Load OHLCV data for an `AssetInstance`.
+@doc """ Load OHLCV data for an `InstrumentInstance`.
 
 $(TYPEDSIGNATURES)
 
-This function loads OHLCV (Open, High, Low, Close, Volume) data for a given `AssetInstance`. If `reset` is set to true, it will re-fetch the data even if it's already been loaded.
+This function loads OHLCV (Open, High, Low, Close, Volume) data for a given `InstrumentInstance`. If `reset` is set to true, it will re-fetch the data even if it's already been loaded.
 
 """
-function load!(ai::AssetInstance; reset=true, zi=zi)
-    for (tf, df) in ai.data
+function load!(ii::InstrumentInstance; reset=true, zi=zi)
+    for (tf, df) in ii.data
         tf == TICK_TIMEFRAME && continue
         reset && empty!(df)
-        loaded = load(zi, ai.exchange.name, raw(ai), string(tf))
+        loaded = load(zi, ii.exchange.name, raw(ii), string(tf))
         # `load` returns `nothing` when no cached OHLCV exists for this
         # timeframe/symbol (e.g. first run, cache purge, or a partially
         # saved symbol). Appending `nothing` would throw and abort asset
@@ -493,60 +493,60 @@ function load!(ai::AssetInstance; reset=true, zi=zi)
         append!(df, loaded)
     end
 end
-Base.getproperty(ai::AssetInstance, f::Symbol) = begin
+Base.getproperty(ii::InstrumentInstance, f::Symbol) = begin
     if f == :ohlcv
-        ohlcv(ai)
+        ohlcv(ii)
     elseif f == :ticks
-        ticks(ai)
+        ticks(ii)
     elseif f == :bc
-        ai.asset.bc
+        ii.asset.bc
     elseif f == :qc
-        ai.asset.qc
+        ii.asset.qc
     elseif f == :funding
-        metadata(ohlcv(ai), "funding")
-    elseif hasfield(AssetInstance, f)
-        getfield(ai, f)
+        metadata(ohlcv(ii), "funding")
+    elseif hasfield(InstrumentInstance, f)
+        getfield(ii, f)
     else
-        attr(ai, f)
+        attr(ii, f)
     end
 end
 
-@doc " Get the parsed `AbstractAsset` of an `AssetInstance`. "
-function asset(ai::AssetInstance)
-    getfield(ai, :asset)
+@doc " Get the parsed `AbstractInstrument` of an `InstrumentInstance`. "
+function asset(ii::InstrumentInstance)
+    getfield(ii, :asset)
 end
 
-@doc " Get the raw string id of an `AssetInstance`. "
-function raw(ai::AssetInstance)
-    raw(asset(ai))
+@doc " Get the raw string id of an `InstrumentInstance`. "
+function raw(ii::InstrumentInstance)
+    raw(asset(ii))
 end
 
-@doc " Get the base currency of an `AssetInstance`. "
-bc(ai::AssetInstance) = bc(asset(ai))
-@doc " Get the quote currency of an `AssetInstance`. "
-qc(ai::AssetInstance) = qc(asset(ai))
+@doc " Get the base currency of an `InstrumentInstance`. "
+bc(ii::InstrumentInstance) = bc(asset(ii))
+@doc " Get the quote currency of an `InstrumentInstance`. "
+qc(ii::InstrumentInstance) = qc(asset(ii))
 
-@doc """ Round a value based on the `precision` field of the `ai` asset instance.
+@doc """ Round a value based on the `precision` field of the `ii` asset instance.
 
 $(TYPEDSIGNATURES)
 
-This macro rounds a value `v` based on the `precision` field of an `AssetInstance`. By default, it rounds the `amount`, but it can also round other fields like `price` or `cost` if specified.
+This macro rounds a value `v` based on the `precision` field of an `InstrumentInstance`. By default, it rounds the `amount`, but it can also round other fields like `price` or `cost` if specified.
 
 """
 macro _round(v, kind=:amount)
     @assert kind isa Symbol
     quote
         toprecision(
-            $(esc(v)), getfield(getfield($(esc(esc(:ai))), :precision), $(QuoteNode(kind)))
+            $(esc(v)), getfield(getfield($(esc(esc(:ii))), :precision), $(QuoteNode(kind)))
         )
     end
 end
 
-@doc """ Round a value based on the `precision` (price) field of the `ai` asset instance.
+@doc """ Round a value based on the `precision` (price) field of the `ii` asset instance.
 
 $(TYPEDSIGNATURES)
 
-This macro rounds a price value `v` based on the `precision` field of an `AssetInstance`.
+This macro rounds a price value `v` based on the `precision` field of an `InstrumentInstance`.
 
 """
 macro rprice(v)
@@ -555,11 +555,11 @@ macro rprice(v)
     end
 end
 
-@doc """ Round a value based on the `precision` (amount) field of the `ai` asset instance.
+@doc """ Round a value based on the `precision` (amount) field of the `ii` asset instance.
 
 $(TYPEDSIGNATURES)
 
-This macro rounds an amount value `v` based on the `precision` field of an `AssetInstance`.
+This macro rounds an amount value `v` based on the `precision` field of an `InstrumentInstance`.
 
 """
 macro ramount(v)
@@ -572,88 +572,88 @@ end
 
 $(TYPEDSIGNATURES)
 
-This function retrieves the last available candle (Open, High, Low, Close, Volume data for a specific time period) from the `AssetInstance` that is strictly lower than the date adjusted by the `TimeFrame` `tf`.
+This function retrieves the last available candle (Open, High, Low, Close, Volume data for a specific time period) from the `InstrumentInstance` that is strictly lower than the date adjusted by the `TimeFrame` `tf`.
 
 """
-function Data.candlelast(ai::AssetInstance, tf::TimeFrame=first(_ohlcv_keys(ai)), args...)
-    Data.candlelast(ai.data[tf])
+function Data.candlelast(ii::InstrumentInstance, tf::TimeFrame=first(_ohlcv_keys(ii)), args...)
+    Data.candlelast(ii.data[tf])
 end
 
-function OrderTypes.Order(ai::AssetInstance, type; kwargs...)
-    Order(ai.asset, ai.exchange.id, type; kwargs...)
+function OrderTypes.Order(ii::InstrumentInstance, type; kwargs...)
+    Order(ii.asset, ii.exchange.id, type; kwargs...)
 end
 
-@doc """ Create a similar `AssetInstance` with cash and orders reset.
+@doc """ Create a similar `InstrumentInstance` with cash and orders reset.
 
 $(TYPEDSIGNATURES)
 
-This function returns a similar `AssetInstance` to the one provided, but resets the cash and orders. The limits, precision, and fees can be specified, and will default to those of the original instance.
+This function returns a similar `InstrumentInstance` to the one provided, but resets the cash and orders. The limits, precision, and fees can be specified, and will default to those of the original instance.
 
 """
 function Base.similar(
-    ai::AssetInstance;
-    exc=ai.exchange,
-    limits=ai.limits,
-    precision=ai.precision,
-    fees=ai.fees,
+    ii::InstrumentInstance;
+    exc=ii.exchange,
+    limits=ii.limits,
+    precision=ii.precision,
+    fees=ii.fees,
 )
-    AssetInstance(ai.asset, ai.data, exc, marginmode(ai); limits, precision, fees)
+    InstrumentInstance(ii.asset, ii.data, exc, marginmode(ii); limits, precision, fees)
 end
 
 @doc "Get the asset instance cash."
-cash(ai::NoMarginInstance) = getfield(ai, :cash)
+cash(ii::NoMarginInstance) = getfield(ii, :cash)
 @doc "Get the asset instance cash for the long position."
-cash(ai::NoMarginInstance, ::ByPos{Long}) = cash(ai)
+cash(ii::NoMarginInstance, ::ByPos{Long}) = cash(ii)
 @doc "Get the asset instance cash for the short position."
-cash(ai::NoMarginInstance, ::ByPos{Short}) = 0.0
-cash(ai::MarginInstance) =
-    let pos = position(ai)
+cash(ii::NoMarginInstance, ::ByPos{Short}) = 0.0
+cash(ii::MarginInstance) =
+    let pos = position(ii)
         isnothing(pos) && return nothing
         getfield((pos), :cash)
     end
-cash(ai::MarginInstance, ::ByPos{Long}) =
-    let pos = position(ai, Long())
+cash(ii::MarginInstance, ::ByPos{Long}) =
+    let pos = position(ii, Long())
         isnothing(pos) && return nothing
         getfield((pos), :cash)
     end
-cash(ai::MarginInstance, ::ByPos{Short}) =
-    let pos = position(ai, Short())
+cash(ii::MarginInstance, ::ByPos{Short}) =
+    let pos = position(ii, Short())
         isnothing(pos) && return nothing
         getfield((pos), :cash)
     end
 @doc "Get the asset instance committed cash."
-committed(ai::NoMarginInstance) = getfield(ai, :cash_committed)
-committed(ai::NoMarginInstance, ::ByPos{Long}) = committed(ai)
-committed(ai::NoMarginInstance, ::ByPos{Short}) = 0.0
-function committed(ai::MarginInstance, ::ByPos{P}) where {P}
-    let pos = position(ai, P)
+committed(ii::NoMarginInstance) = getfield(ii, :cash_committed)
+committed(ii::NoMarginInstance, ::ByPos{Long}) = committed(ii)
+committed(ii::NoMarginInstance, ::ByPos{Short}) = 0.0
+function committed(ii::MarginInstance, ::ByPos{P}) where {P}
+    let pos = position(ii, P)
         isnothing(pos) && return nothing
         getfield((pos), :cash_committed)
     end
 end
-committed(ai::MarginInstance) =
-    let pos = position(ai)
+committed(ii::MarginInstance) =
+    let pos = position(ii)
         isnothing(pos) && return nothing
         committed(pos)
     end
 @doc "Get the asset instance ohlcv data for the smallest time frame."
-ohlcv(ai::AssetInstance) = getfield(ai, :data)[first(_ohlcv_keys(ai))]
-ohlcv(ai::AssetInstance, tf::TimeFrame) = getfield(ai, :data)[tf]
+ohlcv(ii::InstrumentInstance) = getfield(ii, :data)[first(_ohlcv_keys(ii))]
+ohlcv(ii::InstrumentInstance, tf::TimeFrame) = getfield(ii, :data)[tf]
 @doc "Get the asset instance ohlcv data dictionary."
-ohlcv_dict(ai::AssetInstance) = getfield(ai, :data)
-Instruments.add!(ai::NoMarginInstance, v, args...) = add!(cash(ai), v)
-Instruments.add!(ai::MarginInstance, v, p::PositionSide) =
-    let c = cash(ai, p)
+ohlcv_dict(ii::InstrumentInstance) = getfield(ii, :data)
+Instruments.add!(ii::NoMarginInstance, v, args...) = add!(cash(ii), v)
+Instruments.add!(ii::MarginInstance, v, p::PositionSide) =
+    let c = cash(ii, p)
         isnothing(c) || add!(c, v)
     end
-Instruments.sub!(ai::NoMarginInstance, v, args...) = sub!(cash(ai), v)
-Instruments.sub!(ai::MarginInstance, v, p::PositionSide) =
-    let c = cash(ai, p)
+Instruments.sub!(ii::NoMarginInstance, v, args...) = sub!(cash(ii), v)
+Instruments.sub!(ii::MarginInstance, v, p::PositionSide) =
+    let c = cash(ii, p)
         isnothing(c) || sub!(c, v)
     end
-Instruments.cash!(ai::NoMarginInstance, v, args...) = cash!(cash(ai), v)
-Instruments.cash!(ai::MarginInstance, v, p::PositionSide) =
-    let c = cash(ai, p)
+Instruments.cash!(ii::NoMarginInstance, v, args...) = cash!(cash(ii), v)
+Instruments.cash!(ii::MarginInstance, v, p::PositionSide) =
+    let c = cash(ii, p)
         isnothing(c) || cash!(c, v)
     end
 # Positive `fees_base` go `trade --> exchange`
@@ -670,9 +670,9 @@ amount_with_fees(amt, fb) =
         amt + fb
     end
 amount_with_fees(t::Trade) = amount_with_fees(t.amount, t.fees_base)
-function Instruments.cash!(ai::NoMarginInstance, t::BuyTrade)
+function Instruments.cash!(ii::NoMarginInstance, t::BuyTrade)
     amt = amount_with_fees(t)
-    add!(cash(ai), amt)
+    add!(cash(ii), amt)
 end
 @doc """ Update the cash value for a `NoMarginInstance` after a `SellTrade`.
 
@@ -681,10 +681,10 @@ $(TYPEDSIGNATURES)
 This function updates the cash value of a `NoMarginInstance` after a `SellTrade`. The cash value would typically increase after a sell trade, as assets are sold in exchange for cash.
 
 """
-function Instruments.cash!(ai::NoMarginInstance, t::SellTrade)
+function Instruments.cash!(ii::NoMarginInstance, t::SellTrade)
     amt = amount_with_fees(t)
-    add!(cash(ai), amt)
-    add!(committed(ai), amt)
+    add!(cash(ii), amt)
+    add!(committed(ii), amt)
 end
 @doc """ Update the cash value for a `MarginInstance` after an `IncreaseTrade`.
 
@@ -693,9 +693,9 @@ $(TYPEDSIGNATURES)
 This function updates the cash value of a `MarginInstance` after an `IncreaseTrade`. The cash value would typically decrease after an increase trade, as assets are bought using cash.
 
 """
-function Instruments.cash!(ai::MarginInstance, t::IncreaseTrade)
+function Instruments.cash!(ii::MarginInstance, t::IncreaseTrade)
     amt = amount_with_fees(t)
-    add!(cash(ai, positionside(t)()), amt)
+    add!(cash(ii, positionside(t)()), amt)
 end
 @doc """ Update the cash value for a `MarginInstance` after a `ReduceTrade`.
 
@@ -704,10 +704,10 @@ $(TYPEDSIGNATURES)
 This function updates the cash value of a `MarginInstance` after a `ReduceTrade`. The cash value would typically increase after a reduce trade, as assets are sold in exchange for cash.
 
 """
-function Instruments.cash!(ai::MarginInstance, t::ReduceTrade)
+function Instruments.cash!(ii::MarginInstance, t::ReduceTrade)
     amt = amount_with_fees(t)
-    add!(cash(ai, positionside(t)()), amt)
-    add!(committed(ai, positionside(t)()), amt)
+    add!(cash(ii, positionside(t)()), amt)
+    add!(committed(ii, positionside(t)()), amt)
 end
 @doc """ Calculate the free cash for a `NoMarginInstance`.
 
@@ -716,9 +716,9 @@ $(TYPEDSIGNATURES)
 This function calculates the free cash (cash that is not tied up in trades) of a `NoMarginInstance`. It takes into account the current cash, open orders, and any additional factors specified in `args`.
 
 """
-function freecash(ai::NoMarginInstance, args...)
-    ca = cash(ai) - committed(ai)
-    @deassert ca |> gtxzero (cash(ai), committed(ai))
+function freecash(ii::NoMarginInstance, args...)
+    ca = cash(ii) - committed(ii)
+    @deassert ca |> gtxzero (cash(ii), committed(ii))
     ca
 end
 @doc """ Calculate the free cash for a `MarginInstance` with long position.
@@ -728,8 +728,8 @@ $(TYPEDSIGNATURES)
 This function calculates the free cash (cash that is not tied up in trades) of a `MarginInstance` that has a long position. It takes into account the current cash, open long positions, and the margin requirements for those positions.
 
 """
-function freecash(ai::MarginInstance, p::ByPos{Long})
-    ca = max(0.0, something(cash(ai, Long()), zero(DFT)) - something(committed(ai, Long()), zero(DFT)))
+function freecash(ii::MarginInstance, p::ByPos{Long})
+    ca = max(0.0, something(cash(ii, Long()), zero(DFT)) - something(committed(ii, Long()), zero(DFT)))
     ca
 end
 @doc """ Calculate the free cash for a `MarginInstance` with short position.
@@ -739,13 +739,13 @@ $(TYPEDSIGNATURES)
 This function calculates the free cash (cash that is not tied up in trades) of a `MarginInstance` that has a short position. It takes into account the current cash, open short positions, and the margin requirements for those positions.
 
 """
-function freecash(ai::MarginInstance, p::ByPos{Short})
-    ca = min(0.0, something(cash(ai, Short()), zero(DFT)) - something(committed(ai, Short()), zero(DFT)))
+function freecash(ii::MarginInstance, p::ByPos{Short})
+    ca = min(0.0, something(cash(ii, Short()), zero(DFT)) - something(committed(ii, Short()), zero(DFT)))
     ca
 end
-_reset!(ai) = begin
-    empty!(ai.history)
-    ai.lastpos[] = nothing
+_reset!(ii) = begin
+    empty!(ii.history)
+    ii.lastpos[] = nothing
 end
 @doc """ Resets asset cash and commitments for a `NoMarginInstance`.
 
@@ -754,10 +754,10 @@ $(TYPEDSIGNATURES)
 This function resets the cash and commitments (open trades) of a `NoMarginInstance` to initial values. Any additional arguments in `args` are used to adjust the reset process, if necessary.
 
 """
-reset!(ai::NoMarginInstance, args...) = begin
-    cash!(ai, 0.0)
-    cash!(committed(ai), 0.0)
-    _reset!(ai)
+reset!(ii::NoMarginInstance, args...) = begin
+    cash!(ii, 0.0)
+    cash!(committed(ii), 0.0)
+    _reset!(ii)
 end
 @doc """ Resets asset positions for a `MarginInstance`.
 
@@ -766,55 +766,55 @@ $(TYPEDSIGNATURES)
 This function resets the positions (open trades) of a `MarginInstance` to initial values. Any additional arguments in `args` are used to adjust the reset process, if necessary.
 
 """
-function reset!(ai::MarginInstance, args...)
+function reset!(ii::MarginInstance, args...)
     for p in (Long(), Short())
-        let pos = position(ai, p)
+        let pos = position(ii, p)
             isnothing(pos) || reset!(pos, args...)
         end
     end
-    _reset!(ai)
+    _reset!(ii)
 end
 
-function reset!(ai::MarginInstance, p::PositionSide)
-    let pos = position(ai, p)
+function reset!(ii::MarginInstance, p::PositionSide)
+    let pos = position(ii, p)
         isnothing(pos) || reset!(pos)
     end
-    let sop = position(ai, opposite(p))
-        ai.lastpos[] = (isnothing(sop) || !isopen(sop)) ? nothing : sop
+    let sop = position(ii, opposite(p))
+        ii.lastpos[] = (isnothing(sop) || !isopen(sop)) ? nothing : sop
     end
 end
-Data.DFUtils.firstdate(ai::AssetInstance) = begin
-    df = ohlcv(ai)
+Data.DFUtils.firstdate(ii::InstrumentInstance) = begin
+    df = ohlcv(ii)
     isempty(df) ? DateTime(0) : first(df.timestamp)
 end
-Data.DFUtils.lastdate(ai::AssetInstance) = begin
-    df = ohlcv(ai)
+Data.DFUtils.lastdate(ii::InstrumentInstance) = begin
+    df = ohlcv(ii)
     isempty(df) ? DateTime(0) : last(df.timestamp)
 end
 
-function Base.print(io::IO, ai::NoMarginInstance)
-    write(io, raw(ai), "~[", compactnum(ai.cash.value), "]{", ai.exchange.name, "}")
+function Base.print(io::IO, ii::NoMarginInstance)
+    write(io, raw(ii), "~[", compactnum(ii.cash.value), "]{", ii.exchange.name, "}")
 end
-function Base.print(io::IO, ai::MarginInstance)
-    let cl = cash(ai, Long()), cs = cash(ai, Short())
+function Base.print(io::IO, ii::MarginInstance)
+    let cl = cash(ii, Long()), cs = cash(ii, Short())
         long = compactnum(isnothing(cl) ? 0.0 : cl.value)
         short = compactnum(isnothing(cs) ? 0.0 : cs.value)
-        write(io, "[\"", raw(ai), "\"][L:", long, "/S:", short, "][", ai.exchange.name, "]")
+        write(io, "[\"", raw(ii), "\"][L:", long, "/S:", short, "][", ii.exchange.name, "]")
     end
 end
-Base.show(io::IO, ::MIME"text/plain", ai::AssetInstance) = print(io, ai)
-Base.show(io::IO, ai::AssetInstance) = print(io, "\"", raw(ai), "\"")
+Base.show(io::IO, ::MIME"text/plain", ii::InstrumentInstance) = print(io, ii)
+Base.show(io::IO, ii::InstrumentInstance) = print(io, "\"", raw(ii), "\"")
 
-@doc """ Stub data for an `AssetInstance` with a `DataFrame`.
+@doc """ Stub data for an `InstrumentInstance` with a `DataFrame`.
 
 $(TYPEDSIGNATURES)
 
-This function stabs data of an `AssetInstance` with a given `DataFrame`. It's used for testing or simulating scenarios with pre-defined data.
+This function stabs data of an `InstrumentInstance` with a given `DataFrame`. It's used for testing or simulating scenarios with pre-defined data.
 
 """
-stub!(ai::AssetInstance, df::DataFrame) = begin
+stub!(ii::InstrumentInstance, df::DataFrame) = begin
     tf = timeframe!(df)
-    ai.data[tf] = df
+    ii.data[tf] = df
 end
 @doc """ Calculate the value of a `NoMarginInstance`.
 
@@ -824,36 +824,36 @@ This function calculates the value of a `NoMarginInstance`. It uses the current 
 
 """
 function value(
-    ai::NoMarginInstance;
-    current_price=lastprice(ai, Val(:history)),
-    fees=current_price * cash(ai) * maxfees(ai),
+    ii::NoMarginInstance;
+    current_price=lastprice(ii, Val(:history)),
+    fees=current_price * cash(ii) * maxfees(ii),
 )
-    cash(ai) * current_price - fees
+    cash(ii) * current_price - fees
 end
 @doc "Taker fees for the asset instance (usually higher than maker fees.)"
-takerfees(ai::AssetInstance) = ai.fees.taker
+takerfees(ii::InstrumentInstance) = ii.fees.taker
 @doc "Maker fees for the asset instance (usually lower than taker fees.)"
-makerfees(ai::AssetInstance) = ai.fees.maker
+makerfees(ii::InstrumentInstance) = ii.fees.maker
 @doc "The minimum fees for trading in the asset market (usually the highest vip level.)"
-minfees(ai::AssetInstance) = ai.fees.min
+minfees(ii::InstrumentInstance) = ii.fees.min
 @doc "The maximum fees for trading in the asset market (usually the lowest vip level.)"
-maxfees(ai::AssetInstance) = ai.fees.max
+maxfees(ii::InstrumentInstance) = ii.fees.max
 @doc "ExchangeID for the asset instance."
-exchangeid(::AssetInstance{<:AbstractAsset,E}) where {E<:ExchangeID} = E
+exchangeid(::InstrumentInstance{<:AbstractInstrument,E}) where {E<:ExchangeID} = E
 @doc "The exchange of the asset instance."
-exchange(ai::AssetInstance) = getfield(ai, :exchange)
-@doc "Asset instance long position."
-position(ai::MarginInstance, ::ByPos{Long}) = getfield(ai, :longpos)
-@doc "Asset instance short position."
-position(ai::MarginInstance, ::ByPos{Short}) = getfield(ai, :shortpos)
-@doc "Asset position by order."
-position(ai::MarginInstance, ::ByPos{S}) where {S<:PositionSide} = position(ai, S)
+exchange(ii::InstrumentInstance) = getfield(ii, :exchange)
+@doc "Instrument instance long position."
+position(ii::MarginInstance, ::ByPos{Long}) = getfield(ii, :longpos)
+@doc "Instrument instance short position."
+position(ii::MarginInstance, ::ByPos{Short}) = getfield(ii, :shortpos)
+@doc "Instrument position by order."
+position(ii::MarginInstance, ::ByPos{S}) where {S<:PositionSide} = position(ii, S)
 @doc "Returns the last open asset position or nothing."
-position(ai::MarginInstance) = getfield(ai, :lastpos)[]
-@doc "Get the trade history of an `AssetInstance`."
-trades(ai::AssetInstance) = getfield(ai, :history)
-_history_timestamp(ai) =
-    let history = trades(ai)
+position(ii::MarginInstance) = getfield(ii, :lastpos)[]
+@doc "Get the trade history of an `InstrumentInstance`."
+trades(ii::InstrumentInstance) = getfield(ii, :history)
+_history_timestamp(ii) =
+    let history = trades(ii)
         if isempty(history)
             DateTime(0)
         else
@@ -861,71 +861,71 @@ _history_timestamp(ai) =
         end
     end
 @doc "Get the timestamp of the last trade."
-timestamp(ai::NoMarginInstance, _=nothing) = _history_timestamp(ai)
+timestamp(ii::NoMarginInstance, _=nothing) = _history_timestamp(ii)
 timestamp(::MarginInstance, ::Nothing) = DateTime(0)
-function timestamp(ai::MarginInstance, ::ByPos{P}=posside(ai)) where {P}
-    pos = position(ai, P())
+function timestamp(ii::MarginInstance, ::ByPos{P}=posside(ii)) where {P}
+    pos = position(ii, P())
     if isnothing(pos)
-        _history_timestamp(ai)
+        _history_timestamp(ii)
     else
         timestamp(pos)
     end
 end
 @doc "Check if an asset position is open."
-function isopen(ai::MarginInstance, ::Union{Type{S},S,Position{S}}) where {S<:PositionSide}
-    isopen(position(ai, S))
+function isopen(ii::MarginInstance, ::Union{Type{S},S,Position{S}}) where {S<:PositionSide}
+    isopen(position(ii, S))
 end
-@doc "Asset position notional value."
-function notional(ai::MarginInstance, ::ByPos{S}) where {S<:PositionSide}
-    position(ai, S) |> notional
+@doc "Instrument position notional value."
+function notional(ii::MarginInstance, ::ByPos{S}) where {S<:PositionSide}
+    position(ii, S) |> notional
 end
-@doc "Asset entry price.
+@doc "Instrument entry price.
 
 $(TYPEDSIGNATURES)
 "
-function price(ai::MarginInstance, fromprice, ::ByPos{S}) where {S<:PositionSide}
-    v = position(ai, S) |> price
+function price(ii::MarginInstance, fromprice, ::ByPos{S}) where {S<:PositionSide}
+    v = position(ii, S) |> price
     ifelse(iszero(v), fromprice, v)
 end
-@doc "Asset entry price."
-entryprice(ai::MarginInstance, fromprice, pos::ByPos) = price(ai, fromprice, pos)
-@doc "Asset entry price.
+@doc "Instrument entry price."
+entryprice(ii::MarginInstance, fromprice, pos::ByPos) = price(ii, fromprice, pos)
+@doc "Instrument entry price.
 
 $(TYPEDSIGNATURES)
 "
 price(::NoMarginInstance, fromprice, args...) = fromprice
-@doc "Asset position liquidation price."
-function liqprice(ai::MarginInstance, ::ByPos{S}) where {S<:PositionSide}
-    position(ai, S) |> liqprice
+@doc "Instrument position liquidation price."
+function liqprice(ii::MarginInstance, ::ByPos{S}) where {S<:PositionSide}
+    position(ii, S) |> liqprice
 end
 @doc "Sets asset position liquidation price.
 
 $(TYPEDSIGNATURES)
 "
-function liqprice!(ai::MarginInstance, v, ::ByPos{S}) where {S<:PositionSide}
-    liqprice!(position(ai, S), v)
+function liqprice!(ii::MarginInstance, v, ::ByPos{S}) where {S<:PositionSide}
+    liqprice!(position(ii, S), v)
 end
-@doc "Asset position leverage."
-function leverage(ai::MarginInstance, ::ByPos{S}=posside(ai)) where {S<:PositionSide}
-    position(ai, S) |> leverage
+@doc "Instrument position leverage."
+function leverage(ii::MarginInstance, ::ByPos{S}=posside(ii)) where {S<:PositionSide}
+    position(ii, S) |> leverage
 end
 leverage(::MarginInstance, ::Nothing) = 1.0
 leverage(::NoMarginInstance, args...) = 1.0
-@doc "Asset position status (open or closed)."
-function status(ai::MarginInstance, ::ByPos{S}) where {S<:PositionSide}
-    position(ai, S) |> status
+@doc "Instrument position status (open or closed)."
+function status(ii::MarginInstance, ::ByPos{S}) where {S<:PositionSide}
+    position(ii, S) |> status
 end
-@doc "Asset position maintenance margin."
-function maintenance(ai::MarginInstance, ::ByPos{S}) where {S<:PositionSide}
-    position(ai, S) |> maintenance
+@doc "Instrument position maintenance margin."
+function maintenance(ii::MarginInstance, ::ByPos{S}) where {S<:PositionSide}
+    position(ii, S) |> maintenance
 end
-@doc "Asset position initial margin."
-function margin(ai::MarginInstance, ::ByPos{S}) where {S<:PositionSide}
-    position(ai, S) |> margin
+@doc "Instrument position initial margin."
+function margin(ii::MarginInstance, ::ByPos{S}) where {S<:PositionSide}
+    position(ii, S) |> margin
 end
-@doc "Asset position additional margin."
-function additional(ai::MarginInstance, ::ByPos{S}) where {S<:PositionSide}
-    position(ai, S) |> additional
+@doc "Instrument position additional margin."
+function additional(ii::MarginInstance, ::ByPos{S}) where {S<:PositionSide}
+    position(ii, S) |> additional
 end
 @doc """ Get the position tier for a `MarginInstance`.
 
@@ -934,8 +934,8 @@ $(TYPEDSIGNATURES)
 This function returns the tier of the position for a `MarginInstance` for a given size and position side (`Long` or `Short`). The tier indicates the level of risk or capital requirement for the position.
 
 """
-function tier(ai::MarginInstance, size, ::ByPos{S}) where {S<:PositionSide}
-    tier(position(ai, S), size)
+function tier(ii::MarginInstance, size, ::ByPos{S}) where {S<:PositionSide}
+    tier(position(ii, S), size)
 end
 @doc """ Get the maintenance margin rate for a `MarginInstance`.
 
@@ -944,8 +944,8 @@ $(TYPEDSIGNATURES)
 This function returns the maintenance margin rate for a `MarginInstance` for a given size and position side (`Long` or `Short`). The maintenance margin rate is the minimum amount of equity that must be maintained in a margin account.
 
 """
-function mmr(ai::MarginInstance, size, s::ByPos)
-    mmr(position(ai, s), size)
+function mmr(ii::MarginInstance, size, s::ByPos)
+    mmr(position(ii, s), size)
 end
 @doc """ Get the bankruptcy price for an asset position.
 
@@ -954,11 +954,11 @@ $(TYPEDSIGNATURES)
 This function calculates the bankruptcy price, which is the price at which the asset position would be fully liquidated. It takes into account the current price of the asset and the position side (`Long` or `Short`).
 
 """
-function bankruptcy(ai, price, ps::ByPos{P}) where {P<:PositionSide}
-    bankruptcy(position(ai, ps), price)
+function bankruptcy(ii, price, ps::ByPos{P}) where {P<:PositionSide}
+    bankruptcy(position(ii, ps), price)
 end
-function bankruptcy(ai, o::Order{T,A,E,P}) where {T,A,E,P<:PositionSide}
-    bankruptcy(ai, o.price, P())
+function bankruptcy(ii, o::Order{T,A,E,P}) where {T,A,E,P<:PositionSide}
+    bankruptcy(ii, o.price, P())
 end
 
 @doc """ Update the leverage for an asset position.
@@ -968,11 +968,11 @@ $(TYPEDSIGNATURES)
 This function updates the leverage for a position in an asset instance. Leverage is the use of various financial instruments or borrowed capital to increase the potential return of an investment. The function takes a leverage value `v` and a position side (`Long` or `Short`) as inputs.
 
 """
-function leverage!(ai, v, p::PositionSide)
-    po = position(ai, p)
+function leverage!(ii, v, p::PositionSide)
+    po = position(ii, p)
     leverage!(po, v)
     # ensure leverage tiers and limits agree
-    @deassert leverage(po) <= ai.limits.leverage.max
+    @deassert leverage(po) <= ii.limits.leverage.max
 end
 
 @doc """ Set the leverage to maximum for a `CrossInstance`.
@@ -981,23 +981,23 @@ $(TYPEDSIGNATURES)
 
 This function sets the leverage for a `CrossInstance` to the maximum value for the current tier. Some exchanges interpret a leverage value of 0 as max leverage in cross margin mode. This means that the maximum amount of borrowed capital will be used to increase the potential return of the investment. We use a very high leverage value (1e10) instead of 0 to avoid division by zero in cost calculations, while preserving the "infinite leverage" semantics.
 """
-function leverage!(ai::CrossInstance, p::PositionSide, ::Val{:max})
-    po = position(ai, p)
+function leverage!(ii::CrossInstance, p::PositionSide, ::Val{:max})
+    po = position(ii, p)
     po.leverage[] = 1e10  # Use very high leverage instead of 0.0 to represent "infinite" leverage
 end
 
 @doc "The opposite position w.r.t. the asset instance and another `Position` or `PositionSide`."
-function opposite(ai::MarginInstance, ::Union{P,Position{P}}) where {P}
-    position(ai, opposite(P))
+function opposite(ii::MarginInstance, ::Union{P,Position{P}}) where {P}
+    position(ii, opposite(P))
 end
 
-function _lastpos!(ai::MarginInstance, p::PositionSide, ::PositionClose)
-    sop = position(ai, opposite(p))
-    isopen(sop) && (ai.lastpos[] = sop)
+function _lastpos!(ii::MarginInstance, p::PositionSide, ::PositionClose)
+    sop = position(ii, opposite(p))
+    isopen(sop) && (ii.lastpos[] = sop)
 end
 
-function _lastpos!(ai::MarginInstance, p::PositionSide, ::PositionOpen)
-    ai.lastpos[] = position(ai, p)
+function _lastpos!(ii::MarginInstance, p::PositionSide, ::PositionOpen)
+    ii.lastpos[] = position(ii, p)
 end
 
 @doc """ Update the status of a hedged position in a `HedgedInstance`.
@@ -1007,10 +1007,10 @@ $(TYPEDSIGNATURES)
 This function opens or closes the status of a hedged position in a `HedgedInstance`. A hedged position is a position that is offset by a corresponding position in a related commodity or security. The `PositionSide` and `PositionStatus` are provided as inputs.
 
 """
-function status!(ai::HedgedInstance, p::PositionSide, pstat::PositionStatus)
-    pos = position(ai, p)
+function status!(ii::HedgedInstance, p::PositionSide, pstat::PositionStatus)
+    pos = position(ii, p)
     _status!(pos, pstat)
-    _lastpos!(ai, p, pstat)
+    _lastpos!(ii, p, pstat)
 end
 
 @doc """ Update the status of a non-hedged position in a `MarginInstance`.
@@ -1020,16 +1020,16 @@ $(TYPEDSIGNATURES)
 This function opens or closes the status of a non-hedged position in a `MarginInstance`. A non-hedged position is a position that is not offset by a corresponding position in a related commodity or security. The `PositionSide` and `PositionStatus` are provided as inputs.
 
 """
-function status!(ai::MarginInstance, p::PositionSide, pstat::PositionStatus)
-    pos = position(ai, p)
-    opp = opposite(ai, p)
+function status!(ii::MarginInstance, p::PositionSide, pstat::PositionStatus)
+    pos = position(ii, p)
+    opp = opposite(ii, p)
     # HACK: the `!iszero` check is needed because in SimMode the `NewTrade` call! in `_update_from_trade!` can trigger aditional trades
     if pstat == PositionOpen() && status(opp) == PositionOpen() && !iszero(cash(opp))
-        @error "double position in non hedged mode" ai.longpos ai.shortpos
+        @error "double position in non hedged mode" ii.longpos ii.shortpos
         error()
     end
     _status!(pos, pstat)
-    _lastpos!(ai, p, pstat)
+    _lastpos!(ii, p, pstat)
 end
 
 value(v::Real, args...; kwargs...) = v
@@ -1041,12 +1041,12 @@ This function calculates the value of a `MarginInstance`. It takes into account 
 
 """
 function value(
-    ai::MarginInstance,
-    ::ByPos{P}=posside(ai);
-    current_price=price(position(ai, P)),
-    fees=current_price * abs(cash(ai, P)) * maxfees(ai),
+    ii::MarginInstance,
+    ::ByPos{P}=posside(ii);
+    current_price=price(position(ii, P)),
+    fees=current_price * abs(cash(ii, P)) * maxfees(ii),
 ) where {P}
-    pos = position(ai, P)
+    pos = position(ii, P)
     @deassert margin(pos) > 0.0 || !isopen(pos)
     @deassert additional(pos) >= 0.0
     margin(pos) + additional(pos) + pnl(pos, current_price) - fees
@@ -1059,8 +1059,8 @@ $(TYPEDSIGNATURES)
 This function calculates the profit and loss (PnL) for an asset position. It takes into account the current price and the position. The PnL represents the gain or loss made on the position, based on the current price compared to the price at which the position was opened.
 
 """
-function pnl(ai, ::ByPos{P}, price) where {P}
-    pos = position(ai, P)
+function pnl(ii, ::ByPos{P}, price) where {P}
+    pos = position(ii, P)
     isnothing(pos) && return 0.0
     pnl(pos, price)
 end
@@ -1072,74 +1072,74 @@ $(TYPEDSIGNATURES)
 This function calculates the profit and loss percentage (PnL%) for an asset position in a `MarginInstance`. It takes into account the current price and the position. The PnL% represents the gain or loss made on the position, as a percentage of the investment, based on the current price compared to the price at which the position was opened.
 
 """
-function pnlpct(ai::MarginInstance, ::ByPos{P}, price; pos=position(ai, P)) where {P}
+function pnlpct(ii::MarginInstance, ::ByPos{P}, price; pos=position(ii, P)) where {P}
     isnothing(pos) && return 0.0
     pnlpct(pos, price)
 end
-pnlpct(ai::MarginInstance, v::Number) = begin
-    pos = position(ai)
+pnlpct(ii::MarginInstance, v::Number) = begin
+    pos = position(ii)
     isnothing(pos) && return 0.0
     pnlpct(pos, v)
 end
 
-@doc """ Get the last price for an `AssetInstance`.
+@doc """ Get the last price for an `InstrumentInstance`.
 
 $(TYPEDSIGNATURES)
 
-This function returns the last known price for an `AssetInstance`. Additional arguments and keyword arguments can be provided to adjust the way the last price is calculated, if necessary.
+This function returns the last known price for an `InstrumentInstance`. Additional arguments and keyword arguments can be provided to adjust the way the last price is calculated, if necessary.
 
 """
-function lastprice(ai::AssetInstance, args...; hist=false, kwargs...)
-    exc = ai.exchange
-    tickers = @tickers! markettype(exc, marginmode(ai)) false TICKERS_CACHE10
-    tick = get(tickers, raw(ai), nothing)
+function lastprice(ii::InstrumentInstance, args...; hist=false, kwargs...)
+    exc = ii.exchange
+    tickers = @tickers! markettype(exc, marginmode(ii)) false TICKERS_CACHE10
+    tick = get(tickers, raw(ii), nothing)
     this_args = if isnothing(tick)
         if hist
-            (ai, Val(:history))
+            (ii, Val(:history))
         else
-            (raw(ai), exc)
+            (raw(ii), exc)
         end
     else
         (exc, tick)
     end
     lastprice(this_args...)
 end
-@doc """ Get the last price from the history for an `AssetInstance`.
+@doc """ Get the last price from the history for an `InstrumentInstance`.
 
 $(TYPEDSIGNATURES)
 
-This function returns the last known price from the historical data for an `AssetInstance`. It's useful when you need to reference the most recent historical price for calculations or comparisons.
+This function returns the last known price from the historical data for an `InstrumentInstance`. It's useful when you need to reference the most recent historical price for calculations or comparisons.
 
 """
-function lastprice(ai::AssetInstance, ::Val{:history})
-    v = ai.history
+function lastprice(ii::InstrumentInstance, ::Val{:history})
+    v = ii.history
     if !isempty(v)
         last(v).price
     else
-        lastprice(ai; hist=true)
+        lastprice(ii; hist=true)
     end
 end
 
-function lastprice(ai::AssetInstance, date::DateTime)
-    h = trades(ai)
+function lastprice(ii::InstrumentInstance, date::DateTime)
+    h = trades(ii)
     if !isempty(h)
         trade = last(h)
         if date >= trade.date
             return trade.price
         end
     end
-    lastprice(ai)
+    lastprice(ii)
 end
 
-@doc """ Get the timeframe for an `AssetInstance`.
+@doc """ Get the timeframe for an `InstrumentInstance`.
 
 $(TYPEDSIGNATURES)
 
-This function returns the timeframe for an `AssetInstance`. The timeframe represents the interval at which the asset's price data is sampled or updated.
+This function returns the timeframe for an `InstrumentInstance`. The timeframe represents the interval at which the asset's price data is sampled or updated.
 
 """
-function timeframe(ai::AssetInstance)
-    data = getfield(ai, :data)
+function timeframe(ii::InstrumentInstance)
+    data = getfield(ii, :data)
     for k in keys(data)
         k != TICK_TIMEFRAME && return k
     end
@@ -1150,7 +1150,7 @@ end
 include("ticks.jl")
 include("constructors.jl")
 
-export AssetInstance, instance, load!, @rprice, @ramount
+export InstrumentInstance, instance, load!, @rprice, @ramount
 export asset, raw, ohlcv, ohlcv_dict, bc, qc, default_asset_df
 export ticks, setticks!
 export takerfees, makerfees, maxfees, minfees, ishedged, isdust, nondust

@@ -16,7 +16,7 @@ using PlanarCore.Instances.Data.TimeTicks: TimeFrame, DateTime, now, Dates
 using PlanarCore.Instances.Data.DataFrames: DataFrame
 using PlanarCore.Instances.Data.TimeTicks.Lang: Option
 using PlanarCore.Instances: NoMarginInstance
-using PlanarCore.Instances.Instruments: AbstractAsset, parse
+using PlanarCore.Instances.Instruments: AbstractInstrument, parse
 using PlanarCore.Instances.Misc: NoMargin, TimeTicks, Lang
 using PlanarCore.Instances.DataStructures: SortedDict
 

@@ -10,7 +10,7 @@ macro warn_unsynced(what, loc, rem, msg="unsynced")
     ex = quote
         (
             if wasopen
-                @debug "Position $($msg) ($($what)) local: $($loc), remote: $($rem) $this_timestamp ($(raw(ai))@$(nameof(s)))" _module =
+                @debug "Position $($msg) ($($what)) local: $($loc), remote: $($rem) $this_timestamp ($(raw(ii))@$(nameof(s)))" _module =
                     LogPosSync
             end
         )
@@ -18,58 +18,58 @@ macro warn_unsynced(what, loc, rem, msg="unsynced")
     esc(ex)
 end
 
-function _sync_oppos!(s, ai, pside, update, forced_side; waitfor)
-    eid = exchangeid(ai)
-    @debug "sync pos: handling double position" _module = LogPosSync ai pside
-    pos = position(ai, pside)
+function _sync_oppos!(s, ii, pside, update, forced_side; waitfor)
+    eid = exchangeid(ii)
+    @debug "sync pos: handling double position" _module = LogPosSync ii pside
+    pos = position(ii, pside)
     wasopen = isopen(pos)
     oppside = opposite(pside)
-    oppos = position(ai, oppside)
+    oppos = position(ii, oppside)
 
-    oppos_pup = live_position(s, ai, oppside; since=forced_side ? update.date : nothing)
+    oppos_pup = live_position(s, ii, oppside; since=forced_side ? update.date : nothing)
     if !isnothing(oppos_pup)
         live_pos = oppos_pup.resp
         oppos_amount = resp_position_contracts(live_pos, eid)
         if !oppos_pup.closed[] && !oppos_pup.read[] && oppos_amount > 0.0
             if wasopen
-                @warn "sync pos: double position open in oneway mode." oppside cash(ai, oppside) ai nameof(
+                @warn "sync pos: double position open in oneway mode." oppside cash(ii, oppside) ii nameof(
                     s
                 ) f = @caller
             end
             if forced_side
-                call!(s, ai, oppside, TimeTicks.now(), PositionClose(); amount=oppos_amount, waitfor)
-                oppos = position(ai, oppside)
+                call!(s, ii, oppside, TimeTicks.now(), PositionClose(); amount=oppos_amount, waitfor)
+                oppos = position(ii, oppside)
                 if isopen(oppos)
-                    @warn "sync pos: refusing sync since opposite side is still open" ai pside amount oppside oppos_amount
+                    @warn "sync pos: refusing sync since opposite side is still open" ii pside amount oppside oppos_amount
                     return pos
                 end
             elseif oppos_pup.date > update.date
                 @debug "sync pos: resetting this side since oppside is newer" _module =
-                    LogPosSync ai pside oppside amount oppos_amount
+                    LogPosSync ii pside oppside amount oppos_amount
                 update.closed[] = true
                 update.read[] = true
-                reset!(ai, pside)
+                reset!(ii, pside)
                 timestamp!(pos, update.date)
-                event!(ai, PositionUpdated(:position_stale_closed, s, pos))
-                let func = () -> live_sync_position!(s, ai, oppside, oppos_pup)
-                    sendrequest!(ai, oppos_pup.date, func)
+                event!(ii, PositionUpdated(:position_stale_closed, s, pos))
+                let func = () -> live_sync_position!(s, ii, oppside, oppos_pup)
+                    sendrequest!(ii, oppos_pup.date, func)
                 end
                 return pos
             end
         end
         if isopen(oppos)
-            @debug "sync pos: resetting oppside pos" _module = LogPosSync ai oppside
-            reset!(ai, oppside)
+            @debug "sync pos: resetting oppside pos" _module = LogPosSync ii oppside
+            reset!(ii, oppside)
         end
         oppos_pup.closed[] = true
         oppos_pup.read[] = true
         timestamp!(oppos, oppos_pup.date)
     else
-        @debug "sync pos: resetting opposite position" _module = LogPosSync ai oppside
-        reset!(ai, oppside)
+        @debug "sync pos: resetting opposite position" _module = LogPosSync ii oppside
+        reset!(ii, oppside)
         timestamp!(oppos, update.date)
     end
-    event!(ai, PositionUpdated(:position_oppos_closed, s, oppos))
+    event!(ii, PositionUpdated(:position_oppos_closed, s, oppos))
 end
 
 @doc """ Synchronizes the live position.
@@ -90,53 +90,53 @@ If the position is closed, it resets the position. If the position is open, it u
 """
 function _live_sync_position!(
     s::LiveStrategy,
-    ai::MarginInstance,
+    ii::MarginInstance,
     p::Option{ByPos},
     update::PositionTuple;
-    amount=resp_position_contracts(update.resp, exchangeid(ai)),
-    ep_in=resp_position_entryprice(update.resp, exchangeid(ai)),
+    amount=resp_position_contracts(update.resp, exchangeid(ii)),
+    ep_in=resp_position_entryprice(update.resp, exchangeid(ii)),
     commits=true,
     skipchecks=false,
     overwrite=false,
     forced_side=false, # NOTE: not checked to be deadlock free
     waitfor=Second(5),
 )
-    @debug "sync pos: checking queue" ai isownable(s.lock) isownable(ai.lock)
-    let queue = asset_queue(ai)
+    @debug "sync pos: checking queue" ii isownable(s.lock) isownable(ii.lock)
+    let queue = asset_queue(ii)
         if queue[] > 1
-            @debug "sync pos: events queue is congested" _module = LogPosSync ai queue[]
+            @debug "sync pos: events queue is congested" _module = LogPosSync ii queue[]
             return nothing
         end
     end
-    eid = exchangeid(ai)
+    eid = exchangeid(ii)
     resp = update.resp
     pside = posside_fromccxt(resp, eid, p)
-    pos = position(ai, pside)
+    pos = position(ii, pside)
     wasopen = isopen(pos) # by macro warn_unsynced
-    @debug "sync pos: vars" _module = LogPosSync cash = cash(pos) sym = raw(ai) wasopen pside skipchecks overwrite
+    @debug "sync pos: vars" _module = LogPosSync cash = cash(pos) sym = raw(ii) wasopen pside skipchecks overwrite
 
     # check hedged mode
     if !resp_position_hedged(resp, eid) == ishedged(pos)
-        @warn "sync pos: hedged mode mismatch" ai loc = ishedged(pos)
+        @warn "sync pos: hedged mode mismatch" ii loc = ishedged(pos)
         @assert marginmode!(
-            exchange(ai),
-            _ccxtmarginmode(ai),
-            raw(ai),
+            exchange(ii),
+            _ccxtmarginmode(ii),
+            raw(ii),
             hedged=ishedged(pos),
             lev=leverage(pos),
-        ) "failed to set hedged mode on exchange ($(ai))"
+        ) "failed to set hedged mode on exchange ($(ii))"
     end
 
     # hedged mode checks
     if !skipchecks
-        if !ishedged(pos) && isopen(opposite(ai, pside)) && !update.closed[]
-            _sync_oppos!(s, ai, pside, update, forced_side; waitfor)
+        if !ishedged(pos) && isopen(opposite(ii, pside)) && !update.closed[]
+            _sync_oppos!(s, ii, pside, update, forced_side; waitfor)
         end
     end
 
     # read checks
     update.read[] && begin
-        @debug "sync pos: update already read" _module = LogPosSync ai pside overwrite update.closed[] resp_position_contracts(
+        @debug "sync pos: update already read" _module = LogPosSync ii pside overwrite update.closed[] resp_position_contracts(
             resp, eid
         )
         if !overwrite
@@ -146,16 +146,16 @@ function _live_sync_position!(
 
     # closed checks
     if update.closed[]
-        if !isdust(ai, _ccxtposprice(ai, resp), pside) && isfinite(cash(pos))
-            @warn "sync pos: cash expected to be (close to) zero, found" ai cash = cash(
-                ai, pside
-            ) cash(ai, pside).precision resp_position_contracts(resp, eid)
+        if !isdust(ii, _ccxtposprice(ii, resp), pside) && isfinite(cash(pos))
+            @warn "sync pos: cash expected to be (close to) zero, found" ii cash = cash(
+                ii, pside
+            ) cash(ii, pside).precision resp_position_contracts(resp, eid)
         end
         update.read[] = true
-        reset!(ai, pside) # if not full reset at least cash/committed
+        reset!(ii, pside) # if not full reset at least cash/committed
         timestamp!(pos, update.date)
-        event!(ai, PositionUpdated(:position_updated_closed, s, pos))
-        @debug "sync pos: closed flag set, reset" _module = LogPosSync ai pside pos
+        event!(ii, PositionUpdated(:position_updated_closed, s, pos))
+        @debug "sync pos: closed flag set, reset" _module = LogPosSync ii pside pos
         return pos
     end
 
@@ -169,52 +169,52 @@ function _live_sync_position!(
     # Margin/hedged mode are immutable so just check for mismatch
     let mm = resp_position_margin_mode(resp, eid)
         if !isnothing(mm) && string(mm) != _ccxtmarginmode(pos)
-            @warn "sync pos: position margin mode mismatch (attempt switch..)" ai loc = marginmode(
+            @warn "sync pos: position margin mode mismatch (attempt switch..)" ii loc = marginmode(
                 pos
             ) rem = mm
             if !marginmode!(
-                exchange(ai),
-                _ccxtmarginmode(ai),
-                raw(ai);
+                exchange(ii),
+                _ccxtmarginmode(ii),
+                raw(ii);
                 hedged=ishedged(pos),
                 lev=leverage(pos),
             )
-                @warn "sync pos: mismatching margin mode will cause corrupted state" ai
+                @warn "sync pos: mismatching margin mode will cause corrupted state" ii
             end
         end
     end
 
     # resp cash, (always positive for longs, or always negative for shorts)
     let rv = islong(pos) ? positive(amount) : negative(amount)
-        @debug "sync pos: amount" _module = LogPosSync ai resp_amount = amount rv posside(
+        @debug "sync pos: amount" _module = LogPosSync ii resp_amount = amount rv posside(
             pos
         )
-        if !isequal(ai, cash(pos), rv, Val(:amount))
+        if !isequal(ii, cash(pos), rv, Val(:amount))
             @warn_unsynced "amount" posside(pos) abs(cash(pos)) amount
         end
         # TODO: should also be checked for finiteness? probably not?
         cash!(pos, rv)
     end
     # If the resp amount is "dust" the position should be considered closed, and to be reset
-    pos_price = _ccxtposprice(ai, resp)
-    if isdust(ai, pos_price, pside)
+    pos_price = _ccxtposprice(ii, resp)
+    if isdust(ii, pos_price, pside)
         update.read[] = true
-        reset!(ai, pside)
-        @debug "sync pos: amount is dust, reset" _module = LogPosSync ai pside isopen(ai, p) cash(
-            ai, pside
+        reset!(ii, pside)
+        @debug "sync pos: amount is dust, reset" _module = LogPosSync ii pside isopen(ii, p) cash(
+            ii, pside
         ) resp
         return pos
     end
-    @debug "sync pos: syncing" _module = LogPosSync ai timestamp(pos) pside
+    @debug "sync pos: syncing" _module = LogPosSync ii timestamp(pos) pside
     pos.status[] = PositionOpen()
-    let lap = ai.lastpos
-        if isnothing(lap[]) || timestamp(ai, opposite(pside)) <= this_timestamp
+    let lap = ii.lastpos
+        if isnothing(lap[]) || timestamp(ii, opposite(pside)) <= this_timestamp
             lap[] = pos
         end
     end
     function dowarn(what, val)
         @debug what resp _module = LogPosSync
-        @warn "sync pos: $(ai) unable to sync $what from $(nameof(exchange(ai))), got $val"
+        @warn "sync pos: $(ii) unable to sync $what from $(nameof(exchange(ii))), got $val"
     end
     # price is always positive
     ep = Float64(ep_in)
@@ -230,8 +230,8 @@ function _live_sync_position!(
         pos_price
     end
     if commits
-        let comm = committed(s, ai, pside)
-            @debug "sync pos: local committment" _module = LogPosSync comm ai pside
+        let comm = committed(s, ii, pside)
+            @debug "sync pos: local committment" _module = LogPosSync comm ii pside
             if !isapprox(committed(pos).value, comm)
                 commit!(pos, comm)
             end
@@ -266,7 +266,7 @@ function _live_sync_position!(
             notional(pos)
         end
     end
-    @assert ntl > 0.0 "sync pos: notional can't be zero ($ai)"
+    @assert ntl > 0.0 "sync pos: notional can't be zero ($ii)"
 
     tier!(pos, ntl)
     lqp = resp_position_liqprice(resp, eid)
@@ -282,7 +282,7 @@ function _live_sync_position!(
 
     mrg = resp_position_initial_margin(resp, eid)
     coll = resp_position_collateral(resp, eid)
-    adt = max(zero(DFT), coll - (mrg + 2(mrg * maxfees(ai))))
+    adt = max(zero(DFT), coll - (mrg + 2(mrg * maxfees(ii))))
     mrg_set =
         mrg > zero(DFT) && begin
             if !isapprox(mrg, margin(pos); rtol=1e-2)
@@ -326,7 +326,7 @@ function _live_sync_position!(
         update_maintenance!(pos; mmr=_ccxtmmr(resp, pos, eid))
     end
     function higherwarn(whata, whatb, a, b)
-        "sync pos: ($(raw(ai))) $whata ($(a)) can't be higher than $whatb ($(b))"
+        "sync pos: ($(raw(ii))) $whata ($(a)) can't be higher than $whatb ($(b))"
     end
     @assert maintenance(pos) <= collateral(pos) higherwarn(
         "maintenance", "collateral", maintenance(pos), collateral(pos)
@@ -346,66 +346,66 @@ function _live_sync_position!(
         "leverage", "max leverage", leverage(pos), maxleverage(pos)
     )
     if pos.min_size <= notional(pos)
-        @assert abs(cash(pos)) >= ai.limits.amount.min higherwarn(
+        @assert abs(cash(pos)) >= ii.limits.amount.min higherwarn(
             "min size", "notional", pos.min_size, notional(pos)
         )
     end
     timestamp!(pos, this_timestamp)
-    @debug "sync pos: synced" _module = LogPosSync ai this_timestamp resp_position_contracts(
+    @debug "sync pos: synced" _module = LogPosSync ii this_timestamp resp_position_contracts(
         update.resp, eid
-    ) posside(ai) cash(ai) isopen(ai, Long()) isopen(ai, Short()) f = @caller
+    ) posside(ii) cash(ii) isopen(ii, Long()) isopen(ii, Short()) f = @caller
     update.read[] = true
-    event!(ai, PositionUpdated(:position_updated, s, pos))
+    event!(ii, PositionUpdated(:position_updated, s, pos))
     return pos
 end
 
-function live_sync_position!(s::LiveStrategy, ai::MarginInstance, pos, update; kwargs...)
-    @debug "sync pos: syncing update" _module = LogPosSync ai = raw(ai) isownable(ai.lock) isownable(
+function live_sync_position!(s::LiveStrategy, ii::MarginInstance, pos, update; kwargs...)
+    @debug "sync pos: syncing update" _module = LogPosSync ii = raw(ii) isownable(ii.lock) isownable(
         s.lock
     ) isownable(update.notify.lock)
     # NOTE: Orders matters to avoid deadlocks
-    @inlock ai @lock update.notify begin
-        _live_sync_position!(s, ai, pos, update; kwargs...)
-        if isopen(ai) || hasorders(s, ai)
-            push!(s.holdings, ai)
+    @inlock ii @lock update.notify begin
+        _live_sync_position!(s, ii, pos, update; kwargs...)
+        if isopen(ii) || hasorders(s, ii)
+            push!(s.holdings, ii)
         else
-            delete!(s.holdings, ai)
+            delete!(s.holdings, ii)
         end
     end
 end
 
 function live_sync_position!(
     s::LiveStrategy,
-    ai::MarginInstance,
+    ii::MarginInstance,
     pos::ByPos;
     force=false,
     since=nothing,
     waitfor=Second(5),
     kwargs...,
 )
-    update = live_position(s, ai, pos; force, since, waitfor)
+    update = live_position(s, ii, pos; force, since, waitfor)
     if isnothing(update)
-        @warn "live sync pos: no update found" ai pos force since
+        @warn "live sync pos: no update found" ii pos force since
     else
-        live_sync_position!(s, ai, pos, update; kwargs...)
+        live_sync_position!(s, ii, pos, update; kwargs...)
     end
 end
 
-function live_sync_position!(s::LiveStrategy, ai::HedgedInstance; kwargs...)
+function live_sync_position!(s::LiveStrategy, ii::HedgedInstance; kwargs...)
     @sync for pos in (Long, Short)
         @async try
-            live_sync_position!(s, ai, $pos; kwargs...)
+            live_sync_position!(s, ii, $pos; kwargs...)
         catch e
             if e isa InterruptException
                 rethrow(e)
             end
-            @error "live sync position: error for $(raw(ai)) $pos" exception=(e, catch_backtrace())
+            @error "live sync position: error for $(raw(ii)) $pos" exception=(e, catch_backtrace())
         end
     end
 end
 
-function live_sync_position!(s::LiveStrategy, ai::MarginInstance; kwargs...)
-    live_sync_position!(s, ai, get_position_side(s, ai); kwargs...)
+function live_sync_position!(s::LiveStrategy, ii::MarginInstance; kwargs...)
+    live_sync_position!(s, ii, get_position_side(s, ii); kwargs...)
 end
 
 @doc """ Synchronizes the cash position in a live trading strategy.
@@ -421,8 +421,8 @@ The function locks the asset instance during the update to prevent race conditio
 """
 function _live_sync_cash!(
     s::MarginStrategy{Live},
-    ai,
-    bp::ByPos=get_position_side(s, ai);
+    ii,
+    bp::ByPos=get_position_side(s, ii);
     since=nothing,
     waitfor=Second(5),
     force=false,
@@ -433,17 +433,17 @@ function _live_sync_cash!(
     kwargs...,
 )
     @timeout_start
-    pup = @something pup live_position(s, ai, pside; since, force, synced, waitfor) missing
+    pup = @something pup live_position(s, ii, pside; since, force, synced, waitfor) missing
     if pup isa PositionTuple
-        @assert isnothing(since) || (timestamp(ai, pside) < since && pup.date >= since)
-        live_sync_position!(s, ai, pside, pup; overwrite, kwargs...)
+        @assert isnothing(since) || (timestamp(ii, pside) < since && pup.date >= since)
+        live_sync_position!(s, ii, pside, pup; overwrite, kwargs...)
     else
-        @debug "sync cash: resetting position cash (not found)" _module = LogUniSync ai = raw(
-            ai
+        @debug "sync cash: resetting position cash (not found)" _module = LogUniSync ii = raw(
+            ii
         ) pside
-        @inlock ai reset!(ai, bp)
+        @inlock ii reset!(ii, bp)
     end
-    position(ai, bp)
+    position(ii, bp)
 end
 
 @doc """ Synchronizes the cash position for all assets in a live trading strategy.
@@ -465,33 +465,33 @@ function _live_sync_universe_cash!(
     end
     long, short, _ = get_positions(s)
     default_date = TimeTicks.now()
-    function dosync(ai, pside, dict)
-        pup = get(dict, raw(ai), nothing)
-        @debug "sync universe cash:" _module = LogUniSync ai pside isnothing(pup) overwrite force
-        live_sync_cash!(s, ai, pside; pup, overwrite, waitfor, force, kwargs...)
+    function dosync(ii, pside, dict)
+        pup = get(dict, raw(ii), nothing)
+        @debug "sync universe cash:" _module = LogUniSync ii pside isnothing(pup) overwrite force
+        live_sync_cash!(s, ii, pside; pup, overwrite, waitfor, force, kwargs...)
     end
-    @sync for ai in s.universe
+    @sync for ii in s.universe
         @async try
             @sync begin
                 @async try
-                    dosync(ai, Long(), long)
+                    dosync(ii, Long(), long)
                 catch e
                     e isa InterruptException && rethrow(e)
-                    @error "sync universe cash: Long error for $(raw(ai))" exception = (e, catch_backtrace())
+                    @error "sync universe cash: Long error for $(raw(ii))" exception = (e, catch_backtrace())
                 end
                 @async try
-                    dosync(ai, Short(), short)
+                    dosync(ii, Short(), short)
                 catch e
                     e isa InterruptException && rethrow(e)
-                    @error "sync universe cash: Short error for $(raw(ai))" exception = (e, catch_backtrace())
+                    @error "sync universe cash: Short error for $(raw(ii))" exception = (e, catch_backtrace())
                 end
             end
-            set_active_position!(ai; default_date)
+            set_active_position!(ii; default_date)
         catch e
             if e isa InterruptException
                 rethrow(e)
             end
-            @error "sync universe cash: error for $(raw(ai))" exception = (e, catch_backtrace())
+            @error "sync universe cash: error for $(raw(ii))" exception = (e, catch_backtrace())
         end
     end
     @debug "sync universe cash: synced" _module = LogUniSync

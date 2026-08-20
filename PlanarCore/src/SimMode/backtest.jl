@@ -77,7 +77,7 @@ function _sim_loop!(
         @withpbar! pbar_items desc=desc begin
             for item in pbar_items
                 isoutof_orders(s) && begin
-                    @deassert all(iszero(ai) for ai in universe(s))
+                    @deassert all(iszero(ii) for ii in universe(s))
                     break
                 end
                 try
@@ -106,7 +106,7 @@ function _sim_loop!(
     else
         for item in items
             isoutof_orders(s) && begin
-                @deassert all(iszero(ai) for ai in universe(s))
+                @deassert all(iszero(ii) for ii in universe(s))
                 break
             end
             try
@@ -178,8 +178,8 @@ function start!(
         step = function (date)
             # Check OHLCV data exists for this date before calling strategy
             has_data = true
-            for ai in universe(s)
-                o = ohlcv(ai)
+            for ii in universe(s)
+                o = ohlcv(ii)
                 # Check if date falls within the OHLCV data range
                 if date < o.timestamp[begin] || date > o.timestamp[end]
                     has_data = false
@@ -318,8 +318,8 @@ Iterates over the strategy's universe to find the date of the last data point. R
 _todate(s) = begin
     isempty(s.universe) && return DateTime(0)
     to = typemin(DateTime)
-    for ai in s.universe
-        this_date = lastdate(ai)
+    for ii in s.universe
+        this_date = lastdate(ii)
         if this_date > to
             to = this_date
         end

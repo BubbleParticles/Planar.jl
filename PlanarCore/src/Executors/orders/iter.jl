@@ -106,9 +106,9 @@ $(TYPEDSIGNATURES)
 """
 Base.count(oi::OrderIterator) = count((_) -> true, oi)
 
-trades(s::Strategy) = Iterators.flatten(trades(ai) for ai in s.universe)
+trades(s::Strategy) = Iterators.flatten(trades(ii) for ii in s.universe)
 function tradescount(s::Strategy)
-    sum((length(trades(ai)) for ai in s.universe); init=0) +
+    sum((length(trades(ii)) for ii in s.universe); init=0) +
     sum((length(trades(o)) for o in values(s)); init=0)
 end
 

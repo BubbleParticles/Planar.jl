@@ -26,20 +26,20 @@ function load_ohlcv(
 end
 
 function fetch_ohlcv!(s::Strategy)
-    @sync for ai in s.universe
+    @sync for ii in s.universe
         @async try
-            exc = exchange(ai)
-            sym = raw(ai)
+            exc = exchange(ii)
+            sym = raw(ii)
             v = fetch_ohlcv(exc, s.timeframe, sym, from=-2000)
             data = get(v, sym, nothing)
             if isnothing(data)
-                @error "fetch_ohlcv!: no data returned" ai asset=sym
+                @error "fetch_ohlcv!: no data returned" ii asset=sym
                 return
             end
-            ai.data[s.timeframe] = data.data
-            propagate_ohlcv!(ai.data, raw(ai), exc)
+            ii.data[s.timeframe] = data.data
+            propagate_ohlcv!(ii.data, raw(ii), exc)
         catch e
-            @error "fetch_ohlcv!: failed to fetch data" ai asset=raw(ai) exception = (
+            @error "fetch_ohlcv!: failed to fetch data" ii asset=raw(ii) exception = (
                 e, catch_backtrace()
             )
         end
@@ -47,14 +47,14 @@ function fetch_ohlcv!(s::Strategy)
 end
 function update_ohlcv!(s::Strategy; kwargs...)
     tf = s.timeframe
-    @sync for ai in s.universe
+    @sync for ii in s.universe
         @async try
-            exc = exchange(ai)
-            sym = raw(ai)
-            update_ohlcv!(ohlcv(ai, tf), sym, exc, tf; kwargs...)
-            propagate_ohlcv!(ai.data, sym, exc)
+            exc = exchange(ii)
+            sym = raw(ii)
+            update_ohlcv!(ohlcv(ii, tf), sym, exc, tf; kwargs...)
+            propagate_ohlcv!(ii.data, sym, exc)
         catch e
-            @error "update_ohlcv!: failed to update data" ai asset=sym exception = (
+            @error "update_ohlcv!: failed to update data" ii asset=sym exception = (
                 e, catch_backtrace()
             )
         end

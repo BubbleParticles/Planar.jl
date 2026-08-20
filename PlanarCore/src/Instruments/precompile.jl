@@ -3,11 +3,11 @@ using ..Lang: @preset, @precomp
     funcs = [*, +, -, *, ÷]
     funcs2 = [sub!, add!, cash!, mul!, div!, rdiv!]
     @precomp begin
-        a = parse(Asset, first(DEFAULT_ASSETS))
+        a = parse(Instrument, first(DEFAULT_ASSETS))
         a.bc
         a.qc
         parse(Derivatives.Derivative, first(DEFAULT_ASSETS))
-        parse(AbstractAsset, first(DEFAULT_ASSETS))
+        parse(AbstractInstrument, first(DEFAULT_ASSETS))
         isfiatpair(first(DEFAULT_ASSETS))
         ca = cash!(c(string(QUOTE_CURRENCY)), 1000.0)
         for f in funcs

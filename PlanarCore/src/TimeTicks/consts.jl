@@ -9,7 +9,7 @@ $(TYPEDSIGNATURES)
 
 Tick data (columns `:timestamp`, `:price`, `:amount`) lives in the same
 `SortedDict{TimeFrame,DataFrame}` as OHLCV under this sentinel key, so it survives
-`similar(ai)` and is never confused with a real OHLCV timeframe. It is excluded from
+`similar(ii)` and is never confused with a real OHLCV timeframe. It is excluded from
 every OHLCV accessor via `Instances._ohlcv_keys`.
 """
 const TICK_TIMEFRAME = TimeFrame(Nanosecond(1))

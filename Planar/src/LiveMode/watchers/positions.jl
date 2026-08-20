@@ -138,15 +138,15 @@ function _start_stall_guard!(w, s, kwargs)
             last = _lastprocessed(w)
             if TimeTicks.now() - last > Second(60)
                 @warn "positions watcher: forcing fetch due to stall" last TimeTicks.now() s
-                for ai in s.universe
+                for ii in s.universe
                     try
                         _force_fetchpos(
-                            s, ai, get_position_side(s, ai); fallback_kwargs=kwargs
+                            s, ii, get_position_side(s, ii); fallback_kwargs=kwargs
                         )
                     catch e
                         e isa InterruptException && rethrow(e)
                         @warn "positions watcher: stall guard error (per asset)" exception =
-                            e ai
+                            e ii
                     end
                 end
             end
@@ -195,7 +195,7 @@ function _w_positions_watch_mode(
         h =
             w[:positions_handler] = watch_positions_handler(
                 exc,
-                (ai for ai in s.universe);
+                (ii for ii in s.universe);
                 f_push=push_positions_to_buf,
                 params,
                 rest...,
@@ -521,7 +521,7 @@ function _positions_process_resp!(ctx, resp, data_date, max_date_ref)
         return nothing
     end
     @debug "watchers pos process: position async" _module = LogWatchPosProcess islocked(
-        lookup_result.ai
+        lookup_result.ii
     ) islocked(lookup_result.pos_cond)
     max_date_ref[] = max(max_date_ref[], this_date)
     # Build pup and enqueue job
@@ -546,8 +546,8 @@ function _positions_validate_and_lookup!(ctx, resp, data_date)
         return nothing
     end
     sym = resp_position_symbol(resp, ctx.eid, String)
-    ai = asset_bysym(ctx.s, sym, ctx.w.symsdict)
-    if isnothing(ai)
+    ii = asset_bysym(ctx.s, sym, ctx.w.symsdict)
+    if isnothing(ii)
         @debug "watchers pos process: no matching asset for symbol" _module =
             LogWatchPosProcess sym
         return nothing
@@ -566,7 +566,7 @@ function _positions_validate_and_lookup!(ctx, resp, data_date)
     else
         @debug "watchers pos process: scheduling" _module = LogWatchPosProcess data_date prev_date
     end
-    return (; valid=true, sym, ai, side, side_dict, pup_prev, prev_date, pos_cond)
+    return (; valid=true, sym, ii, side, side_dict, pup_prev, prev_date, pos_cond)
 end
 
 @doc """ Computes the effective date for a position update, preferring the response's date if available and newer, otherwise using the data date.
@@ -629,7 +629,7 @@ end
 function _positions_enqueue_update_job!(ctx, lr, pup, resp)
     function update_position_job()
         try
-            @inlock lr.ai begin
+            @inlock lr.ii begin
                 @debug "watchers pos process: internal lock" _module = LogWatchPosProcess lr.sym lr.side
                 @lock lr.pos_cond begin
                     @debug "watchers pos process: processing" _module = LogWatchPosProcess lr.sym lr.side
@@ -651,7 +651,7 @@ function _positions_enqueue_update_job!(ctx, lr, pup, resp)
                             )) == _ccxtposside(prev_side)
                             lr.pup_prev.closed[] = true
                             if ctx.iswatchevent
-                                _live_sync_cash!(ctx.s, lr.ai, prev_side; pup=lr.pup_prev)
+                                _live_sync_cash!(ctx.s, lr.ii, prev_side; pup=lr.pup_prev)
                             end
                         end
                         ctx.last_dict[lr.sym] = lr.side
@@ -660,13 +660,13 @@ function _positions_enqueue_update_job!(ctx, lr, pup, resp)
                             @debug "watchers pos process: syncing" _module =
                                 LogWatchPosProcess contracts = resp_position_contracts(
                                 pup.resp, ctx.eid
-                            ) length(lr.ai.events) timestamp(lr.ai, lr.side)
-                            _live_sync_cash!(ctx.s, lr.ai, lr.side; pup)
+                            ) length(lr.ii.events) timestamp(lr.ii, lr.side)
+                            _live_sync_cash!(ctx.s, lr.ii, lr.side; pup)
                             @debug "watchers pos process: synced" _module =
                                 LogWatchPosProcess contracts = resp_position_contracts(
                                 pup.resp, ctx.eid
-                            ) lr.side cash(lr.ai, lr.side) timestamp(lr.ai, lr.side) pup.date ctx.iswatchevent ctx.fetched length(
-                                lr.ai.events
+                            ) lr.side cash(lr.ii, lr.side) timestamp(lr.ii, lr.side) pup.date ctx.iswatchevent ctx.fetched length(
+                                lr.ii.events
                             )
                         end
                         safenotify(lr.pos_cond)
@@ -682,7 +682,7 @@ function _positions_enqueue_update_job!(ctx, lr, pup, resp)
             ctx.jobs[] = ctx.jobs[] + 1
         end
     end
-    sendrequest!(lr.ai, pup.date, update_position_job)
+    sendrequest!(lr.ii, pup.date, update_position_job)
     ctx.jobs_count_ref[] += 1
 end
 
@@ -734,16 +734,16 @@ This function updates the position flags for a symbol in a dictionary when not u
 """
 function _setposflags!(ctx, max_date, dict, side)
     @sync for (sym, pup) in dict
-        ai = asset_bysym(ctx.s, sym, ctx.w.symsdict)
-        if isnothing(ai)
+        ii = asset_bysym(ctx.s, sym, ctx.w.symsdict)
+        if isnothing(ii)
             @debug "watchers pos process: no matching asset for symbol while finalizing flags" _module = LogWatchPosProcess sym
             continue
         end
         @debug "watchers pos process: pos flags locking" _module = LogWatchPosProcess isownable(
-            ai.lock
+            ii.lock
         ) isownable(pup.notify.lock)
         # Capture loop variables in a `let` block to avoid closure/mutation races
-        let ai_local = ai, pup_local = pup, sym_local = sym
+        let ai_local = ii, pup_local = pup, sym_local = sym
             @start_task IdDict() try
                 @lock pup_local.notify begin
                     if !pup_local.closed[] && (sym_local, side) ∉ ctx.processed_syms

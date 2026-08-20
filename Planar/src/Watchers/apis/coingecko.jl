@@ -406,14 +406,14 @@ function loadexchanges!()
 end
 @doc """ Fetches top 100 tickers from exchange.
 
-Returns a Dict{Asset, Dict}
+Returns a Dict{Instrument, Dict}
 """
 function tickers_from(exc_id)
     @assert exc_id ∈ keys(exchanges) "Exchange id not found, call `loadexchanges!` to fetch ids."
     path = (ApiPaths.exchanges, "/", exc_id)
     json = get(join(path))
     return Dict(
-        Asset(SubString(""), t["base"], t["target"]) => jsontodict(t) for
+        Instrument(SubString(""), t["base"], t["target"]) => jsontodict(t) for
         t in json["tickers"] if _is_valid(t)
     )
 end

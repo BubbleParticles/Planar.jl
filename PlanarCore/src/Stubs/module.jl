@@ -28,9 +28,9 @@ function stubscache_path()
 
 end
 
-function save_stubtrades(ai)
+function save_stubtrades(ii)
     ca.save_cache(
-        "trades_stub_$(ai.asset.bc).jls", ai.history; cache_path=stubscache_path()
+        "trades_stub_$(ii.asset.bc).jls", ii.history; cache_path=stubscache_path()
     )
 end
 
@@ -42,35 +42,35 @@ end
 #     ca.load_cache("strategy_stub_$(name)"; cache_path=stubscache_path())
 # end
 
-function load_stubtrades(ai)
-   ca.load_cache("trades_stub_$(ai.asset.bc).jls"; cache_path=stubscache_path(), raise=false)
+function load_stubtrades(ii)
+   ca.load_cache("trades_stub_$(ii.asset.bc).jls"; cache_path=stubscache_path(), raise=false)
 end
 
-function load_stubtrades!(ai)
-    trades = load_stubtrades(ai)
-    isnothing(trades) || append!(ai.history, trades)
+function load_stubtrades!(ii)
+    trades = load_stubtrades(ii)
+    isnothing(trades) || append!(ii.history, trades)
 end
 
 @doc "Generates trades and saves them to the stubs shed."
 function gensave_trades(n=10_000; s, dosave=true)
-    for ai in s.universe
-        sml.stub!(ai, n)
+    for ii in s.universe
+        sml.stub!(ii, n)
     end
     SimMode.start!(s; doreset=true)
     if dosave
-        for ai in s.universe
-            save_stubtrades(ai)
+        for ii in s.universe
+            save_stubtrades(ii)
         end
     end
 end
 
 function do_stub!(s::Strategy, n=10_000; trades=true)
-    for ai in s.universe
-        sml.stub!(ai, n)
+    for ii in s.universe
+        sml.stub!(ii, n)
     end
     if trades
-        for ai in s.universe
-            load_stubtrades!(ai)
+        for ii in s.universe
+            load_stubtrades!(ii)
         end
     end
     s
@@ -95,11 +95,11 @@ if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
                 gensave_trades(; s, dosave=true)
             catch
                 s = stub_strategy(; cfg, dostub=false)
-                while any(isempty(ai.history) for ai in s.universe)
+                while any(isempty(ii.history) for ii in s.universe)
                     gensave_trades(; s, dosave=true)
                 end
-                for ai in s.universe
-                    save_stubtrades(ai)
+                for ii in s.universe
+                    save_stubtrades(ii)
                 end
                 try
                     stub_strategy(; cfg, dostub=true)

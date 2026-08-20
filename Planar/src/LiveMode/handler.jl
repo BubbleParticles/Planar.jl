@@ -1,24 +1,24 @@
-function condition(ai::AssetInstance)
-    @lget! ai :event_cond Threads.Condition()
+function condition(ii::InstrumentInstance)
+    @lget! ii :event_cond Threads.Condition()
 end
 
 function condition(s::LiveStrategy)
     @lget! s :event_cond Threads.Condition()
 end
 
-function sync_condition(ai::AssetInstance)
-    @lget! ai :sync_cond Threads.Condition()
+function sync_condition(ii::InstrumentInstance)
+    @lget! ii :sync_cond Threads.Condition()
 end
 
 function sync_condition(s::LiveStrategy)
     @lget! s :sync_cond Threads.Condition()
 end
 
-function lasteventrun!(obj::Union{Strategy,AssetInstance}, date::DateTime)
+function lasteventrun!(obj::Union{Strategy,InstrumentInstance}, date::DateTime)
     obj[:last_event_date] = date
 end
 
-function lasteventrun!(obj::Union{Strategy,AssetInstance})
+function lasteventrun!(obj::Union{Strategy,InstrumentInstance})
     @lget! obj :last_event_date DateTime(0)
 end
 
@@ -31,10 +31,10 @@ function get_events(s::LiveStrategy)
     end
 end
 
-function get_events(ai::AssetInstance)
-    @lget! ai :events begin
-        lasteventrun!(ai)
-        condition(ai)
+function get_events(ii::InstrumentInstance)
+    @lget! ii :events begin
+        lasteventrun!(ii)
+        condition(ii)
         SortedArray(Vector{SyncRequest1}(); by=erq -> erq.date)
     end
 end
@@ -44,16 +44,16 @@ function events_lock(obj)
     @lget! attrs(obj) :events_lock Threads.ReentrantLock()
 end
 
-function notify_request(ai::AssetInstance)
-    safenotify(condition(ai))
+function notify_request(ii::InstrumentInstance)
+    safenotify(condition(ii))
 end
 
 function notify_request(s::LiveStrategy)
     safenotify(condition(s))
 end
 
-function notify_sync(ai::AssetInstance)
-    safenotify(sync_condition(ai))
+function notify_sync(ii::InstrumentInstance)
+    safenotify(sync_condition(ii))
 end
 
 function notify_sync(s::LiveStrategy)
@@ -196,8 +196,8 @@ end
 
 function start_handlers!(s::LiveStrategy)
     _start_handler!(s)
-    for ai in universe(s)
-        _start_handler!(ai)
+    for ii in universe(s)
+        _start_handler!(ii)
     end
 end
 
@@ -245,7 +245,7 @@ end
 
 function stop_handlers!(s::LiveStrategy)
     s_task = _stop_handler!(s)
-    ai_tasks = [_stop_handler!(ai) for ai in universe(s)]
+    ai_tasks = [_stop_handler!(ii) for ii in universe(s)]
     @debug "handlers: waiting termination" _module = LogEvents
     if istaskrunning(s_task)
         waitforcond(() -> !istaskrunning(s_task), Second(5))
@@ -253,12 +253,12 @@ function stop_handlers!(s::LiveStrategy)
             @warn "handlers: strategy handler task did not terminate" _module = LogEvents
         end
     end
-    for (i, ai) in enumerate(universe(s))
+    for (i, ii) in enumerate(universe(s))
         t = ai_tasks[i]
         if istaskrunning(t)
             waitforcond(() -> !istaskrunning(t), Second(5))
             if istaskrunning(t)
-                @warn "handlers: asset handler task did not terminate" ai = raw(ai) _module = LogEvents
+                @warn "handlers: asset handler task did not terminate" ii = raw(ii) _module = LogEvents
             end
         end
     end
@@ -267,7 +267,7 @@ end
 
 function reset_events!(s::LiveStrategy)
     empty!(get_events(s))
-    foreach(empty!, (get_events(ai) for ai in universe(s)))
+    foreach(empty!, (get_events(ii) for ii in universe(s)))
 end
 
 function restart_handlers!(s::LiveStrategy)

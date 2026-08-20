@@ -109,7 +109,7 @@ The benchmark can be:
 - `tail::Option{Int}`: The number of data points to use for the Beta calculation. If `nothing`, all data points are used. If a positive integer, the last `tail` data points are used.
 
 # Returns
-- `DataFrame`: A DataFrame with columns `:Asset`, and either `:Beta_Covariance`, `:Beta_Regression`, or both, depending on the `method` argument.
+- `DataFrame`: A DataFrame with columns `:Instrument`, and either `:Beta_Covariance`, `:Beta_Regression`, or both, depending on the `method` argument.
              Returns an empty DataFrame if insufficient data or assets are available, or if the benchmark cannot be determined.
 """
 function beta_indicator(s::st.Strategy, tf=s.timeframe; benchmark::Union{Symbol, String, DataFrame} = :top_asset, min_vol::DFT=1e6, method::Symbol = :covariance, tail::Option{Int} = nothing)::DataFrame
@@ -329,11 +329,11 @@ function beta_indicator(s::st.Strategy, tf=s.timeframe; benchmark::Union{Symbol,
     # Determine the columns for the results DataFrame
     local result_cols::Vector{Symbol}
     if method == :covariance
-        result_cols = [:Asset, :Beta_Covariance]
+        result_cols = [:Instrument, :Beta_Covariance]
     elseif method == :regression
-        result_cols = [:Asset, :Beta_Regression]
+        result_cols = [:Instrument, :Beta_Regression]
     elseif method == :both
-        result_cols = [:Asset, :Beta_Covariance, :Beta_Regression]
+        result_cols = [:Instrument, :Beta_Covariance, :Beta_Regression]
     else
         error("Invalid method: $(method). Must be :covariance, :regression, or :both.")
     end
@@ -399,7 +399,7 @@ function beta_indicator(s::st.Strategy, tf=s.timeframe; benchmark::Union{Symbol,
 
     # Collect results
     for (i, asset_name) in enumerate(asset_names)
-        row_data = (Asset = asset_name,)
+        row_data = (Instrument = asset_name,)
         if method == :covariance || method == :both
             # Check if beta_cov_results was calculated (i.e., method includes covariance)
             if beta_cov_results !== nothing

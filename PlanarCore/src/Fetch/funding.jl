@@ -60,7 +60,7 @@ function funding_rate(exc::Exchange, s::AbstractString)
     end
 end
 funding_rate(exc, a::Derivative) = funding_rate(exc, a.raw)
-funding_rate(ai) = funding_rate(ai.exchange, ai.asset)
+funding_rate(ii) = funding_rate(ii.exchange, ii.asset)
 
 const FUNDING_RATE_COLUMNS = (:timestamp, :pair, :rate)
 const FUNDING_RATE_COLS = [FUNDING_RATE_COLUMNS...]
@@ -195,6 +195,6 @@ const FUNDING_RATE_TTL = Ref(Second(5))
 const FUNDING_RATE_CACHE = safettl(Tuple{String,Symbol}, DFT, FUNDING_RATE_TTL[])
 @doc "Initializes a safe TTL cache for storing multiple funding rates with a specified TTL."
 const FUNDING_RATES_CACHE = safettl(Symbol, Any, FUNDING_RATE_TTL[])
-assetkey(ai) = (ai.raw, ai.exchange.id)
+assetkey(ii) = (ii.raw, ii.exchange.id)
 
 export funding_history, funding_rate

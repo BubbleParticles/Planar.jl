@@ -8,7 +8,7 @@ using .Misc: DFT
 @doc "The order task tuple, where `alive` indicates if the task is still alive."
 const OrderTaskTuple = NamedTuple{(:task, :alive),Tuple{Task,Ref{Bool}}}
 @doc "Keeps track of the consumed volume of an asset (from the daily liquidity)."
-const AssetLiquidity = Tuple{Ref{DateTime},Ref{DFT},Ref{DFT}}
+const InstrumentLiquidity = Tuple{Ref{DateTime},Ref{DFT},Ref{DFT}}
 
 const date_format = "yyyy-mm-dd HH:MM:SS"
 
@@ -27,7 +27,7 @@ This function sets the default attributes for a given strategy. It initializes t
 """
 function st.default!(s::Strategy{Paper})
     attrs = s.attrs
-    @lget! attrs :paper_liquidity Dict{AssetInstance,AssetLiquidity}()
+    @lget! attrs :paper_liquidity Dict{InstrumentInstance,InstrumentLiquidity}()
     # ensure order tasks do not linger
     tasks = @lget! attrs :paper_order_tasks Dict{Order,OrderTaskTuple}()
     for task_tuple in values(tasks)
@@ -38,11 +38,11 @@ function st.default!(s::Strategy{Paper})
     strategy_logger!(s)
 end
 
-function priceat(::PaperStrategy, ::Type{<:Order}, ai, args...; kwargs...)
-    p = lastprice(ai.asset.raw, ai.exchange)
+function priceat(::PaperStrategy, ::Type{<:Order}, ii, args...; kwargs...)
+    p = lastprice(ii.asset.raw, ii.exchange)
     # Ensure we return DFT, not NaN
     return isnan(p) ? zero(DFT) : DFT(p)
 end
-function priceat(s::PaperStrategy, ::T, ai, args...; kwargs...) where {T<:Order}
-    priceat(s, T, ai, DateTime(0); kwargs...)
+function priceat(s::PaperStrategy, ::T, ii, args...; kwargs...) where {T<:Order}
+    priceat(s, T, ii, DateTime(0); kwargs...)
 end

@@ -37,7 +37,7 @@ function _option_float(o, k; nonzero=false)
     return nothing
 end
 
-function get_float(resp, k, def, args...; ai)
+function get_float(resp, k, def, args...; ii)
     _get_float_or(resp, string(k), def)
 end
 
@@ -74,7 +74,7 @@ get_time(v, keys...) = @something pytodate(v, keys...) TimeTicks.now()
 
 _pystrsym(v::String) = uppercase(v)
 _pystrsym(v::Symbol) = uppercase(string(v))
-_pystrsym(ai::AssetInstance) = ai.bc
+_pystrsym(ii::InstrumentInstance) = ii.bc
 
 _ccxtordertype(::ot.LimitOrderType) = "limit"
 _ccxtordertype(::ot.MarketOrderType) = "market"
@@ -172,13 +172,13 @@ function resp_isfilled(resp, ::EIDType)
     iszero(rem) && filled > zero(DFT)
 end
 
-function isorder_synced(o, ai, resp, eid::EIDType=exchangeid(ai))
+function isorder_synced(o, ii, resp, eid::EIDType=exchangeid(ii))
     if !resp_isfilled(resp, eid)
         return false
     end
     filled = resp_order_filled(resp, eid)
     o_filled = filled_amount(o)
-    isorder_synced_result = isequal(ai, filled, o_filled, Val(:amount))
+    isorder_synced_result = isequal(ii, filled, o_filled, Val(:amount))
     return isorder_synced_result
 end
 function _ccxt_sidetype(

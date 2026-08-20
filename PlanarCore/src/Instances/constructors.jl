@@ -1,30 +1,30 @@
 using ..Exchanges: market_limits, market_precision, market_fees
 
-@doc """ Creates an AssetInstance.
+@doc """ Creates an InstrumentInstance.
 
 $(TYPEDSIGNATURES)
 
-This function creates an AssetInstance with the specified asset (`a`), data, exchange (`exc`), margin, and an optional minimum amount (`min_amount`). If no minimum amount is provided, it defaults to 1e-15.
+This function creates an InstrumentInstance with the specified asset (`a`), data, exchange (`exc`), margin, and an optional minimum amount (`min_amount`). If no minimum amount is provided, it defaults to 1e-15.
 
 """
-function Instances.AssetInstance(a; data, exc, margin, min_amount=1e-15)
+function Instances.InstrumentInstance(a; data, exc, margin, min_amount=1e-15)
     precision = market_precision(a.raw, exc)
     prec = (; amount=precision[1], price=precision[2])
     limits = market_limits(a.raw, exc; default_amount=(min=min_amount, max=Inf), precision=prec)
     fees = market_fees(a.raw, exc)
-    AssetInstance(a, data, exc, margin; limits, precision=prec, fees)
+    InstrumentInstance(a, data, exc, margin; limits, precision=prec, fees)
 end
-@doc """ Creates an AssetInstance from strings.
+@doc """ Creates an InstrumentInstance from strings.
 
 $(TYPEDSIGNATURES)
 
-This function creates an AssetInstance using the provided strings for the asset (`s`), data type (`t`), exchange (`e`), and margin type (`m`).
+This function creates an InstrumentInstance using the provided strings for the asset (`s`), data type (`t`), exchange (`e`), and margin type (`m`).
 
 """
-function Instances.AssetInstance(
+function Instances.InstrumentInstance(
     s::S, t::S, e::S, m::S; sandbox::Bool, params=nothing, account=""
 ) where {S<:AbstractString}
-    a = parse(AbstractAsset, s)
+    a = parse(AbstractInstrument, s)
     tf = convert(TimeFrame, t)
     exc = getexchange!(Symbol(e), params; sandbox, account)
     margin = if m == "isolated"
@@ -39,20 +39,20 @@ function Instances.AssetInstance(
     # A `nothing` DataFrame in `data` would crash downstream code that treats
     # the value as a DataFrame, so fall back to an empty one (watchers fill it).
     data = Dict(tf => isnothing(loaded) ? DataFrame() : loaded)
-    AssetInstance(a, data, exc, margin)
+    InstrumentInstance(a, data, exc, margin)
 end
 
-function Instances.AssetInstance{AA,EID,MM}(sym; sandbox, params=nothing, account="") where {AA,EID,MM}
-    AssetInstance(
-        parse(AbstractAsset, sym);
+function Instances.InstrumentInstance{AA,EID,MM}(sym; sandbox, params=nothing, account="") where {AA,EID,MM}
+    InstrumentInstance(
+        parse(AbstractInstrument, sym);
         data=SortedDict{TimeFrame,DataFrame}(),
         exc=getexchange!(EID(), params; sandbox, account),
         margin=MM(),
     )
 end
 
-function default_asset_df(ai::AssetInstance)
+function default_asset_df(ii::InstrumentInstance)
     df = DataFrame()
-    metadata!(df, "asset_instance", ai; style=:note)
+    metadata!(df, "asset_instance", ii; style=:note)
     return df
 end
