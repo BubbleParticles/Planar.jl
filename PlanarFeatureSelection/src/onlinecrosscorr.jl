@@ -325,8 +325,8 @@ function _get_filtered_assets(s, tf, min_vol, x_num)
     local_assets_dict = st.symsdict(s)
     if isempty(local_assets_dict)
         # Fill with the strategy's assets
-        for ai in s.universe
-            local_assets_dict[raw(ai)] = ai
+        for ii in s.universe
+            local_assets_dict[raw(ii)] = ii
         end
     end
 

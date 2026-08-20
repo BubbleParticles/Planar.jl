@@ -4,16 +4,16 @@ over multiple exchanges, so portfolio and orders are mapped to exchanges.
 Instead of a single quote currency for cash, it holds one collection of Cash currency per exchange.
 """
 struct MultiStrategy1{M}
-    universe::AssetCollection
-    portfolio::Dict{ExchangeID,Dict{Asset,Ref{AssetInstance}}}
-    orders::Dict{ExchangeID,Dict{Asset,Ref{AssetInstance}}}
+    universe::InstrumentCollection
+    portfolio::Dict{ExchangeID,Dict{Instrument,Ref{InstrumentInstance}}}
+    orders::Dict{ExchangeID,Dict{Instrument,Ref{InstrumentInstance}}}
     wallet::Dict{Tuple{ExchangeID,Symbol},Cash}
     config::Config
     function MultiStrategy1(
         src::Symbol, assets::Union{Dict,Iterable{String}}, config::Config
     )
         exc = getexchange!(config.exchange, sandbox=config.sandbox)
-        uni = AssetCollection(assets; exc)
+        uni = InstrumentCollection(assets; exc)
         new{src}(uni, Dict(), Dict(), Dict(), config)
     end
 end

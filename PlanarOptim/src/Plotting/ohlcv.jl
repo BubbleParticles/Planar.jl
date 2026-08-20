@@ -7,7 +7,7 @@ using PlanarCore.Data.DataFramesMeta
 using PlanarCore.Processing: resample
 
 @doc """ Returns a formatted asset string or an empty string if the asset is `nothing` """
-maybe_asset(a) = isnothing(a) ? "" : "Asset: $(a)\n"
+maybe_asset(a) = isnothing(a) ? "" : "Instrument: $(a)\n"
 @doc """ Returns a formatted candle string """
 function candle_str(row, asset=nothing)
     """$(maybe_asset(asset))O: $(cn(row.open))

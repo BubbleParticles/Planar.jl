@@ -16,7 +16,7 @@ using .da.DataFrames:
     DataFrame, metadata, names, findfirst, size, DataFrameRow, filter, nrow, rename!
 using .st.Dates: DateTime
 using PlanarCore.Strategies.Misc: DFT, Option # Assuming DFT is in Misc
-using PlanarCore.Strategies: Strategy, AssetInstance, universe, raw # Added imports for strategy and asset access
+using PlanarCore.Strategies: Strategy, InstrumentInstance, universe, raw # Added imports for strategy and asset access
 using .da.DataStructures: BinaryHeap, isempty, push!, peek, pop! # Added for min-heap
 
 # Helper function to calculate quote volume safely
@@ -351,24 +351,24 @@ function _get_new_ohlcv_data(
     strategy_universe = st.universe(s)
 
     for asset_name in assets
-        # Find the AssetInstance for the current asset name
-        ai = nothing
+        # Find the InstrumentInstance for the current asset name
+        ii = nothing
         for asset_instance in strategy_universe
             if st.raw(asset_instance) == asset_name
-                ai = asset_instance
+                ii = asset_instance
                 break
             end
         end
 
-        if isnothing(ai)
-            @warn "Asset instance not found in strategy universe for $(asset_name)." color =
+        if isnothing(ii)
+            @warn "Instrument instance not found in strategy universe for $(asset_name)." color =
                 :yellow
             continue # Skip this asset if not in the universe
         end
 
         # Access the OHLCV data for the specific timeframe from the asset instance
-        if haskey(ai.data, tf)
-            ohlcv_df = ai.data[tf]
+        if haskey(ii.data, tf)
+            ohlcv_df = ii.data[tf]
             if !isempty(ohlcv_df) && "timestamp" in names(ohlcv_df)
                 if isnothing(since_timestamp)
                     # If no since_timestamp, return all available data (initial load)
@@ -550,9 +550,9 @@ function _align_and_calculate_returns!(
                       roc_ready = nobs(roc) >= roc_period
                       roc_val = value(roc)
                       roc_valid = !ismissing(roc_val) && !isnan(roc_val)
-                      @debug "  Asset $(asset): ROC ready = $(roc_ready), ROC value valid = $(roc_valid), nobs = $(nobs(roc))"
+                      @debug "  Instrument $(asset): ROC ready = $(roc_ready), ROC value valid = $(roc_valid), nobs = $(nobs(roc))"
                   else
-                      @debug "  Asset $(asset): ROC indicator not found."
+                      @debug "  Instrument $(asset): ROC indicator not found."
                   end
              end
         end
@@ -640,11 +640,11 @@ end
 function _validate_and_init_params(method::Symbol)::Tuple{Vector{Symbol},String}
     local result_cols::Vector{Symbol}
     if method == :covariance
-        result_cols = [:Asset, :Beta_Covariance]
+        result_cols = [:Instrument, :Beta_Covariance]
     elseif method == :regression
-        result_cols = [:Asset, :Beta_Regression]
+        result_cols = [:Instrument, :Beta_Regression]
     elseif method == :both
-        result_cols = [:Asset, :Beta_Covariance, :Beta_Regression]
+        result_cols = [:Instrument, :Beta_Covariance, :Beta_Regression]
     else
         error("Invalid method: $(method). Must be :covariance, :regression, or :both.")
     end
@@ -699,7 +699,7 @@ function _prepare_asset_data(
                 @debug "Skipping asset $(asset_name) due to empty DataFrame or missing timestamp column."
             end
         else
-            @debug "Asset $(asset_name) from volume filter not found in initial universe data for timeframe $(tf)."
+            @debug "Instrument $(asset_name) from volume filter not found in initial universe data for timeframe $(tf)."
         end
     end
 
@@ -1104,7 +1104,7 @@ function _process_and_update_cache!(
                            @debug "Top 5% benchmark component asset $(asset) data present at $(timestamp), but ROC not ready. Skipping for benchmark average."
                      end
                 else
-                    # Asset data or return is missing/invalid at this timestamp
+                    # Instrument data or return is missing/invalid at this timestamp
                      @debug "Top 5% benchmark component asset $(asset) data/return missing at timestamp $(timestamp)."
                 end
             end
@@ -1149,9 +1149,9 @@ function _process_and_update_cache!(
             # Ensure the asset is one for which we calculate beta and its return is available and valid
             if ismissing(asset_return) || isnan(asset_return) || !(asset_name in assets_for_beta_calc) # Double check asset_name is in assets_for_beta_calc
                  if !(asset_name in assets_for_beta_calc)
-                      @debug "Asset $(asset_name) is not in the list of assets for beta calculation. Skipping stat fitting."
+                      @debug "Instrument $(asset_name) is not in the list of assets for beta calculation. Skipping stat fitting."
                  else
-                      @debug "Asset return missing or invalid for $(asset_name) at timestamp $(timestamp). Skipping stat fitting for this asset."
+                      @debug "Instrument return missing or invalid for $(asset_name) at timestamp $(timestamp). Skipping stat fitting for this asset."
                  end
                 continue
             end
@@ -1163,7 +1163,7 @@ function _process_and_update_cache!(
                     asset_return - value(beta_cache.roc_indicators[asset_name])
                  else
                       # Cannot demean if asset ROC is not ready, use non-demeaned return but log a warning
-                       @warn "Asset ROC not ready for demeaning for $(asset_name) at timestamp $(timestamp). Using non-demeaned asset return for covariance calculation."
+                       @warn "Instrument ROC not ready for demeaning for $(asset_name) at timestamp $(timestamp). Using non-demeaned asset return for covariance calculation."
                        asset_return
                  end
             else
@@ -1262,11 +1262,11 @@ function _calculate_and_cache_beta(
                 # Check if the RollingCovMatrix stat has enough observations for this asset
                 if haskey(beta_cache.cov_stats, stat_pair_key) &&
                     nobs(beta_cache.cov_stats[stat_pair_key]) >= beta_cache.window
-                    # Get the rolling covariance matrix and extract the covariance value (Cov(Asset, Benchmark))
+                    # Get the rolling covariance matrix and extract the covariance value (Cov(Instrument, Benchmark))
                     cov_matrix = value(beta_cache.cov_stats[stat_pair_key])
 
-                    # The covariance matrix from RollingCovMatrix is [[Var(Asset), Cov(Asset, Benchmark)], [Cov(Benchmark, Asset), Var(Benchmark)]]
-                    # We need Cov(Asset, Benchmark), which is at [1, 2] or [2, 1]. It should be symmetric.
+                    # The covariance matrix from RollingCovMatrix is [[Var(Instrument), Cov(Instrument, Benchmark)], [Cov(Benchmark, Instrument), Var(Benchmark)]]
+                    # We need Cov(Instrument, Benchmark), which is at [1, 2] or [2, 1]. It should be symmetric.
                     cov_val = cov_matrix[1, 2]
 
                     # Ensure the covariance value is not NaN
@@ -1304,12 +1304,12 @@ function _calculate_and_cache_beta(
         local asset_result
         if beta_cache.method == :both
             asset_result = (
-                Asset=asset_name, Beta_Covariance=beta_cov, Beta_Regression=beta_reg
+                Instrument=asset_name, Beta_Covariance=beta_cov, Beta_Regression=beta_reg
             )
         elseif beta_cache.method == :covariance
-            asset_result = (Asset=asset_name, Beta_Covariance=beta_cov)
+            asset_result = (Instrument=asset_name, Beta_Covariance=beta_cov)
         elseif beta_cache.method == :regression
-            asset_result = (Asset=asset_name, Beta_Regression=beta_reg)
+            asset_result = (Instrument=asset_name, Beta_Regression=beta_reg)
         end
         # Update the cached result for this specific asset
         beta_cache.last_calculated_beta[asset_name] = asset_result

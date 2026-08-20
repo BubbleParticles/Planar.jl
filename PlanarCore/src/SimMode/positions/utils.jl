@@ -11,33 +11,33 @@ using ..Misc: DFT
 import ..Executors: position!
 
 """
-Open a position in `s` with `ai` using `t`.
+Open a position in `s` with `ii` using `t`.
 
 $(TYPEDSIGNATURES)
 
 The function opens a position in the specified strategy using the given margin instance and position trade.
 """
 function open_position!(
-    s::IsolatedStrategy, ai::MarginInstance, t::PositionTrade{P};
+    s::IsolatedStrategy, ii::MarginInstance, t::PositionTrade{P};
 ) where {P<:PositionSide}
     # NOTE: Order of calls is important
-    po = position(ai, P)
-    @deassert cash(ai, opposite(P())) == DFT(0.0) (cash(ai, opposite(P()))),
-    status(ai, opposite(P()))
+    po = position(ii, P)
+    @deassert cash(ii, opposite(P())) == DFT(0.0) (cash(ii, opposite(P()))),
+    status(ii, opposite(P()))
     @deassert !isopen(po)
     @deassert notional(po) == DFT(0.0)
     # Cash should already be updated from trade construction
-    @deassert abs(cash(po)) == abs(cash(ai, P())) >= abs(t.amount)
+    @deassert abs(cash(po)) == abs(cash(ii, P())) >= abs(t.amount)
     withtrade!(po, t)
     # Notional should never be above the trade size
     # unless fees are negative
     @deassert notional(po) < abs(t.size) ||
-        minfees(ai) < DFT(0.0) ||
-        abs(t.amount) < abs(cash(ai, P()))
+        minfees(ii) < DFT(0.0) ||
+        abs(t.amount) < abs(cash(ii, P()))
     # finalize
-    status!(ai, P(), PositionOpen())
+    status!(ii, P(), PositionOpen())
     @deassert status(po) == PositionOpen()
-    call!(s, ai, t, po, PositionOpen())
+    call!(s, ii, t, po, PositionOpen())
 end
 
 @doc """Force exit a position.
@@ -47,26 +47,26 @@ $(TYPEDSIGNATURES)
 This function cancels all orders associated with the specified position and updates the position with a forced order. The function also handles cases where the position is already closed or has zero committed funds.
 
 """
-function force_exit_position(s::Strategy, ai, p, date::DateTime; kwargs...)
-    @ifdebug @assert !hasorders(s, ai)
-    @ifdebug @deassert isempty(collect(values(s, ai, p)))
-    @ifdebug @deassert iszero(committed(ai, p)) committed(ai, p)
+function force_exit_position(s::Strategy, ii, p, date::DateTime; kwargs...)
+    @ifdebug @assert !hasorders(s, ii)
+    @ifdebug @deassert isempty(collect(values(s, ii, p)))
+    @ifdebug @deassert iszero(committed(ii, p)) committed(ii, p)
     ot = ReduceOnlyOrder(p)
-    price = priceat(s, ot, ai, date)
-    amount = abs(nondust(ai, ot, price))
+    price = priceat(s, ot, ii, date)
+    amount = abs(nondust(ii, ot, price))
     if amount > DFT(0.0)
         prevcash = s.cash.value
-        t = call!(s, ai, ot; amount, date, price, kwargs...)
+        t = call!(s, ii, ot; amount, date, price, kwargs...)
         if !isnothing(t)
             @debug "force exit position: " amount price t.price s.cash.value - prevcash t.value
             @ifdebug @deassert let o = t.order
                 (
                     t isa Trade &&
                     o.date == date &&
-                    isapprox(o.amount, amount; atol=ai.precision.amount)
+                    isapprox(o.amount, amount; atol=ii.precision.amount)
                 )
             end
-            @ifdebug @deassert isdust(ai, price, p)
+            @ifdebug @deassert isdust(ii, price, p)
         else
             @debug "force_exit_position: call! returned nothing for amount=$amount price=$price"
         end
@@ -82,15 +82,15 @@ When a date is given, this function closes pending orders and sells the remainin
 It then resets the position, deletes it from the holdings, and checks that the position is closed and no funds are committed.
 
 """
-function close_position!(s::IsolatedStrategy, ai, p::PositionSide, date=nothing; kwargs...)
-    @ifdebug @deassert !hasorders(s, ai, p)
+function close_position!(s::IsolatedStrategy, ii, p::PositionSide, date=nothing; kwargs...)
+    @ifdebug @deassert !hasorders(s, ii, p)
     # when a date is given we should close pending orders and sell remaining cash
     if !isnothing(date)
-        force_exit_position(s, ai, p, date; kwargs...)
+        force_exit_position(s, ii, p, date; kwargs...)
     end
-    reset!(ai, p)
-    delete!(s.holdings, ai)
-    @ifdebug @deassert !isopen(position(ai, p)) && iszero(ai)
+    reset!(ii, p)
+    delete!(s.holdings, ii)
+    @ifdebug @deassert !isopen(position(ii, p)) && iszero(ii)
     true
 end
 
@@ -117,22 +117,22 @@ $(TYPEDSIGNATURES)
 
 """
 function liquidate!(
-    s::MarginStrategy, ai::MarginInstance, p::PositionSide, date, fees=LIQUIDATION_FEES;
+    s::MarginStrategy, ii::MarginInstance, p::PositionSide, date, fees=LIQUIDATION_FEES;
 )
-    pos = position(ai, p)
-    ords = collect(values(s, ai, p))
+    pos = position(ii, p)
+    ords = collect(values(s, ii, p))
     for o in ords
         @ifdebug @deassert o isa Order
-        cancel!(s, o, ai; err=LiquidationOverride(o, liqprice(pos), date, p))
+        cancel!(s, o, ii; err=LiquidationOverride(o, liqprice(pos), date, p))
     end
     amount = abs(cash(pos).value)
     price = liqprice(pos)
-    t = call!(s, ai, LiquidationOrder{liqside(p),typeof(p)}; amount, date, price, fees)
+    t = call!(s, ii, LiquidationOrder{liqside(p),typeof(p)}; amount, date, price, fees)
     isnothing(t) || begin
         @ifdebug @deassert t.order.date == date && DFT(0.0) < abs(t.amount) <= abs(t.order.amount)
     end
-    @ifdebug @deassert isdust(ai, price, p) (notional(ai, p), cash(ai, p), cash(ai, p) * price, p)
-    close_position!(s, ai, p)
+    @ifdebug @deassert isdust(ii, price, p) (notional(ii, p), cash(ii, p), cash(ii, p) * price, p)
+    close_position!(s, ii, p)
 end
 
 """
@@ -141,37 +141,37 @@ Checks asset positions for liquidations and executes them (Non hedged mode, so o
 $(TYPEDSIGNATURES)
 
 If a position is open and liquidatable, it is liquidated using the `liquidate!` function.
-The liquidation is performed on the asset positions in `ai` on the specified `date`.
+The liquidation is performed on the asset positions in `ii` on the specified `date`.
 
 """
-function maybe_liquidate!(s::IsolatedStrategy, ai::MarginInstance, date::DateTime)
-    pos = position(ai)
+function maybe_liquidate!(s::IsolatedStrategy, ii::MarginInstance, date::DateTime)
+    pos = position(ii)
     isnothing(pos) && return nothing
-    @ifdebug @deassert !isopen(opposite(ai, pos))
+    @ifdebug @deassert !isopen(opposite(ii, pos))
     p = posside(pos)
-    isliquidatable(s, ai, p, date) && liquidate!(s, ai, p, date)
+    isliquidatable(s, ii, p, date) && liquidate!(s, ii, p, date)
 end
 
 @doc """Updates the position by applying a position trade.
 
 $(TYPEDSIGNATURES)
 
-Applies the position trade `t` to the isolated strategy `s` and the margin instance `ai`.
+Applies the position trade `t` to the isolated strategy `s` and the margin instance `ii`.
 The order of calls is important.
 Checks if the position has a notional value not equal to zero.
 Updates the cash of the position using the trade construction.
 
 """
 function update_position!(
-    s::IsolatedStrategy, ai, t::PositionTrade{P}
+    s::IsolatedStrategy, ii, t::PositionTrade{P}
 ) where {P<:PositionSide}
     # NOTE: Order of calls is important
-    po = position(ai, P)
+    po = position(ii, P)
     @ifdebug @deassert notional(po) != DFT(0.0)
     # Cash should already be updated from trade construction
     withtrade!(po, t)
     # position is still open
-    call!(s, ai, t, po, PositionUpdate())
+    call!(s, ii, t, po, PositionUpdate())
 end
 
 @doc """ Updates or opens a position based on a given trade.
@@ -184,25 +184,25 @@ After updating or opening the position, it checks if the position needs to be li
 
 """
 function position!(
-    s::IsolatedStrategy, ai::MarginInstance, t::PositionTrade{P}; check_liq=true
+    s::IsolatedStrategy, ii::MarginInstance, t::PositionTrade{P}; check_liq=true
 ) where {P<:PositionSide}
     @ifdebug @deassert exchangeid(s) == exchangeid(t)
-    @ifdebug @deassert t.order.asset == ai.asset
-    pos = position(ai, P)
+    @ifdebug @deassert t.order.asset == ii.asset
+    pos = position(ii, P)
     if isopen(pos)
-        if isdust(ai, t.price, P())
-            close_position!(s, ai, P())
+        if isdust(ii, t.price, P())
+            close_position!(s, ii, P())
         else
             @ifdebug @deassert !iszero(cash(pos)) || t isa ReduceTrade
             @debug "position update" pos.entryprice[] t.value t.price
-            update_position!(s, ai, t)
+            update_position!(s, ii, t)
         end
     elseif t isa IncreaseTrade
-        @debug "position open" cash(ai, t) t
-        open_position!(s, ai, t)
+        @debug "position open" cash(ii, t) t
+        open_position!(s, ii, t)
     end
     if check_liq
-        maybe_liquidate!(s, ai, t.date)
+        maybe_liquidate!(s, ii, t.date)
     end
 end
 
@@ -215,17 +215,17 @@ If the position is liquidatable, it is liquidated.
 Otherwise, the position remains open and a `PositionUpdate` is pinged.
 
 """
-function position!(s::IsolatedStrategy{Sim}, ai, date::DateTime, pos::Position=position(ai))
+function position!(s::IsolatedStrategy{Sim}, ii, date::DateTime, pos::Position=position(ii))
     # NOTE: Order of calls is important
     @ifdebug @deassert isopen(pos)
     p = posside(pos)
     @ifdebug @deassert notional(pos) != DFT(0.0)
     timestamp!(pos, date)
-    if isliquidatable(s, ai, p, date)
-        liquidate!(s, ai, p, date)
+    if isliquidatable(s, ii, p, date)
+        liquidate!(s, ii, p, date)
     else
         # position is still open
-        call!(s, ai, date, pos, PositionUpdate())
+        call!(s, ii, date, pos, PositionUpdate())
     end
 end
 
@@ -252,25 +252,25 @@ Execution updates include the maintenance of position and order records and acco
 """
 function positions!(s::IsolatedStrategy{<:Union{Paper,Sim}}, date::DateTime)
     @ifdebug _checkorders(s)
-    # Collect holdings first to avoid mutation during iteration (liquidate! -> close_position! -> delete!(s.holdings, ai))
+    # Collect holdings first to avoid mutation during iteration (liquidate! -> close_position! -> delete!(s.holdings, ii))
     holdings_copy = collect(keys(s.holdings))
-    for ai in holdings_copy
-        @ifdebug @deassert isopen(ai) || hasorders(s, ai) ai
-        if isopen(ai)
-            position!(s, ai, date)
+    for ii in holdings_copy
+        @ifdebug @deassert isopen(ii) || hasorders(s, ii) ii
+        if isopen(ii)
+            position!(s, ii, date)
         end
     end
     @ifdebug _checkorders(s)
-    for ai in universe(s)
-        @ifdebug @deassert !(isopen(ai, Short()) && isopen(ai, Long()))
-        po = position(ai)
+    for ii in universe(s)
+        @ifdebug @deassert !(isopen(ii, Short()) && isopen(ii, Long()))
+        po = position(ii)
         if !isnothing(po)
-            @ifdebug @deassert ai ∈ s.holdings && !iszero(cash(po)) && isopen(po)
+            @ifdebug @deassert ii ∈ s.holdings && !iszero(cash(po)) && isopen(po)
         else
-            @ifdebug @deassert iszero(cash(ai, Long())) &&
-                iszero(cash(ai, Short())) &&
-                !isopen(ai, Long()) &&
-                !isopen(ai, Short())
+            @ifdebug @deassert iszero(cash(ii, Long())) &&
+                iszero(cash(ii, Short())) &&
+                !isopen(ii, Long()) &&
+                !isopen(ii, Short())
         end
     end
 end

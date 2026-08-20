@@ -5,7 +5,7 @@ function cache_keys()
     (:trades_cache, :open_orders_cache, :closed_orders_cache, :orders_cache, :order_byid_cache, :positions_cache, :fetchall_cache, :live_recent_orders, :live_recent_trades_update)
 end
 
-_last_trade_date(ai) = st.lasttrade_date(ai, TimeTicks.now() - Day(1))
+_last_trade_date(ii) = st.lasttrade_date(ii, TimeTicks.now() - Day(1))
 function somevalue(dict, keys...)
     for k in keys
         v = get(dict, k, nothing)
@@ -16,38 +16,38 @@ end
 ttl_dict_type(ttl::Period, kt=DateTime, vt=Vector{Any}) = TTL{kt,Union{Missing,vt},ConcurrentDict,typeof(ttl)}
 ttl_resp_dict(ttl::Period, kt=DateTime, vt=Vector{Any}) = safettl(kt, Union{Missing,vt}, ttl)
 
-function _trades_resp_cache(a, ai)
+function _trades_resp_cache(a, ii)
     # every asset instance holds a mapping of timestamp (since) and relative vector of trades resps
-    cache = @lget! a :trades_cache Dict{AssetInstance,ttl_dict_type(a[:trades_cache_ttl], DateTime)}()
-    @lget! cache ai ttl_resp_dict(a[:trades_cache_ttl], DateTime)
+    cache = @lget! a :trades_cache Dict{InstrumentInstance,ttl_dict_type(a[:trades_cache_ttl], DateTime)}()
+    @lget! cache ii ttl_resp_dict(a[:trades_cache_ttl], DateTime)
 end
 
 @doc """Use `DateTime(0)` as key to fetch the *latest* response."""
 const LATEST_RESP_KEY = DateTime(0)
 
-function _order_trades_resp_cache(a, ai)
-    cache = @lget! a :order_trades_cache Dict{AssetInstance,ttl_dict_type(a[:trades_cache_ttl], String)}()
-    @lget! cache ai ttl_resp_dict(a[:trades_cache_ttl], String)
+function _order_trades_resp_cache(a, ii)
+    cache = @lget! a :order_trades_cache Dict{InstrumentInstance,ttl_dict_type(a[:trades_cache_ttl], String)}()
+    @lget! cache ii ttl_resp_dict(a[:trades_cache_ttl], String)
 end
 
-function _open_orders_resp_cache(a, ai)
-    cache = @lget! a :open_orders_cache Dict{AssetInstance,ttl_dict_type(a[:open_orders_ttl], DateTime)}()
-    @lget! cache ai ttl_resp_dict(a[:open_orders_ttl], DateTime)
+function _open_orders_resp_cache(a, ii)
+    cache = @lget! a :open_orders_cache Dict{InstrumentInstance,ttl_dict_type(a[:open_orders_ttl], DateTime)}()
+    @lget! cache ii ttl_resp_dict(a[:open_orders_ttl], DateTime)
 end
 
-function _closed_orders_resp_cache(a, ai)
-    cache = @lget! a :closed_orders_cache Dict{AssetInstance,ttl_dict_type(a[:closed_orders_ttl], Union{String,DateTime})}()
-    @lget! cache ai ttl_resp_dict(a[:closed_orders_ttl], Union{String,DateTime})
+function _closed_orders_resp_cache(a, ii)
+    cache = @lget! a :closed_orders_cache Dict{InstrumentInstance,ttl_dict_type(a[:closed_orders_ttl], Union{String,DateTime})}()
+    @lget! cache ii ttl_resp_dict(a[:closed_orders_ttl], Union{String,DateTime})
 end
 
-function _orders_resp_cache(a, ai)
-    cache = @lget! a :orders_cache Dict{AssetInstance,ttl_dict_type(a[:orders_cache_ttl], Any)}()
-    @lget! cache ai ttl_resp_dict(a[:orders_cache_ttl], Any)
+function _orders_resp_cache(a, ii)
+    cache = @lget! a :orders_cache Dict{InstrumentInstance,ttl_dict_type(a[:orders_cache_ttl], Any)}()
+    @lget! cache ii ttl_resp_dict(a[:orders_cache_ttl], Any)
 end
 
-function _order_byid_resp_cache(a, ai)
-    cache = @lget! a :order_byid_cache Dict{AssetInstance,ttl_dict_type(a[:order_byid_ttl], String)}()
-    @lget! cache ai ttl_resp_dict(a[:order_byid_ttl], String)
+function _order_byid_resp_cache(a, ii)
+    cache = @lget! a :order_byid_cache Dict{InstrumentInstance,ttl_dict_type(a[:order_byid_ttl], String)}()
+    @lget! cache ii ttl_resp_dict(a[:order_byid_ttl], String)
 end
 
 function _positions_resp_cache(a)
@@ -105,20 +105,20 @@ $(TYPEDSIGNATURES)
 Returns a dictionary of recent orders ids for a given asset instance.
 
 """
-function recent_orders(s::LiveStrategy, ai)
+function recent_orders(s::LiveStrategy, ii)
     @lock s begin
-        lro = @lget! attrs(s) :live_recent_orders Dict{AssetInstance,RecentOrdersDict}()
-        @lget! lro ai RecentOrdersDict(maxsize=100)
+        lro = @lget! attrs(s) :live_recent_orders Dict{InstrumentInstance,RecentOrdersDict}()
+        @lget! lro ii RecentOrdersDict(maxsize=100)
     end
 end
 
 @doc "An lru cache of recently processed trades hashes."
 const RecentUpdatesDict = LRUCache.LRU{UInt64,Nothing}
 
-function recent_trade_update(s::LiveStrategy, ai)
+function recent_trade_update(s::LiveStrategy, ii)
     @lock s begin
-        lrt = @lget! attrs(s) :live_recent_trades_update Dict{AssetInstance,RecentUpdatesDict}()
-        @lget! lrt ai RecentUpdatesDict(maxsize=100)
+        lrt = @lget! attrs(s) :live_recent_trades_update Dict{InstrumentInstance,RecentUpdatesDict}()
+        @lget! lrt ii RecentUpdatesDict(maxsize=100)
     end
 end
 

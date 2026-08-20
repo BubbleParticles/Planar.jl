@@ -9,9 +9,9 @@ if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
             ohlcv_dict(s[m"btc"])[s.timeframe]
             empty_ohlcv()
         end
-        for ai in s.universe
+        for ii in s.universe
             append!(
-                ohlcv_dict(ai)[s.timeframe],
+                ohlcv_dict(ii)[s.timeframe],
                 sml.Processing.Data.to_ohlcv(sml.synthohlcv());
                 cols=:union,
             )

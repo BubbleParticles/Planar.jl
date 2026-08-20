@@ -6,7 +6,7 @@ using ..Instances: notional, pnl, Instances
 import ..Instances: committed
 using ..Misc: Short, DFT, toprecision
 using ..Instruments
-using ..Instruments: @importcash!, AbstractAsset
+using ..Instruments: @importcash!, AbstractInstrument
 import .Checks: cost
 @importcash!
 import Base: fill!
@@ -40,7 +40,7 @@ $(TYPEDSIGNATURES)
 
 """
 function basicorder(
-    ai::AssetInstance,
+    ii::InstrumentInstance,
     price,
     amount,
     committed,
@@ -53,27 +53,27 @@ function basicorder(
     tag="",
 )
     if !ismonotonic(loss, price, profit)
-        @debug "basic order: prices not monotonic" ai = raw(ai) loss price profit type
+        @debug "basic order: prices not monotonic" ii = raw(ii) loss price profit type
         return nothing
     end
     # don't check cost for market orders since they can go lower
     ignore_cost = isnocost(type)
     # Allow reduce only orders below minimum cost
-    if !ignore_cost && !iscost(ai, amount, loss, price, profit)
-        @debug "basic order: invalid cost" ai = raw(ai) amount loss price profit type
+    if !ignore_cost && !iscost(ii, amount, loss, price, profit)
+        @debug "basic order: invalid cost" ii = raw(ii) amount loss price profit type
         return nothing
     end
     if !ignore_cost
         @deassert if type <: IncreaseOrder
-            committed[] * leverage(ai, positionside(type)) >= ai.limits.cost.min
+            committed[] * leverage(ii, positionside(type)) >= ii.limits.cost.min
         else
-            abs(committed[]) >= ai.limits.amount.min || ignore_cost
-        end "Order committment too low\n$(committed[]), $(ai.asset) $date"
+            abs(committed[]) >= ii.limits.amount.min || ignore_cost
+        end "Order committment too low\n$(committed[]), $(ii.asset) $date"
     end
     unfilled = Ref(unfillment(type, amount))
     @deassert type <: AnyBuyOrder ? unfilled[] < 0.0 : unfilled[] > 0.0
     OrderTypes.Order(
-        ai,
+        ii,
         type;
         date,
         price,
@@ -89,12 +89,12 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function Base.delete!(s::Strategy, ai, o::IncreaseOrder)
+function Base.delete!(s::Strategy, ii, o::IncreaseOrder)
     @deassert committed(o) |> approxzero o
-    delete!(orders(s, ai, orderside(o)), pricetime(o))
-    @deassert pricetime(o) ∉ keys(orders(s, ai, orderside(o)))
+    delete!(orders(s, ii, orderside(o)), pricetime(o))
+    @deassert pricetime(o) ∉ keys(orders(s, ii, orderside(o)))
     # If we don't have cash for this asset, it should be released from holdings
-    release!(s, ai)
+    release!(s, ii)
 end
 
 @doc """Removes a single sell order from the order queue.
@@ -102,11 +102,11 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function Base.delete!(s::Strategy, ai, o::SellOrder)
+function Base.delete!(s::Strategy, ii, o::SellOrder)
     @deassert committed(o) |> approxzero o
-    delete!(orders(s, ai, orderside(o)), pricetime(o))
+    delete!(orders(s, ii, orderside(o)), pricetime(o))
     # If we don't have cash for this asset, it should be released from holdings
-    release!(s, ai)
+    release!(s, ii)
 end
 
 @doc """Removes a single short buy order from the order queue.
@@ -114,12 +114,12 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function Base.delete!(s::Strategy, ai, o::ShortBuyOrder)
+function Base.delete!(s::Strategy, ii, o::ShortBuyOrder)
     # Short buy orders have negative committment
     @deassert committed(o) |> approxzero o
-    delete!(orders(s, ai, Buy), pricetime(o))
+    delete!(orders(s, ii, Buy), pricetime(o))
     # If we don't have cash for this asset, it should be released from holdings
-    release!(s, ai)
+    release!(s, ii)
 end
 
 @doc """Removes all buy/sell orders for an asset instance.
@@ -127,8 +127,8 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function Base.delete!(s::Strategy, ai, t::Type{<:Union{Buy,Sell}})
-    delete!.(s, ai, values(orders(s, ai, t)))
+function Base.delete!(s::Strategy, ii, t::Type{<:Union{Buy,Sell}})
+    delete!.(s, ii, values(orders(s, ii, t)))
 end
 
 @doc """Removes all buy and sell orders for an asset instance.
@@ -136,9 +136,9 @@ end
 $(TYPEDSIGNATURES)
 
 """
-Base.delete!(s::Strategy, ai, ::Type{BuyOrSell}) = begin
-    delete!(s, ai, Buy)
-    delete!(s, ai, Sell)
+Base.delete!(s::Strategy, ii, ::Type{BuyOrSell}) = begin
+    delete!(s, ii, Buy)
+    delete!(s, ii, Sell)
 end
 
 @doc """Removes all orders for an asset instance.
@@ -146,16 +146,16 @@ end
 $(TYPEDSIGNATURES)
 
 """
-Base.delete!(s::Strategy, ai) = delete!(s, ai, BuyOrSell)
+Base.delete!(s::Strategy, ii) = delete!(s, ii, BuyOrSell)
 
 @doc """Inserts an order into the order dict of the asset instance. Orders should be identifiable by a unique (price, date) tuple.
 
 $(TYPEDSIGNATURES)
 
 """
-function Base.push!(s::Strategy, ai, o::Order{<:OrderType{S}}) where {S<:OrderSide}
+function Base.push!(s::Strategy, ii, o::Order{<:OrderType{S}}) where {S<:OrderSide}
     k = pricetime(o)
-    d = orders(s, ai, S)
+    d = orders(s, ii, S)
     # stok = searchsortedfirst(d, k)
     @ifdebug if k ∈ keys(d)
         @debug "Duplicate order key" o.id d[k].id o.price o.date
@@ -168,8 +168,8 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function isqueued(o::Order{<:OrderType{S}}, s::Strategy, ai) where {S<:OrderSide}
-    let k = pricetime(o), d = orders(s, ai, S)
+function isqueued(o::Order{<:OrderType{S}}, s::Strategy, ii) where {S<:OrderSide}
+    let k = pricetime(o), d = orders(s, ii, S)
         k in keys(d)
     end
 end
@@ -232,7 +232,7 @@ $(TYPEDSIGNATURES)
 
 """
 function fill!(
-    ::Strategy{<:Union{Sim,Paper}}, ai::NoMarginInstance, o::BuyOrder, t::BuyTrade
+    ::Strategy{<:Union{Sim,Paper}}, ii::NoMarginInstance, o::BuyOrder, t::BuyTrade
 )
     @deassert o isa IncreaseOrder && _check_unfillment(o) unfilled(o), typeof(o)
     @deassert committed(o) == o.attrs.committed[] && committed(o) >= 0.0
@@ -240,9 +240,9 @@ function fill!(
     attr(o, :unfilled)[] += t.amount
     @deassert attr(o, :unfilled)[] |> ltxzero (o, t.amount)
     # from pos to 0 (buy size is neg)
-    attr(o, :committed)[] -= committment(ai, t)
-    @deassert gtxzero(ai, committed(o), Val(:price)) || o isa MarketOrder o,
-    committment(ai, t)
+    attr(o, :committed)[] -= committment(ii, t)
+    @deassert gtxzero(ii, committed(o), Val(:price)) || o isa MarketOrder o,
+    committment(ii, t)
 end
 
 @doc """Fills a sell order.
@@ -251,7 +251,7 @@ $(TYPEDSIGNATURES)
 
 """
 function fill!(
-    ::Strategy{<:Union{Sim,Paper}}, ai::AssetInstance, o::SellOrder, t::SellTrade
+    ::Strategy{<:Union{Sim,Paper}}, ii::InstrumentInstance, o::SellOrder, t::SellTrade
 )
     @deassert o isa SellOrder && _check_unfillment(o)
     @deassert committed(o) == o.attrs.committed[] && committed(o) |> gtxzero
@@ -269,7 +269,7 @@ $(TYPEDSIGNATURES)
 
 """
 function fill!(
-    ::Strategy{<:Union{Sim,Paper}}, ai::AssetInstance, o::ShortBuyOrder, t::ShortBuyTrade
+    ::Strategy{<:Union{Sim,Paper}}, ii::InstrumentInstance, o::ShortBuyOrder, t::ShortBuyTrade
 )
     @deassert o isa ShortBuyOrder && _check_unfillment(o) o
     @deassert committed(o) == o.attrs.committed[] && committed(o) |> ltxzero
@@ -289,7 +289,7 @@ $(TYPEDSIGNATURES)
 """
 function fill!(
     ::MarginStrategy{<:Union{Sim,Paper}},
-    ai::MarginInstance,
+    ii::MarginInstance,
     o::IncreaseOrder,
     t::IncreaseTrade,
 )
@@ -298,7 +298,7 @@ function fill!(
     attr(o, :unfilled)[] += t.amount
     @deassert attr(o, :unfilled)[] |> ltxzero || o isa ShortSellOrder
     @deassert t.value > 0.0
-    attr(o, :committed)[] -= committment(ai, t)
+    attr(o, :committed)[] -= committment(ii, t)
     # Market order spending can exceed the estimated committment
     # ShortSell limit orders can spend more than committed because of slippage
     @deassert committed(o) |> gtxzero || o isa AnyMarketOrder || o isa IncreaseLimitOrder
@@ -309,28 +309,28 @@ end
 $(TYPEDSIGNATURES)
 
 """
-Base.isopen(ai::AssetInstance, o::Order) = !isfilled(ai, o)
+Base.isopen(ii::InstrumentInstance, o::Order) = !isfilled(ii, o)
 
 @doc """Checks if the order amount left to fill is below minimum qty.
 
 $(TYPEDSIGNATURES)
 
 """
-Base.iszero(ai::AssetInstance, o::Order) = iszero(ai, unfilled(o))
+Base.iszero(ii::InstrumentInstance, o::Order) = iszero(ii, unfilled(o))
 
 @doc """Checks if the order committed value is below minimum quantity.
 
 $(TYPEDSIGNATURES)
 
 """
-function Instances.isdust(ai::AssetInstance, o::Order)
+function Instances.isdust(ii::InstrumentInstance, o::Order)
     unf = abs(unfilled(o))
-    unf < ai.limits.amount.min ||
-        unf * o.price < ai.limits.cost.min ||
-        unf < ai.limits.amount.min * ai.fees.min
+    unf < ii.limits.amount.min ||
+        unf * o.price < ii.limits.cost.min ||
+        unf < ii.limits.amount.min * ii.fees.min
 end
 
-function Instances.isdust(ai::AssetInstance, o::ReduceOnlyOrder)
+function Instances.isdust(ii::InstrumentInstance, o::ReduceOnlyOrder)
     false
 end
 
@@ -339,8 +339,8 @@ end
 $(TYPEDSIGNATURES)
 
 """
-isfilled(ai::AssetInstance, o::Order) =
-    isdust(ai, o) || begin
+isfilled(ii::InstrumentInstance, o::Order) =
+    isdust(ii, o) || begin
         ot = trades(o)
         if !isempty(ot)
             abs(sum(t.amount for t in ot)) >= abs(o.amount)
@@ -354,11 +354,11 @@ isfilled(ai::AssetInstance, o::Order) =
 $(TYPEDSIGNATURES)
 
 """
-function strategycash!(s::NoMarginStrategy, ai, t::BuyTrade)
+function strategycash!(s::NoMarginStrategy, ii, t::BuyTrade)
     @deassert t.size < 0.0
     add!(s.cash, t.size)
-    sub!(s.cash_committed, committment(ai, t))
-    @deassert gtxzero(ai, s.cash_committed, Val(:price))
+    sub!(s.cash_committed, committment(ii, t))
+    @deassert gtxzero(ii, s.cash_committed, Val(:price))
 end
 
 @doc """Updates the strategy's cash after a sell trade.
@@ -377,21 +377,21 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function strategycash!(s::IsolatedStrategy, ai, t::IncreaseTrade)
+function strategycash!(s::IsolatedStrategy, ii, t::IncreaseTrade)
     @deassert t.size < 0.0
     # t.amount can be negative for short sells
     margin = t.value / t.leverage
     # subtract realized fees, and added margin
-    @deassert t.fees > 0.0 || maxfees(ai) < 0.0
+    @deassert t.fees > 0.0 || maxfees(ii) < 0.0
     spent = t.fees + margin
     @deassert spent > 0.0
     sub!(s.cash, spent)
-    @ifdebug if committment(ai, t) > committed(s)
+    @ifdebug if committment(ii, t) > committed(s)
         @error "cash: trade committment can't be higher that total comm" trade = committment(
-            ai, t
+            ii, t
         ) total = committed(s) t
     end
-    subzero!(s.cash_committed, committment(ai, t); atol=ai.limits.cost.min, dothrow=false)
+    subzero!(s.cash_committed, committment(ii, t); atol=ii.limits.cost.min, dothrow=false)
     @deassert s.cash_committed |> gtxzero s.cash, s.cash_committed.value, orderscount(s)
 end
 
@@ -412,19 +412,19 @@ _checktrade(t::ShortBuyTrade) = @deassert t.amount > 0.0
 $(TYPEDSIGNATURES)
 
 """
-function strategycash!(s::IsolatedStrategy, ai, t::ReduceTrade)
+function strategycash!(s::IsolatedStrategy, ii, t::ReduceTrade)
     @deassert t.size > 0.0
-    @deassert abs(cash(ai, positionside(t)())) >= abs(t.amount) (
-        cash(ai), t.amount, t.order
+    @deassert abs(cash(ii, positionside(t)())) >= abs(t.amount) (
+        cash(ii), t.amount, t.order
     )
     @ifdebug _checktrade(t)
-    po = position(ai, positionside(t))
+    po = position(ii, positionside(t))
     # The notional tracks current value, but the margin
     # refers to the notional from the (avg) entry price
     # of the position
     margin = abs(t.entryprice * t.amount) / t.leverage
     unrealized_pnl = pnl(po, t.price, t.amount)
-    @deassert t.fees > 0.0 || maxfees(ai) < 0.0
+    @deassert t.fees > 0.0 || maxfees(ii) < 0.0
     gained = margin + unrealized_pnl - t.fees # minus fees
     @ifdebug _showliq(s, unrealized_pnl, gained, po, t)
     @debug "strategycash reduce trade:" gained t.value margin unrealized_pnl t.fees po.entryprice[] cash(
@@ -441,11 +441,11 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function cash!(s::Strategy, ai, t::Trade)
-    @ifdebug _check_trade(t, ai)
-    strategycash!(s, ai, t)
-    cash!(ai, t)
-    @ifdebug _check_cash(ai, positionside(t)())
+function cash!(s::Strategy, ii, t::Trade)
+    @ifdebug _check_trade(t, ii)
+    strategycash!(s, ii, t)
+    cash!(ii, t)
+    @ifdebug _check_cash(ii, positionside(t)())
 end
 
 @doc """Returns the attribute of an order.
@@ -484,9 +484,9 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function commit!(::Strategy, o::ReduceOrder, ai)
+function commit!(::Strategy, o::ReduceOrder, ii)
     @deassert committed(o) |> ltxzero || positionside(o) == Long
-    add!(committed(ai, positionside(o)()), committed(o))
+    add!(committed(ii, positionside(o)()), committed(o))
 end
 
 @doc """Decommits an increase order from a strategy.
@@ -494,13 +494,13 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function decommit!(s::Strategy, o::IncreaseOrder, ai, canceled=false)
+function decommit!(s::Strategy, o::IncreaseOrder, ii, canceled=false)
     @ifdebug _check_committment(o)
     # NOTE: ignore negative values caused by slippage
-    @deassert canceled || isdust(ai, o) o
+    @deassert canceled || isdust(ii, o) o
     # NOTE: committed can be negative in case the predicted commit is below the executed size
     subzero!(s.cash_committed, abs(committed(o)))
-    @deassert gtxzero(ai, s.cash_committed, Val(:price)) s.cash_committed.value,
+    @deassert gtxzero(ii, s.cash_committed, Val(:price)) s.cash_committed.value,
     s.cash.precision,
     o
     attr(o, :committed)[] = 0.0
@@ -517,10 +517,10 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function decommit!(s::Strategy, o::SellOrder, ai, args...)
+function decommit!(s::Strategy, o::SellOrder, ii, args...)
     # NOTE: ignore negative values caused by slippage
-    sub!(committed(ai, Long()), max(0.0, committed(o)))
-    @deassert gtxzero(ai, committed(ai, Long()), Val(:amount))
+    sub!(committed(ii, Long()), max(0.0, committed(o)))
+    @deassert gtxzero(ii, committed(ii, Long()), Val(:amount))
     attr(o, :committed)[] = 0.0
 end
 
@@ -529,9 +529,9 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function decommit!(s::Strategy, o::ShortBuyOrder, ai, args...)
+function decommit!(s::Strategy, o::ShortBuyOrder, ii, args...)
     @deassert committed(o) |> ltxzero
-    sub!(committed(ai, Short()), committed(o))
+    sub!(committed(ii, Short()), committed(o))
     attr(o, :committed)[] = 0.0
 end
 @doc """Checks if an increase order can be committed to a strategy.
@@ -539,7 +539,7 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function iscommittable(s::Strategy, o::IncreaseOrder, ai)
+function iscommittable(s::Strategy, o::IncreaseOrder, ii)
     @deassert committed(o) > 0.0
     c = st.freecash(s)
     comm = committed(o)
@@ -551,9 +551,9 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function iscommittable(::Strategy, o::SellOrder, ai)
+function iscommittable(::Strategy, o::SellOrder, ii)
     @deassert committed(o) > 0.0
-    c = Instances.freecash(ai, Long())
+    c = Instances.freecash(ii, Long())
     comm = committed(o)
     c >= comm || isapprox(c, comm)
 end
@@ -563,9 +563,9 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function iscommittable(::Strategy, o::ShortBuyOrder, ai)
+function iscommittable(::Strategy, o::ShortBuyOrder, ii)
     @deassert committed(o) < 0.0
-    c = Instances.freecash(ai, Short())
+    c = Instances.freecash(ii, Short())
     comm = committed(o)
     c <= comm || isapprox(c, comm)
 end
@@ -575,9 +575,9 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function hold!(s::Strategy, ai, o::IncreaseOrder)
-    @deassert hasorders(s, ai, orderside(o)) || !iszero(ai) o
-    push!(s.holdings, ai)
+function hold!(s::Strategy, ii, o::IncreaseOrder)
+    @deassert hasorders(s, ii, orderside(o)) || !iszero(ii) o
+    push!(s.holdings, ii)
 end
 
 @doc """Reduce orders can never switch an asset from not held to held.
@@ -592,9 +592,9 @@ hold!(::Strategy, _, ::ReduceOrder) = nothing
 $(TYPEDSIGNATURES)
 
 """
-function release!(s::Strategy, ai)
-    if iszero(ai) && !hasorders(s, ai)
-        delete!(s.holdings, ai)
+function release!(s::Strategy, ii)
+    if iszero(ii) && !hasorders(s, ii)
+        delete!(s.holdings, ii)
     end
 end
 
@@ -603,13 +603,13 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function cancel!(s::Strategy, o::Order, ai; err::OrderError)::Bool
-    @debug "order cancel" o.id ai = raw(ai) err s.cash_committed.value committed(o)
-    if isqueued(o, s, ai)
-        decommit!(s, o, ai, true)
+function cancel!(s::Strategy, o::Order, ii; err::OrderError)::Bool
+    @debug "order cancel" o.id ii = raw(ii) err s.cash_committed.value committed(o)
+    if isqueued(o, s, ii)
+        decommit!(s, o, ii, true)
         @debug "order cancel" s.cash_committed.value
-        delete!(s, ai, o)
-        st.call!(s, o, err, ai)
+        delete!(s, ii, o)
+        st.call!(s, o, err, ii)
     end
     true
 end
@@ -634,7 +634,7 @@ trades(o::Order) = attr(o, :trades)
 $(TYPEDSIGNATURES)
 
 """
-function committed(o::ShortBuyOrder{<:AbstractAsset,<:ExchangeID})
+function committed(o::ShortBuyOrder{<:AbstractInstrument,<:ExchangeID})
     @deassert attr(o, :committed)[] |> ltxzero o
     attr(o, :committed)[]
 end
@@ -661,44 +661,44 @@ cost(o::Order) = o.price * abs(o.amount)
 $(TYPEDSIGNATURES)
 
 """
-function reset!(o::Order, ai)
+function reset!(o::Order, ii)
     empty!(trades(o))
-    attr(o, :committed)[] = committment(ai, o)
+    attr(o, :committed)[] = committment(ii, o)
     attr(o, :unfilled)[] = unfillment(o)
 end
 
-queue!(s::Strategy, o::Order, ai; skipcommit=false) = nothing
+queue!(s::Strategy, o::Order, ii; skipcommit=false) = nothing
 
-function _increase_order_comm(s::Strategy, ai::AssetInstance, oside::BySide)
-    all_comm = sum((committed(o) for o in values(s, ai, oside)); init=0.0)
+function _increase_order_comm(s::Strategy, ii::InstrumentInstance, oside::BySide)
+    all_comm = sum((committed(o) for o in values(s, ii, oside)); init=0.0)
     s_comm = committed(s)
     all_comm, s_comm
 end
 
-function _check_committment(s::Strategy, ai::AssetInstance, ::BySide{Buy}, ::ByPos{Long})
-    o_comm, ai_comm = _increase_order_comm(s, ai, Buy)
+function _check_committment(s::Strategy, ii::InstrumentInstance, ::BySide{Buy}, ::ByPos{Long})
+    o_comm, ai_comm = _increase_order_comm(s, ii, Buy)
     abs(ai_comm) >= abs(o_comm)
 end
 
-function _check_committment(s::Strategy, ai::AssetInstance, ::BySide{Sell}, ::ByPos{Short})
-    o_comm, s_comm = _increase_order_comm(s, ai, Sell)
+function _check_committment(s::Strategy, ii::InstrumentInstance, ::BySide{Sell}, ::ByPos{Short})
+    o_comm, s_comm = _increase_order_comm(s, ii, Sell)
     abs(s_comm) >= abs(o_comm)
 end
 
 function _reduce_order_comm(
-    s::Strategy, ai::AssetInstance, oside::BySide, pside::ByPos=posside(ai)
+    s::Strategy, ii::InstrumentInstance, oside::BySide, pside::ByPos=posside(ii)
 )
-    o_comm = sum((committed(o) for o in values(s, ai, oside) if ispos(pside, o)); init=0.0)
-    s_comm = committed(ai, pside)
+    o_comm = sum((committed(o) for o in values(s, ii, oside) if ispos(pside, o)); init=0.0)
+    s_comm = committed(ii, pside)
     o_comm, s_comm
 end
 
-function _check_committment(s::Strategy, ai::AssetInstance, ::BySide{Sell}, ::ByPos{Long})
-    o_comm, ai_comm = _reduce_order_comm(s, ai, Sell, Long)
-    isapprox(ai, abs(o_comm), abs(ai_comm), Val(:amount))
+function _check_committment(s::Strategy, ii::InstrumentInstance, ::BySide{Sell}, ::ByPos{Long})
+    o_comm, ai_comm = _reduce_order_comm(s, ii, Sell, Long)
+    isapprox(ii, abs(o_comm), abs(ai_comm), Val(:amount))
 end
 
-function _check_committment(s::Strategy, ai::AssetInstance, ::BySide{Buy}, ::ByPos{Short})
-    o_comm, ai_comm = _reduce_order_comm(s, ai, Buy, Short)
-    isapprox(ai, abs(o_comm), abs(ai_comm), Val(:amount))
+function _check_committment(s::Strategy, ii::InstrumentInstance, ::BySide{Buy}, ::ByPos{Short})
+    o_comm, ai_comm = _reduce_order_comm(s, ii, Buy, Short)
+    isapprox(ii, abs(o_comm), abs(ai_comm), Val(:amount))
 end

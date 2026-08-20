@@ -4,7 +4,7 @@ macro position_constructor(side=Planar.Engine.Misc.Long, mm=Planar.Engine.Misc.I
     e = quote
         eid = :binance
         exc = Planar.Engine.Exchanges.getexchange!(eid)
-        asset = Planar.Engine.Instruments.Derivatives.Derivative(Instruments.Asset("BTC/USDT"), :USDT, SubString(""), 0.0, Instruments.Derivatives.Unkn)
+        asset = Planar.Engine.Instruments.Derivatives.Derivative(Instruments.Instrument("BTC/USDT"), :USDT, SubString(""), 0.0, Instruments.Derivatives.Unkn)
         pos_cash = Planar.Engine.Exchanges.CurrencyCash(exc, "BTC")
         pos_cash_committed = Planar.Engine.Exchanges.CurrencyCash(exc, "BTC")
         tiers = Planar.Engine.Exchanges.leverage_tiers(exc, asset.raw)

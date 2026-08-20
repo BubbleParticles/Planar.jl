@@ -2,4 +2,4 @@
 
 $(TYPEDSIGNATURES)
 """
-priceat(::Strategy, ::Type{<:Order}, ai, date) = error("Not implemented")
+priceat(::Strategy, ::Type{<:Order}, ii, date) = error("Not implemented")

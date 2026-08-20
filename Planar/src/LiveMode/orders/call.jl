@@ -11,23 +11,23 @@ It returns the trade information once the transaction is complete.
 """
 function call!(
     s::NoMarginStrategy{Live},
-    ai,
+    ii,
     t::Type{<:AnyLimitOrder};
     amount,
-    price=lastprice(s, ai, t),
+    price=lastprice(s, ii, t),
     waitfor=Second(5),
     synced=true,
     skipchecks=false,
     kwargs...,
 )::Union{<:Trade,Nothing,Missing}
     @timeout_start
-    @lock ai begin
+    @lock ii begin
         order_kwargs = withoutkws(:fees; kwargs)
         trade = _live_limit_order(
-            s, ai, t; skipchecks, amount, price, waitfor, synced, kwargs=order_kwargs
+            s, ii, t; skipchecks, amount, price, waitfor, synced, kwargs=order_kwargs
         )
         if synced && trade isa Trade
-            live_sync_cash!(s, ai; since=trade.date, waitfor=@timeout_now)
+            live_sync_cash!(s, ii; since=trade.date, waitfor=@timeout_now)
         end
         trade
     end
@@ -44,7 +44,7 @@ It returns the trade information once the transaction is complete.
 """
 function call!(
     s::NoMarginStrategy{Live},
-    ai,
+    ii,
     t::Type{<:AnyMarketOrder};
     amount,
     waitfor=Second(5),
@@ -53,14 +53,14 @@ function call!(
     kwargs...,
 )
     @timeout_start
-    @lock ai begin
+    @lock ii begin
         order_kwargs = withoutkws(:fees; kwargs)
         trade = _live_market_order(
-            s, ai, t; skipchecks, amount, synced, waitfor, kwargs=order_kwargs
+            s, ii, t; skipchecks, amount, synced, waitfor, kwargs=order_kwargs
         )
         if synced && trade isa Trade
-            waitorder(s, ai, trade.order; waitfor=@timeout_now)
-            live_sync_cash!(s, ai; since=trade.date, waitfor=@timeout_now)
+            waitorder(s, ii, trade.order; waitfor=@timeout_now)
+            live_sync_cash!(s, ii; since=trade.date, waitfor=@timeout_now)
         end
         trade
     end
@@ -77,7 +77,7 @@ It returns a boolean indicating whether the cancellation was successful.
 """
 function call!(
     s::Strategy{Live},
-    ai::AssetInstance,
+    ii::InstrumentInstance,
     ::CancelOrders;
     t::Type{<:OrderSide}=BuyOrSell,
     waitfor=Second(10),
@@ -86,29 +86,29 @@ function call!(
     ids=(),
 )
     @timeout_start
-    @lock ai begin
-        if !hasorders(s, ai, t) && !confirm
-            @debug "call cancel orders: no local open orders" _module = LogCancelOrder ai t
+    @lock ii begin
+        if !hasorders(s, ii, t) && !confirm
+            @debug "call cancel orders: no local open orders" _module = LogCancelOrder ii t
             return true
         end
-        watch_orders!(s, ai)
-        if live_cancel(s, ai; ids, side=t, confirm)::Bool
-            success = waitordclose(s, ai, @timeout_now; t)
+        watch_orders!(s, ii)
+        if live_cancel(s, ii; ids, side=t, confirm)::Bool
+            success = waitordclose(s, ii, @timeout_now; t)
             if success
                 if synced
-                    @debug "call cancel orders: syncing cash" ai t _module =
+                    @debug "call cancel orders: syncing cash" ii t _module =
                         LogCancelOrder
-                    live_sync_cash!(s, ai; waitfor=@timeout_now)
+                    live_sync_cash!(s, ii; waitfor=@timeout_now)
                 end
             else
-                @debug "call cancel orders: failed syncing open orders" ai t _module =
+                @debug "call cancel orders: failed syncing open orders" ii t _module =
                     LogCancelOrder
-                live_sync_open_orders!(s, ai, exec=true)
+                live_sync_open_orders!(s, ii, exec=true)
             end
-            @debug "call cancel orders: " ai t success _module = LogCancelOrder
+            @debug "call cancel orders: " ii t success _module = LogCancelOrder
             success
         else
-            @debug "call cancel orders: failed" ai t success _module = LogCancelOrder
+            @debug "call cancel orders: failed" ii t success _module = LogCancelOrder
             false
         end
     end

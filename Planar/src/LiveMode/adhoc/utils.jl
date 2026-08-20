@@ -15,10 +15,10 @@ else
     "GoodTillCancel"
 end
 
-function time_in_force_key(::Exchange{<:eids(:phemex, :bybit)}, ::AbstractAsset)
+function time_in_force_key(::Exchange{<:eids(:phemex, :bybit)}, ::AbstractInstrument)
     "timeInForce"
 end
-function time_in_force_value(::Exchange{<:eids(:phemex)}, ::Option{<:AbstractAsset}, v)
+function time_in_force_value(::Exchange{<:eids(:phemex)}, ::Option{<:AbstractInstrument}, v)
     _tif_value(v)
 end
 time_in_force_value(::Exchange, _, v) = v

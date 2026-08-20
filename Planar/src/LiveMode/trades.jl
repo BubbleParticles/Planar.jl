@@ -12,12 +12,12 @@ If a `since` timestamp is provided, it filters out trades that occurred before t
 The function returns the filtered list of trades or the original response if no `since` timestamp is provided.
 
 """
-function _check_and_filter(resp; ai, since, kind="")
+function _check_and_filter(resp; ii, since, kind="")
     if resp isa Vector
         if isnothing(since)
             resp
         else
-            filter(t -> trade_timestamp(t, exchangeid(ai)) >= since, resp)
+            filter(t -> trade_timestamp(t, exchangeid(ii)) >= since, resp)
         end
     elseif islist(resp)
         if isnothing(since)
@@ -25,12 +25,12 @@ function _check_and_filter(resp; ai, since, kind="")
         else
             out = []
             for t in resp
-                trade_timestamp(t, exchangeid(ai)) >= since && push!(out, t)
+                trade_timestamp(t, exchangeid(ii)) >= since && push!(out, t)
             end
             out
         end
     else
-        @warn "Couldn't fetch $kind trades for $(raw(ai))"
+        @warn "Couldn't fetch $kind trades for $(raw(ii))"
         return nothing
     end
 end
@@ -48,9 +48,9 @@ If a `since` timestamp is provided, it filters out trades that occurred before t
 The function returns the filtered list of trades or the original response if no `since` timestamp is provided.
 
 """
-function live_my_trades(s::LiveStrategy, ai; since=nothing, kwargs...)
-    resp = fetch_my_trades(s, ai; since, kwargs...)
-    _check_and_filter(resp; ai, since)
+function live_my_trades(s::LiveStrategy, ii; since=nothing, kwargs...)
+    resp = fetch_my_trades(s, ii; since, kwargs...)
+    _check_and_filter(resp; ii, since)
 end
 
 @doc """ Fetches and filters trades for a specific order
@@ -62,9 +62,9 @@ If a `since` timestamp is provided, it filters out trades that occurred before t
 The function returns the filtered list of trades or the original response if no `since` timestamp is provided.
 
 """
-function live_order_trades(s::LiveStrategy, ai, id; since=nothing, kwargs...)
-    resp = fetch_order_trades(s, ai, id; since, kwargs...)
-    _check_and_filter(resp; ai, since, kind="order")
+function live_order_trades(s::LiveStrategy, ii, id; since=nothing, kwargs...)
+    resp = fetch_order_trades(s, ii, id; since, kwargs...)
+    _check_and_filter(resp; ii, since, kind="order")
 end
 
 @doc "A named tuple representing the ccxt fields of a trade."
@@ -88,8 +88,8 @@ const Trf = NamedTuple(
     )
 )
 
-function inlimits(v, ai, lim_sym)
-    lims = ai.limits
+function inlimits(v, ii, lim_sym)
+    lims = ii.limits
     min = getproperty(lims, lim_sym).min
     max = getproperty(lims, lim_sym).max
 
@@ -145,11 +145,11 @@ If the currency doesn't match either, it returns zero for both.
 
 """
 function _feecost(
-    fee_dict, ai, ::EIDType=exchangeid(ai)
+    fee_dict, ii, ::EIDType=exchangeid(ii)
 )
     cur = get(fee_dict, "currency", nothing)
-    qc_str = qc(ai)
-    bc_str = bc(ai)
+    qc_str = qc(ii)
+    bc_str = bc(ii)
     @debug "live fee cost" _module = LogCreateTrade cur qc_str bc_str
     if string(cur) == qc_str
         @debug "live fee cost: quote currency" _module = LogCreateTrade _getfee(fee_dict)
@@ -163,7 +163,7 @@ function _feecost(
 end
 
 # This tries to always convert the fees in quote currency
-# function _feecost_quote(s, ai, bc_price, date, qc_py=@pystr(qc(ai)), bc_py=@pystr(bc(ai)))
+# function _feecost_quote(s, ii, bc_price, date, qc_py=@pystr(qc(ii)), bc_py=@pystr(bc(ii)))
 #     if pyeq(Bool, cur, bc_py)
 #         _feebysign(rate, cost * bc_price)
 #     else
@@ -171,8 +171,8 @@ end
 #         # of the related spot pair with the trade quote currency at the trade date
 #         try
 #             spot_pair = "$cur/$qc_py"
-#             price = @something priceat(s, ai, date; sym=spot_pair, step=:close) anyprice(
-#                 string(cur), spot_pair, exchange(ai)
+#             price = @something priceat(s, ii, date; sym=spot_pair, step=:close) anyprice(
+#                 string(cur), spot_pair, exchange(ii)
 #             )
 #             _feebysign(rate, cost * price)
 #         catch
@@ -189,9 +189,9 @@ It uses the `feeSide` property of the market associated with the order.
 The function returns `:base` if the fee is in the base currency and `:quote` if the fee is in the quote currency.
 
 """
-function trade_feecur(ai, side::Type{<:OrderSide})
+function trade_feecur(ii, side::Type{<:OrderSide})
     # Default to get since it should be the most common
-    feeside = get(market(ai), "feeSide", "get")
+    feeside = get(market(ii), "feeSide", "get")
     if feeside == "get"
         if side == Buy
             :base
@@ -222,10 +222,10 @@ It uses the `trade_feecur` function to determine the currency of the fee and the
 
 """
 function _default_trade_fees(
-    ai, side::Type{<:OrderSide}; fees_base, fees_quote, actual_amount, net_cost
+    ii, side::Type{<:OrderSide}; fees_base, fees_quote, actual_amount, net_cost
 )
-    feecur = trade_feecur(ai, side)
-    default_fees = maxfees(ai)
+    feecur = trade_feecur(ii, side)
+    default_fees = maxfees(ii)
     if feecur == :base
         fees_base += actual_amount * default_fees
     else
@@ -234,7 +234,7 @@ function _default_trade_fees(
     (fees_quote, fees_base)
 end
 
-market(ai) = exchange(ai).markets[raw(ai)]
+market(ii) = exchange(ii).markets[raw(ii)]
 @doc """ Determines the trade fees based on the response and side of the order
 
 $(TYPEDSIGNATURES)
@@ -245,25 +245,25 @@ If the response does not contain a fee dictionary but contains a list of fees, i
 If the response does not contain either, it calculates the default trade fees.
 
 """
-function _tradefees(resp, side, ai; actual_amount, net_cost)
-    eid = exchangeid(ai)
+function _tradefees(resp, side, ii; actual_amount, net_cost)
+    eid = exchangeid(ii)
     v = resp_trade_fee(resp, eid)
     if isdict(v)
-        @debug "live trade fees: " _module = LogCreateTrade _feecost(v, ai, eid)
-        return _feecost(v, ai, eid)
+        @debug "live trade fees: " _module = LogCreateTrade _feecost(v, ii, eid)
+        return _feecost(v, ii, eid)
     end
     v = resp_trade_fees(resp, eid)
     fees_quote, fees_base = 0.0, 0.0
     if islist(v) && !isempty(v)
         for fee in v
-            (q, b) = _feecost(fee, ai, eid)
+            (q, b) = _feecost(fee, ii, eid)
             fees_quote += q
             fees_base += b
         end
     end
     if iszero(fees_quote) && iszero(fees_base)
         (fees_quote, fees_base) = _default_trade_fees(
-            ai, side; fees_base, fees_quote, actual_amount, net_cost
+            ii, side; fees_base, fees_quote, actual_amount, net_cost
         )
     end
     @debug "live trade fees" _module = LogCreateTrade fees_quote fees_base
@@ -281,9 +281,9 @@ This function checks if the trade symbol from the response matches the symbol of
 If they do not match, it issues a warning and returns `false`.
 
 """
-function isordersymbol(ai, o, resp, eid::EIDType; getter=resp_trade_symbol)::Bool
-    string(getter(resp, eid)) == raw(ai) || begin
-        @warn "Mismatching trade for $(raw(ai))($(resp_trade_symbol(resp, eid))), order: $(o.asset), refusing construction."
+function isordersymbol(ii, o, resp, eid::EIDType; getter=resp_trade_symbol)::Bool
+    string(getter(resp, eid)) == raw(ii) || begin
+        @warn "Mismatching trade for $(raw(ii))($(resp_trade_symbol(resp, eid))), order: $(o.asset), refusing construction."
         return false
     end
 end
@@ -296,9 +296,9 @@ This function checks if the response from the exchange is of the expected type.
 If the response is not of the expected type, it issues a warning and returns `false`.
 
 """
-function isordertype(ai, o, resp, ::EIDType; type=isdict)::Bool
+function isordertype(ii, o, resp, ::EIDType; type=isdict)::Bool
     if !isdict(resp)
-        @warn "Invalid response for order $(raw(ai)), order: $o, refusing construction."
+        @warn "Invalid response for order $(raw(ii)), order: $o, refusing construction."
         false
     else
         true
@@ -313,9 +313,9 @@ This function checks if the trade id from the response matches the id of the ord
 If they do not match, it issues a warning and returns `false`.
 
 """
-function isorderid(ai, o, resp, eid::EIDType; getter=resp_trade_order)::Bool
+function isorderid(ii, o, resp, eid::EIDType; getter=resp_trade_order)::Bool
     if string(getter(resp, eid)) != o.id
-        @warn "Mismatching id $(raw(ai))($(resp_trade_order(resp, eid))), order: $(o.id), refusing construction."
+        @warn "Mismatching id $(raw(ii))($(resp_trade_order(resp, eid))), order: $(o.id), refusing construction."
         false
     else
         true
@@ -360,14 +360,14 @@ If the price is far off from the order price, it issues a warning.
 The function also checks if the price is greater than zero, issuing a warning and returning `false` if it's not.
 
 """
-function isorderprice(s, ai, actual_price, o; rtol=0.05, resp)::Bool
+function isorderprice(s, ii, actual_price, o; rtol=0.05, resp)::Bool
     if divergentprice(o, actual_price; rtol)
         @warn "create trade: trade price far off from order price" o.price exc_price =
-            actual_price ai nameof(s) o o.id @caller(20)
+            actual_price ii nameof(s) o o.id @caller(20)
         false
     elseif actual_price <= 0.0 || !isfinite(actual_price)
-        @warn "create trade: invalid price" nameof(s) ai tradeid = resp_trade_id(
-            resp, exchangeid(ai)
+        @warn "create trade: invalid price" nameof(s) ii tradeid = resp_trade_id(
+            resp, exchangeid(ii)
         ) o
         false
     else
@@ -383,10 +383,10 @@ This function checks if the trade amount from the response is greater than zero.
 If it's not, it issues a warning and returns `false`.
 
 """
-function isorderamount(s, ai, actual_amount; resp)::Bool
+function isorderamount(s, ii, actual_amount; resp)::Bool
     if actual_amount <= 0.0 || !isfinite(actual_amount)
-        @warn "create trade: invalid amount" nameof(s) ai tradeid = resp_trade_id(
-            resp, exchangeid(ai)
+        @warn "create trade: invalid amount" nameof(s) ii tradeid = resp_trade_id(
+            resp, exchangeid(ii)
         )
         false
     else
@@ -402,9 +402,9 @@ This function checks if the local cash is enough for the trade.
 If it's not, it issues a warning.
 
 """
-function _warn_cash(s, ai, o; actual_amount)
-    if !iscashenough(s, ai, actual_amount, o)
-        @warn "make trade: creating trade but local cash is not enough" cash(ai) o.id actual_amount
+function _warn_cash(s, ii, o; actual_amount)
+    if !iscashenough(s, ii, actual_amount, o)
+        @warn "make trade: creating trade but local cash is not enough" cash(ii) o.id actual_amount
     end
 end
 
@@ -418,53 +418,53 @@ If any of these checks fail, the function returns `nothing`.
 Otherwise, it calculates the fees, warns if the local cash is not enough for the trade, and constructs the trade.
 
 """
-function maketrade(s::LiveStrategy, o, ai; resp, trade::Option{Trade}=nothing, kwargs...)
-    eid = exchangeid(ai)
+function maketrade(s::LiveStrategy, o, ii; resp, trade::Option{Trade}=nothing, kwargs...)
+    eid = exchangeid(ii)
     if trade isa Trade
         return trade
     end
-    if !isordertype(ai, o, resp, eid) ||
-        !isordersymbol(ai, o, resp, eid) ||
-        !isorderid(ai, o, resp, eid)
-        @debug "maketrade: failed" _module = LogCreateTrade ai isordertype(ai, o, resp, eid) isordersymbol(ai, o, resp, eid) isorderid(ai, o, resp, eid)
+    if !isordertype(ii, o, resp, eid) ||
+        !isordersymbol(ii, o, resp, eid) ||
+        !isorderid(ii, o, resp, eid)
+        @debug "maketrade: failed" _module = LogCreateTrade ii isordertype(ii, o, resp, eid) isordersymbol(ii, o, resp, eid) isorderid(ii, o, resp, eid)
         return nothing
     end
     side = _ccxt_sidetype(resp, eid; o)
     if !isorderside(side, o)
-        @debug "maketrade: wrong side" _module = LogCreateTrade ai side o
+        @debug "maketrade: wrong side" _module = LogCreateTrade ii side o
         return nothing
     end
     actual_amount = resp_trade_amount(resp, eid)
     actual_price = resp_trade_price(resp, eid)
 
-    isorderprice(s, ai, actual_price, o; resp)
-    inlimits(actual_price, ai, :price)
+    isorderprice(s, ii, actual_price, o; resp)
+    inlimits(actual_price, ii, :price)
 
     if actual_amount <= 0.0 || !isfinite(actual_amount)
         @debug "make trade: amount value absent from trade or wrong ($actual_amount)), using cost." _module =
-            LogCreateTrade ai actual_amount resp
+            LogCreateTrade ii actual_amount resp
         net_cost = resp_trade_cost(resp, eid)
-        actual_amount = toprecision(net_cost / actual_price, ai.precision.amount)
-        if !isorderamount(s, ai, actual_amount; resp)
-            @debug "make trade: wrong amount" _module = LogCreateTrade ai actual_amount
+        actual_amount = toprecision(net_cost / actual_price, ii.precision.amount)
+        if !isorderamount(s, ii, actual_amount; resp)
+            @debug "make trade: wrong amount" _module = LogCreateTrade ii actual_amount
             return nothing
         end
     else
         net_cost = let c = cost(actual_price, actual_amount)
-            toprecision(c, ai.precision.price)
+            toprecision(c, ii.precision.price)
         end
     end
-    inlimits(net_cost, ai, :cost)
-    inlimits(actual_amount, ai, :amount)
+    inlimits(net_cost, ii, :cost)
+    inlimits(actual_amount, ii, :amount)
 
-    _warn_cash(s, ai, o; actual_amount)
+    _warn_cash(s, ii, o; actual_amount)
     date = @something pytodate(resp, eid) TimeTicks.now()
 
-    fees_quote, fees_base = _tradefees(resp, side, ai; actual_amount, net_cost)
+    fees_quote, fees_base = _tradefees(resp, side, ii; actual_amount, net_cost)
     size = _addfees(net_cost, fees_quote, o)
 
-    @debug "Constructing trade" _module = LogCreateTrade cash = cash(ai, posside(o)) ai = raw(
-        ai
+    @debug "Constructing trade" _module = LogCreateTrade cash = cash(ii, posside(o)) ii = raw(
+        ii
     ) s = nameof(s)
     @maketrade
 end

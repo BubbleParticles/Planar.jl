@@ -3,7 +3,7 @@
 $(TYPEDSIGNATURES)
 
 """
-aftertrade!(s, ai, o, t=nothing) =  nothing
+aftertrade!(s, ii, o, t=nothing) =  nothing
 
 with_slippage(args...; kwargs...) = nothing
 
@@ -15,13 +15,13 @@ $(TYPEDSIGNATURES)
 
 This function is called after a trade to remove filled 'Fill Or Kill' (FOK) or 'Immediate Or Cancel' (IOC) orders from the strategy's order queue.
 """
-function aftertrade!(s::Strategy, ai, o::Union{AnyFOKOrder,AnyIOCOrder,AnyMarketOrder}, t=nothing)
+function aftertrade!(s::Strategy, ii, o::Union{AnyFOKOrder,AnyIOCOrder,AnyMarketOrder}, t=nothing)
     if t isa Trade
-        position!(s, ai, t)
+        position!(s, ii, t)
     end
-    decommit!(s, o, ai, true)
-    delete!(s, ai, o)
-    isfilled(ai, o) || st.call!(s, o, NotEnoughCash(_cashfrom(s, ai, o)), ai)
+    decommit!(s, o, ii, true)
+    delete!(s, ii, o)
+    isfilled(ii, o) || st.call!(s, o, NotEnoughCash(_cashfrom(s, ii, o)), ii)
 end
 
 @doc """ Removes a filled limit order from the queue
@@ -30,13 +30,13 @@ $(TYPEDSIGNATURES)
 
 The function is used post-trade to clean up the strategy's order queue.
 """
-aftertrade!(s::Strategy, ai, o::Order, t=nothing) = begin
+aftertrade!(s::Strategy, ii, o::Order, t=nothing) = begin
     if t isa Trade
-        position!(s, ai, t)
+        position!(s, ii, t)
     end
-    if isfilled(ai, o)
-        decommit!(s, o, ai)
-        delete!(s, ai, o)
+    if isfilled(ii, o)
+        decommit!(s, o, ii)
+        delete!(s, ii, o)
     end
 end
 
@@ -51,11 +51,11 @@ This function executes a trade based on the given order and asset instance. It c
 function trade!(
     s::Strategy,
     o,
-    ai;
+    ii;
     date,
     price,
     actual_amount,
-    fees=maxfees(ai),
+    fees=maxfees(ii),
     slippage=true,
     kwargs...,
 )
@@ -63,38 +63,38 @@ function trade!(
     @ifdebug s.debug_afterorder()
     if !isnothing(actual_amount)
         if o isa ReduceOnlyOrder
-            actual_amount = min(actual_amount, ai.limits.amount.max)
+            actual_amount = min(actual_amount, ii.limits.amount.max)
         else
-            @amount! ai actual_amount
+            @amount! ii actual_amount
         end
     end
-    actual_price = slippage ? with_slippage(s, o, ai; date, price, actual_amount) : price
-    @price! ai actual_price
-    trade = maketrade(s, o, ai; date, actual_price, actual_amount, fees, kwargs...)
+    actual_price = slippage ? with_slippage(s, o, ii; date, price, actual_amount) : price
+    @price! ii actual_price
+    trade = maketrade(s, o, ii; date, actual_price, actual_amount, fees, kwargs...)
     isnothing(trade) && begin
         # unqueue or decommit order if filled
-        aftertrade!(s, ai, o)
+        aftertrade!(s, ii, o)
         return nothing
     end
-    _update_from_trade!(s, ai, o, trade; actual_price)
+    _update_from_trade!(s, ii, o, trade; actual_price)
 end
 
-function _update_from_trade!(s::Strategy, ai, o, trade; actual_price)
-    @ifdebug s.debug_beforetrade(s, ai, o, trade, actual_price)
+function _update_from_trade!(s::Strategy, ii, o, trade; actual_price)
+    @ifdebug s.debug_beforetrade(s, ii, o, trade, actual_price)
     # record trade
-    @deassert !isdust(ai, o) committed(o), o
+    @deassert !isdust(ii, o) committed(o), o
     # Fills the order
-    fill!(s, ai, o, trade)
-    push!(trades(ai), trade)
+    fill!(s, ii, o, trade)
+    push!(trades(ii), trade)
     push!(trades(o), trade)
     # update asset cash and strategy cash
-    cash!(s, ai, trade)
+    cash!(s, ii, trade)
     # unqueue or decommit order if filled
     # and update position state
-    aftertrade!(s, ai, o, trade)
-    call!(s, ai, trade, NewTrade())
-    @ifdebug s.debug_aftertrade(s, ai, o)
-    @ifdebug s.debug_check_committments(s, ai)
-    @ifdebug s.debug_check_committments(s, ai, trade)
+    aftertrade!(s, ii, o, trade)
+    call!(s, ii, trade, NewTrade())
+    @ifdebug s.debug_aftertrade(s, ii, o)
+    @ifdebug s.debug_check_committments(s, ii)
+    @ifdebug s.debug_check_committments(s, ii, trade)
     return trade
 end

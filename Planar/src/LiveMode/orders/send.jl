@@ -26,8 +26,8 @@ $(TYPEDSIGNATURES)
 
 The function compares the absolute value of free cash in the strategy to the absolute value of the required cash for the order, which is the product of the amount and price.
 """
-function check_available_cash(s, ai, amount, price, o::Type{<:IncreaseOrder})
-    lev = abs(leverage(ai, posside(o)))
+function check_available_cash(s, ii, amount, price, o::Type{<:IncreaseOrder})
+    lev = abs(leverage(ii, posside(o)))
     required = if iszero(lev) 0.0 else abs(amount) * price / lev end
     @debug "check avl cash: inc" _module = LogState freecash(s) amount lev required
     abs(freecash(s)) >= required
@@ -39,27 +39,27 @@ $(TYPEDSIGNATURES)
 
 The function compares the absolute value of free cash in the asset instance to the absolute value of the required cash for the order, which is the amount.
 """
-function check_available_cash(_, ai, amount, _, o::Type{<:ReduceOrder})
-    abs(freecash(ai, posside(o))) >= abs(amount)
+function check_available_cash(_, ii, amount, _, o::Type{<:ReduceOrder})
+    abs(freecash(ii, posside(o))) >= abs(amount)
 end
 
 @doc """ Ensure margin mode on exchange matches asset margin mode.
 
 
 """
-function ensure_marginmode(s::LiveStrategy, ai::MarginInstance)
-    exc = exchange(ai)
-    mm = marginmode(ai)
-    last_mm = get(ai, :live_margin_mode, missing)
+function ensure_marginmode(s::LiveStrategy, ii::MarginInstance)
+    exc = exchange(ii)
+    mm = marginmode(ii)
+    last_mm = get(ii, :live_margin_mode, missing)
     if ismissing(last_mm) || last_mm != mm
         @debug "margin mode: updating" mm last_mm exc = nameof(exc)
-        hedged = ishedged(ai)
+        hedged = ishedged(ii)
         remote_mode = Symbol(string(typeof(mm)))
-        return if marginmode!(exc, remote_mode, raw(ai); hedged)
-            ai[:live_margin_mode] = mm
-            event!(exc, MarginUpdated(Symbol(:margin_mode_set_, mm), s, position(ai, Long)))
+        return if marginmode!(exc, remote_mode, raw(ii); hedged)
+            ii[:live_margin_mode] = mm
+            event!(exc, MarginUpdated(Symbol(:margin_mode_set_, mm), s, position(ii, Long)))
             event!(
-                exc, MarginUpdated(Symbol(:margin_mode_set_, mm), s, position(ai, Short))
+                exc, MarginUpdated(Symbol(:margin_mode_set_, mm), s, position(ii, Short))
             )
             true
         else
@@ -69,7 +69,7 @@ function ensure_marginmode(s::LiveStrategy, ai::MarginInstance)
     true
 end
 
-function ensure_marginmode(s::LiveStrategy, ai)
+function ensure_marginmode(s::LiveStrategy, ii)
     true
 end
 
@@ -95,12 +95,12 @@ It then sends the order to the exchange, retries if exceptions occur, and handle
 """
 function live_send_order(
     s::LiveStrategy,
-    ai::AssetInstance,
+    ii::InstrumentInstance,
     t::Type{<:Order}=GTCOrder{Buy},
     args...;
     skipchecks=false,
     amount,
-    price=lastprice(s, ai, t),
+    price=lastprice(s, ii, t),
     post_only=false,
     reduce_only=false,
     stop_price=nothing,
@@ -122,35 +122,35 @@ function live_send_order(
     end
     # NOTE: this should not be needed, but some exchanges can be buggy
     # might be used in a specialized function for problematic exchanges
-    # @price! ai stop_loss stop_price price profit_price take_profit
-    # @amount! ai amount
+    # @price! ii stop_loss stop_price price profit_price take_profit
+    # @amount! ii amount
     if !skipchecks
-        if !check_available_cash(s, ai, amount, price, t)
-            @warn "send order: not enough cash" this_cash = cash(ai, posside(t)) ai_comm = committed(
-                ai, posside(t)
-            ) ai_free = freecash(ai, posside(t)) strat_cash = cash(s) strat_comm = committed(
+        if !check_available_cash(s, ii, amount, price, t)
+            @warn "send order: not enough cash" this_cash = cash(ii, posside(t)) ai_comm = committed(
+                ii, posside(t)
+            ) ai_free = freecash(ii, posside(t)) strat_cash = cash(s) strat_comm = committed(
                 s
-            ) order_cash = amount t lev = leverage(ai, posside(t))
+            ) order_cash = amount t lev = leverage(ii, posside(t))
             return nothing
         end
-        if !ensure_marginmode(s, ai)
-            @warn "send order: margin mode mismatch" this_mm = marginmode(ai) exc = nameof(
-                exchange(ai)
+        if !ensure_marginmode(s, ii)
+            @warn "send order: margin mode mismatch" this_mm = marginmode(ii) exc = nameof(
+                exchange(ii)
             ) reduce_only
             if !reduce_only
                 return nothing
             end
         end
     end
-    sym = raw(ai)
-    exc = exchange(ai)
+    sym = raw(ii)
+    exc = exchange(ii)
     side = _ccxtorderside(t)
     type = _ccxtordertype(exc, t)
     params = Dict{String,Any}(string(k) => v for (k, v) in kwargs)
     tif = _ccxttif(exc, t)
     if !isempty(tif)
         tif_k = string(time_in_force_key(exc))
-        tif_v = string(time_in_force_value(exc, asset(ai), tif))
+        tif_v = string(time_in_force_value(exc, asset(ii), tif))
         pygetorconvert!(params, tif_k, tif_v)
     end
     function supportmsg(feat)
@@ -247,16 +247,16 @@ function live_send_order(
         elseif !isnothing(trailing_trigger_amount)
             if !(price isa Number)
                 @warn "send order: trailing amount order needs price input parameter" price
-                price = lastprice(ai)
+                price = lastprice(ii)
             end
             pygetorconvert!(params, "trailingTriggerPrice", price)
         end
     end
     # start monitoring before sending the create request
-    watch_orders!(s, ai)
-    watch_trades!(s, ai)
+    watch_orders!(s, ii)
+    watch_trades!(s, ii)
     @debug "send order: create" _module = LogSendOrder sym type price amount side params args
-    inc_pending_orders!(ai)
+    inc_pending_orders!(ii)
     resp = nothing
     try
         resp = create_order(s, sym, args...; side, type, price, amount, params)
@@ -266,13 +266,13 @@ function live_send_order(
             @start_task IdDict() try
                 try
                     @debug "send order: response raw" _module = LogSendOrder resp
-                    resp_id = try resp_order_id(resp, exchangeid(ai)) catch e; e isa InterruptException && rethrow(e); nothing end
-                    resp_price = try resp_order_price(resp, exchangeid(ai)) catch e; e isa InterruptException && rethrow(e); nothing end
-                    resp_cost = try resp_order_cost(resp, exchangeid(ai)) catch e; e isa InterruptException && rethrow(e); nothing end
-                    resp_filled = try resp_order_filled(resp, exchangeid(ai)) catch e; e isa InterruptException && rethrow(e); nothing end
-                    resp_avg = try resp_order_average(resp, exchangeid(ai)) catch e; e isa InterruptException && rethrow(e); nothing end
-                    resp_remaining = try resp_order_remaining(resp, exchangeid(ai)) catch e; e isa InterruptException && rethrow(e); nothing end
-                    resp_status = try resp_order_status(resp, exchangeid(ai)) catch e; e isa InterruptException && rethrow(e); nothing end
+                    resp_id = try resp_order_id(resp, exchangeid(ii)) catch e; e isa InterruptException && rethrow(e); nothing end
+                    resp_price = try resp_order_price(resp, exchangeid(ii)) catch e; e isa InterruptException && rethrow(e); nothing end
+                    resp_cost = try resp_order_cost(resp, exchangeid(ii)) catch e; e isa InterruptException && rethrow(e); nothing end
+                    resp_filled = try resp_order_filled(resp, exchangeid(ii)) catch e; e isa InterruptException && rethrow(e); nothing end
+                    resp_avg = try resp_order_average(resp, exchangeid(ii)) catch e; e isa InterruptException && rethrow(e); nothing end
+                    resp_remaining = try resp_order_remaining(resp, exchangeid(ii)) catch e; e isa InterruptException && rethrow(e); nothing end
+                    resp_status = try resp_order_status(resp, exchangeid(ii)) catch e; e isa InterruptException && rethrow(e); nothing end
                     @debug "send order: response trace" _module = LogSendOrder req_price = price req_amount = amount resp_id resp_price resp_cost resp_filled resp_avg resp_remaining resp_status
                 catch err
                     err isa InterruptException && rethrow(err)
@@ -285,11 +285,11 @@ function live_send_order(
         end
     end
     return if isnothing(resp) || resp isa Exception
-        @warn "send order: failed" sym ai exception = resp args params
-        dec_pending_orders!(ai)
+        @warn "send order: failed" sym ii exception = resp args params
+        dec_pending_orders!(ii)
         resp
-    elseif isnothing(resp_order_id(resp, exchangeid(ai)))
-        dec_pending_orders!(ai)
+    elseif isnothing(resp_order_id(resp, exchangeid(ii)))
+        dec_pending_orders!(ii)
         nothing
     else
         resp

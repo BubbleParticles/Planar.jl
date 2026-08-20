@@ -20,7 +20,7 @@ mutable struct BalanceSnapshot{T<:AbstractFloat}
     end
     BalanceSnapshot(sym) = BalanceSnapshot(; currency=Symbol(sym))
     BalanceSnapshot(sym::Symbol) = BalanceSnapshot(; currency=sym)
-    BalanceSnapshot(ai::AssetInstance) = BalanceSnapshot(bc(ai))
+    BalanceSnapshot(ii::InstrumentInstance) = BalanceSnapshot(bc(ii))
 end
 
 Base.zero(snap::BalanceSnapshot{T}) where {T} = BalanceSnapshot(snap.currency)
@@ -44,21 +44,21 @@ reset!(bal::BalanceSnapshot{T}) where {T} = begin
     bal.used = zero(T)
 end
 Base.getindex(bal::BalanceDict, sym::Symbol) = bal.assets[sym]
-Base.getindex(bal::BalanceDict, ai::AssetInstance) = getindex(bal, bc(ai))
+Base.getindex(bal::BalanceDict, ii::InstrumentInstance) = getindex(bal, bc(ii))
 Base.getindex(bal::BalanceDict, c::AbstractCash) = getindex(bal, nameof(c))
 Base.getindex(bal::BalanceDict, s::Strategy) = getindex(bal, s.cash)
 Base.setindex!(bal::BalanceDict, v, sym::Symbol) = setindex!(bal.assets, v, sym)
-Base.setindex!(bal::BalanceDict, v, ai::AssetInstance) = setindex!(bal, v, bc(ai))
+Base.setindex!(bal::BalanceDict, v, ii::InstrumentInstance) = setindex!(bal, v, bc(ii))
 Base.delete!(bal::BalanceDict, sym::Symbol) = delete!(bal.assets, sym)
-Base.delete!(bal::BalanceDict, ai::AssetInstance) = delete!(bal, bc(ai))
+Base.delete!(bal::BalanceDict, ii::InstrumentInstance) = delete!(bal, bc(ii))
 Base.empty(::Type{<:BalanceDict{T}}) where {T} = BalanceDict{T}()
 Base.empty!(bal::BalanceDict{T}) where {T} = empty!(bal.assets)
 Base.keys(bal::BalanceDict) = keys(bal.assets)
 Base.values(bal::BalanceDict) = values(bal.assets)
 Base.pairs(bal::BalanceDict) = pairs(bal.assets)
 Base.iterate(bal::BalanceDict, args...; kwargs...) = iterate(bal.assets, args...; kwargs...)
-function Base.get(bal::BalanceDict, ai::AssetInstance, args...; kwargs...)
-    get(bal.assets, bc(ai), args...; kwargs...)
+function Base.get(bal::BalanceDict, ii::InstrumentInstance, args...; kwargs...)
+    get(bal.assets, bc(ii), args...; kwargs...)
 end
 Base.get(bal::BalanceDict, args...; kwargs...) = get(bal.assets, args...; kwargs...)
 reset!(bal::BalanceDict{T}) where {T} = begin
@@ -115,8 +115,8 @@ get_balance(s, sym, type; kwargs...) = begin
     end
 end
 get_balance(s, ::Nothing, ::Nothing) = get_balance(s, nothing)
-function get_balance(s, ai::AssetInstance, tp::Option{Symbol}=nothing; kwargs...)
-    get_balance(s, bc(ai), tp; kwargs...)
+function get_balance(s, ii::InstrumentInstance, tp::Option{Symbol}=nothing; kwargs...)
+    get_balance(s, bc(ii), tp; kwargs...)
 end
 function get_balance(s, ::Nothing, args...; kwargs...)
     get_balance(s, nameof(cash(s)), args...; kwargs...)
@@ -196,15 +196,15 @@ end
 
 $(TYPEDSIGNATURES)
 
-The function `live_balance` retrieves the live balance for a given strategy `s` and asset `ai`.
+The function `live_balance` retrieves the live balance for a given strategy `s` and asset `ii`.
 If `force` is `true` and the balance watcher is not locked, it forces a balance fetch operation.
 If the balance is not found or is outdated, it waits for a balance update or forces a balance fetch operation depending on the `force` parameter.
 The function accepts additional parameters `fallback_kwargs` for the balance fetch operation.
-If `ai=nothing` and `full=true` the dict of all assets balances will be returned, otherwise the `BalanceTuple` of the strategy cash currency.
+If `ii=nothing` and `full=true` the dict of all assets balances will be returned, otherwise the `BalanceTuple` of the strategy cash currency.
 """
 function live_balance(
     s::LiveStrategy,
-    ai=nothing;
+    ii=nothing;
     fallback_kwargs=(),
     since=nothing,
     force=false,
@@ -216,9 +216,9 @@ function live_balance(
 )::Union{BalanceDict,BalanceSnapshot,Nothing}
     @timeout_start
     watch_balance!(s)
-    bal_args = full ? () : (ai, type)
+    bal_args = full ? () : (ii, type)
     getbal() = get_balance(s, bal_args...)
-    waitw(waitfor=@timeout_now) = waitsync(@something(ai, s); since, waitfor)
+    waitw(waitfor=@timeout_now) = waitsync(@something(ii, s); since, waitfor)
     forcebal() = _force_fetchbal(s; fallback_kwargs)
 
     return if !isnothing(since)
@@ -244,7 +244,7 @@ function live_balance(
             getbal()
         end
     elseif force
-        @debug "live bal: force fetching balance" _module = LogBalance ai
+        @debug "live bal: force fetching balance" _module = LogBalance ii
         forcebal()
         waitw()
         getbal()
@@ -260,7 +260,7 @@ end
 
 $(TYPEDSIGNATURES)
 
-The function `_live_kind` retrieves a specific kind of live balance for a given strategy `s` and asset `ai`.
+The function `_live_kind` retrieves a specific kind of live balance for a given strategy `s` and asset `ii`.
 The kind of balance to retrieve is specified by the `kind` parameter.
 If the balance is not found, it returns a zero balance with the current date.
 """
@@ -302,44 +302,44 @@ function st.current_total(
         s_tot = zero(s_tot)
     end
     @debug "total: loop" _module = LogTasks
-    @sync for ai in s.universe
+    @sync for ii in s.universe
         @async try
             let v = if local_bal
                     current_price = try
-                        price_func(ai)
+                        price_func(ii)
                     catch e
                         e isa InterruptException && rethrow(e)
                         @warn "current total: price func failed" exception = (e, catch_backtrace()) exc = nameof(exchange(s)) price_func
-                        if isopen(ai, Long())
-                            entryprice(ai, Long())
-                        elseif isopen(ai, Short())
-                            entryprice(ai, Short())
+                        if isopen(ii, Long())
+                            entryprice(ii, Long())
+                        elseif isopen(ii, Short())
+                            entryprice(ii, Short())
                         else
                             zero(s_tot)
                         end
                     end
-                    value(ai, Long(); current_price) + value(ai, Short(); current_price)
+                    value(ii, Long(); current_price) + value(ii, Short(); current_price)
                 else
-                    long_nt = abs(live_notional(s, ai, Long()))
-                    short_nt = abs(live_notional(s, ai, Short()))
-                    lev_long = leverage(ai, Long())
-                    lev_short = leverage(ai, Short())
-                    v_long = if iszero(lev_long) 0.0 else (long_nt - long_nt * maxfees(ai)) / lev_long end
-                    v_short = if iszero(lev_short) 0.0 else (short_nt - short_nt * maxfees(ai)) / lev_short end
+                    long_nt = abs(live_notional(s, ii, Long()))
+                    short_nt = abs(live_notional(s, ii, Short()))
+                    lev_long = leverage(ii, Long())
+                    lev_short = leverage(ii, Short())
+                    v_long = if iszero(lev_long) 0.0 else (long_nt - long_nt * maxfees(ii)) / lev_long end
+                    v_short = if iszero(lev_short) 0.0 else (short_nt - short_nt * maxfees(ii)) / lev_short end
                     v_long + v_short
                 end
                 if isfinite(v)
                     # Use atomic add to avoid race condition on tot[] across async tasks
                     Base.Threads.atomic_add!(tot, v)
                 else
-                    @warn "strategy cash: not finite asset cash" ai = raw(ai) long = cash(
-                        ai, Long
-                    ) short = cash(ai, Short)
+                    @warn "strategy cash: not finite asset cash" ii = raw(ii) long = cash(
+                        ii, Long
+                    ) short = cash(ii, Short)
                 end
             end
         catch e
             e isa InterruptException && rethrow(e)
-            @error "current total: asset failed" ai = raw(ai) exception = (e, catch_backtrace())
+            @error "current total: asset failed" ii = raw(ii) exception = (e, catch_backtrace())
         end
     end
     @debug "total: loop done" _module = LogTasks
@@ -369,9 +369,9 @@ function st.current_total(
         @warn "strategy cash: not finite"
         tot[] = zero(tot[])
     end
-    function wprice_func(ai)
+    function wprice_func(ii)
         try
-            price_func(ai)
+            price_func(ii)
         catch e
             e isa InterruptException && rethrow(e)
             @warn "current total: price func failed" exc = nameof(exchange(s)) price_func
@@ -379,22 +379,22 @@ function st.current_total(
             zero(tot[])
         end
     end
-    @sync for ai in s.universe
+    @sync for ii in s.universe
         @async try
             let v = if local_bal
-                    cash(ai).value
+                    cash(ii).value
                 else
-                    (@get bal ai BalanceSnapshot(bc(ai))).free
-                end * wprice_func(ai)
+                    (@get bal ii BalanceSnapshot(bc(ii))).free
+                end * wprice_func(ii)
                 if isfinite(v)
                     Base.Threads.atomic_add!(tot, v)
                 else
-                    @warn "strategy cash: not finite asset cash" ai = raw(ai)
+                    @warn "strategy cash: not finite asset cash" ii = raw(ii)
                 end
             end
         catch e
             e isa InterruptException && rethrow(e)
-            @error "current total (nomargin): asset failed" ai = raw(ai) exception = (e, catch_backtrace())
+            @error "current total (nomargin): asset failed" ii = raw(ii) exception = (e, catch_backtrace())
         end
     end
     tot[]

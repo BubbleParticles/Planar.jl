@@ -7,12 +7,12 @@ $(TYPEDSIGNATURES)
 This function counts the number of liquidations that have occurred in the history of a margin asset instance.
 
 """
-function liquidations(ai::MarginInstance)
+function liquidations(ii::MarginInstance)
     short_liq = Trade[]
     short_loss = 0.0
     long_liq = Trade[]
     long_loss = 0.0
-    for t in ai.history
+    for t in ii.history
         if t isa LiquidationTrade
             if positionside(t) == Long
                 @deassert t.value - t.fees == t.size

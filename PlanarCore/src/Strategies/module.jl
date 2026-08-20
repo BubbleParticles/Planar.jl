@@ -1,12 +1,12 @@
-using ..Collections: AssetCollection, Collections as coll, Instances, Data
+using ..Collections: InstrumentCollection, Collections as coll, Instances, Data
 
-using ..Instances: AssetInstance, Position, MarginMode, PositionSide, ishedged, Instances
+using ..Instances: InstrumentInstance, Position, MarginMode, PositionSide, ishedged, Instances
 using ..Instances: CurrencyCash, CCash
 using ..Instances.Exchanges
 using ..Instances: OrderTypes
 using ..OrderTypes: Order, OrderType, AnyBuyOrder, AnySellOrder, Buy, Sell, OrderSide
 using ..OrderTypes: OrderError, StrategyEvent, Instruments
-using ..Instruments: AbstractAsset, Cash, cash!, Derivatives.Derivative
+using ..Instruments: AbstractInstrument, Cash, cash!, Derivatives.Derivative
 
 import ..Data: candleat, openat, highat, lowat, closeat, volumeat, closelast
 using ..Data: Misc, EventTrace
@@ -25,14 +25,14 @@ using Pkg: Pkg
 @doc "The base type for all strategies."
 abstract type AbstractStrategy end
 
-@doc "`AssetInstance` by `ExchangeID`"
-const ExchangeAsset{E} = AssetInstance{T,E} where {T<:AbstractAsset}
+@doc "`InstrumentInstance` by `ExchangeID`"
+const ExchangeInstrument{E} = InstrumentInstance{T,E} where {T<:AbstractInstrument}
 @doc "`Order` by `ExchangeID`"
-const ExchangeOrder{E} = Order{O,T,E} where {O<:OrderType,T<:AbstractAsset}
+const ExchangeOrder{E} = Order{O,T,E} where {O<:OrderType,T<:AbstractInstrument}
 @doc "`BuyOrder` by `ExchangeID`"
-const ExchangeBuyOrder{E} = AnyBuyOrder{P,T,E} where {P<:PositionSide,T<:AbstractAsset}
+const ExchangeBuyOrder{E} = AnyBuyOrder{P,T,E} where {P<:PositionSide,T<:AbstractInstrument}
 @doc "`SellOrder` by `ExchangeID`"
-const ExchangeSellOrder{E} = AnySellOrder{P,T,E} where {P<:PositionSide,T<:AbstractAsset}
+const ExchangeSellOrder{E} = AnySellOrder{P,T,E} where {P<:PositionSide,T<:AbstractInstrument}
 @doc "`PriceTime` named tuple"
 const PriceTime = NamedTuple{(:price, :time),Tuple{DFT,DateTime}}
 @doc "Ordering for buy orders (highest price first)"
@@ -79,13 +79,13 @@ struct Strategy{X<:ExecMode,N,E<:ExchangeID,M<:MarginMode,C} <: AbstractStrategy
     "Cash kept busy by pending orders"
     cash_committed::CCash{E}{C}
     "Active buy orders"
-    buyorders::Dict{ExchangeAsset{E},BuyOrdersDict{E}}
+    buyorders::Dict{ExchangeInstrument{E},BuyOrdersDict{E}}
     "Active sell orders"
-    sellorders::Dict{ExchangeAsset{E},SellOrdersDict{E}}
+    sellorders::Dict{ExchangeInstrument{E},SellOrdersDict{E}}
     "Assets with non zero balance"
-    holdings::Set{ExchangeAsset{E}}
+    holdings::Set{ExchangeInstrument{E}}
     "All the assets that the strategy knows about"
-    universe::AssetCollection
+    universe::InstrumentCollection
     "A lock for thread safety"
     lock::SafeLock
     @doc """ Initializes a new `Strategy` object
@@ -103,7 +103,7 @@ struct Strategy{X<:ExecMode,N,E<:ExchangeID,M<:MarginMode,C} <: AbstractStrategy
         margin::MarginMode,
         timeframe::TimeFrame,
         exc::Exchange,
-        uni::AssetCollection;
+        uni::InstrumentCollection;
         config::Config
     )
         @assert !ishedged(margin) "Hedged margin not yet supported."
@@ -117,9 +117,9 @@ struct Strategy{X<:ExecMode,N,E<:ExchangeID,M<:MarginMode,C} <: AbstractStrategy
         if issandbox(exc) && mode isa Paper
             @warn "Exchange should not be in sandbox mode if strategy is in paper mode."
         end
-        holdings = Set{ExchangeAsset{eid}}()
-        buyorders = Dict{ExchangeAsset{eid},SortedDict{PriceTime,ExchangeBuyOrder{eid}}}()
-        sellorders = Dict{ExchangeAsset{eid},SortedDict{PriceTime,ExchangeSellOrder{eid}}}()
+        holdings = Set{ExchangeInstrument{eid}}()
+        buyorders = Dict{ExchangeInstrument{eid},SortedDict{PriceTime,ExchangeBuyOrder{eid}}}()
+        sellorders = Dict{ExchangeInstrument{eid},SortedDict{PriceTime,ExchangeSellOrder{eid}}}()
         name = nameof(self)
         # set exchange
         mm = margin isa IsolatedMargin ? "isolated" : "cross"

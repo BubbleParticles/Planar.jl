@@ -16,7 +16,7 @@ using PlanarCore.Data: load, zi
 using PlanarCore.Data.DataFramesMeta
 using PlanarCore.Data.DFUtils
 using PlanarCore.Processing: resample, Processing
-using PlanarCore.Instruments: AbstractAsset, Asset, fiatnames, Instruments
+using PlanarCore.Instruments: AbstractInstrument, Instrument, fiatnames, Instruments
 using PlanarCore.Misc
 using PlanarCore.TimeTicks
 using PlanarCore.Lang: Lang

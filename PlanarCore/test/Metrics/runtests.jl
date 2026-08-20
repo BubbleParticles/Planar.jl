@@ -335,34 +335,34 @@ end
     end)
     cfg = PlanarCore.Metrics.Instances.Misc.Config()
     using PlanarCore.Stubs: stub_strategy
-    using PlanarCore.Metrics.Instances: AssetInstance
-    using PlanarCore.Metrics.Instances.Instruments: AbstractAsset, parse
+    using PlanarCore.Metrics.Instances: InstrumentInstance
+    using PlanarCore.Metrics.Instances.Instruments: AbstractInstrument, parse
     using PlanarCore.Metrics.Instances.Misc: NoMargin
     using PlanarCore.Metrics.Instances.Exchanges.ExchangeTypes: ExchangeID
     using PlanarCore.Metrics.OrderTypes: Order, Trade, MarketOrderType, Buy
     s = stub_strategy(; cfg, dostub=false)
-    ai = first(s.universe)
+    ii = first(s.universe)
     # Build two minimal trades (distinct dates) and push into the live history
     tf_dt = M.ect.TimeTicks.DateTime
-    o1 = Order(ai.asset, ai.exchange.id, Order{MarketOrderType{Buy}}, Metrics.Instances.Misc.Long;
+    o1 = Order(ii.asset, ii.exchange.id, Order{MarketOrderType{Buy}}, Metrics.Instances.Misc.Long;
               price=50000.0, date=tf_dt(2024, 1, 1, 0, 0, 0), amount=0.001)
     t1 = Trade(o1; date=tf_dt(2024, 1, 1, 0, 0, 0), amount=0.001, price=50000.0,
                fees=0.0, size=50.0, lev=1.0, entryprice=50000.0, fees_base=0.0)
-    o2 = Order(ai.asset, ai.exchange.id, Order{MarketOrderType{Buy}}, Metrics.Instances.Misc.Long;
+    o2 = Order(ii.asset, ii.exchange.id, Order{MarketOrderType{Buy}}, Metrics.Instances.Misc.Long;
               price=51000.0, date=tf_dt(2024, 1, 1, 0, 1, 0), amount=0.001)
     t2 = Trade(o2; date=tf_dt(2024, 1, 1, 0, 1, 0), amount=0.001, price=51000.0,
                fees=0.0, size=51.0, lev=1.0, entryprice=51000.0, fees_base=0.0)
-    push!(ai.history, t1, t2)
-    @test !isempty(ai.history)
-    hist_before = copy(ai.history)
+    push!(ii.history, t1, t2)
+    @test !isempty(ii.history)
+    hist_before = copy(ii.history)
     # Trigger the filter branch (since >= first history date) which previously
-    # mutated ai.history in place and restored it via finally.
+    # mutated ii.history in place and restored it via finally.
     # Wrap so the assertion holds even if asset_stats! has its own data requirements.
     try
         M.trades_stats(s; since=M.ect.TimeTicks.DateTime(2024, 1, 1, 0, 0, 0))
     catch
     end
     # The live history must be unchanged (no in-place filter/restore).
-    @test length(ai.history) == length(hist_before)
-    @test collect(ai.history) == collect(hist_before)
+    @test length(ii.history) == length(hist_before)
+    @test collect(ii.history) == collect(hist_before)
 end

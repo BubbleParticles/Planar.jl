@@ -37,9 +37,9 @@ function Strategies.Strategy(
     setproperty!(config, :min_timeframe, timeframe)
     exc = getexchange!(config.exchange, params; sandbox, account)
     uni = if isempty(assets)
-        AssetCollection()
+        InstrumentCollection()
     else
-        AssetCollection(assets; load_data, timeframe=string(timeframe), exc, margin)
+        InstrumentCollection(assets; load_data, timeframe=string(timeframe), exc, margin)
     end
     s = Strategy(self, mode, margin, timeframe, exc, uni; config)
     mode_k = if mode == Sim()

@@ -27,11 +27,11 @@ end
 Base.Broadcast.broadcastable(s::Strategy) = Ref(s)
 @doc "Assets loaded by the strategy."
 assets(s::Strategy) = universe(s).data.asset
-inuniverse(a::AbstractAsset, s::Strategy) = a ∈ assets(s)
-inuniverse(ai::AssetInstance, s::Strategy) = ai.asset ∈ assets(s)
+inuniverse(a::AbstractInstrument, s::Strategy) = a ∈ assets(s)
+inuniverse(ii::InstrumentInstance, s::Strategy) = ii.asset ∈ assets(s)
 inuniverse(sym::Symbol, s::Strategy) = begin
-    for ai in s.universe
-        if sym == bc(ai)
+    for ii in s.universe
+        if sym == bc(ii)
             return true
         end
     end
@@ -105,7 +105,7 @@ islive(::Strategy{M}) where {M<:ExecMode} = M == Live
 Base.nameof(::Type{<:Strategy{<:ExecMode,N}}) where {N<:Symbol} = N
 @doc "The name of the strategy module."
 Base.nameof(s::Strategy) = typeof(s).parameters[2]
-@doc "The strategy `AssetCollection`."
+@doc "The strategy `InstrumentCollection`."
 universe(s::Strategy) = getfield(s, :universe)
 @doc "The `throttle` attribute determines the strategy polling interval."
 throttle(s::Strategy) = attr(s, :throttle, Second(5))
@@ -137,8 +137,8 @@ function reset!(s::Strategy, config=false)
         empty!(d)
     end
     empty!(s.holdings)
-    for ai in universe(s)
-        reset!(ai, Val(:full))
+    for ii in universe(s)
+        reset!(ii, Val(:full))
     end
     if config
         cfg = s.config
@@ -198,8 +198,8 @@ Base.fill!(s::Strategy; kwargs...) = begin
     push!(tfs, attr(s, :timeframe, s.timeframe))
     uni = universe(s)
     coll.fill!(uni, tfs...; kwargs...)
-    for ai in uni
-        propagate_ohlcv!(ohlcv_dict(ai))
+    for ii in uni
+        propagate_ohlcv!(ohlcv_dict(ii))
     end
 end
 
@@ -326,7 +326,7 @@ function Base.similar(s::Strategy; mode=s.mode, timeframe=s.timeframe, exc=excha
 end
 
 function symsdict(s::Strategy)
-    @lock s @lget! attrs(s) :assets_bysym Dict{String,Option{AssetInstance}}()
+    @lock s @lget! attrs(s) :assets_bysym Dict{String,Option{InstrumentInstance}}()
 end
 
 @doc """
@@ -339,13 +339,13 @@ This function retrieves an asset instance by symbol `sym` from a strategy `s`. I
 """
 function asset_bysym(s::Strategy, sym, dict_bysim=symsdict(s))
     k = string(sym)
-    ai = get(dict_bysim, k, nothing)
-    if isnothing(ai)
-        ai = s[MatchString(k)]
-        if ai isa AssetInstance
-            dict_bysim[k] = ai
+    ii = get(dict_bysim, k, nothing)
+    if isnothing(ii)
+        ii = s[MatchString(k)]
+        if ii isa InstrumentInstance
+            dict_bysim[k] = ii
         end
     else
-        ai
+        ii
     end
 end

@@ -10,7 +10,7 @@ The function returns the calculated PnL.
 """
 function live_pnl(
     s::LiveStrategy,
-    ai,
+    ii,
     p::ByPos;
     update::Option{PositionTuple}=nothing,
     synced=true,
@@ -19,17 +19,17 @@ function live_pnl(
     kwargs...,
 )
     pside = posside(p)
-    eid = exchangeid(ai)
-    update = @something update live_position(s, ai, pside; kwargs...) (resp=nothing, date=TimeTicks.now())
+    eid = exchangeid(ii)
+    update = @something update live_position(s, ii, pside; kwargs...) (resp=nothing, date=TimeTicks.now())
     lp = update.resp
     @assert !isnothing(lp) "live_pnl: no position response from exchange"
-    pos = position(ai, p)
+    pos = position(ii, p)
     pnl = resp_position_unpnl(lp, eid)
     if iszero(pnl)
         amount = resp_position_contracts(lp, eid)
         function dowarn(a, b)
-            @warn "live pnl: position amount not matching exchange" ai = raw(ai) exc = nameof(
-                exchange(ai)
+            @warn "live pnl: position amount not matching exchange" ii = raw(ii) exc = nameof(
+                exchange(ii)
             ) a != b
         end
         sync = false
@@ -45,10 +45,10 @@ function live_pnl(
             end
             if synced || sync
                 @timeout_start
-                waitsync(ai; since=update.date, waitfor)
-                live_sync_position!(s, ai, pside, update; commits=false)
+                waitsync(ii; since=update.date, waitfor)
+                live_sync_position!(s, ii, pside, update; commits=false)
             end
-            Instances.pnl(pos, _ccxtposprice(ai, lp))
+            Instances.pnl(pos, _ccxtposprice(ii, lp))
         else
             pnl
         end

@@ -11,8 +11,8 @@ using PlanarCore.Strategies.Instances.Exchanges.ExchangeTypes
 using PlanarCore.Strategies.Instances.Exchanges.ExchangeTypes: CcxtExchange, ExchangeID, ExcPrecisionMode
 using PlanarCore.Strategies.Instances.Exchanges.ExchangeTypes.OrderedCollections: OrderedSet
 using PlanarCore.Strategies.Instances.Misc: Config
-using PlanarCore.Strategies.Instances.Instruments: AbstractAsset
-using PlanarCore.Strategies.Instances: AssetInstance, ohlcv, ohlcv_dict, ticks, setticks!, _check_ticks_ordered!, _ohlcv_keys
+using PlanarCore.Strategies.Instances.Instruments: AbstractInstrument
+using PlanarCore.Strategies.Instances: InstrumentInstance, ohlcv, ohlcv_dict, ticks, setticks!, _check_ticks_ordered!, _ohlcv_keys
 using PlanarCore.Strategies.Instances.DataStructures: SortedDict
 using PlanarCore.Strategies.Instances.Data: DataFrame
 
@@ -23,7 +23,7 @@ const DateTime = SimMode.DateTime
 const Buy = SimMode.Buy
 const Sell = SimMode.Sell
 
-_asset = SimMode.Asset("BTC/USDT")
+_asset = SimMode.Instrument("BTC/USDT")
 _eid = EID(:test)
 _dt = DateTime(2024, 1, 1)
 
@@ -142,7 +142,7 @@ end
 end
 
 @testset "doclamp market (slippage.jl)" begin
-    # _doclamp for market orders ignores ai/date → just returns price
+    # _doclamp for market orders ignores ii/date → just returns price
     @test SimMode._doclamp(_market_buy(), 100.0, nothing, _dt) == 100.0
     @test SimMode._doclamp(_market_sell(), 50.0, nothing, _dt) == 50.0
 end
@@ -229,7 +229,7 @@ end
 
 _mock_exc = _make_tick_exchange(:test)
 # A real exchange sets `exc._trace` to an EventTrace (see constructors.jl); the
-# mock exchange is built without one. `event!` pushes AssetEvents to `_trace`
+# mock exchange is built without one. `event!` pushes InstrumentEvents to `_trace`
 # on order errors, so we give it a no-op backend to keep the engine path live.
 struct _MockTrace end
 Base.push!(::_MockTrace, v; kwargs...) = v
@@ -241,12 +241,12 @@ ExchangeTypes.sb_exchanges[(:test, "")] = _mock_exc
 # CONCRETE-T alias (e.g. OT.LimitOrder{Buy}) — the generic LimitOrder{S} alias
 # now has concrete T (LimitOrderType{S}) and flows through call!/committment/
 # basicorder dispatch; a fully 4-param-explicit Order{...} type breaks the
-# internal OrderTypes.Order(ai, type) call.
-function _make_sim_order(ai, OType; price, amount=1.0, date=_dt)
-    comm = Ref(SimMode.Executors.committment(OType, ai, price, amount))
-    SimMode.Executors.basicorder(ai, price, amount, comm, SimMode.Executors.Checks.SanitizeOff(); type=OType, date=date)
+# internal OrderTypes.Order(ii, type) call.
+function _make_sim_order(ii, OType; price, amount=1.0, date=_dt)
+    comm = Ref(SimMode.Executors.committment(OType, ii, price, amount))
+    SimMode.Executors.basicorder(ii, price, amount, comm, SimMode.Executors.Checks.SanitizeOff(); type=OType, date=date)
 end
-_queue_order!(s, ai, o) = SimMode.queue!(s, o, ai)
+_queue_order!(s, ii, o) = SimMode.queue!(s, o, ii)
 
 function _make_ohlcv(price, n=200; start=_dt)
     DataFrame(
@@ -267,21 +267,21 @@ function _make_ticks(n=100; start=_dt + SimMode.Minute(1), step=SimMode.Millisec
     )
 end
 
-function _make_tick_ai(sym; tick_df=nothing, ohlcv_price=50000.0)
-    a = SimMode.Asset(sym)
+function _make_tick_ii(sym; tick_df=nothing, ohlcv_price=50000.0)
+    a = SimMode.Instrument(sym)
     data = SortedDict(tf"1m" => _make_ohlcv(ohlcv_price))
-    ai = AssetInstance(
+    ii = InstrumentInstance(
         a, data, _mock_exc, SimMode.NoMargin();
         limits=(; leverage=(; min=1.0, max=100.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
         precision=(; amount=8, price=2),
         fees=(; taker=0.001, maker=0.001, min=0.001, max=0.001),
     )
-    isnothing(tick_df) || setticks!(ai, tick_df)
-    ai
+    isnothing(tick_df) || setticks!(ii, tick_df)
+    ii
 end
 
 function _make_tick_strategy(ais)
-    uni = Collections.AssetCollection(ais)
+    uni = Collections.InstrumentCollection(ais)
     cfg = Config(; qc=:USDT, initial_cash=10000.0, sandbox=true)
     # zero-period timeframe → WarmupPeriod() == Millisecond(0) → no ticks skipped
     Strategies.Strategy(
@@ -294,7 +294,7 @@ end
 # submodule (not the enclosing Runtests) so its constrained `ping!` dispatches
 # during the backtest loop and places a limit order that the engine fills.
 function _make_limit_fill_strategy(ais)
-    uni = Collections.AssetCollection(ais)
+    uni = Collections.InstrumentCollection(ais)
     cfg = Config(; qc=:USDT, initial_cash=10000.0, sandbox=true)
     Strategies.Strategy(
         LimitFillStrat, SimMode.Sim(), SimMode.NoMargin(),
@@ -304,45 +304,45 @@ function _make_limit_fill_strategy(ais)
 end
 
 @testset "ticks storage & ordering (Instances/ticks.jl)" begin
-    ai = _make_tick_ai("BTC/USDT")
+    ii = _make_tick_ii("BTC/USDT")
     df = _make_ticks(10)
-    setticks!(ai, df)
-    @test ticks(ai) === df
-    @test ticks(ai).timestamp isa Vector{DateTime}
+    setticks!(ii, df)
+    @test ticks(ii) === df
+    @test ticks(ii).timestamp isa Vector{DateTime}
     # ohlcv accessor still returns the smallest OHLCV tf when ticks are present
-    @test ohlcv(ai) === ai.data[tf"1m"]
-    @test SimMode.timeframe(ai) == tf"1m"
-    @test first(_ohlcv_keys(ai)) == tf"1m"
+    @test ohlcv(ii) === ii.data[tf"1m"]
+    @test SimMode.timeframe(ii) == tf"1m"
+    @test first(_ohlcv_keys(ii)) == tf"1m"
 
     # equal timestamps are valid
     df2 = DataFrame(
         timestamp=[_dt, _dt, _dt + SimMode.Millisecond(1)],
         price=[1.0, 2.0, 3.0], amount=[1.0, 1.0, 1.0],
     )
-    setticks!(ai, df2)
-    @test _check_ticks_ordered!(ai)
+    setticks!(ii, df2)
+    @test _check_ticks_ordered!(ii)
     # fingerprint cached
-    @test ai.attrs[:_tick_order][1] == (_dt, _dt + SimMode.Millisecond(1), 3)
+    @test ii.attrs[:_tick_order][1] == (_dt, _dt + SimMode.Millisecond(1), 3)
     # middle-row mutation with unchanged fingerprint → cached result, no re-validation
     df2[2, :timestamp] = _dt - SimMode.Millisecond(5)
-    @test _check_ticks_ordered!(ai)
+    @test _check_ticks_ordered!(ii)
     # first-tick change re-validates → decrease detected
     df2[1, :timestamp] = _dt + SimMode.Millisecond(10)
-    @test_throws ArgumentError _check_ticks_ordered!(ai)
+    @test_throws ArgumentError _check_ticks_ordered!(ii)
     # fresh decrease throws
     setticks!(
-        ai,
+        ii,
         DataFrame(
             timestamp=[_dt + SimMode.Millisecond(2), _dt + SimMode.Millisecond(1)],
             price=[1.0, 2.0], amount=[1.0, 1.0],
         ),
     )
-    @test_throws ArgumentError _check_ticks_ordered!(ai)
+    @test_throws ArgumentError _check_ticks_ordered!(ii)
 end
 
 @testset "TradeTickRange (SimMode/tickrange.jl)" begin
-    ai_a = _make_tick_ai("BTC/USDT")
-    ai_b = _make_tick_ai("ETH/USDT")
+    ai_a = _make_tick_ii("BTC/USDT")
+    ai_b = _make_tick_ii("ETH/USDT")
     setticks!(
         ai_a,
         DataFrame(
@@ -369,7 +369,7 @@ end
     @test r[1].asset === ai_a && r[2].asset === ai_b && r[3].asset === ai_a
 
     # Integer (Unix-ms) timestamps are converted via dt
-    ai_c = _make_tick_ai("BTC/USDT")
+    ai_c = _make_tick_ii("BTC/USDT")
     setticks!(
         ai_c,
         DataFrame(
@@ -382,7 +382,7 @@ end
     @test r2[1].timestamp isa DateTime
 
     # universe asset without ticks is a hard error
-    ai_d = _make_tick_ai("BTC/USDT")
+    ai_d = _make_tick_ii("BTC/USDT")
     @test_throws ArgumentError SimMode.TradeTickRange(_make_tick_strategy([ai_d]))
 end
 
@@ -394,68 +394,68 @@ end
     # buy: call! with the generic alias queues (no MethodError), then fills at the
     # exact tick price. Note: call! returns `nothing` for a non-triggered GTC
     # limit (limitorder_ifprice!'s else branch) — the order is queued regardless.
-    s = _make_tick_strategy([_make_tick_ai("BTC/USDT")])
-    ai = first(s.universe)
+    s = _make_tick_strategy([_make_tick_ii("BTC/USDT")])
+    ii = first(s.universe)
     reset!(s)
-    SimMode.Executors.call!(s, ai, OT.LimitOrder{Buy}; amount=1.0, price=100.0, date=_dt)
-    o = only(values(SimMode.Executors.orders(s, ai, Buy)))
+    SimMode.Executors.call!(s, ii, OT.LimitOrder{Buy}; amount=1.0, price=100.0, date=_dt)
+    o = only(values(SimMode.Executors.orders(s, ii, Buy)))
     @test o isa Order{<:OT.LimitOrderType{Buy}}
-    @test SimMode.isqueued(o, s, ai)
-    tick = SimMode.TradeTick(_dt + SimMode.Millisecond(1), ai, SimMode.DFT(99.0), SimMode.DFT(1.0))
+    @test SimMode.isqueued(o, s, ii)
+    tick = SimMode.TradeTick(_dt + SimMode.Millisecond(1), ii, SimMode.DFT(99.0), SimMode.DFT(1.0))
     SimMode.update!(s, tick, SimMode.UpdateOrdersTick())
-    @test SimMode.isfilled(ai, o)
-    @test !SimMode.isqueued(o, s, ai)
-    @test SimMode.OrderTypes.trades(ai)[end].price == SimMode.DFT(99.0)
+    @test SimMode.isfilled(ii, o)
+    @test !SimMode.isqueued(o, s, ii)
+    @test SimMode.OrderTypes.trades(ii)[end].price == SimMode.DFT(99.0)
 
     # sell mirror: prefund, sell limit at 100, tick at 101 → filled
-    s2 = _make_tick_strategy([_make_tick_ai("BTC/USDT"; ohlcv_price=50.0)])
-    ai2 = first(s2.universe)
+    s2 = _make_tick_strategy([_make_tick_ii("BTC/USDT"; ohlcv_price=50.0)])
+    ii2 = first(s2.universe)
     reset!(s2)
-    SimMode.Instruments.add!(SimMode.cash(ai2), 1.0)
-    SimMode.Executors.call!(s2, ai2, OT.LimitOrder{Sell}; amount=1.0, price=100.0, date=_dt)
-    o2 = only(values(SimMode.Executors.orders(s2, ai2, Sell)))
+    SimMode.Instruments.add!(SimMode.cash(ii2), 1.0)
+    SimMode.Executors.call!(s2, ii2, OT.LimitOrder{Sell}; amount=1.0, price=100.0, date=_dt)
+    o2 = only(values(SimMode.Executors.orders(s2, ii2, Sell)))
     @test o2 isa Order{<:OT.LimitOrderType{Sell}}
-    @test SimMode.isqueued(o2, s2, ai2)
-    tick2 = SimMode.TradeTick(_dt + SimMode.Millisecond(1), ai2, SimMode.DFT(101.0), SimMode.DFT(1.0))
+    @test SimMode.isqueued(o2, s2, ii2)
+    tick2 = SimMode.TradeTick(_dt + SimMode.Millisecond(1), ii2, SimMode.DFT(101.0), SimMode.DFT(1.0))
     SimMode.update!(s2, tick2, SimMode.UpdateOrdersTick())
-    @test SimMode.isfilled(ai2, o2)
-    @test SimMode.OrderTypes.trades(ai2)[end].price == SimMode.DFT(101.0)
+    @test SimMode.isfilled(ii2, o2)
+    @test SimMode.OrderTypes.trades(ii2)[end].price == SimMode.DFT(101.0)
 end
 
 @testset "UpdateOrdersTick fills (SimMode/orders/updates.jl)" begin
     # queued buy limit fills at the exact tick price (no slippage)
-    s = _make_tick_strategy([_make_tick_ai("BTC/USDT")])
-    ai = first(s.universe)
+    s = _make_tick_strategy([_make_tick_ii("BTC/USDT")])
+    ii = first(s.universe)
     reset!(s)
-    o = _make_sim_order(ai, OT.LimitOrder{Buy}; price=100.0)
+    o = _make_sim_order(ii, OT.LimitOrder{Buy}; price=100.0)
     @test !isnothing(o)
-    @test _queue_order!(s, ai, o)
-    @test SimMode.isqueued(o, s, ai)
-    tick = SimMode.TradeTick(_dt + SimMode.Millisecond(1), ai, SimMode.DFT(99.0), SimMode.DFT(1.0))
+    @test _queue_order!(s, ii, o)
+    @test SimMode.isqueued(o, s, ii)
+    tick = SimMode.TradeTick(_dt + SimMode.Millisecond(1), ii, SimMode.DFT(99.0), SimMode.DFT(1.0))
     SimMode.update!(s, tick, SimMode.UpdateOrdersTick())
-    @test SimMode.isfilled(ai, o)
-    @test !SimMode.isqueued(o, s, ai)
-    t = SimMode.OrderTypes.trades(ai)[end]
+    @test SimMode.isfilled(ii, o)
+    @test !SimMode.isqueued(o, s, ii)
+    t = SimMode.OrderTypes.trades(ii)[end]
     @test t.order === o
     @test t.price == SimMode.DFT(99.0)
     @test t.date == tick.timestamp
 
     # queued sell limit fills when tick.price >= o.price
-    s2 = _make_tick_strategy([_make_tick_ai("BTC/USDT"; ohlcv_price=50.0)])
-    ai2 = first(s2.universe)
+    s2 = _make_tick_strategy([_make_tick_ii("BTC/USDT"; ohlcv_price=50.0)])
+    ii2 = first(s2.universe)
     reset!(s2)
-    SimMode.Instruments.add!(SimMode.cash(ai2), 1.0)
-    o2 = _make_sim_order(ai2, OT.LimitOrder{Sell}; price=100.0)
+    SimMode.Instruments.add!(SimMode.cash(ii2), 1.0)
+    o2 = _make_sim_order(ii2, OT.LimitOrder{Sell}; price=100.0)
     @test !isnothing(o2)
-    @test _queue_order!(s2, ai2, o2)
-    @test SimMode.isqueued(o2, s2, ai2)
-    tick2 = SimMode.TradeTick(_dt + SimMode.Millisecond(1), ai2, SimMode.DFT(101.0), SimMode.DFT(1.0))
+    @test _queue_order!(s2, ii2, o2)
+    @test SimMode.isqueued(o2, s2, ii2)
+    tick2 = SimMode.TradeTick(_dt + SimMode.Millisecond(1), ii2, SimMode.DFT(101.0), SimMode.DFT(1.0))
     SimMode.update!(s2, tick2, SimMode.UpdateOrdersTick())
-    @test SimMode.isfilled(ai2, o2)
-    @test SimMode.OrderTypes.trades(ai2)[end].price == SimMode.DFT(101.0)
+    @test SimMode.isfilled(ii2, o2)
+    @test SimMode.OrderTypes.trades(ii2)[end].price == SimMode.DFT(101.0)
 
     # non-triggered GTC limit stays queued
-    s3 = _make_tick_strategy([_make_tick_ai("BTC/USDT")])
+    s3 = _make_tick_strategy([_make_tick_ii("BTC/USDT")])
     ai3 = first(s3.universe)
     reset!(s3)
     o3 = _make_sim_order(ai3, OT.LimitOrder{Buy}; price=100.0)
@@ -467,7 +467,7 @@ end
     @test !SimMode.isfilled(ai3, o3)
 
     # non-triggered FOK limit is canceled (queued directly, no creation-time trigger)
-    s4 = _make_tick_strategy([_make_tick_ai("BTC/USDT")])
+    s4 = _make_tick_strategy([_make_tick_ii("BTC/USDT")])
     ai4 = first(s4.universe)
     reset!(s4)
     ofok = _make_sim_order(ai4, OT.FOKOrder{Buy}; price=100.0)
@@ -481,30 +481,30 @@ end
 end
 
 @testset "tick price plumbing (limit/market/slippage)" begin
-    ai = _make_tick_ai("BTC/USDT")
-    s = _make_tick_strategy([ai])
+    ii = _make_tick_ii("BTC/USDT")
+    s = _make_tick_strategy([ii])
     reset!(s)
     o = _limit_buy(p=100.0, a=1.0)
-    tick = SimMode.TradeTick(_dt + SimMode.Millisecond(1), ai, SimMode.DFT(88.0), SimMode.DFT(1.0))
+    tick = SimMode.TradeTick(_dt + SimMode.Millisecond(1), ii, SimMode.DFT(88.0), SimMode.DFT(1.0))
 
     # priceat: tick price for the current tick's asset, openat otherwise
     s.attrs[:sim_current_tick] = tick
-    @test SimMode.priceat(s, OT.MarketOrder{Buy}, ai, _dt) == SimMode.DFT(88.0)
+    @test SimMode.priceat(s, OT.MarketOrder{Buy}, ii, _dt) == SimMode.DFT(88.0)
     delete!(s.attrs, :sim_current_tick)
-    @test SimMode.priceat(s, OT.MarketOrder{Buy}, ai, _dt) == SimMode.DFT(50000.0)  # openat fallback
+    @test SimMode.priceat(s, OT.MarketOrder{Buy}, ii, _dt) == SimMode.DFT(50000.0)  # openat fallback
 
     # with_slippage short-circuits in tick mode
     s.attrs[:sim_tick_mode] = true
     @test SimMode.Executors.with_slippage(
-        s, o, ai; date=_dt, price=SimMode.DFT(88.0), actual_amount=SimMode.DFT(1.0)
+        s, o, ii; date=_dt, price=SimMode.DFT(88.0), actual_amount=SimMode.DFT(1.0)
     ) == SimMode.DFT(88.0)
     delete!(s.attrs, :sim_tick_mode)
 end
 
 @testset "tick backtest e2e (SimMode/backtest.jl)" begin
     TickStrat.reset!()
-    ai_btc = _make_tick_ai("BTC/USDT"; tick_df=_make_ticks(100; price0=100.0))
-    ai_eth = _make_tick_ai("ETH/USDT"; tick_df=_make_ticks(100; price0=200.0))
+    ai_btc = _make_tick_ii("BTC/USDT"; tick_df=_make_ticks(100; price0=100.0))
+    ai_eth = _make_tick_ii("ETH/USDT"; tick_df=_make_ticks(100; price0=200.0))
     s = _make_tick_strategy([ai_btc, ai_eth])
     r = SimMode.TradeTickRange(s)
     @test length(r) == 200
@@ -534,8 +534,8 @@ end
     # asserts on the actual simulation output: a limit order placed during the
     # backtest is filled by the engine's order-simulation as ticks cross it.
     LimitFillStrat.reset!()
-    ai = _make_tick_ai("BTC/USDT"; tick_df=_make_ticks(100; price0=100.0))
-    s = _make_limit_fill_strategy([ai])
+    ii = _make_tick_ii("BTC/USDT"; tick_df=_make_ticks(100; price0=100.0))
+    s = _make_limit_fill_strategy([ii])
     r = SimMode.TradeTickRange(s)
     ctx = SimMode.TickContext(SimMode.Sim(), r)
     SimMode.start!(s, ctx)
@@ -544,7 +544,7 @@ end
     # the order is first eligible on the next tick: tick 2 has price 102 (ticks
     # are price0+i = 100+i → tick 1 = 101, tick 2 = 102), which is <= the 103
     # limit, and the engine fills it there at the tick price.
-    tr = SimMode.OrderTypes.trades(ai)
+    tr = SimMode.OrderTypes.trades(ii)
     @test length(tr) == 1
     @test tr[1].price == SimMode.DFT(102.0)
 end

@@ -67,7 +67,7 @@ function parse_args(args)
         elseif arg == "--skip-examples"
             # Accepted for Makefile compatibility: code-example testing was
             # replaced with manual AI-guided review (see maintenance/
-            # ai-code-block-review-guide.md), so there is nothing to skip.
+            # ii-code-block-review-guide.md), so there is nothing to skip.
             options[:skip_examples] = true
         elseif startswith(arg, "--timeout=")
             # Accepted for Makefile compatibility: the runner has no

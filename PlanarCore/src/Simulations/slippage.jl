@@ -7,7 +7,7 @@ Slippage refers to the difference between the expected price of a trade and the 
 It uses the open-close spread and the high-low spread to compute the slippage.
 
 """
-function slippageat(inst::AssetInstance, date::DateTime; kwargs...)
+function slippageat(inst::InstrumentInstance, date::DateTime; kwargs...)
     idx = dateindex(df, date)
     slippageat(ohlcv(inst), idx; kwargs...)
 end
@@ -21,7 +21,7 @@ Slippage refers to the difference between the expected price of a trade and the 
 It uses the current date's open-close spread and the high-low spread to compute the slippage.
 
 """
-function slippageat(inst::AssetInstance; kwargs...)
+function slippageat(inst::InstrumentInstance; kwargs...)
     data = ohlcv(inst)
 
     date = data.timestamp[end]

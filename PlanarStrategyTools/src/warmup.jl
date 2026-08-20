@@ -23,19 +23,19 @@ function call!(
     # If this strategy instance is itself the temporary warmup simulator,
     # don't trigger nested warmups. Mark as warm and skip.
     if get(attrs, :is_warmup_sim, false)
-        attrs[:warmup] = Dict(ai => true for ai in s.universe)
+        attrs[:warmup] = Dict(ii => true for ii in s.universe)
         attrs[:warmup_candles] = 0
         return nothing
     end
-    attrs[:warmup] = Dict(ai => false for ai in s.universe)
+    attrs[:warmup] = Dict(ii => false for ii in s.universe)
     attrs[:warmup_candles] = max(100, count(s.timeframe, TimeFrame(warmup_period)))
 end
 
 function call!(
-    cb::Function, s::SimStrategy, ai, ats, ::SimWarmup; n_candles=s.warmup_candles
+    cb::Function, s::SimStrategy, ii, ats, ::SimWarmup; n_candles=s.warmup_candles
 )
-    if !s.warmup[ai] && !s.warmup_running
-        _warmup!(cb, s, ai, ats; n_candles)
+    if !s.warmup[ii] && !s.warmup_running
+        _warmup!(cb, s, ii, ats; n_candles)
     end
 end
 
@@ -49,16 +49,16 @@ If warmup has not been previously completed for the given asset instance, it per
 function call!(
     cb::Function,
     s::RTStrategy,
-    ai::AssetInstance,
+    ii::InstrumentInstance,
     ats::DateTime,
     ::SimWarmup;
     n_candles=s.warmup_candles,
 )
     # give up on warmup after `warmup_timeout`
     if now() - s.is_start < s.warmup_timeout
-        if !s[:warmup][ai]
+        if !s[:warmup][ii]
             warmup_lock = @lock s @lget! s.attrs :warmup_lock ReentrantLock()
-            @lock warmup_lock _warmup!(cb, s, ai, ats; n_candles)
+            @lock warmup_lock _warmup!(cb, s, ii, ats; n_candles)
         end
     end
 end
@@ -73,25 +73,25 @@ The function prepares the trading strategy by simulating past data before live e
 function _warmup!(
     callback::Function,
     s::Strategy,
-    ai::AssetInstance,
+    ii::InstrumentInstance,
     ats::DateTime;
     n_candles=s.warmup_candles,
 )
     # wait until ohlcv data is available
     @debug "warmup: checking ohlcv data"
     since = ats - min(call!(s, WarmupPeriod()), (s.timeframe * n_candles).period)
-    for ohlcv in values(ohlcv_dict(ai))
+    for ohlcv in values(ohlcv_dict(ii))
         if dateindex(ohlcv, since) < 1
-            @debug "warmup: no data" ai = raw(ai) ats
+            @debug "warmup: no data" ii = raw(ii) ats
             return nothing
         end
     end
     # Build a dedicated sim strategy and flag it as a warmup simulator
     s_sim = @lget! s.attrs :simstrat strategy(nameof(s), mode=Sim(), sandbox=issandbox(s))
     s_sim[:is_warmup_sim] = true
-    ai_dict = @lget! s.attrs :siminstances Dict(raw(ai) => ai for ai in s_sim.universe)
-    ai_sim = ai_dict[raw(ai)]
-    copyohlcv!(ai_sim, ai)
+    ai_dict = @lget! s.attrs :siminstances Dict(raw(ii) => ii for ii in s_sim.universe)
+    ai_sim = ai_dict[raw(ii)]
+    copyohlcv!(ai_sim, ii)
     uni_df = s_sim.universe.data
     empty!(uni_df)
     push!(uni_df, (exchangeid(ai_sim)(), ai_sim.asset, ai_sim))
@@ -103,8 +103,8 @@ function _warmup!(
     s_sim[:warmup_running] = true
     start!(s_sim, ctx; doreset=false)
     # callback
-    callback(s, ai, s_sim, ai_sim)
-    @debug "warmup: completed" ai = raw(ai)
+    callback(s, ii, s_sim, ai_sim)
+    @debug "warmup: completed" ii = raw(ii)
 end
 
 @doc """
@@ -164,10 +164,10 @@ function _warmup!(
     since = ats - min(call!(s, WarmupPeriod()), (s.timeframe * n_candles).period)
     
     # Check data availability for all assets
-    for ai in s.universe
-        for ohlcv in values(ohlcv_dict(ai))
+    for ii in s.universe
+        for ohlcv in values(ohlcv_dict(ii))
             if dateindex(ohlcv, since) < 1
-                @debug "warmup: no data for asset" ai = raw(ai) ats
+                @debug "warmup: no data for asset" ii = raw(ii) ats
                 return nothing
             end
         end
@@ -178,10 +178,10 @@ function _warmup!(
     s_sim[:is_warmup_sim] = true
     
     # Copy OHLCV data for all assets
-    for ai in s.universe
-        ai_dict = @lget! s.attrs :siminstances Dict(raw(ai) => ai for ai in s_sim.universe)
-        ai_sim = ai_dict[raw(ai)]
-        copyohlcv!(ai_sim, ai)
+    for ii in s.universe
+        ai_dict = @lget! s.attrs :siminstances Dict(raw(ii) => ii for ii in s_sim.universe)
+        ai_sim = ai_dict[raw(ii)]
+        copyohlcv!(ai_sim, ii)
     end
     
     # run sim on full universe
@@ -217,10 +217,10 @@ function _warmup!(
     s_sim[:is_warmup_sim] = true
     
     # Copy OHLCV data for all assets
-    for ai in s.universe
-        ai_dict = @lget! s.attrs :siminstances Dict(raw(ai) => ai for ai in s_sim.universe)
-        ai_sim = ai_dict[raw(ai)]
-        copyohlcv!(ai_sim, ai)
+    for ii in s.universe
+        ai_dict = @lget! s.attrs :siminstances Dict(raw(ii) => ii for ii in s_sim.universe)
+        ai_sim = ai_dict[raw(ii)]
+        copyohlcv!(ai_sim, ii)
     end
     
     # Determine warmup time range - use current strategy context or reasonable default

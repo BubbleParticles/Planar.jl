@@ -5,7 +5,7 @@ using ..Misc: toprecision, DFT
 import ..Executors: with_slippage
 
 @doc "The default slippage for the strategy."
-spreadopt(::Val{:spread}, date, ai) = sml.spreadat(ai, date, Val(:opcl))
+spreadopt(::Val{:spread}, date, ii) = sml.spreadat(ii, date, Val(:opcl))
 @doc "A raw float value (percentage) as slippage."
 spreadopt(n::T, args...) where {T<:Real} = n
 spreadopt(v, args...) = error("`base_slippage` option value not supported ($v)")
@@ -20,8 +20,8 @@ It is used in the context of trading simulations to model the cost of executing 
 
 """
 _base_slippage
-function _base_slippage(s::Strategy, date::DateTime, ai)
-    spreadopt(s.attrs[:sim_base_slippage], date, ai)
+function _base_slippage(s::Strategy, date::DateTime, ii)
+    spreadopt(s.attrs[:sim_base_slippage], date, ii)
 end
 
 @doc """ Returns a skew factor based on the actual amount and volume.
@@ -44,14 +44,14 @@ _volumeskew(actual_amount, volume) =
 
 $(TYPEDSIGNATURES)
 
-This function finds the skewness of price for a particular asset `ai` at a given `date`.
-The skewness is calculated as `1.0 - lowat(ai, date) / highat(ai, date)`.
+This function finds the skewness of price for a particular asset `ii` at a given `date`.
+The skewness is calculated as `1.0 - lowat(ii, date) / highat(ii, date)`.
 The function `lowat` and `highat` are used to get the low and high prices respectively.
 
 """
-_priceskew(ai, date) = begin
-    h = highat(ai, date)
-    l = lowat(ai, date)
+_priceskew(ii, date) = begin
+    h = highat(ii, date)
+    l = lowat(ii, date)
     if h <= DFT(0.0)
         DFT(0.0)
     else
@@ -64,9 +64,9 @@ _addslippage(::AnyLimitOrder{Buy}, price, slp) = price - slp
 @doc "Slippage makes price go up for sell orders."
 _addslippage(::AnyLimitOrder{Sell}, price, slp) = price + slp
 @doc "Buy orders slippage is favorable when the close price is lower than the open price."
-_isfavorable(::AnyLimitOrder{Buy}, ai, date) = closeat(ai, date) < openat(ai, date)
+_isfavorable(::AnyLimitOrder{Buy}, ii, date) = closeat(ii, date) < openat(ii, date)
 @doc "Sell orders slippage is favorable when the close price is higher than the open price."
-_isfavorable(::AnyLimitOrder{Sell}, ai, date) = closeat(ai, date) > openat(ai, date)
+_isfavorable(::AnyLimitOrder{Sell}, ii, date) = closeat(ii, date) > openat(ii, date)
 
 @doc """ Apply slippage to limit orders based on various factors.
 
@@ -79,17 +79,17 @@ The final price is clamped within the high and low prices of the asset for the g
 
 """
 function _with_slippage(
-    s::Strategy{<:Union{Paper,Sim}}, o::AnyLimitOrder, ai, ::Val{:skew}; date, kwargs...
+    s::Strategy{<:Union{Paper,Sim}}, o::AnyLimitOrder, ii, ::Val{:skew}; date, kwargs...
 )
-    bs = _base_slippage(s, o.date, ai)
-    vol = volumeat(ai, date)
+    bs = _base_slippage(s, o.date, ii)
+    vol = volumeat(ii, date)
     vol_skew = _volumeskew(o.amount, vol)
-    slp = if _isfavorable(o, ai, date)
+    slp = if _isfavorable(o, ii, date)
         bs
     else
         bs * vol_skew
     end
-    _doclamp(o, _addslippage(o, clamp(priceat(s, o, ai, date), lowat(ai, date), highat(ai, date)), slp), ai, date)
+    _doclamp(o, _addslippage(o, clamp(priceat(s, o, ii, date), lowat(ii, date), highat(ii, date)), slp), ii, date)
 end
 
 @doc """ Apply slippage to limit orders based on spread.
@@ -102,17 +102,17 @@ within the high and low prices of the asset for the given date.
 
 """
 function _with_slippage(
-    s::Strategy{<:Union{Paper,Sim}}, o::AnyLimitOrder, ai, ::Val{:spread}; date, kwargs...
+    s::Strategy{<:Union{Paper,Sim}}, o::AnyLimitOrder, ii, ::Val{:spread}; date, kwargs...
 )
-    bs = _base_slippage(s, o.date, ai)
-    _doclamp(o, _addslippage(o, priceat(s, o, ai, date), bs), ai, date)
+    bs = _base_slippage(s, o.date, ii)
+    _doclamp(o, _addslippage(o, priceat(s, o, ii, date), bs), ii, date)
 end
 
 @doc "Default slippage for limit orders uses skew."
 function _with_slippage(
-    s::Strategy{<:Union{Paper,Sim}}, o::AnyLimitOrder, ai; date, kwargs...
+    s::Strategy{<:Union{Paper,Sim}}, o::AnyLimitOrder, ii; date, kwargs...
 )
-    _with_slippage(s, o, ai, s.attrs[:sim_base_slippage]; date, kwargs...)
+    _with_slippage(s, o, ii, s.attrs[:sim_base_slippage]; date, kwargs...)
 end
 
 @doc """ Apply slippage to market orders based on average price.
@@ -125,11 +125,11 @@ The final price is then adjusted by the calculated slippage.
 
 """
 function _with_slippage(
-    s::Strategy{<:Union{Paper,Sim}}, o::AnyMarketOrder, ai, ::Val{:avg}; date, kwargs...
+    s::Strategy{<:Union{Paper,Sim}}, o::AnyMarketOrder, ii, ::Val{:avg}; date, kwargs...
 )
-    m = openat(ai, date)
-    diff1 = abs(closeat(ai, date - s.timeframe) - openat(ai, date))
-    diff2 = abs(closeat(ai, date) - openat(ai, date + s.timeframe))
+    m = openat(ii, date)
+    diff1 = abs(closeat(ii, date - s.timeframe) - openat(ii, date))
+    diff2 = abs(closeat(ii, date) - openat(ii, date + s.timeframe))
     slp = (diff1 + diff2) / 2.0
     _addslippage(o, m, slp)
 end
@@ -152,20 +152,20 @@ The final price is clamped within the high and low prices of the asset for the g
 function _with_slippage(
     s::Strategy{<:Union{Paper,Sim}},
     o::AnyMarketOrder,
-    ai,
+    ii,
     ::Val{:skew};
     clamp_price,
     actual_amount,
     date,
 )
-    @deassert o.price == priceat(s, o, ai, date) ||
+    @deassert o.price == priceat(s, o, ii, date) ||
         o isa Union{LiquidationOrder,ReduceOnlyOrder}
-    volume = volumeat(ai, date)
+    volume = volumeat(ii, date)
     volume_skew = _volumeskew(actual_amount, volume)
-    price_skew = _priceskew(ai, date)
+    price_skew = _priceskew(ii, date)
     # neg skew makes the price _increase_ while pos skew makes it decrease
     skew_rate = volume_skew + price_skew
-    bs = _base_slippage(s, o.date, ai)
+    bs = _base_slippage(s, o.date, ii)
     slp = if skew_rate <= DFT(0.0)
         bs
     else
@@ -178,7 +178,7 @@ function _with_slippage(
     # We only go outside candle high/low boundaries if the candle
     # has very little volume, otherwise assume that liquidity is deep enough
     if volume_skew < DFT(1e-3) && !(o isa LiquidationOrder)
-        clamp(slp_price, lowat(ai, date), highat(ai, date))
+        clamp(slp_price, lowat(ii, date), highat(ii, date))
     else
         slp_price
     end
@@ -188,11 +188,11 @@ end
 
 $(TYPEDSIGNATURES)
 
-This function clamps the given `price` within the high and low prices of the asset `ai` for the specified `date`.
+This function clamps the given `price` within the high and low prices of the asset `ii` for the specified `date`.
 
 """
-function _doclamp(::Order{<:LimitOrderType}, price, ai, date)
-    clamp(price, lowat(ai, date), highat(ai, date))
+function _doclamp(::Order{<:LimitOrderType}, price, ii, date)
+    clamp(price, lowat(ii, date), highat(ii, date))
 end
 
 @doc "Market order price is never clamped."
@@ -202,20 +202,20 @@ _doclamp(::Order{<:MarketOrderType}, price, args...) = price
 
 $(TYPEDSIGNATURES)
 
-This function applies slippage to the given `price` based on the order `o`, asset instance `ai`,
+This function applies slippage to the given `price` based on the order `o`, asset instance `ii`,
 and the specified `date` and `actual_amount`. It dispatches to the appropriate slippage function
 based on the order type and the strategy's slippage configuration.
 
 """
-function _do_slippage(s, o, ai; date, price, actual_amount, kwargs...)
+function _do_slippage(s, o, ii; date, price, actual_amount, kwargs...)
     if o isa AnyLimitOrder
-        _with_slippage(s, o, ai; date, kwargs...)
+        _with_slippage(s, o, ii; date, kwargs...)
     else
         slippage_mode = s.attrs[:sim_market_slippage]
         if slippage_mode isa Val
-            _with_slippage(s, o, ai, slippage_mode; clamp_price=price, actual_amount, date)
+            _with_slippage(s, o, ii, slippage_mode; clamp_price=price, actual_amount, date)
         else
-            _with_slippage(s, o, ai; date)
+            _with_slippage(s, o, ii; date)
         end
     end
 end
@@ -224,14 +224,14 @@ end
 
 $(TYPEDSIGNATURES)
 
-This function applies slippage to the given `price` based on the order `o`, asset instance `ai`,
+This function applies slippage to the given `price` based on the order `o`, asset instance `ii`,
 and the specified `date` and `actual_amount`. It is the entry point for applying slippage in
 simulation and paper trading modes.
 
 """
-function Executors.with_slippage(s::Strategy{<:Union{Paper,Sim}}, o, ai; date, price, actual_amount)
+function Executors.with_slippage(s::Strategy{<:Union{Paper,Sim}}, o, ii; date, price, actual_amount)
     # Tick mode (set only by the Sim tick `start!`) fills at the exact tick price:
     # no slippage, ever. Paper mode never sets `:sim_tick_mode`, so it is unaffected.
     get(s.attrs, :sim_tick_mode, false) && return price
-    _do_slippage(s, o, ai; date, price, actual_amount)
+    _do_slippage(s, o, ii; date, price, actual_amount)
 end
