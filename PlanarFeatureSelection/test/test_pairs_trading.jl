@@ -15,7 +15,7 @@ using PlanarFeatureSelection
         n = 100
         spread = cumsum(randn(n))  # Random walk spread
         p1 = cumsum(randn(n))  # Random walk for asset 1
-        p2 = p1 + spread  # Asset 2 is cointegrated with asset 1 plus some spread
+        p2 = p1 + spread  # Instrument 2 is cointegrated with asset 1 plus some spread
         
         # Generate signals
         lookback = 20

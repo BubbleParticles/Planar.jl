@@ -66,7 +66,7 @@ end
 function signals_state!(s)
     sig_defs = s[:signals_def]
     s[:signals] = Dict(
-        ai => begin
+        ii => begin
             NamedTuple(
                 let
                     state = this.type(; this.params...)
@@ -79,23 +79,23 @@ function signals_state!(s)
                     )
                 end for (name, this) in sig_defs.defs
             )
-        end for ai in s.universe
+        end for ii in s.universe
     )
 end
 
 signals_names(s) = keys(s[:signals_def].defs)
 signal_timeframe(s, name) = s[:signals_def].defs[name].tf
-strategy_signal(s, ai, name) = s[:signals][ai][name]
+strategy_signal(s, ii, name) = s[:signals][ii][name]
 @doc "Dispatch on `typeof(sig.state)`"
 signal_value(::Any; sig) = sig.state.value
-signal_value(s, ai, name) = begin
-    sig = strategy_signal(s, ai, name)
+signal_value(s, ii, name) = begin
+    sig = strategy_signal(s, ii, name)
     signal_value(sig.state; sig)
 end
-signal_trend(s, ai, name) = strategy_signal(s, ai, name).trend
-signal_slope(s, ai, name) = strategy_signal(s, ai, name).slope
+signal_trend(s, ii, name) = strategy_signal(s, ii, name).trend
+signal_slope(s, ii, name) = strategy_signal(s, ii, name).slope
 signal_prev(::Any; sig) = sig.prev
-signal_trace(s, ai, name) = strategy_signal(s, ai, name).trace
+signal_trace(s, ii, name) = strategy_signal(s, ii, name).trace
 indicator_scalar(val) = let this = @coalesce val 0.0
     if this isa Number
         this
@@ -145,12 +145,12 @@ Update or initialize mutable data related to asset information.
 
 $(TYPEDSIGNATURES)
 
-This function acquires or creates a data frame for the `ai` asset using the timeframe `tf`, then refreshes its OHLCV data by fetching new entries from the specified time onwards, based on the asset's symbol and exchange details. The update process may involve checking the existing data timestamps to avoid unnecessary data retrieval.
+This function acquires or creates a data frame for the `ii` asset using the timeframe `tf`, then refreshes its OHLCV data by fetching new entries from the specified time onwards, based on the asset's symbol and exchange details. The update process may involve checking the existing data timestamps to avoid unnecessary data retrieval.
 """
-function update_data!(ai, tf)
-    df = @lget!(ai.data, tf, empty_ohlcv(ai, tf))
+function update_data!(ii, tf)
+    df = @lget!(ii.data, tf, empty_ohlcv(ii, tf))
     from = isempty(df) ? now() - Day(1) : nothing
-    update_ohlcv!(df, ai.symbol, ai.exc, tf; from)
+    update_ohlcv!(df, ii.symbol, ii.exc, tf; from)
 end
 
 @doc "Return the inputs for the `fit!` function of the signal."
@@ -163,23 +163,23 @@ Update signal
 
 $(TYPEDSIGNATURES)
 
-Updates the signal `sig_name` for asset `ai` based on new data up to timestamp `ats`.
+Updates the signal `sig_name` for asset `ii` based on new data up to timestamp `ats`.
 Uses a lookback window of `count` timeframes `tf`.
 """
-function update_signal!(ai, ats, ai_signals, sig_name; tf, count)
+function update_signal!(ii, ats, ai_signals, sig_name; tf, count)
     # Ensure count is always an Int
     @assert count isa Int "Signal count must be Int, got $(typeof(count))"
     this = ai_signals[sig_name]
-    data = ohlcv(ai, tf)
+    data = ohlcv(ii, tf)
     this_tf_ats = available(tf, ats)
-    @debug "update_signal!" raw(ai) iscontig = isempty(data) ? nothing : contiguous_ts(data) maxlog =
+    @debug "update_signal!" raw(ii) iscontig = isempty(data) ? nothing : contiguous_ts(data) maxlog =
         1
     if ismissing(this.state.value)
         # Align start date to timeframe boundaries to ensure indexes exist
         start_date = available(tf, ats) - tf * count
         idx_start = dateindex(data, start_date)
         if iszero(idx_start)
-            @warn "can't update stat" ai = raw(ai) sig_name start_date maxlog = 1
+            @warn "can't update stat" ii = raw(ii) sig_name start_date maxlog = 1
             return nothing
         end
         idx_stop = dateindex(data, this_tf_ats)
@@ -202,7 +202,7 @@ function update_signal!(ai, ats, ai_signals, sig_name; tf, count)
         start_date = max(this.date + tf, available(tf, ats) - tf * count)
         idx_start = dateindex(data, start_date)
         if iszero(idx_start)
-            @warn "can't update stat" ai = raw(ai) sig_name start_date maxlog = 1
+            @warn "can't update stat" ii = raw(ii) sig_name start_date maxlog = 1
             return nothing
         end
         idx_stop = dateindex(data, this_tf_ats)
@@ -242,12 +242,12 @@ function signals!(s::Strategy, ::Val{:warmup}; force=false, history=true)
     signals_state!(s)
     # Fill fresh ohlcv data at startup
     if ispaper(s) || islive(s)
-        for ai in s.universe
-            this_asset = asset_tasks(ai).byname
+        for ii in s.universe
+            this_asset = asset_tasks(ii).byname
             prev_task = get(this_asset, :signals, nothing)
             if !istaskrunning(prev_task)
                 this_asset[:signals] = errormonitor(@async foreach(s.signals_def.defs) do def
-                    update_data!(ai, def.tf)
+                    update_data!(ii, def.tf)
                 end)
             end
         end
@@ -266,10 +266,10 @@ Iterates over the universe of assets and for each asset iterates over the config
 function signals!(s::Strategy, ats, ::Val{:update})
     sigs = s[:signals]
     sigdefs = s[:signals_def]
-    foreach(s.universe) do ai
-        ai_signals = sigs[ai]
+    foreach(s.universe) do ii
+        ai_signals = sigs[ii]
         foreach(sigdefs.defs) do (name, def)
-            update_signal!(ai, ats, ai_signals, name; def.tf, def.count)
+            update_signal!(ii, ats, ai_signals, name; def.tf, def.count)
         end
     end
 end

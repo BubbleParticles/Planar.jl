@@ -1,6 +1,6 @@
 function positions_func(exc::Exchange{ExchangeID{:bybit}}, ais; timeout, kwargs...)
     f = first(exc, :fetchPositionsWs, :fetchPositions)
-    list = [raw(ai) for ai in ais]
+    list = [raw(ii) for ii in ais]
     args = length(list) > 1 ? () : (list,)
     _execfunc_timeout(f, args...; timeout, kwargs...)
 end
@@ -8,7 +8,7 @@ end
 function positions_func(exc::Exchange{ExchangeID{:deribit}}, ais; timeout, kwargs...)
     f = first(exc, :fetchPositionsWs, :fetchPositions)
     resp = _execfunc_timeout(f; timeout, kwargs...)
-    syms = Set(raw(ai) for ai in ais)
+    syms = Set(raw(ii) for ii in ais)
     if islist(resp)
         removefrom!(resp) do p
             string(p.get("symbol")) ∈ syms

@@ -93,7 +93,7 @@ end)
 # Create a shared mock exchange
 # Use an exchange name NOT in the ccxt exchange set to skip gateway calls
 const exc = Exchange(:mocktest)
-# Manually seed markets so AssetInstance constructor doesn't crash
+# Manually seed markets so InstrumentInstance constructor doesn't crash
 exc.markets["BTC/USDT"] = Dict{String,Any}(
     "id" => "BTC/USDT", "type" => "spot",
     "base" => "BTC", "quote" => "USDT",
@@ -156,16 +156,16 @@ end
     fees = (taker=0.01, maker=0.01, min=0.01, max=0.01)
     data = SortedDict{TimeFrame,DataFrame}(tf"1m" => DataFrame())
 
-    ai = Instances.AssetInstance(a, data, exc, NoMargin(); limits=limits, precision=precision, fees=fees)
-    @test ai isa Instances.AssetInstance
-    @test ai isa Instances.NoMarginInstance
-    @test Instances.raw(ai) == "BTC/USDT"
-    @test Instances.bc(ai) == :BTC
-    @test Instances.qc(ai) == :USDT
-    @test Instances.exchange(ai) === exc
-    @test Instances.exchangeid(ai) == ExchangeID{:mocktest}
-    @test Instances.asset(ai) === a
-    @test iszero(ai)
+    ii = Instances.InstrumentInstance(a, data, exc, NoMargin(); limits=limits, precision=precision, fees=fees)
+    @test ii isa Instances.InstrumentInstance
+    @test ii isa Instances.NoMarginInstance
+    @test Instances.raw(ii) == "BTC/USDT"
+    @test Instances.bc(ii) == :BTC
+    @test Instances.qc(ii) == :USDT
+    @test Instances.exchange(ii) === exc
+    @test Instances.exchangeid(ii) == ExchangeID{:mocktest}
+    @test Instances.asset(ii) === a
+    @test iszero(ii)
 end
 
 # =============================================================
@@ -176,51 +176,51 @@ end
     precision = (amount=1e-8, price=1e-8)
     fees = (taker=0.01, maker=0.01, min=0.01, max=0.01)
     data = SortedDict{TimeFrame,DataFrame}(tf"1m" => DataFrame())
-    ai = Instances.AssetInstance(a, data, exc, NoMargin(); limits=limits, precision=precision, fees=fees)
-    @test value(Instances.cash(ai)) == 0.0
-    @test value(Instances.committed(ai)) == 0.0
+    ii = Instances.InstrumentInstance(a, data, exc, NoMargin(); limits=limits, precision=precision, fees=fees)
+    @test value(Instances.cash(ii)) == 0.0
+    @test value(Instances.committed(ii)) == 0.0
 
     # add cash
-    ai_cash = Instances.cash(ai)
+    ai_cash = Instances.cash(ii)
     add!(ai_cash, 1.5)
-    @test value(Instances.cash(ai)) == 1.5
-    @test !iszero(ai)
+    @test value(Instances.cash(ii)) == 1.5
+    @test !iszero(ii)
 
     # committed
-    add!(Instances.committed(ai), 0.5)
-    @test value(Instances.committed(ai)) == 0.5
+    add!(Instances.committed(ii), 0.5)
+    @test value(Instances.committed(ii)) == 0.5
 
     # freecash
-    @test Instances.freecash(ai) ≈ 1.0
+    @test Instances.freecash(ii) ≈ 1.0
 
     # cash via add! directly
-    add!(ai, 0.5)
-    @test value(Instances.cash(ai)) == 2.0
+    add!(ii, 0.5)
+    @test value(Instances.cash(ii)) == 2.0
 
     # sub
-    sub!(ai, 0.3)
-    @test value(Instances.cash(ai)) == 1.7
+    sub!(ii, 0.3)
+    @test value(Instances.cash(ii)) == 1.7
 
     # cash!
-    cash!(ai, 10.0)
-    @test value(Instances.cash(ai)) == 10.0
+    cash!(ii, 10.0)
+    @test value(Instances.cash(ii)) == 10.0
 
     # long position
-    @test Instances.posside(ai) == Long()
-    @test Instances.islong(ai)
-    @test !Instances.isshort(ai)
+    @test Instances.posside(ii) == Long()
+    @test Instances.islong(ii)
+    @test !Instances.isshort(ii)
 
     # limits, precision, fees
-    @test Instances.takerfees(ai) == 0.01
-    @test Instances.makerfees(ai) == 0.01
-    @test Instances.maxfees(ai) == 0.01
-    @test Instances.minfees(ai) == 0.01
+    @test Instances.takerfees(ii) == 0.01
+    @test Instances.makerfees(ii) == 0.01
+    @test Instances.maxfees(ii) == 0.01
+    @test Instances.minfees(ii) == 0.01
 
     # reset
-    Instances.reset!(ai)
-    @test iszero(ai)
-    @test value(Instances.cash(ai)) == 0.0
-    @test value(Instances.committed(ai)) == 0.0
+    Instances.reset!(ii)
+    @test iszero(ii)
+    @test value(Instances.cash(ii)) == 0.0
+    @test value(Instances.committed(ii)) == 0.0
 end
 
 # =============================================================
@@ -283,13 +283,13 @@ end
     precision = (amount=1e-8, price=1e-8)
     fees = (taker=0.01, maker=0.01, min=0.01, max=0.01)
     data = SortedDict{TimeFrame,DataFrame}(tf"1m" => DataFrame())
-    ai = Instances.AssetInstance(a, data, exc, NoMargin(); limits=limits, precision=precision, fees=fees)
+    ii = Instances.InstrumentInstance(a, data, exc, NoMargin(); limits=limits, precision=precision, fees=fees)
 
-    add!(Instances.cash(ai), 0.05)
-    @test Instances.isdust(ai, 1000.0) == true
+    add!(Instances.cash(ii), 0.05)
+    @test Instances.isdust(ii, 1000.0) == true
 
-    cash!(Instances.cash(ai), 0.2)
-    @test Instances.isdust(ai, 1000.0) == false
+    cash!(Instances.cash(ii), 0.2)
+    @test Instances.isdust(ii, 1000.0) == false
 end
 
 # =============================================================
@@ -300,19 +300,19 @@ end
     precision = (amount=1e-8, price=1e-8)
     fees = (taker=0.01, maker=0.01, min=0.01, max=0.01)
     data = SortedDict{TimeFrame,DataFrame}(tf"1m" => DataFrame())
-    ai = Instances.AssetInstance(a, data, exc, NoMargin(); limits=limits, precision=precision, fees=fees)
+    ii = Instances.InstrumentInstance(a, data, exc, NoMargin(); limits=limits, precision=precision, fees=fees)
 
-    add!(Instances.cash(ai), 1.5)
+    add!(Instances.cash(ii), 1.5)
     buf = IOBuffer()
-    print(buf, ai)
+    print(buf, ii)
     s = String(take!(buf))
     @test occursin("BTC/USDT", s)
     @test occursin("mocktest", s)
 
-    show(buf, ai)
+    show(buf, ii)
     @test String(take!(buf)) != ""
 
-    show(buf, MIME("text/plain"), ai)
+    show(buf, MIME("text/plain"), ii)
     @test String(take!(buf)) != ""
 end
 
@@ -324,9 +324,9 @@ end
     precision = (amount=1e-8, price=1e-8)
     fees = (taker=0.01, maker=0.01, min=0.01, max=0.01)
     data = SortedDict{TimeFrame,DataFrame}(tf"1m" => DataFrame())
-    ai = Instances.AssetInstance(a, data, exc, NoMargin(); limits=limits, precision=precision, fees=fees)
+    ii = Instances.InstrumentInstance(a, data, exc, NoMargin(); limits=limits, precision=precision, fees=fees)
 
-    df = Instances.default_asset_df(ai)
+    df = Instances.default_asset_df(ii)
     @test df isa DataFrame
 end
 
@@ -556,20 +556,20 @@ end
         "maintAmtNotional" => 0.0, "minNotional" => 0.0))
     Exchanges._TIER_CACHES[tier_key] = ([tier1], time() * 1000)
 
-    ai = Instances.AssetInstance(da, data, exc, Isolated(); limits=limits, precision=precision, fees=fees)
-    @test ai isa Instances.AssetInstance
-    @test ai isa Instances.MarginInstance{Isolated}
-    @test Instances.raw(ai) == "BTC/USDT:USDT"
-    @test Instances.bc(ai) == :BTC
-    @test Instances.qc(ai) == :USDT
-    @test Instances.exchange(ai) === exc
-    @test Instances.exchangeid(ai) == ExchangeID{:mocktest}
-    @test Instances.asset(ai) === da
-    @test Instances.marginmode(ai) == Isolated()
+    ii = Instances.InstrumentInstance(da, data, exc, Isolated(); limits=limits, precision=precision, fees=fees)
+    @test ii isa Instances.InstrumentInstance
+    @test ii isa Instances.MarginInstance{Isolated}
+    @test Instances.raw(ii) == "BTC/USDT:USDT"
+    @test Instances.bc(ii) == :BTC
+    @test Instances.qc(ii) == :USDT
+    @test Instances.exchange(ii) === exc
+    @test Instances.exchangeid(ii) == ExchangeID{:mocktest}
+    @test Instances.asset(ii) === da
+    @test Instances.marginmode(ii) == Isolated()
 
     # Positions should be created with tiers
-    longpos = Instances.position(ai, Long())
-    shortpos = Instances.position(ai, Short())
+    longpos = Instances.position(ii, Long())
+    shortpos = Instances.position(ii, Short())
     @test longpos !== nothing
     @test shortpos !== nothing
     @test Instances.islong(longpos)
@@ -579,16 +579,16 @@ end
     @test Instances.mmr(longpos) == 0.01
 
     # Cash is nothing for margin instances
-    @test Instances.cash(ai) === nothing
-    @test Instances.committed(ai) === nothing
+    @test Instances.cash(ii) === nothing
+    @test Instances.committed(ii) === nothing
 
     # Cross margin
-    ai2 = Instances.AssetInstance(da, data, exc, Cross(); limits=limits, precision=precision, fees=fees)
-    @test ai2 isa Instances.MarginInstance{Cross}
-    @test Instances.marginmode(ai2) == Cross()
+    ii2 = Instances.InstrumentInstance(da, data, exc, Cross(); limits=limits, precision=precision, fees=fees)
+    @test ii2 isa Instances.MarginInstance{Cross}
+    @test Instances.marginmode(ii2) == Cross()
 
     # Float conversion
-    @test float(ai) == 0.0
+    @test float(ii) == 0.0
 end
 
 @testset "MarginInstance cash/reset/print regression" begin
@@ -604,22 +604,22 @@ end
         "maxLeverage" => 10.0, "maintenanceMarginRate" => 0.01,
         "maintAmtNotional" => 0.0, "minNotional" => 0.0))
     Exchanges._TIER_CACHES[tier_key] = ([tier1], time() * 1000)
-    ai = Instances.AssetInstance(da, data, exc, Isolated(); limits=limits, precision=precision, fees=fees)
+    ii = Instances.InstrumentInstance(da, data, exc, Isolated(); limits=limits, precision=precision, fees=fees)
     # guarded getters must not crash on a normal instance
-    @test Instances.cash(ai, Long()) !== nothing
-    @test Instances.cash(ai, Short()) !== nothing
-    @test Instances.committed(ai, Long()) !== nothing
-    @test Instances.committed(ai, Short()) !== nothing
-    @test Instances.iszero(ai) == true
-    @test Instances.freecash(ai, Long()) == 0.0
-    @test Instances.freecash(ai, Short()) == 0.0
-    @test_nowarn Instances.reset!(ai, Short())
-    @test_nowarn sprint(show, ai)
-    # committed(ai) with no active position must not throw (returns nothing),
-    # mirroring cash(ai) which already guards the absent side.
-    ai.lastpos[] = nothing
-    @test Instances.committed(ai) === nothing
-    @test_nowarn sprint(show, ai)
+    @test Instances.cash(ii, Long()) !== nothing
+    @test Instances.cash(ii, Short()) !== nothing
+    @test Instances.committed(ii, Long()) !== nothing
+    @test Instances.committed(ii, Short()) !== nothing
+    @test Instances.iszero(ii) == true
+    @test Instances.freecash(ii, Long()) == 0.0
+    @test Instances.freecash(ii, Short()) == 0.0
+    @test_nowarn Instances.reset!(ii, Short())
+    @test_nowarn sprint(show, ii)
+    # committed(ii) with no active position must not throw (returns nothing),
+    # mirroring cash(ii) which already guards the absent side.
+    ii.lastpos[] = nothing
+    @test Instances.committed(ii) === nothing
+    @test_nowarn sprint(show, ii)
 end
 
 
@@ -634,13 +634,13 @@ end
     fees = (taker=0.01, maker=0.01, min=0.01, max=0.01)
     data = SortedDict{TimeFrame,DataFrame}(tf"1m" => DataFrame())
 
-    ai = Instances.AssetInstance(da, data, exc, Isolated(); limits=limits, precision=precision, fees=fees)
+    ii = Instances.InstrumentInstance(da, data, exc, Isolated(); limits=limits, precision=precision, fees=fees)
 
-    # The macros use the `ai` variable in scope
-    @test (@rprice 100.123) == Instances.toprecision(100.123, ai.precision.price)
-    @test (@rprice 100.125) == Instances.toprecision(100.125, ai.precision.price)
-    @test (@ramount 0.00123) == Instances.toprecision(0.00123, ai.precision.amount)
-    @test (@ramount 0.00125) == Instances.toprecision(0.00125, ai.precision.amount)
+    # The macros use the `ii` variable in scope
+    @test (@rprice 100.123) == Instances.toprecision(100.123, ii.precision.price)
+    @test (@rprice 100.125) == Instances.toprecision(100.125, ii.precision.price)
+    @test (@ramount 0.00123) == Instances.toprecision(0.00123, ii.precision.amount)
+    @test (@ramount 0.00125) == Instances.toprecision(0.00125, ii.precision.amount)
 end
 
 # =============================================================
@@ -655,18 +655,18 @@ end
 end
 
 # =============================================================
-# 20. Base.iszero for AssetInstance
+# 20. Base.iszero for InstrumentInstance
 # =============================================================
-@testset "Base.iszero for AssetInstance" begin
+@testset "Base.iszero for InstrumentInstance" begin
     limits = (leverage=(min=1.0, max=10.0), amount=(min=1e-8, max=1e8),
               price=(min=1e-8, max=1e8), cost=(min=1e-8, max=1e8))
     precision = (amount=1e-8, price=1e-8)
     fees = (taker=0.01, maker=0.01, min=0.01, max=0.01)
     data = SortedDict{TimeFrame,DataFrame}(tf"1m" => DataFrame())
-    ai = Instances.AssetInstance(a, data, exc, NoMargin(); limits=limits, precision=precision, fees=fees)
-    @test iszero(ai)
-    add!(Instances.cash(ai), 0.5)
-    @test !iszero(ai)
+    ii = Instances.InstrumentInstance(a, data, exc, NoMargin(); limits=limits, precision=precision, fees=fees)
+    @test iszero(ii)
+    add!(Instances.cash(ii), 0.5)
+    @test !iszero(ii)
 end
 
 # =============================================================
@@ -739,20 +739,20 @@ end
     precision = (amount=1e-8, price=1e-8)
     fees = (taker=0.01, maker=0.01, min=0.01, max=0.01)
     data = SortedDict{TimeFrame,DataFrame}(tf"1m" => DataFrame())
-    ai = Instances.AssetInstance(da, data, exc, Isolated(); limits=limits, precision=precision, fees=fees)
+    ii = Instances.InstrumentInstance(da, data, exc, Isolated(); limits=limits, precision=precision, fees=fees)
 
     # No position → returns 0
-    longpos = Instances.position(ai, Long())
-    shortpos = Instances.position(ai, Short())
-    @test Instances.nondust(ai, 50000.0, Long()) == 0.0
-    @test Instances.nondust(ai, 50000.0, Short()) == 0.0
+    longpos = Instances.position(ii, Long())
+    shortpos = Instances.position(ii, Short())
+    @test Instances.nondust(ii, 50000.0, Long()) == 0.0
+    @test Instances.nondust(ii, 50000.0, Short()) == 0.0
 
     # Add cash to position and verify nondust
     # cost.min = 10.0, so 0.0001 BTC * 50000 * 1.0 = 5.0 < 10.0 → dust
     Instances.Instruments.add!(Instances.cash(longpos), 0.0001)
-    @test Instances.nondust(ai, 50000.0, Long()) == 0.0
+    @test Instances.nondust(ii, 50000.0, Long()) == 0.0
 
     # 0.001 BTC * 50000 * 1.0 = 50.0 > 10.0 → not dust
     Instances.Instruments.add!(Instances.cash(longpos), 0.001)
-    @test Instances.nondust(ai, 50000.0, Long()) > 0.0
+    @test Instances.nondust(ii, 50000.0, Long()) > 0.0
 end

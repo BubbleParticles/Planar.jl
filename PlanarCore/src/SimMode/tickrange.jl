@@ -12,7 +12,7 @@ A single merged trade: the `timestamp`, the `asset` it belongs to, the `price` a
 """
 struct TradeTick
     timestamp::DateTime
-    asset::AssetInstance
+    asset::InstrumentInstance
     price::DFT
     amount::DFT
 end
@@ -36,20 +36,20 @@ end
 
 function TradeTickRange(s::Strategy)
     out = TradeTick[]
-    for ai in s.universe
-        _check_ticks_ordered!(ai)
-        df = ticks(ai)
+    for ii in s.universe
+        _check_ticks_ordered!(ii)
+        df = ticks(ii)
         if isempty(df)
             throw(
                 ArgumentError(
-                    "asset $(raw(ai)) has no tick data — set it with setticks!(ai, df)",
+                    "asset $(raw(ii)) has no tick data — set it with setticks!(ii, df)",
                 ),
             )
         end
         for row in eachrow(df)
             ts = row.timestamp
             ts isa Integer && (ts = dt(ts))
-            push!(out, TradeTick(ts, ai, row.price, row.amount))
+            push!(out, TradeTick(ts, ii, row.price, row.amount))
         end
     end
     TradeTickRange(out)

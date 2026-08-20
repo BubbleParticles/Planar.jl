@@ -12,13 +12,13 @@ using ..Misc: DFT
 
 $(TYPEDSIGNATURES)
 
-This function creates a limit order in a simulated environment. It takes a strategy `s`, an order type `t`, and an asset `ai` as inputs, along with an `amount` and an optional `skipcommit` flag. If the order is valid, it is queued for execution.
+This function creates a limit order in a simulated environment. It takes a strategy `s`, an order type `t`, and an asset `ii` as inputs, along with an `amount` and an optional `skipcommit` flag. If the order is valid, it is queued for execution.
 """
-function create_sim_limit_order(s, t, ai; amount, skipcommit=false, kwargs...)
+function create_sim_limit_order(s, t, ii; amount, skipcommit=false, kwargs...)
     @debug "create_sim_limit_order: kwargs" kwargs
-    o = limitorder(s, ai, amount; type=t, skipcommit, kwargs...)
+    o = limitorder(s, ii, amount; type=t, skipcommit, kwargs...)
     isnothing(o) && return nothing
-    queue!(s, o, ai; skipcommit) || return nothing
+    queue!(s, o, ii; skipcommit) || return nothing
     @deassert skipcommit || abs(committed(o)) > DFT(0.0)
     return o
 end
@@ -27,12 +27,12 @@ end
 
 $(TYPEDSIGNATURES)
 
-This function returns the price at a particular date for an order. It takes a strategy `s`, an order type, an asset `ai`, and a date as inputs.
+This function returns the price at a particular date for an order. It takes a strategy `s`, an order type, an asset `ii`, and a date as inputs.
 """
-function priceat(s::Strategy{Sim}, ::Type{<:Order}, ai, date)
+function priceat(s::Strategy{Sim}, ::Type{<:Order}, ii, date)
     tick = get(s.attrs, :sim_current_tick, nothing)
-    tick isa TradeTick && tick.asset === ai && return tick.price
-    st.openat(ai, date)
+    tick isa TradeTick && tick.asset === ii && return tick.price
+    st.openat(ii, date)
 end
 priceat(s::Strategy{Sim}, ::T, args...) where {T<:Order} = priceat(s, T, args...)
 function priceat(s::MarginStrategy{Sim}, ::T, args...) where {T<:Order}
@@ -43,10 +43,10 @@ end
 
 $(TYPEDSIGNATURES)
 
-This function checks if a buy limit order `o` is triggered at a given `date` for an asset `ai`. It returns a boolean indicating whether the order is triggered.
+This function checks if a buy limit order `o` is triggered at a given `date` for an asset `ii`. It returns a boolean indicating whether the order is triggered.
 """
-_istriggered(o::AnyLimitOrder{Buy}, date, ai) = begin
-    pbs = _pricebyside(o, date, ai)
+_istriggered(o::AnyLimitOrder{Buy}, date, ii) = begin
+    pbs = _pricebyside(o, date, ii)
     pbs, (pbs <= o.price)
 end
 
@@ -54,40 +54,40 @@ end
 
 $(TYPEDSIGNATURES)
 
-This function checks if a sell limit order `o` is triggered at a given `date` for an asset `ai`. It returns a boolean indicating whether the order is triggered.
+This function checks if a sell limit order `o` is triggered at a given `date` for an asset `ii`. It returns a boolean indicating whether the order is triggered.
 """
-_istriggered(o::AnyLimitOrder{Sell}, date, ai) = begin
-    pbs = _pricebyside(o, date, ai)
+_istriggered(o::AnyLimitOrder{Sell}, date, ii) = begin
+    pbs = _pricebyside(o, date, ii)
     pbs, pbs >= o.price
 end
 
 @doc "Progresses a simulated limit order."
 function order!(
-    s::NoMarginStrategy{Sim}, o::Order{<:LimitOrderType}, date::DateTime, ai; kwargs...
+    s::NoMarginStrategy{Sim}, o::Order{<:LimitOrderType}, date::DateTime, ii; kwargs...
 )
     @deassert abs(committed(o)) > DFT(0.0) o
-    limitorder_ifprice!(s, o, date, ai; kwargs...)
+    limitorder_ifprice!(s, o, date, ii; kwargs...)
 end
 
 @doc "Progresses a simulated limit order for an isolated margin strategy."
 function order!(
-    s::IsolatedStrategy{Sim}, o::Order{<:LimitOrderType}, date::DateTime, ai; kwargs...
+    s::IsolatedStrategy{Sim}, o::Order{<:LimitOrderType}, date::DateTime, ii; kwargs...
 )
     @deassert abs(committed(o)) > DFT(0.0) (pricetime(o), o)
-    t = limitorder_ifprice!(s, o, date, ai; kwargs...)
+    t = limitorder_ifprice!(s, o, date, ii; kwargs...)
     @deassert gtxzero(s.cash_committed, atol=2s.cash_committed.precision) s.cash_committed.value
     t
 end
 
-function limitorder_ifprice!(s::Strategy{Sim}, o::AnyLimitOrder, date, ai; kwargs...)
+function limitorder_ifprice!(s::Strategy{Sim}, o::AnyLimitOrder, date, ii; kwargs...)
     ds = get(s.attrs, :sim_debug_state, nothing)
     !isnothing(ds) && (ds.price_checks[] += 1)
-    pbs, triggered = _istriggered(o, date, ai)
+    pbs, triggered = _istriggered(o, date, ii)
     if triggered
         # Order might trigger on high/low, but execution uses the *close* price.
-        limitorder_ifvol!(s, o, date, ai; kwargs...)
+        limitorder_ifvol!(s, o, date, ii; kwargs...)
     elseif o isa Union{AnyFOKOrder,AnyIOCOrder}
-        if cancel!(s, o, ai; err=NotMatched(o.price, pbs, DFT(0.0), DFT(0.0)))
+        if cancel!(s, o, ii; err=NotMatched(o.price, pbs, DFT(0.0), DFT(0.0)))
             nothing
         end
     else
@@ -138,13 +138,13 @@ end
 
 $(TYPEDSIGNATURES)
 
-This function executes a limit order `o` at a given `date` for an asset `ai` based on the volume of the candle compared to the order amount. It checks if the trade should succeed and performs the trade if conditions are met.
+This function executes a limit order `o` at a given `date` for an asset `ii` based on the volume of the candle compared to the order amount. It checks if the trade should succeed and performs the trade if conditions are met.
 """
-function limitorder_ifvol!(s::Strategy{Sim}, o::AnyLimitOrder, date, ai; kwargs...)
+function limitorder_ifvol!(s::Strategy{Sim}, o::AnyLimitOrder, date, ii; kwargs...)
     ds = get(s.attrs, :sim_debug_state, nothing)
     !isnothing(ds) && (ds.vol_checks[] += 1)
     ans::Union{Nothing,Trade} = nothing
-    cdl_vol = st.volumeat(ai, date)
+    cdl_vol = st.volumeat(ii, date)
     amount = unfilled(o)
     @deassert amount > DFT(0.0)
     if o isa AnyFOKOrder # check for full fill
@@ -153,15 +153,15 @@ function limitorder_ifvol!(s::Strategy{Sim}, o::AnyLimitOrder, date, ai; kwargs.
         triggered, actual_amount = _fill_happened(rng, amount, cdl_vol; max_depth=1)
         if triggered
             @deassert amount == actual_amount
-            ans = trade!(s, o, ai; price=o.price, date, actual_amount, kwargs...)
+            ans = trade!(s, o, ii; price=o.price, date, actual_amount, kwargs...)
         else
             if cancel!(
-                s, o, ai; err=NotMatched(o.price, priceat(s, o, ai, date), amount, cdl_vol)
+                s, o, ii; err=NotMatched(o.price, priceat(s, o, ii, date), amount, cdl_vol)
             )
                 ans = nothing
             end
         end
-        @deassert !isqueued(o, s, ai)
+        @deassert !isqueued(o, s, ii)
     else
         # GTC and IOC can be partially filled so allow for amount reduction (max_depth=4)
         rng = s.attrs[:sim_rng]
@@ -171,20 +171,20 @@ function limitorder_ifvol!(s::Strategy{Sim}, o::AnyLimitOrder, date, ai; kwargs.
         if triggered
             @deassert actual_amount > amount * DFT(0.1)
             ans = if o isa AnyPostOnlyOrder && o.date == date
-                cancel!(s, o, ai; err=OrderCanceled(o))
+                cancel!(s, o, ii; err=OrderCanceled(o))
                 nothing
             else
-                trade!(s, o, ai; price=o.price, date, actual_amount, kwargs...)
+                trade!(s, o, ii; price=o.price, date, actual_amount, kwargs...)
             end
         else
             # Cancel IOC orders if partially filled
             if o isa AnyIOCOrder &&
-                !isfilled(ai, o) &&
-                cancel!(s, o, ai; err=NotFilled(amount, cdl_vol))
+                !isfilled(ii, o) &&
+                cancel!(s, o, ii; err=NotFilled(amount, cdl_vol))
                 ans = nothing
             end
         end
-        @deassert o isa AnyGTCOrder || !isqueued(o, s, ai)
+        @deassert o isa AnyGTCOrder || !isqueued(o, s, ii)
     end
     ans
 end

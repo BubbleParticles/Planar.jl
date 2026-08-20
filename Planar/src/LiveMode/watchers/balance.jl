@@ -119,8 +119,8 @@ end
 @doc """
 Computes used balance for a specific asset by summing unfilled reduce orders.
 """
-function _balance_compute_used_for_asset!(used, s, ai)
-    for o in orders(s, ai)
+function _balance_compute_used_for_asset!(used, s, ii)
+    for o in orders(s, ii)
         if o isa ReduceOrder
             used += unfilled(o)
         end
@@ -138,9 +138,9 @@ function _balance_compute_used(sym_bal, isqc, s, symsdict, sym)
         if isqc
             return _balance_compute_used_for_qc!(used, s)
         else
-            ai = asset_bysym(s, string(sym), symsdict)
-            if !isnothing(ai)
-                return _balance_compute_used_for_asset!(used, s, ai)
+            ii = asset_bysym(s, string(sym), symsdict)
+            if !isnothing(ii)
+                return _balance_compute_used_for_asset!(used, s, ii)
             end
         end
         return used
@@ -171,10 +171,10 @@ function _balance_dispatch_events!(w, s, isqc, bal, sym, symsdict)
         func = () -> _live_sync_strategy_cash!(s; bal)
         sendrequest!(s, bal.date, func)
     elseif s isa NoMarginStrategy
-        ai = asset_bysym(s, sym, symsdict)
-        if !isnothing(ai)
-            func = () -> _live_sync_cash!(s, ai; bal)
-            sendrequest!(ai, bal.date, func)
+        ii = asset_bysym(s, sym, symsdict)
+        if !isnothing(ii)
+            func = () -> _live_sync_cash!(s, ii; bal)
+            sendrequest!(ii, bal.date, func)
         end
     end
     nothing

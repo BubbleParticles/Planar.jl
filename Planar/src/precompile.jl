@@ -7,6 +7,6 @@ using .Lang: @preset, @precomp, @ignore
 #     @precomp let
 #         s = Stubs.stub_strategy()
 #         Engine.SimMode.start!(s)
-#         ai = first(s.universe)
+#         ii = first(s.universe)
 #     end
 # end

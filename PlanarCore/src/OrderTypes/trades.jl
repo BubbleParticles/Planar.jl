@@ -18,7 +18,7 @@ Entry trades: The date when the order was actually opened, during backtesting, i
     where the timeframe depends on the backtesting `Context`. It should match a candle.
 Exit trades: It should match the candle when the buy or sell happened.
 """
-struct Trade{O<:OrderType{S} where {S<:OrderSide}, A<:AbstractAsset, E<:ExchangeID, P<:PositionSide}
+struct Trade{O<:OrderType{S} where {S<:OrderSide}, A<:AbstractInstrument, E<:ExchangeID, P<:PositionSide}
     "The order that spawned this trade."
     order::Order{O,A,E,P}
     "The date at which the trade (usually its last order) was completed."
@@ -96,7 +96,7 @@ const IncreaseTrade{A,E} = Union{BuyTrade{A,E},ShortSellTrade{A,E}}
 @doc "A type representing a reduce trade, which closes or reduces the size of a position"
 const ReduceTrade{A,E} = Union{SellTrade{A,E},ShortBuyTrade{A,E}}
 @doc "A trade type alias with position as parameter"
-const PositionTrade{P} = Trade{O,A,E,P} where {O<:OrderType,A<:AbstractAsset,E<:ExchangeID}
+const PositionTrade{P} = Trade{O,A,E,P} where {O<:OrderType,A<:AbstractInstrument,E<:ExchangeID}
 @doc "A type representing a liquidation trade"
 const LiquidationTrade{S} = Trade{<:LiquidationType{S}}
 @doc "A type representing a long liquidation trade"
@@ -104,14 +104,14 @@ const LongLiquidationTrade{S,A,E} = Trade{<:LiquidationType{S},A,E,Long}
 @doc "A type representing a short liquidation trade"
 const ShortLiquidationTrade{S,A,E} = Trade{<:LiquidationType{S},A,E,Short}
 
-exchangeid(::Trade{<:OrderType,<:AbstractAsset,E}) where {E<:ExchangeID} = E
+exchangeid(::Trade{<:OrderType,<:AbstractInstrument,E}) where {E<:ExchangeID} = E
 function positionside(
-    ::Trade{<:OrderType,<:AbstractAsset,<:ExchangeID,P}
+    ::Trade{<:OrderType,<:AbstractInstrument,<:ExchangeID,P}
 ) where {P<:PositionSide}
     P
 end
 function orderside(
-    ::Trade{<:OrderType{S},<:AbstractAsset,<:ExchangeID,<:PositionSide}
+    ::Trade{<:OrderType{S},<:AbstractInstrument,<:ExchangeID,<:PositionSide}
 ) where {S<:OrderSide}
     S
 end

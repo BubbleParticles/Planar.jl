@@ -2,8 +2,8 @@ function _sync_comm_cash!(s)
     comm = 0.0
     buys = s.buyorders
     sells = s.sellorders
-    for ai in s.universe
-        this_buys = get(buys, ai, missing)
+    for ii in s.universe
+        this_buys = get(buys, ii, missing)
         if !ismissing(this_buys)
             for o in this_buys
                 if o isa IncreaseOrder
@@ -11,7 +11,7 @@ function _sync_comm_cash!(s)
                 end
             end
         end
-        this_sells = get(sells, ai, missing)
+        this_sells = get(sells, ii, missing)
         if !ismissing(this_sells)
             for o in this_sells
                 if o isa IncreaseOrder
@@ -92,17 +92,17 @@ function _live_sync_universe_cash!(s::NoMarginStrategy{Live}; force=false, waitf
         return nothing
     end
     loop_kwargs = filterkws(:fallback_kwargs; kwargs)
-    all_synced = Set(ai for ai in universe(s))
+    all_synced = Set(ii for ii in universe(s))
     events = get_events(s)
-    for ai in s.universe
-        push!(all_synced, ai)
-        ai_bal = @get bal ai BalanceSnapshot(ai)
+    for ii in s.universe
+        push!(all_synced, ii)
+        ai_bal = @get bal ii BalanceSnapshot(ii)
         function func()
-            live_sync_cash!(s, ai; bal=ai_bal, loop_kwargs...)
+            live_sync_cash!(s, ii; bal=ai_bal, loop_kwargs...)
             # might not be present, don't use pop!
-            delete!(all_synced, ai)
+            delete!(all_synced, ii)
         end
-        sendrequest!(ai, bal.date, func; events)
+        sendrequest!(ii, bal.date, func; events)
     end
     waitforcond(() -> isempty(all_synced), @timeout_now())
     @debug "sync universe cash(nm): synced"
@@ -120,31 +120,31 @@ If no balance information is found for the asset, its cash and committed cash va
 """
 function _live_sync_cash!(
     s::NoMarginStrategy{Live},
-    ai;
+    ii;
     since=nothing,
     waitfor=Second(5),
     force=false,
     drift=Millisecond(5),
-    bal=live_balance(s, ai; since, waitfor, force),
+    bal=live_balance(s, ii; since, waitfor, force),
     overwrite=false,
     kwargs...,
 )
-    @inlock ai if bal isa BalanceSnapshot
+    @inlock ii if bal isa BalanceSnapshot
         @assert isnothing(since) || bal.date >= since - drift
-        if overwrite || bal.date != DateTime(0) || !isfinite(cash(ai))
+        if overwrite || bal.date != DateTime(0) || !isfinite(cash(ii))
             if isfinite(bal.free)
-                cash!(ai, bal.free)
+                cash!(ii, bal.free)
             else
-                @warn "asset cash: non finite" ai = raw(ai) bal
+                @warn "asset cash: non finite" ii = raw(ii) bal
             end
             # FIXME: used cash can't be assummed to only account for open orders.
             # It might consider (cross) margin as well (same problem as positions)
-            # cash!(committed(ai), this_bal.used)
+            # cash!(committed(ii), this_bal.used)
         end
     else
-        @debug "Resetting asset cash (not found)" _module = LogUniSync ai = raw(ai)
-        cash!(ai, 0.0)
-        cash!(committed(ai), 0.0)
+        @debug "Resetting asset cash (not found)" _module = LogUniSync ii = raw(ii)
+        cash!(ii, 0.0)
+        cash!(committed(ii), 0.0)
     end
-    event!(ai, ot.BalanceUpdated(ai, :asset_balance_updated, s, bal))
+    event!(ii, ot.BalanceUpdated(ii, :asset_balance_updated, s, bal))
 end

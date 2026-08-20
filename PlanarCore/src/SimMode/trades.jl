@@ -33,10 +33,10 @@ $(TYPEDSIGNATURES)
 This function checks if the free cash in the asset plus the committed amount is greater than or equal to the actual amount of the sell order.
 
 """
-function iscashenough(_::Strategy, ai, actual_amount, o::SellOrder)
-    @deassert cash(ai, Long()) |> gtxzero
+function iscashenough(_::Strategy, ii, actual_amount, o::SellOrder)
+    @deassert cash(ii, Long()) |> gtxzero
     @deassert committed(o) |> gtxzero
-    inst.freecash(ai, Long()) + committed(o) >= actual_amount
+    inst.freecash(ii, Long()) + committed(o) >= actual_amount
 end
 
 @doc """ Checks if there is sufficient cash for a long buy order.
@@ -46,10 +46,10 @@ $(TYPEDSIGNATURES)
 This function verifies if the free cash in the strategy, combined with the committed amount, is sufficient to cover the size of the buy trade when multiplied by the leverage.
 
 """
-function iscashenough(s::IsolatedStrategy, ai, size, o::BuyOrder)
+function iscashenough(s::IsolatedStrategy, ii, size, o::BuyOrder)
     @deassert s.cash.value |> gtxzero
     @deassert committed(o) |> gtxzero
-    (st.freecash(s) + committed(o)) * leverage(ai, Long()) >= size
+    (st.freecash(s) + committed(o)) * leverage(ii, Long()) >= size
 end
 
 @doc """ Checks if there is sufficient QC for a short sell trade.
@@ -61,10 +61,10 @@ This function checks if there is enough QC (Quote Currency) to cover the short s
 It does this by verifying if the free cash in the strategy, combined with the committed amount, is sufficient to cover the size of the short sell trade when multiplied by the leverage.
 
 """
-function iscashenough(s::IsolatedStrategy, ai, size, o::ShortSellOrder)
+function iscashenough(s::IsolatedStrategy, ii, size, o::ShortSellOrder)
     @deassert s.cash.value |> gtxzero
     @deassert committed(o) |> gtxzero
-    (st.freecash(s) + committed(o)) * leverage(ai, Short()) >= size
+    (st.freecash(s) + committed(o)) * leverage(ii, Short()) >= size
 end
 
 @doc """ A short buy reduces the required capital by the leverage. But we shouldn't buy back more than what we have shorted.
@@ -72,11 +72,11 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function iscashenough(s::IsolatedStrategy, ai, actual_amount, o::ShortBuyOrder)
-    @deassert cash(ai, Short()) |> ltxzero
+function iscashenough(s::IsolatedStrategy, ii, actual_amount, o::ShortBuyOrder)
+    @deassert cash(ii, Short()) |> ltxzero
     @deassert committed(o) |> ltxzero
-    @deassert inst.freecash(ai, Short()) |> ltxzero
-    abs(inst.freecash(ai, Short())) + abs(committed(o)) >= actual_amount
+    @deassert inst.freecash(ii, Short()) |> ltxzero
+    abs(inst.freecash(ii, Short())) + abs(committed(o)) >= actual_amount
 end
 
 @doc """ Constructs a Trade object with the given parameters.
@@ -100,8 +100,8 @@ macro maketrade()
             fees=fees_quote,
             fees_base,
             size,
-            lev=leverage(ai, o),
-            entryprice=price(ai, actual_price, o),
+            lev=leverage(ii, o),
+            entryprice=price(ii, actual_price, o),
         )
     end
     esc(expr)
@@ -121,7 +121,7 @@ The entry price is the price of the asset instance after the trade.
 function maketrade(
     s::Strategy{<:Union{Sim,Paper}},
     o::IncreaseOrder,
-    ai;
+    ii;
     date,
     actual_price,
     actual_amount,
@@ -129,7 +129,7 @@ function maketrade(
 )
     net_cost = cost(actual_price, actual_amount)
     size = withfees(net_cost, fees, o)
-    iscashenough(s, ai, size, o) || return nothing
+    iscashenough(s, ii, size, o) || return nothing
     @deassert size > DFT(0.0) && net_cost > DFT(0.0)
     fees_quote = size - net_cost
     fees_base = DFT(0.0)
@@ -149,14 +149,14 @@ Otherwise, it calculates the fees and creates a trade using the `@maketrade` mac
 function maketrade(
     s::Strategy{<:Union{Sim,Paper}},
     o::ReduceOrder,
-    ai;
+    ii;
     date,
     actual_price,
     actual_amount,
     fees,
 )
     @deassert actual_amount >= DFT(0.0)
-    iscashenough(s, ai, actual_amount, o) || return nothing
+    iscashenough(s, ii, actual_amount, o) || return nothing
     net_cost = cost(actual_price, actual_amount)
     size = withfees(net_cost, fees, o)
     @deassert size > DFT(0.0) && net_cost > DFT(0.0)
@@ -167,7 +167,7 @@ function maketrade(
 end
 
 @doc """ Fees override for simulation mode (taker).  """
-simfeestaker(s::Strategy, ai) = @coalesce get(s, :sim_fees_taker, missing) maxfees(ai)
+simfeestaker(s::Strategy, ii) = @coalesce get(s, :sim_fees_taker, missing) maxfees(ii)
 
 @doc """ Fees override for simulation mode (maker).  """
-simfeesmaker(s::Strategy, ai) = @coalesce get(s, :sim_fees_maker, missing) minfees(ai)
+simfeesmaker(s::Strategy, ii) = @coalesce get(s, :sim_fees_maker, missing) minfees(ii)

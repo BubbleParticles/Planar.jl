@@ -29,18 +29,18 @@ end
 
 $(TYPEDSIGNATURES)
 
-This function triggers the update of data for a specific asset instance `ai` in a real-time strategy `s`. The update is performed for the specified columns `cols` and uses the provided timeframe `timeframe`.
+This function triggers the update of data for a specific asset instance `ii` in a real-time strategy `s`. The update is performed for the specified columns `cols` and uses the provided timeframe `timeframe`.
 
 """
 function call!(
     f::Function,
     s::RTStrategy,
-    ai::AssetInstance,
+    ii::InstrumentInstance,
     ::UpdateData;
     cols::Tuple{Vararg{Symbol}},
     timeframe=s.timeframe,
 )
-    update!(f, s, ai, cols...; tf=timeframe)
+    update!(f, s, ii, cols...; tf=timeframe)
 end
 
 @doc """ Initializes the data for a real-time strategy.

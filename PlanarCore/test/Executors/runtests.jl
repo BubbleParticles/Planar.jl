@@ -34,9 +34,9 @@ const _mock_limits = (leverage=(min=1.0, max=10.0), amount=(min=1e-8, max=1e8),
 const _mock_precision = (amount=1e-8, price=1e-8)
 const _mock_fees = (taker=0.01, maker=0.01, min=0.01, max=0.01)
 
-function _make_ai()
+function _make_ii()
     data = SortedDict{TimeFrame,DataFrame}(tf"1m" => DataFrame())
-    Inst.AssetInstance(a, data, exc, NoMargin();
+    Inst.InstrumentInstance(a, data, exc, NoMargin();
         limits=_mock_limits, precision=_mock_precision, fees=_mock_fees)
 end
 
@@ -221,64 +221,64 @@ end
         end
     end
 
-    @testset "Checks with AssetInstance" begin
-        ai = _make_ai()
+    @testset "Checks with InstrumentInstance" begin
+        ii = _make_ii()
 
         @testset "ismincost" begin
-            @test Executors.Checks.ismincost(ai, 100.0, 1.0)
-            @test !Executors.Checks.ismincost(ai, 100.0, 1e-12)
+            @test Executors.Checks.ismincost(ii, 100.0, 1.0)
+            @test !Executors.Checks.ismincost(ii, 100.0, 1e-12)
         end
 
         @testset "ismaxcost" begin
-            @test Executors.Checks.ismaxcost(ai, 1.0, 1.0)
-            @test !Executors.Checks.ismaxcost(ai, 1e9, 1e9)
+            @test Executors.Checks.ismaxcost(ii, 1.0, 1.0)
+            @test !Executors.Checks.ismaxcost(ii, 1e9, 1e9)
         end
 
         @testset "checkcost" begin
-            @test Executors.Checks.checkcost(ai, 1.0, 100.0)
+            @test Executors.Checks.checkcost(ii, 1.0, 100.0)
         end
 
         @testset "checkcost keyword" begin
-            @test Executors.Checks.checkcost(ai; amount=1.0, price=100.0)
+            @test Executors.Checks.checkcost(ii; amount=1.0, price=100.0)
         end
 
         @testset "iscost" begin
-            @test Executors.Checks.iscost(ai, 1.0, 100.0)
-            @test !Executors.Checks.iscost(ai, 1e-12, 1e-12)
+            @test Executors.Checks.iscost(ii, 1.0, 100.0)
+            @test !Executors.Checks.iscost(ii, 1e-12, 1e-12)
         end
 
         @testset "iscost keyword" begin
-            @test Executors.Checks.iscost(ai; amount=1.0, price=100.0)
-            @test !Executors.Checks.iscost(ai; amount=1e-12, price=1e-12)
+            @test Executors.Checks.iscost(ii; amount=1.0, price=100.0)
+            @test !Executors.Checks.iscost(ii; amount=1e-12, price=1e-12)
         end
 
         @testset "sanitize_amount" begin
-            @test Executors.Checks.sanitize_amount(ai, 5.0) ≈ 5.0
-            @test Executors.Checks.sanitize_amount(ai, 0.0) ≈ 1e-8
+            @test Executors.Checks.sanitize_amount(ii, 5.0) ≈ 5.0
+            @test Executors.Checks.sanitize_amount(ii, 0.0) ≈ 1e-8
         end
 
         @testset "sanitize_price" begin
-            @test Executors.Checks.sanitize_price(ai, 50000.0) ≈ 50000.0
+            @test Executors.Checks.sanitize_price(ii, 50000.0) ≈ 50000.0
         end
     end
 
     @testset "committment for NoMarginInstance" begin
-        ai = _make_ai()
+        ii = _make_ii()
 
         @testset "IncreaseOrder" begin
-            comm = Executors.committment(Executors.OrderTypes.IncreaseOrder, ai, 100.0, 2.0)
+            comm = Executors.committment(Executors.OrderTypes.IncreaseOrder, ii, 100.0, 2.0)
             expected_cost = Executors.Checks.cost(100.0, 2.0)
             expected_fees = expected_cost * 0.01
             @test comm ≈ expected_cost + expected_fees
         end
 
         @testset "SellOrder" begin
-            comm = Executors.committment(Executors.OrderTypes.SellOrder, ai, 100.0, 2.0)
+            comm = Executors.committment(Executors.OrderTypes.SellOrder, ii, 100.0, 2.0)
             @test comm ≈ 2.0
         end
 
         @testset "ShortBuyOrder" begin
-            comm = Executors.committment(Executors.OrderTypes.ShortBuyOrder, ai, 100.0, 2.0)
+            comm = Executors.committment(Executors.OrderTypes.ShortBuyOrder, ii, 100.0, 2.0)
             @test comm ≈ -2.0
         end
     end

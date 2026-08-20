@@ -120,14 +120,14 @@ const LIQUIDATION_BUFFER =
 const LIQUIDATION_FEES =
     parse(DFT, get(ENV, "PLANAR_LIQUIDATION_FEES", "0.02")) |> abs
 
-_pricebypos(ai, date, ::Long) = lowat(ai, date)
-_pricebypos(ai, date, ::Short) = highat(ai, date)
+_pricebypos(ii, date, ::Long) = lowat(ii, date)
+_pricebypos(ii, date, ::Short) = highat(ii, date)
 _buffered(price, ::Long) = muladd(price, LIQUIDATION_BUFFER, price)
 _buffered(price, ::Short) = muladd(price, abs(LIQUIDATION_BUFFER), price)
 _checkbuffered(buffered, price, ::Long) = buffered <= price
 _checkbuffered(buffered, price, ::Short) = buffered >= price
-_iscrossed(ai, price, ::Long) = price <= Instances.liqprice(ai, Long())
-_iscrossed(ai, price, ::Short) = price >= Instances.liqprice(ai, Short())
+_iscrossed(ii, price, ::Long) = price <= Instances.liqprice(ii, Long())
+_iscrossed(ii, price, ::Short) = price >= Instances.liqprice(ii, Short())
 
 @doc """ Checks if a position is liquidatable at a given date
 
@@ -137,12 +137,12 @@ This function determines whether a position in a margin strategy is eligible for
 
 """
 function isliquidatable(
-    ::Strategy{Sim}, ai::MarginInstance, p::PositionSide, date::DateTime
+    ::Strategy{Sim}, ii::MarginInstance, p::PositionSide, date::DateTime
 )
-    let price = _pricebypos(ai, date, p)
+    let price = _pricebypos(ii, date, p)
         buffered = _buffered(price, p)
         @deassert _checkbuffered(buffered, price, p)
-        return _iscrossed(ai, buffered, p)
+        return _iscrossed(ii, buffered, p)
     end
 end
 
@@ -154,8 +154,8 @@ This function checks whether a position in a Paper or Live strategy should be li
 
 """
 function isliquidatable(
-    ::Strategy{<:Union{Paper,Live}}, ai::MarginInstance, p::PositionSide, date::DateTime
+    ::Strategy{<:Union{Paper,Live}}, ii::MarginInstance, p::PositionSide, date::DateTime
 )
-    price = lastprice(ai) # pytofloat(ticker!(ai.asset.raw, ai.exchange)["last"])
-    _iscrossed(ai, price, p)
+    price = lastprice(ii) # pytofloat(ticker!(ii.asset.raw, ii.exchange)["last"])
+    _iscrossed(ii, price, p)
 end

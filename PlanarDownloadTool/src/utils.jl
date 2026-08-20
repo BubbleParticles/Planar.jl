@@ -218,7 +218,7 @@ The `fromassets` function takes in a list of assets and extracts the symbols and
 It returns a dictionary with the symbols and quote currency.
 
 """
-function fromassets(aa::AbstractVector{<:AbstractAsset})
+function fromassets(aa::AbstractVector{<:AbstractInstrument})
     syms = string.(bc.(aa))
     quote_currency = let qsyms = qc.(aa)
         @assert length(Set(qsyms)) == 1 "All assets should have the same quote currency"
@@ -256,7 +256,7 @@ macro fromassets(fname)
     mod = __module__
     this = @__MODULE__
     ex = quote
-        function $mod.func(aa::AbstractVector{<:AbstractAsset}; kwargs...)
+        function $mod.func(aa::AbstractVector{<:AbstractInstrument}; kwargs...)
             _, kwargs = $this.splitkws(:quote_currency; kwargs)
             syms, quote_currency = $this.fromassets(aa)
             $mod.func(syms; quote_currency, kwargs...)

@@ -19,17 +19,17 @@ _derivative_error(s) = "Failed to parse derivative symbols for $s."
 
 $(FIELDS)
 """
-struct Derivative8 <: AbstractAsset
-    asset::Asset
+struct Derivative8 <: AbstractInstrument
+    asset::Instrument
     sc::SettlementCurrency
     id::SubString
     strike::Float64
     kind::DerivativeKind
-    function Derivative8(a::A, args...; kwargs...) where {A<:Asset}
+    function Derivative8(a::A, args...; kwargs...) where {A<:Instrument}
         new(a, args...; kwargs...)
     end
     function Derivative8(s::AbstractString, m)
-        asset = Asset(SubString(s, 1, length(s)), m[1], m[2])
+        asset = Instrument(SubString(s, 1, length(s)), m[1], m[2])
         @assert !isnothing(m[3]) _derivative_error(s)
         S = Symbol(m[3])
         id = isnothing(m[4]) ? SubString("") : m[4]
@@ -45,7 +45,7 @@ Derivative = Derivative8
 $(TYPEDSIGNATURES)
 """
 function perpetual(raw::AbstractString, bc::AbstractString, qc::AbstractString)
-    Derivative(Asset(SubString(raw), bc, qc), Symbol(qc), SubString(""), 0.0, Unkn)
+    Derivative(Instrument(SubString(raw), bc, qc), Symbol(qc), SubString(""), 0.0, Unkn)
 end
 
 function Base.parse(::Type{Derivative}, s::AbstractString)
@@ -53,22 +53,22 @@ function Base.parse(::Type{Derivative}, s::AbstractString)
     isnothing(m) && throw(ArgumentError(_derivative_error(s)))
     Derivative(s, m.captures)
 end
-function Base.parse(::Type{AbstractAsset}, s::AbstractString)
+function Base.parse(::Type{AbstractInstrument}, s::AbstractString)
     m = match(FULL_SYMBOL_GROUPS_REGEX, SubString(s))
     if isnothing(m) || isnothing(m.captures)
-        return parse(Asset, s)
+        return parse(Instrument, s)
     end
     if length(m) > 2 && !isempty(m[3])
         isnothing(m[3]) && throw(ArgumentError(_derivative_error(s)))
         Derivative(s, m.captures)
     else
-        Asset(SubString(s), m[1], m[2])
+        Instrument(SubString(s), m[1], m[2])
     end
 end
 
 import Base.getproperty
 function getproperty(d::Derivative, s::Symbol)
-    hasfield(Asset, s) && return getproperty(getfield(d, :asset), s)
+    hasfield(Instrument, s) && return getproperty(getfield(d, :asset), s)
     getfield(d, s)
 end
 
@@ -98,7 +98,7 @@ is_inverse(d::Derivative) = is_settled(d) ? d.bc == d.sc : false
 ```julia
 > drv = d"BTC/USDT:USDT"
 > typeof(drv)
-# Instruments.Derivatives.Derivative{Asset{:BTC, :USDT}}
+# Instruments.Derivatives.Derivative{Instrument{:BTC, :USDT}}
 ```
 """
 macro d_str(s)

@@ -63,8 +63,8 @@ $(TYPEDSIGNATURES)
 Checks if the last timestamp `ts` is within the time frame `tf` for the simulation strategy `s`.
 """
 islastts(::SimStrategy, _, ats, tf) = (true, ats)
-function islastts(_, ai, ats, tf)
-    ts = ohlcv(ai).timestamp
+function islastts(_, ii, ats, tf)
+    ts = ohlcv(ii).timestamp
     if lastindex(ts) > 0
         last_date = ts[end]
         (last_date + period(tf) >= ats, last_date)

@@ -19,7 +19,7 @@ end
 function call!(
     ::Function,
     s::Strategy{Sim},
-    ai,
+    ii,
     ::UpdateData;
     timeframe=s.timeframe,
     cols::Tuple{Vararg{Symbol}},
@@ -35,8 +35,8 @@ This function initializes data for each asset in the strategy by retrieving the 
 
 """
 function _init_data(f, s, cols...; timeframe)
-    for ai in s.universe
-        ohlcv = @lget! ohlcv_dict(ai) timeframe empty_ohlcv()
+    for ii in s.universe
+        ohlcv = @lget! ohlcv_dict(ii) timeframe empty_ohlcv()
         if !isempty(ohlcv)
             new_data = f(ohlcv, firstdate(ohlcv))
             setcols!(ohlcv, new_data, cols)

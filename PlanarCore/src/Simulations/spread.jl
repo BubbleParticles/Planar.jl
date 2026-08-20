@@ -249,7 +249,7 @@ function spreadat(v::Val{:edge2}, df::AbstractDataFrame, idx; kwargs...)
     spread(v, df.high[idx], df.low[idx], df.high[prev_idx], df.low[prev_idx]; kwargs...)
 end
 
-function spreadat(inst::AssetInstance, idx, v::Val=Val(:opcl); kwargs...)
+function spreadat(inst::InstrumentInstance, idx, v::Val=Val(:opcl); kwargs...)
     @deassert ohlcv(inst).volume[idx] > 0
     spreadat(v, ohlcv(inst), idx; kwargs...)
 end
@@ -263,7 +263,7 @@ The open-close spread is a measure of the price gap between two trading sessions
 The function uses the value of the open and close prices at the given date.
 
 """
-function spreadat(inst::AssetInstance, date::DateTime, v::Val=Val(:opcl); kwargs...)
+function spreadat(inst::InstrumentInstance, date::DateTime, v::Val=Val(:opcl); kwargs...)
     df = ohlcv(inst)
     idx = dateindex(df, date)
     spreadat(v, df, idx; kwargs...)
@@ -278,7 +278,7 @@ The open-close spread is a measure of the price gap between two trading sessions
 This function uses the current date's open and close prices to compute the spread.
 
 """
-function spreadat(inst::AssetInstance, v::Val=Val(:opcl); kwargs...)
+function spreadat(inst::InstrumentInstance, v::Val=Val(:opcl); kwargs...)
     df = ohlcv(inst)
     date = df.timestamp[end]
     idx = dateindex(df, date)
@@ -301,6 +301,6 @@ function isfakeoc(df::AbstractDataFrame)
     end
     true
 end
-isfakeoc(ai::AssetInstance) = isfakeoc(ohlcv(ai))
+isfakeoc(ii::InstrumentInstance) = isfakeoc(ohlcv(ii))
 
 export spread, spreadat, isfakeoc

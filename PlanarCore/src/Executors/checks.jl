@@ -50,8 +50,8 @@ $(TYPEDSIGNATURES)
 
 The price of a trade for long positions should never be below the liquidation price.
 """
-function checkprice(_::IsolatedStrategy, ai, actual_price, o::LongOrder)
-    @assert actual_price > liqprice(ai, Long()) (o, actual_price, liqprice(ai, Long()))
+function checkprice(_::IsolatedStrategy, ii, actual_price, o::LongOrder)
+    @assert actual_price > liqprice(ii, Long()) (o, actual_price, liqprice(ii, Long()))
 end
 
 @doc """ Check the price for short positions
@@ -60,8 +60,8 @@ $(TYPEDSIGNATURES)
 
 The price of a trade for short positions should never be above the liquidation price.
 """
-function checkprice(_::IsolatedStrategy, ai, actual_price, o::ShortOrder)
-    @assert actual_price < liqprice(ai, Short()) (o, actual_price, liqprice(ai, Short()))
+function checkprice(_::IsolatedStrategy, ii, actual_price, o::ShortOrder)
+    @assert actual_price < liqprice(ii, Short()) (o, actual_price, liqprice(ii, Short()))
 end
 
 @doc """ Check the amount of a trade
@@ -78,20 +78,20 @@ $(TYPEDSIGNATURES)
 
 Price and amount value of an order are adjusted by subtraction. Their output values will always be lower than their input, except for the case in which their values would fall below the exchange minimums. In such case the exchange minimum is returned.
 """
-function sanitize_amount(ai::AssetInstance, amount::N) where {N<:Real}
-    if ai.limits.amount.min > 0.0 && amount < ai.limits.amount.min
+function sanitize_amount(ii::InstrumentInstance, amount::N) where {N<:Real}
+    if ii.limits.amount.min > 0.0 && amount < ii.limits.amount.min
         if amount < zero(amount)
-            @warn "orders: amounts should never be negative (default to min amount)" ai ai.limits.amount.min maxlog = 1 @caller 20
+            @warn "orders: amounts should never be negative (default to min amount)" ii ii.limits.amount.min maxlog = 1 @caller 20
         end
-        ai.limits.amount.min
-    elseif ai.precision.amount < 0.0 # has to be a multiple of 10
-        max(toprecision(Int(amount), 10.0), ai.limits.amount.min)
+        ii.limits.amount.min
+    elseif ii.precision.amount < 0.0 # has to be a multiple of 10
+        max(toprecision(Int(amount), 10.0), ii.limits.amount.min)
     else
-        toprecision(amount, ai.precision.amount)
+        toprecision(amount, ii.precision.amount)
     end
 end
 
-sanitize_amount(ai, amount) = sanitize_amount(ai, value(amount))
+sanitize_amount(ii, amount) = sanitize_amount(ii, value(amount))
 
 @doc """ Adjust the price value of an order
 
@@ -99,12 +99,12 @@ $(TYPEDSIGNATURES)
 
 See `sanitize_amount`.
 """
-function sanitize_price(ai::AssetInstance, price)
-    @debug "sanitize_price input" ai=ai price=price
-    out = if ai.limits.price.min > 0.0 && price < ai.limits.price.min
-        ai.limits.price.min
+function sanitize_price(ii::InstrumentInstance, price)
+    @debug "sanitize_price input" ii=ii price=price
+    out = if ii.limits.price.min > 0.0 && price < ii.limits.price.min
+        ii.limits.price.min
     else
-        max(toprecision(price, ai.precision.price), ai.limits.price.min)
+        max(toprecision(price, ii.precision.price), ii.limits.price.min)
     end
     @debug "sanitize_price result" result=out
     out
@@ -119,10 +119,10 @@ Check if the cost of an order is above the minimum limit
 
 $(TYPEDSIGNATURES)
 
-This function checks if the cost of an order is above the minimum limit for the exchange. It takes an AssetInstance, a price, and an amount as arguments and returns a boolean indicating whether the cost is above the minimum limit.
+This function checks if the cost of an order is above the minimum limit for the exchange. It takes an InstrumentInstance, a price, and an amount as arguments and returns a boolean indicating whether the cost is above the minimum limit.
 """
-function ismincost(ai::AssetInstance, price, amount)
-    let min = ai.limits.cost.min
+function ismincost(ii::InstrumentInstance, price, amount)
+    let min = ii.limits.cost.min
         iszero(min) || begin
             cost = price * amount
             cost >= min
@@ -136,9 +136,9 @@ $(TYPEDSIGNATURES)
 
 The cost of the order should not be below the minimum for the exchange.
 """
-function checkmincost(ai::AssetInstance, price, amount)
-    @assert ismincost(ai, price, amount) _cost_msg(
-        ai.asset, "below", ai.limits.cost.min, price * amount
+function checkmincost(ii::InstrumentInstance, price, amount)
+    @assert ismincost(ii, price, amount) _cost_msg(
+        ii.asset, "below", ii.limits.cost.min, price * amount
     )
     return true
 end
@@ -149,8 +149,8 @@ $(TYPEDSIGNATURES)
 
 This function checks if the cost of the order is below the maximum for the exchange.
 """
-function ismaxcost(ai::AssetInstance, price, amount)
-    let max = ai.limits.cost.max
+function ismaxcost(ii::InstrumentInstance, price, amount)
+    let max = ii.limits.cost.max
         iszero(max) || begin
             cost = price * amount
             cost < max
@@ -164,22 +164,22 @@ $(TYPEDSIGNATURES)
 
 The cost of the order should not be above the maximum for the exchange.
 """
-function checkmaxcost(ai::AssetInstance, price, amount)
-    @assert ismaxcost(ai, price, amount) _cost_msg(
-        ai.asset, "above", ai.limits.cost.max, price * amount
+function checkmaxcost(ii::InstrumentInstance, price, amount)
+    @assert ismaxcost(ii, price, amount) _cost_msg(
+        ii.asset, "above", ii.limits.cost.max, price * amount
     )
     return true
 end
 
-function _checkcost(fmin, fmax, ai::AssetInstance, amount, prices...)
+function _checkcost(fmin, fmax, ii::InstrumentInstance, amount, prices...)
     ok = false
     for p in Iterators.reverse(prices)
-        isnothing(p) || (fmax(ai, amount, p) && (ok = true; break))
+        isnothing(p) || (fmax(ii, amount, p) && (ok = true; break))
     end
     ok || return false
     ok = false
     for p in prices
-        isnothing(p) || (fmin(ai, amount, p) && (ok = true; break))
+        isnothing(p) || (fmin(ii, amount, p) && (ok = true; break))
     end
     ok
 end
@@ -190,18 +190,18 @@ $(TYPEDSIGNATURES)
 
 Checks that the last price given is below maximum, and the first is above minimum. In other words, it expects all given prices to be already sorted.
 """
-function checkcost(ai::AssetInstance, amount, prices...)
-    _checkcost(checkmincost, checkmaxcost, ai, amount, prices...)
+function checkcost(ii::InstrumentInstance, amount, prices...)
+    _checkcost(checkmincost, checkmaxcost, ii, amount, prices...)
 end
 
-function checkcost(ai::AssetInstance; amount, price)
-    checkmaxcost(ai, amount, price)
-    checkmincost(ai, amount, price)
+function checkcost(ii::InstrumentInstance; amount, price)
+    checkmaxcost(ii, amount, price)
+    checkmincost(ii, amount, price)
 end
 
-function iscost(ai::AssetInstance, amount, prices...)
+function iscost(ii::InstrumentInstance, amount, prices...)
     @ifdebug check_monotonic(prices...)
-    _checkcost(ismincost, ismaxcost, ai, amount, prices...)
+    _checkcost(ismincost, ismaxcost, ii, amount, prices...)
 end
 
 @doc """
@@ -209,10 +209,10 @@ Check if the cost of an order is within the limits
 
 $(TYPEDSIGNATURES)
 
-This function checks if the cost of an order is within the maximum and minimum limits. It takes an AssetInstance, an amount, and a price as arguments and returns a boolean indicating whether the cost is within the limits.
+This function checks if the cost of an order is within the maximum and minimum limits. It takes an InstrumentInstance, an amount, and a price as arguments and returns a boolean indicating whether the cost is within the limits.
 """
-function iscost(ai::AssetInstance; amount, price)
-    ismaxcost(ai, amount, price) && ismincost(ai, amount, price)
+function iscost(ii::InstrumentInstance; amount, price)
+    ismaxcost(ii, amount, price) && ismincost(ii, amount, price)
 end
 
 ismonotonic(prices...) = isstrictlysorted(Iterators.filter(!isnothing, prices)...)

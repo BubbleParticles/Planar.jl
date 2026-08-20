@@ -30,14 +30,14 @@ appsum(x, y, atol=1e-15) = orzero(x + y, atol)
 
 $(SIGNATURES)
 
-It calculates a start and a stop date based on the dates of the first and last trades in the `AssetInstance` history and the specified timeframe.
-It then extracts the OHLCV data for the `AssetInstance` within this date range, and resamples this data to the specified timeframe.
+It calculates a start and a stop date based on the dates of the first and last trades in the `InstrumentInstance` history and the specified timeframe.
+It then extracts the OHLCV data for the `InstrumentInstance` within this date range, and resamples this data to the specified timeframe.
 The resultant resampled DataFrame is returned.
 """
-aroundtrades(ai, tf) = begin
-    start_date = first(ai.history).order.date - tf
-    stop_date = last(ai.history).date + tf
-    df = ohlcv(ai)[DateRange(start_date, stop_date)]
+aroundtrades(ii, tf) = begin
+    start_date = first(ii.history).order.date - tf
+    stop_date = last(ii.history).date + tf
+    df = ohlcv(ii)[DateRange(start_date, stop_date)]
     df = resample(df, tf)
 end
 
@@ -47,19 +47,19 @@ _cum_value_balance(::NoMarginInstance, df) = df.cum_base .* df.close
 
 $(TYPEDSIGNATURES)
 
-This function takes a `MarginInstance` `ai` and a DataFrame `df` as parameters. 
+This function takes a `MarginInstance` `ii` and a DataFrame `df` as parameters. 
 It defines a helper function `cvb` that calculates the value of an order based on various parameters, 
 and updates some variables (`last_lev`, `last_ep`, `last_side`) with the details of the last non-missing order.
 
-The function then applies `cvb` to each order in `df`, along with the corresponding `ai`, `entryprice`, `cum_base`, `leverage`, and `close` values from `df`.
+The function then applies `cvb` to each order in `df`, along with the corresponding `ii`, `entryprice`, `cum_base`, `leverage`, and `close` values from `df`.
 The earned amounts for each order are returned as a vector.
 """
-function _cum_value_balance(ai::MarginInstance, df)
+function _cum_value_balance(ii::MarginInstance, df)
     last_lev = one(DFT)
     last_ep = zero(DFT)
     last_side = Long
-    def_fees = maxfees(ai)
-    function cvb(o, ai, entryprice, cum_amount, leverage, close_price)
+    def_fees = maxfees(ii)
+    function cvb(o, ii, entryprice, cum_amount, leverage, close_price)
         this_val = abs(cum_amount * close_price)
         this_fees = ismissing(o) ? 0.0 : @something fees(o) def_fees
         if !ismissing(o)
@@ -69,7 +69,7 @@ function _cum_value_balance(ai::MarginInstance, df)
         end
         _earned(last_side, last_ep, cum_amount, last_lev, close_price, this_val, this_fees)
     end
-    cvb.(df.order, ai, df.entryprice, df.cum_base, df.leverage, df.close)
+    cvb.(df.order, ii, df.entryprice, df.cum_base, df.leverage, df.close)
 end
 
 @doc """Replays the trade history of a single asset instance.
@@ -87,11 +87,11 @@ $(TYPEDSIGNATURES)
     this single asset.
 """
 function trades_balance(
-    ai::AssetInstance; tf=tf"1d", return_all=true, df=aroundtrades(ai, tf), initial_cash=0.0
+    ii::InstrumentInstance; tf=tf"1d", return_all=true, df=aroundtrades(ii, tf), initial_cash=0.0
 )
-    isempty(ai.history) && return nothing
+    isempty(ii.history) && return nothing
     trades = resample_trades(
-        ai,
+        ii,
         tf;
         style=:minimal,
         custom=(:order => last, :entryprice => last, :leverage => last),
@@ -111,11 +111,11 @@ function trades_balance(
         renamecols=false,
     )
     if return_all
-        df[!, :cum_value_balance] = _cum_value_balance(ai, df)
+        df[!, :cum_value_balance] = _cum_value_balance(ii, df)
         df[!, :cum_total] = df.cum_quote + df.cum_value_balance
         df
     else
-        df.cum_quote .+ _cum_value_balance(ai, df)
+        df.cum_quote .+ _cum_value_balance(ii, df)
     end
 end
 
@@ -126,22 +126,22 @@ end
 
 $(SIGNATURES)
 
-This function takes a `NoMarginInstance` `ai`, a `cum_amount`, and a `timestamp` as parameters, along with any number of additional arguments.
+This function takes a `NoMarginInstance` `ii`, a `cum_amount`, and a `timestamp` as parameters, along with any number of additional arguments.
 It calculates the value of the position as the product of the cumulative amount and the closing price at the given timestamp, and returns this value.
 Note: For a `NoMarginInstance`, leverage is not considered, hence the value is directly dependent on the cumulative amount and the closing price.
 """
-_valueat(ai::NoMarginInstance, cum_amount, timestamp, args...) =
-    cum_amount * closeat(ai, timestamp)
+_valueat(ii::NoMarginInstance, cum_amount, timestamp, args...) =
+    cum_amount * closeat(ii, timestamp)
 @doc """ Calculates the value of a position at a given timestamp.
 
 $(SIGNATURES)
 
-This function takes a `MarginInstance` `ai`, a `cum_amount`, a `timestamp`, a `leverage`, an `entryprice`, and a position `pos` as parameters.
+This function takes a `MarginInstance` `ii`, a `cum_amount`, a `timestamp`, a `leverage`, an `entryprice`, and a position `pos` as parameters.
 It first calculates the closing price at the given timestamp, the value of the position based on the cumulative amount and the closing price, and the fees based on this value.
 It then returns the earned amount based on these values, using the `_earned` function.
 """
 function _valueat(
-    ai::MarginInstance,
+    ii::MarginInstance,
     cum_amount,
     timestamp,
     leverage,
@@ -150,7 +150,7 @@ function _valueat(
     fees,
     fees_base=0.0,
 )
-    close = closeat(ai, timestamp)
+    close = closeat(ii, timestamp)
     this_value = cum_amount * close
 
     _earned(pos, entryprice, cum_amount, leverage, close, this_value, fees, fees_base)
@@ -194,22 +194,22 @@ function trades_balance(
     # We need to accumulate base balances for each asset
     let elt = eltype(df.quote_balance),
         assets = Dict(
-            ai => (;
+            ii => (;
                 cum_value_balance=Ref(zero(elt)),
                 cum_base=Ref(zero(elt)),
                 lev=Ref(one(elt)),
                 ep=Ref(zero(elt)),
                 pos=Ref{PositionSide}(Long()),
                 fees=Ref(zero(elt)),
-            ) for ai in s.universe
+            ) for ii in s.universe
         )
 
         @inbounds @eachrow! df begin
             @newcol :cum_value_balance::typeof(df.quote_balance)
-            let ai = :instance
+            let ii = :instance
                 # only update values if there are trades for this timestamp
-                ismissing(ai) || begin
-                    let state = assets[ai]
+                ismissing(ii) || begin
+                    let state = assets[ii]
                         # we only accumulate the *amounts* of the assets
                         state.cum_base[] += :base_balance
                         # Keep track of the last trade for the asset such
@@ -221,11 +221,11 @@ function trades_balance(
                     end
                 end
                 # while the actual cash value is updated in place for all assets
-                for ai in keys(assets)
-                    firstdate(ai) <= :timestamp <= lastdate(ai) && let
-                        state = assets[ai]
+                for ii in keys(assets)
+                    firstdate(ii) <= :timestamp <= lastdate(ii) && let
+                        state = assets[ii]
                         state.cum_value_balance[] = _valueat(
-                            ai,
+                            ii,
                             state.cum_base[],
                             :timestamp,
                             state.lev[],
@@ -239,11 +239,11 @@ function trades_balance(
                 # The sum of all assets value will be correct only on the last
                 # trade for a particular timestamp.
                 let value_dict = Dict(
-                        ai => state.cum_value_balance[] for (ai, state) in assets
+                        ii => state.cum_value_balance[] for (ii, state) in assets
                     )
                     :cum_value_balance = sum(values(value_dict))
                     if ^(byasset)
-                        @newcol :byasset::Vector{Dict{AssetInstance,elt}}
+                        @newcol :byasset::Vector{Dict{InstrumentInstance,elt}}
                         :byasset = copy(value_dict)
                     end
                 end

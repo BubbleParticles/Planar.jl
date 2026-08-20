@@ -182,7 +182,7 @@ function bare_load(mod::Module, t::Type, config::Config)
     syms = invokelatest(call_func, t, StrategyMarkets())
     exc = Exchanges.getexchange!(config.exchange; sandbox=true, config.account)
     TF = invokelatest(getfield, mod, :TF)
-    uni = AssetCollection(syms; load_data=false, timeframe=TF, exc, config.margin)
+    uni = InstrumentCollection(syms; load_data=false, timeframe=TF, exc, config.margin)
     s = Strategy(mod, config.mode, config.margin, TF, exc, uni; config)
     _strat_load_checks(s, config)
 end
@@ -471,8 +471,8 @@ This function checks for the presence of inverse contracts in a given exchange.
 If any inverse contracts are found, it asserts an error.
 """
 function _no_inv_contracts(exc::Exchange, uni)
-    for ai in uni
-        sym = raw(ai)
+    for ii in uni
+        sym = raw(ii)
         @assert something(get(exc.markets[sym], "linear", true), true) "Inverse contracts are not supported by SimMode. $(sym)"
     end
 end

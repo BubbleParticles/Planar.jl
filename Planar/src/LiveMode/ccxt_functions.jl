@@ -32,10 +32,10 @@ function _ordertrades(resp, exc, isid=(x) -> !isempty(x))
     end
 end
 
-function _cancel_all_orders(ai, orders_f, cancel_f)
-    sym = raw(ai)
-    eid = exchangeid(ai)
-    all_orders = _execfunc(orders_f, ai)
+function _cancel_all_orders(ii, orders_f, cancel_f)
+    sym = raw(ii)
+    eid = exchangeid(ii)
+    all_orders = _execfunc(orders_f, ii)
     removefrom!(all_orders) do o
         string(resp_order_status(o, eid)) != "open"
     end
@@ -45,9 +45,9 @@ function _cancel_all_orders(ai, orders_f, cancel_f)
     end
 end
 
-function _cancel_all_orders_single(ai, orders_f, cancel_f)
+function _cancel_all_orders_single(ii, orders_f, cancel_f)
     _cancel_all_orders(
-        ai, orders_f, ((ids; symbol) -> begin
+        ii, orders_f, ((ids; symbol) -> begin
             @sync for id in ids
                 @async try
                     _execfunc(cancel_f, id; symbol)
@@ -60,9 +60,9 @@ function _cancel_all_orders_single(ai, orders_f, cancel_f)
     )
 end
 
-function _cancel_orders(ai, side, ids, orders_f, cancel_f)
-    sym = raw(ai)
-    eid = exchangeid(ai)
+function _cancel_orders(ii, side, ids, orders_f, cancel_f)
+    sym = raw(ii)
+    eid = exchangeid(ii)
     all_orders = let
         kwargs = if isnothing(side)
             (;)
@@ -72,7 +72,7 @@ function _cancel_orders(ai, side, ids, orders_f, cancel_f)
         if isempty(ids) && !(ids isa Tuple)
             ids = ()
         end
-        _execfunc(orders_f, ai; kwargs..., ids)
+        _execfunc(orders_f, ii; kwargs..., ids)
     end
     if isemptish(all_orders)
         return
@@ -99,7 +99,7 @@ function _cancel_orders(ai, side, ids, orders_f, cancel_f)
     end
 end
 
-_syms(ais) = [raw(ai) for ai in ais]
+_syms(ais) = [raw(ii) for ii in ais]
 
 function _filter_positions(out, eid::EIDType, side=Hedged(); default_side_func=Returns(nothing))
     if out isa Exception || (@something side Hedged()) isa Hedged
@@ -112,10 +112,10 @@ function _filter_positions(out, eid::EIDType, side=Hedged(); default_side_func=R
     end
 end
 
-function _fetch_orders(ai, this_func; eid, side=BuyOrSell, ids=(), pred_funcs=(), kwargs...)
-    resp = _execfunc(this_func, ai)
+function _fetch_orders(ii, this_func; eid, side=BuyOrSell, ids=(), pred_funcs=(), kwargs...)
+    resp = _execfunc(this_func, ii)
     if resp isa Exception
-        @error "ccxt fetch orders" raw(ai) resp @caller
+        @error "ccxt fetch orders" raw(ii) resp @caller
         return nothing
     end
     notside = let sides = if side === BuyOrSell
@@ -144,7 +144,7 @@ function _fetch_orders(ai, this_func; eid, side=BuyOrSell, ids=(), pred_funcs=()
     removefrom!(filter_func, resp)
 end
 
-function _tryfetchall(a, func, ai, args...; kwargs...)
+function _tryfetchall(a, func, ii, args...; kwargs...)
     disable_all = @lget! a :live_disable_all Dict{Symbol,Bool}()
     func_name = nameof(func)
     if !get(disable_all, func_name, false)
@@ -155,9 +155,9 @@ function _tryfetchall(a, func, ai, args...; kwargs...)
         end
         if islist(resp_all)
             ans = [resp_all...]
-            if ai isa AssetInstance
-                this_sym = raw(ai)
-                eid = exchangeid(ai)
+            if ii isa InstrumentInstance
+                this_sym = raw(ii)
+                eid = exchangeid(ii)
                 removefrom!(ans) do o
                     string(resp_order_symbol(o, eid)) != this_sym
                 end
@@ -171,7 +171,7 @@ function _tryfetchall(a, func, ai, args...; kwargs...)
             disable_all[func_name] = true
         end
     end
-    func(ai, args...; kwargs...)
+    func(ii, args...; kwargs...)
 end
 
 issupported(exc, syms::Vararg{Symbol}) = begin
@@ -188,41 +188,41 @@ function ccxt_orders_func!(a, exc)
     fetch_multi_func = first(exc, :fetchOrdersWs, :fetchOrders)
     fetch_single_func = first(exc, :fetchOrderWs, :fetchOrder)
     eid = typeof(exchangeid(exc))
-    function orders_multi_fallback(ai; kwargs...)
+    function orders_multi_fallback(ii; kwargs...)
         out = []
         @sync begin
             @async try
-                v = a[:live_open_orders_func](ai; kwargs...)
+                v = a[:live_open_orders_func](ii; kwargs...)
                 if islist(v)
                     append!(out, v)
                 end
             catch e
                 e isa InterruptException && rethrow(e)
-                @error "orders multi fallback: open orders failed" ai exception = (e, catch_backtrace())
+                @error "orders multi fallback: open orders failed" ii exception = (e, catch_backtrace())
             end
             @async try
-                v = a[:live_closed_orders_func](ai; kwargs...)
+                v = a[:live_closed_orders_func](ii; kwargs...)
                 if islist(v)
                     append!(out, v)
                 end
             catch e
                 e isa InterruptException && rethrow(e)
-                @error "orders multi fallback: closed orders failed" ai exception = (e, catch_backtrace())
+                @error "orders multi fallback: closed orders failed" ii exception = (e, catch_backtrace())
             end
         end
-        out_unique = unique!(o -> resp_order_id(o, exchangeid(ai)), out)
-        _fetch_orders(ai, Returns(out_unique); eid=exchangeid(ai), kwargs...)
+        out_unique = unique!(o -> resp_order_id(o, exchangeid(ii)), out)
+        _fetch_orders(ii, Returns(out_unique); eid=exchangeid(ii), kwargs...)
     end
     a[:live_orders_func] = if !isnothing(fetch_multi_func)
-        fetch_orders_multi(ai, args...; kwargs...) = begin
-            sym = ai isa AssetInstance ? raw(ai) : nothing
+        fetch_orders_multi(ii, args...; kwargs...) = begin
+            sym = ii isa InstrumentInstance ? raw(ii) : nothing
             _execfunc(fetch_multi_func, sym, args...; kwargs...)
         end
-        orders_multi_fetcher(ai, args...; kwargs...) = _tryfetchall(a, fetch_orders_multi, ai, args...; kwargs...)
-        ccxt_orders_multi(ai; kwargs...) = begin
-            resp = _fetch_orders(ai, orders_multi_fetcher; eid, kwargs...)
+        orders_multi_fetcher(ii, args...; kwargs...) = _tryfetchall(a, fetch_orders_multi, ii, args...; kwargs...)
+        ccxt_orders_multi(ii; kwargs...) = begin
+            resp = _fetch_orders(ii, orders_multi_fetcher; eid, kwargs...)
             if isemptish(resp) && has_fallback
-                orders_multi_fallback(ai; kwargs...)
+                orders_multi_fallback(ii; kwargs...)
             else
                 resp
             end
@@ -231,9 +231,9 @@ function ccxt_orders_func!(a, exc)
         orders_multi_fallback
     elseif !isnothing(fetch_single_func)
         @warn "ccxt funcs: fetch orders func single fallback (requires `ids` as kwarg)"
-        function ccxt_orders_single(ai; ids, side=BuyOrSell, kwargs...)
+        function ccxt_orders_single(ii; ids, side=BuyOrSell, kwargs...)
             out = []
-            sym = raw(ai)
+            sym = raw(ii)
             @sync for id in ids
                 @async try
                     let resp = _execfunc(fetch_single_func, id, sym; kwargs...)
@@ -268,9 +268,9 @@ function positions_func(exc::Exchange, ais, args...; timeout, kwargs...)
     _execfunc_timeout(f, _syms(ais), args...; timeout, kwargs...)
 end
 
-function position_func(exc::Exchange, ai, args...; timeout, kwargs...)
+function position_func(exc::Exchange, ii, args...; timeout, kwargs...)
     f = first(exc, :fetchPositionWs, :fetchPosition)
-    _execfunc_timeout(f, raw(ai), args...; timeout, kwargs...)
+    _execfunc_timeout(f, raw(ii), args...; timeout, kwargs...)
 end
 
 function watch_positions_handler(exc::Exchange, ais, args...; f_push, kwargs...)
@@ -290,9 +290,9 @@ end
 
 function _matching_asset(resp, eid, ais)
     sym = resp_position_symbol(resp, eid, String)
-    for ai in ais
-        if sym == raw(ai)
-            return ai
+    for ii in ais
+        if sym == raw(ii)
+            return ii
         end
     end
     return nothing
@@ -325,7 +325,7 @@ function ccxt_positions_func!(a, exc)
 
     a[:live_positions_func] = if has(exc, :fetchPositions)
         function ccxt_positions_multi(ais; side=Hedged(), timeout=base_timeout[], kwargs...)
-            syms = ((raw(ai) for ai in ais)..., side)
+            syms = ((raw(ii) for ii in ais)..., side)
             @get cache syms @lock l @lget! cache syms if isempty(ais)
                 nothing
             else
@@ -341,17 +341,17 @@ function ccxt_positions_func!(a, exc)
         end
     else
         function ccxt_positions_single(ais; side=Hedged(), timeout=base_timeout[], kwargs...)
-            syms = ((raw(ai) for ai in ais)..., side)
+            syms = ((raw(ii) for ii in ais)..., side)
             @get cache syms @lock l @lget! cache syms @sync begin
                 out = []
                 timeout += base_timeout[]
-                for ai in ais
+                for ii in ais
                     @async try
                         sleep(pre_timeout[])
-                        p = position_func(exc, ai; timeout, kwargs...)
+                        p = position_func(exc, ii; timeout, kwargs...)
                         p = handle_list_resp(eid, p, timeout, pre_timeout, base_timeout)
                         if !isnothing(p)
-                            last_side = _last_posside(ai)
+                            last_side = _last_posside(ii)
                             default_side_func(_) = last_side
                             p_side = posside_fromccxt(p, eid; default_side_func)
                             if isside(p_side, side)
@@ -360,7 +360,7 @@ function ccxt_positions_func!(a, exc)
                         end
                     catch e
                         e isa InterruptException && rethrow(e)
-                        @error "ccxt positions single: fetch failed" ai = raw(ai) exception = (e, catch_backtrace())
+                        @error "ccxt positions single: fetch failed" ii = raw(ii) exception = (e, catch_backtrace())
                     end
                 end
                 out
@@ -384,11 +384,11 @@ function ccxt_cancel_orders_func!(a, exc)
     orders_f = a[:live_orders_func]
     cancel_multi_f = first(exc, :cancelOrdersWs, :cancelOrders)
     a[:live_cancel_func] = if !isnothing(cancel_multi_f)
-        ccxt_cancel_multi(ai; side=nothing, ids=()) = _cancel_orders(ai, side, ids, orders_f, cancel_multi_f)
+        ccxt_cancel_multi(ii; side=nothing, ids=()) = _cancel_orders(ii, side, ids, orders_f, cancel_multi_f)
     else
         cancel_single_f = first(exc, :cancelOrderWs, :cancelOrder)
         if !isnothing(cancel_single_f)
-            ccxt_cancel_single(ai; side=nothing, ids=()) = _cancel_orders(ai, side, ids, orders_f, cancel_loop_func(exc, cancel_single_f))
+            ccxt_cancel_single(ii; side=nothing, ids=()) = _cancel_orders(ii, side, ids, orders_f, cancel_loop_func(exc, cancel_single_f))
         else
             error("$(nameof(exc)) doesn't support any cancel order function.")
         end
@@ -398,13 +398,13 @@ end
 function ccxt_cancel_all_orders_func!(a, exc)
     cancel_all_f = first(exc, :cancelAllOrdersWs, :cancelAllOrders)
     a[:live_cancel_all_func] = if !isnothing(cancel_all_f)
-        ccxt_cancel_all_multi(ai) = _execfunc(cancel_all_f, raw(ai))
+        ccxt_cancel_all_multi(ii) = _execfunc(cancel_all_f, raw(ii))
     else
         orders_func = get(a, :live_orders_func, nothing)
         @assert !isnothing(orders_func) "$(nameof(exc)) doesn't support fetchOrders."
         cancel_func = get(a, :live_cancel_func, nothing)
         @assert !isnothing(orders_func) "$(nameof(exc)) doesn't support cancelAllOrders."
-        ccxt_cancel_all_single(ai) = cancel_func(ai)
+        ccxt_cancel_all_single(ii) = cancel_func(ii)
     end
 end
 
@@ -422,20 +422,20 @@ function ccxt_oc_orders_func!(a, exc; open=true)
     orders_func = first(exc, names.ws, names.fetch)
     eid = typeof(exchangeid(exc))
     a[names.key] = if !isnothing(orders_func)
-        ccxt_all_orders_func(ai, args...; kwargs...) = begin
-            sym = ai isa AssetInstance ? raw(ai) : nothing
+        ccxt_all_orders_func(ii, args...; kwargs...) = begin
+            sym = ii isa InstrumentInstance ? raw(ii) : nothing
             _execfunc(orders_func, sym, args...; kwargs...)
         end
-        ccxt_oc_func(ai, args...; kwargs...) = _tryfetchall(a, ccxt_all_orders_func, ai, args...; kwargs...)
+        ccxt_oc_func(ii, args...; kwargs...) = _tryfetchall(a, ccxt_all_orders_func, ii, args...; kwargs...)
         if open
             this_func = ccxt_open_orders_func(args...; kwargs...) = ccxt_oc_func(args...; kwargs...)
             isopen_func(o) = !_ccxtisopen(o, eid)
-            ccxt_open_orders(ai, args...; kwargs...) = _fetch_orders(ai, this_func;
+            ccxt_open_orders(ii, args...; kwargs...) = _fetch_orders(ii, this_func;
                 eid, pred_funcs=(isopen_func,), kwargs...)
         else
             this_func = ccxt_closed_orders_func(args...; kwargs...) = ccxt_oc_func(args...; kwargs...)
             isclosed_func(o) = _ccxtisopen(o, eid)
-            ccxt_closed_orders(ai, args...; kwargs...) = _fetch_orders(ai, this_func;
+            ccxt_closed_orders(ii, args...; kwargs...) = _fetch_orders(ii, this_func;
                 eid, pred_funcs=(isclosed_func,), kwargs...)
         end
     else
@@ -443,9 +443,9 @@ function ccxt_oc_orders_func!(a, exc; open=true)
         @assert !isnothing(orders_func) "`live_orders_func` must be set before `live_$(names.oc)_orders_func`"
         pred_func(o) = string(resp_order_status(o, eid)) == "open"
         status_pred_func = open ? pred_func : !pred_func
-        this_func_fallback(ai; ids=(), kwargs...) = begin
+        this_func_fallback(ii; ids=(), kwargs...) = begin
             out = []
-            all_orders = orders_func(ai; ids, kwargs...)
+            all_orders = orders_func(ii; ids, kwargs...)
             for o in all_orders
                 if status_pred_func(o)
                     push!(out, o)
@@ -464,39 +464,39 @@ end
 function ccxt_my_trades_func!(a, exc)
     mytrades_func = first(exc, :fetchMyTradesWs, :fetchMyTrades)
     a[:live_my_trades_func] = if !isnothing(mytrades_func)
-        function mytrades_wrapped(ai; since=nothing, params=nothing)
-             _execfunc(mytrades_func, raw(ai); _skipkwargs(; since, params)...)
+        function mytrades_wrapped(ii; since=nothing, params=nothing)
+             _execfunc(mytrades_func, raw(ii); _skipkwargs(; since, params)...)
         end
-        function ccxt_my_trades(ai; since=nothing, params=nothing)
-            _tryfetchall(a, mytrades_wrapped, ai; since, params)
+        function ccxt_my_trades(ii; since=nothing, params=nothing)
+            _tryfetchall(a, mytrades_wrapped, ii; since, params)
         end
     else
         @warn "$(nameof(exc)) does not have a method to fetch account trades (trades will be emulated)"
     end
 end
 
-find_trades_or_since(a, ai, id::String)::Tuple{DateTime,Option{Any}} = begin
-    orderbyid_func = @something first(exchange(ai), :fetchOrderWs, :fetchOrder) Returns(())
+find_trades_or_since(a, ii, id::String)::Tuple{DateTime,Option{Any}} = begin
+    orderbyid_func = @something first(exchange(ii), :fetchOrderWs, :fetchOrder) Returns(())
     orders_func = a[:live_orders_func]
     closedords_func = a[:live_closed_orders_func]
-    default_since() = @something findorder(ai, id; property=:date) _last_trade_date(ai)
+    default_since() = @something findorder(ii, id; property=:date) _last_trade_date(ii)
     try
-        eid = exchangeid(ai)
-        ords = @lget! _order_byid_resp_cache(a, ai) id _execfunc(
-            orderbyid_func, id, raw(ai)
+        eid = exchangeid(ii)
+        ords = @lget! _order_byid_resp_cache(a, ii) id _execfunc(
+            orderbyid_func, id, raw(ii)
         ) |> resp_to_vec
         if isemptish(ords)
-            ords = @lget! _orders_resp_cache(a, ai) id _execfunc(
-                orders_func, ai; ids=(id,)
+            ords = @lget! _orders_resp_cache(a, ii) id _execfunc(
+                orders_func, ii; ids=(id,)
             ) |> resp_to_vec
             if isemptish(ords)
-                ords = @lget! _closed_orders_resp_cache(a, ai) id _execfunc(
-                    closedords_func, ai; ids=(id,)
+                ords = @lget! _closed_orders_resp_cache(a, ii) id _execfunc(
+                    closedords_func, ii; ids=(id,)
                 ) |> resp_to_vec
             end
         end
         if isemptish(ords)
-            @debug "live order trades: couldn't fetch trades (default to last day trades)" _module = LogCcxtFuncs order = id ai = raw(ai) exc = nameof(exchange(ai)) since = _last_trade_date(ai)
+            @debug "live order trades: couldn't fetch trades (default to last day trades)" _module = LogCcxtFuncs order = id ii = raw(ii) exc = nameof(exchange(ii)) since = _last_trade_date(ii)
             return default_since(), nothing
         else
             o = if isdict(ords)
@@ -536,10 +536,10 @@ resp_to_vec(resp) =
         [resp...]
     end
 
-find_trades_since(a, ai, id_str::String; exc, since, params) = begin
+find_trades_since(a, ii, id_str::String; exc, since, params) = begin
     mytrades_func = a[:live_my_trades_func]
     since = @something since let
-        (this_since, trades_resp) = find_trades_or_since(a, ai, id_str)
+        (this_since, trades_resp) = find_trades_or_since(a, ii, id_str)
         if !isemptish(trades_resp)
             return trades_resp
         else
@@ -547,12 +547,12 @@ find_trades_since(a, ai, id_str::String; exc, since, params) = begin
         end
     end
     trades_resp = []
-    trades_cache = _trades_resp_cache(a, ai)
+    trades_cache = _trades_resp_cache(a, ii)
     since -= Second(1)
     since_bound = since - round(a[:max_order_lookback], Millisecond)
     while since > since_bound
         resp = @lget! trades_cache since begin
-            this_resp = _execfunc(mytrades_func, ai; _skipkwargs(; since=dtstamp(since), params)...)
+            this_resp = _execfunc(mytrades_func, ii; _skipkwargs(; since=dtstamp(since), params)...)
             this_trades = _ordertrades(this_resp, exc, ((x) -> string(x) == id_str))
             if isnothing(this_trades)
                 missing
@@ -572,39 +572,39 @@ end
 function ccxt_order_trades_func!(a, exc)
     order_trades_func = first(exc, :fetchOrderTradesWs, :fetchOrderTrades)
     a[:live_order_trades_func] = if !isnothing(order_trades_func)
-        ccxt_order_trades(ai, id; since=nothing, params=nothing) = begin
-            cache = _order_trades_resp_cache(a, ai)
+        ccxt_order_trades(ii, id; since=nothing, params=nothing) = begin
+            cache = _order_trades_resp_cache(a, ii)
             @lget! cache id _execfunc(
                 order_trades_func;
-                symbol=raw(ai), id, _skipkwargs(; since, params)...
+                symbol=raw(ii), id, _skipkwargs(; since, params)...
             ) |> resp_to_vec
         end
     else
         mytrades_func = a[:live_my_trades_func]
-        ccxt_order_trades_fallback(ai, id; since=nothing, params=nothing) = begin
-            @debug "fetch order trades: from cache" _module = LogTradeFetch ai id
-            trades_cache = _trades_resp_cache(a, ai)
+        ccxt_order_trades_fallback(ii, id; since=nothing, params=nothing) = begin
+            @debug "fetch order trades: from cache" _module = LogTradeFetch ii id
+            trades_cache = _trades_resp_cache(a, ii)
             resp_latest = if mytrades_func isa Function
                 @lget! trades_cache LATEST_RESP_KEY _execfunc(
-                    mytrades_func, ai; _skipkwargs(; params)...
+                    mytrades_func, ii; _skipkwargs(; params)...
                 ) |> resp_to_vec
             end
             id_str = string(id)
             trades_resp = if isemptish(resp_latest)
-                @debug "fetch order trades: emptish" _module = LogTradeFetch ai id
+                @debug "fetch order trades: emptish" _module = LogTradeFetch ii id
                 []
             else
                 this_trades = _ordertrades(resp_latest, exc, ((x) -> string(x) == id_str))
                 if isnothing(this_trades)
-                    @debug "fetch order trades: empty filtered" _module = LogTradeFetch ai id
+                    @debug "fetch order trades: empty filtered" _module = LogTradeFetch ii id
                     []
                 else
                     Any[this_trades...]
                 end
             end
             if isemptish(trades_resp)
-                @debug "fetch order trades: fetch since" _module = LogTradeFetch ai id
-                find_trades_since(a, ai, id_str; exc, since, params)
+                @debug "fetch order trades: fetch since" _module = LogTradeFetch ii id
+                find_trades_since(a, ii, id_str; exc, since, params)
             else
                 return trades_resp
             end
@@ -624,7 +624,7 @@ end
 function ccxt_fetch_l2ob_func!(a, exc)
     ob_func = first(exc, :fetchOrderBookWs, :fetchOrderBook)
     a[:live_fetch_l2ob_func] = if !isnothing(ob_func)
-        ccxt_fetch_l2ob(ai; kwargs...) = _execfunc(ob_func, raw(ai); kwargs...)
+        ccxt_fetch_l2ob(ii; kwargs...) = _execfunc(ob_func, raw(ii); kwargs...)
     else
         @warn "$(nameof(exc)) does not support fetchOrderBook"
     end

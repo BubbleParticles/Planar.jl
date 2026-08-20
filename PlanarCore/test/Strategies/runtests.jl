@@ -10,9 +10,9 @@ using PlanarCore.Strategies.Instances.Exchanges.ExchangeTypes.OrderedCollections
 using PlanarCore.Strategies.Instances.Misc: Config
 using PlanarCore.Strategies.Instances.Data.TimeTicks: TimeFrame, DateTime, TimeTicks, Period, Second, Minute
 using PlanarCore.Strategies.Instances.Data.DataFrames: DataFrame
-using PlanarCore.Strategies.Instances.Instruments: AbstractAsset, parse, raw, cash!, cash
+using PlanarCore.Strategies.Instances.Instruments: AbstractInstrument, parse, raw, cash!, cash
 using PlanarCore.Strategies.Instances.Misc: NoMargin, Sim, Paper
-using PlanarCore.Strategies.Instances: NoMarginInstance, AssetInstance, ohlcv
+using PlanarCore.Strategies.Instances: NoMarginInstance, InstrumentInstance, ohlcv
 using PlanarCore.Strategies.Instances.Data.DataStructures: SortedDict
 
 function _make_exchange(name::Symbol)
@@ -64,17 +64,17 @@ function _make_ohlcv(price, n=10)
 end
 
 function _make_strategy(assets=[:BTC]; qc=:USDT, cash=10000.0, sandbox=true)
-    a_list = [parse(AbstractAsset, string(sym, "/USDT")) for sym in assets]
+    a_list = [parse(AbstractInstrument, string(sym, "/USDT")) for sym in assets]
     tf = TimeFrame("1m")
     ais = [
-        AssetInstance(
+        InstrumentInstance(
             a, SortedDict(tf => _make_ohlcv(50000.0)), mock_exc, NoMargin();
             limits=(; leverage=(; min=1.0, max=100.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
             precision=(; amount=8, price=2),
             fees=(; taker=0.001, maker=0.001, min=0.001, max=0.001),
         ) for a in a_list
     ]
-    uni = Collections.AssetCollection(ais)
+    uni = Collections.InstrumentCollection(ais)
     cfg = Config(; qc=qc, initial_cash=cash, sandbox=sandbox)
     Strategies.Strategy(@__MODULE__, Sim(), NoMargin(), tf, mock_exc, uni; config=cfg)
 end
@@ -92,23 +92,23 @@ end
     end
 
     @testset "strategy construction" begin
-        a_btc = parse(AbstractAsset, "BTC/USDT")
-        a_eth = parse(AbstractAsset, "ETH/USDT")
+        a_btc = parse(AbstractInstrument, "BTC/USDT")
+        a_eth = parse(AbstractInstrument, "ETH/USDT")
         tf = TimeFrame("1m")
         data = SortedDict(tf => _make_ohlcv(50000.0))
-        ai_btc = AssetInstance(
+        ai_btc = InstrumentInstance(
             a_btc, data, mock_exc, NoMargin();
             limits=(; leverage=(; min=1.0, max=100.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
             precision=(; amount=8, price=2),
             fees=(; taker=0.001, maker=0.001, min=0.001, max=0.001),
         )
-        ai_eth = AssetInstance(
+        ai_eth = InstrumentInstance(
             a_eth, data, mock_exc, NoMargin();
             limits=(; leverage=(; min=1.0, max=100.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
             precision=(; amount=8, price=2),
             fees=(; taker=0.001, maker=0.001, min=0.001, max=0.001),
         )
-        uni = Collections.AssetCollection([ai_btc, ai_eth])
+        uni = Collections.InstrumentCollection([ai_btc, ai_eth])
         cfg = Config(; qc=:USDT, initial_cash=10000.0, sandbox=true)
         s = Strategies.Strategy(
             @__MODULE__, Sim(), NoMargin(), tf, mock_exc, uni; config=cfg,
@@ -136,16 +136,16 @@ end
         assets = Strategies.assets(s)
         @test assets isa AbstractVector
         @test length(assets) == 2
-        @test parse(AbstractAsset, "BTC/USDT") in assets
-        @test parse(AbstractAsset, "ETH/USDT") in assets
-        @test parse(AbstractAsset, "SOL/USDT") ∉ assets
+        @test parse(AbstractInstrument, "BTC/USDT") in assets
+        @test parse(AbstractInstrument, "ETH/USDT") in assets
+        @test parse(AbstractInstrument, "SOL/USDT") ∉ assets
 
         ais = Strategies.universe(s).data.instance
         @test length(ais) == 2
-        @test all(Strategies.inuniverse(ai, s) for ai in ais)
+        @test all(Strategies.inuniverse(ii, s) for ii in ais)
 
-        @test Strategies.inuniverse(parse(AbstractAsset, "BTC/USDT"), s)
-        @test !Strategies.inuniverse(parse(AbstractAsset, "SOL/USDT"), s)
+        @test Strategies.inuniverse(parse(AbstractInstrument, "BTC/USDT"), s)
+        @test !Strategies.inuniverse(parse(AbstractInstrument, "SOL/USDT"), s)
     end
 
     @testset "attrs and symsdict" begin
@@ -155,15 +155,15 @@ end
         @test haskey(attrs, :exc)
 
         syms = Strategies.symsdict(s)
-        @test syms isa Dict{String,Union{Nothing,AssetInstance}}
+        @test syms isa Dict{String,Union{Nothing,InstrumentInstance}}
         @test isempty(syms)
 
         result = Strategies.asset_bysym(s, "BTC/USDT")
-        @test result isa AssetInstance
+        @test result isa InstrumentInstance
 
         # Second call hits cached path (methods.jl:344)
         result_cached = Strategies.asset_bysym(s, "BTC/USDT")
-        @test result_cached isa AssetInstance
+        @test result_cached isa InstrumentInstance
         @test result_cached === result
 
         result2 = Strategies.asset_bysym(s, "NONEXISTENT")
@@ -249,18 +249,18 @@ end
 
         # sizehint! inner loops with non-empty buyorders/sellorders
         E = typeof(mock_exc.id)
-        ai = first(Strategies.instances(s))
+        ii = first(Strategies.instances(s))
         bo = SortedDict{Strategies.PriceTime, Strategies.ExchangeBuyOrder{E}, Strategies.BuyPriceTimeOrdering}(Strategies.BuyPriceTimeOrdering())
-        s.buyorders[ai] = bo
+        s.buyorders[ii] = bo
         so = SortedDict{Strategies.PriceTime, Strategies.ExchangeSellOrder{E}, Strategies.SellPriceTimeOrdering}(Strategies.SellPriceTimeOrdering())
-        s.sellorders[ai] = so
+        s.sellorders[ii] = so
         Strategies.sizehint!(s)
         @test haskey(Strategies.attrs(s), :_sizes)
     end
 
     @testset "print helpers" begin
         s = _make_strategy([:BTC, :ETH])
-        ai = first(Strategies.instances(s))
+        ii = first(Strategies.instances(s))
 
         # trades_count with empty history
         @test Strategies.trades_count(s) == 0
@@ -277,7 +277,7 @@ end
         @test pos.liquidations == 0
 
         # _count_trades with empty AI
-        long, short, long_liq, short_liq = Strategies._count_trades(ai)
+        long, short, long_liq, short_liq = Strategies._count_trades(ii)
         @test long == 0
         @test short == 0
         @test long_liq == 0
@@ -303,7 +303,7 @@ end
         # Base.count inner loop with non-empty buyorders
         E = typeof(mock_exc.id)
         bo = SortedDict{Strategies.PriceTime, Strategies.ExchangeBuyOrder{E}, Strategies.BuyPriceTimeOrdering}(Strategies.BuyPriceTimeOrdering())
-        s.buyorders[ai] = bo
+        s.buyorders[ii] = bo
         @test Base.count(s, Strategies.Buy) == 0
     end
 
@@ -314,9 +314,9 @@ end
         @test Strategies.current_total(s, Strategies.lasttrade_price_func) == 10000.0
 
         # With non-empty holdings -> loop body executes
-        ai = first(Strategies.instances(s))
-        cash!(ai, 100.0)
-        push!(s.holdings, ai)
+        ii = first(Strategies.instances(s))
+        cash!(ii, 100.0)
+        push!(s.holdings, ii)
         tot = Strategies.current_total(s)
         @test tot > 10000.0
 
@@ -336,17 +336,17 @@ end
 
     @testset "lasttrade and tradesedge" begin
         s = _make_strategy([:BTC])
-        ai = first(Strategies.instances(s))
+        ii = first(Strategies.instances(s))
         tf = TimeFrame("1m")
         data = SortedDict(tf => _make_ohlcv(50000.0))
 
         # lasttrade_price_func with empty history
-        price = Strategies.lasttrade_price_func(ai)
+        price = Strategies.lasttrade_price_func(ii)
         @test price isa Real
         @test price > 0
 
         # lasttrade_date with empty history -> falls back to OHLCV end
-        ts = Strategies.lasttrade_date(ai)
+        ts = Strategies.lasttrade_date(ii)
         @test ts isa DateTime
 
         # tradesedge with no trades -> (nothing, nothing)
@@ -386,11 +386,11 @@ end
 
     @testset "candle helpers" begin
         s = _make_strategy([:BTC])
-        ai = first(Strategies.instances(s))
+        ii = first(Strategies.instances(s))
         tf = TimeFrame("1m")
 
         # closeat/openat/highat/lowat/volumeat are generated by @define_candle_func
-        df = ohlcv(ai)
+        df = ohlcv(ii)
         @test df isa DataFrame
         date = DateTime(2024, 1, 1, 0, 1, 0)  # second row
         @test Strategies.closeat(df, date) isa Number
@@ -400,34 +400,34 @@ end
         @test Strategies.volumeat(df, date) isa Number
 
         # lasttrade_price_func via AI data (empty history -> uses last close)
-        price = Strategies.lasttrade_price_func(ai)
+        price = Strategies.lasttrade_price_func(ii)
         @test price isa Real
         @test price == df.close[end]
     end
     @testset "current_total is race-free (Paper)" begin
         function _make_paper(assets=[:BTC, :ETH])
-            a_list = [parse(AbstractAsset, string(sym, "/USDT")) for sym in assets]
+            a_list = [parse(AbstractInstrument, string(sym, "/USDT")) for sym in assets]
             tf = TimeFrame("1m")
             ais = [
-                AssetInstance(
+                InstrumentInstance(
                     a, SortedDict(tf => _make_ohlcv(50000.0)), mock_exc, NoMargin();
                     limits=(; leverage=(; min=1.0, max=100.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
                     precision=(; amount=8, price=2),
                     fees=(; taker=0.001, maker=0.001, min=0.001, max=0.001),
                 ) for a in a_list
             ]
-            uni = Collections.AssetCollection(ais)
+            uni = Collections.InstrumentCollection(ais)
             cfg = Config(; qc=:USDT, initial_cash=10000.0, sandbox=true)
             Strategies.Strategy(@__MODULE__, Paper(), NoMargin(), tf, mock_exc, uni; config=cfg)
         end
         s = _make_paper()
         # register holdings (mirrors current_total test setup)
-        for ai in Strategies.instances(s)
-            cash!(ai, 100.0)
-            push!(s.holdings, ai)
+        for ii in Strategies.instances(s)
+            cash!(ii, 100.0)
+            push!(s.holdings, ii)
         end
         # deterministic serial reference
-        ref = sum(cash(ai) * Strategies.lasttrade_price_func(ai) for ai in s.holdings) + cash(s)
+        ref = sum(cash(ii) * Strategies.lasttrade_price_func(ii) for ii in s.holdings) + cash(s)
         # many concurrent calls must all agree with the reference (no dropped/duplicated holdings)
         for _ in 1:50
             @test Strategies.current_total(s) ≈ ref

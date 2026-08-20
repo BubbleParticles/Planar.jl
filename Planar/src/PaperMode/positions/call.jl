@@ -15,25 +15,25 @@ Additional keyword arguments can be passed.
 """
 function call!(
     s::IsolatedStrategy{Paper},
-    ai::MarginInstance,
+    ii::MarginInstance,
     t::Type{<:AnyMarketOrder};
     amount,
     date,
     price=NaN,
     kwargs...,
 )
-    !singlewaycheck(s, ai, t) && return nothing
+    !singlewaycheck(s, ii, t) && return nothing
     fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
     # Handle NaN price from priceat
     price = isnan(price) ? zero(DFT) : convert(DFT, price)
     try
-        o, obside = create_paper_market_order(s, t, ai; amount, date, price, order_kwargs...)
+        o, obside = create_paper_market_order(s, t, ii; amount, date, price, order_kwargs...)
         isnothing(o) && return nothing
-        trade = marketorder!(s, o, ai; obside, date, fees_kwarg...)
+        trade = marketorder!(s, o, ii; obside, date, fees_kwarg...)
         return trade
     catch e
         e isa InterruptException && rethrow(e)
-        @error "IsolatedStrategy: market order failed" exception = (e, catch_backtrace()) raw(ai)
+        @error "IsolatedStrategy: market order failed" exception = (e, catch_backtrace()) raw(ii)
         return nothing
     end
 end
@@ -48,10 +48,10 @@ Additional keyword arguments can be passed.
 
 """
 function call!(
-    s::IsolatedStrategy{Paper}, ai, t::Type{<:AnyLimitOrder}; amount, date, kwargs...
+    s::IsolatedStrategy{Paper}, ii, t::Type{<:AnyLimitOrder}; amount, date, kwargs...
 )
-    !singlewaycheck(s, ai, t) && return nothing
-    create_paper_limit_order!(s, ai, t; amount, date, kwargs...)
+    !singlewaycheck(s, ii, t) && return nothing
+    create_paper_limit_order!(s, ii, t; amount, date, kwargs...)
 end
 
 @doc """ Closes positions for a live margin strategy.
@@ -63,36 +63,36 @@ function call!(
     s::MarginStrategy{<:Union{Paper,Live}}, bp::ByPos, date, ::PositionClose; kwargs...
 )
     tasks = Task[]
-    for ai in s.universe
+    for ii in s.universe
         alive = Ref(true)
         # Get or create the task registry under the strategy lock to avoid race with stop!
         pos_tasks = @lock s get!(attr(s), :paper_position_tasks) do
-            Dict{AssetInstance, Tuple{Task, Ref{Bool}}}()
+            Dict{InstrumentInstance, Tuple{Task, Ref{Bool}}}()
         end
         # Create task but DON'T start it yet - register first to avoid race condition
         task = @task begin
             try
                 while alive[]
                     # Check if position is already closed before attempting to close
-                    if !isopen(ai)
-                        @debug "PaperMode: position already closed, skipping" ai = ai
+                    if !isopen(ii)
+                        @debug "PaperMode: position already closed, skipping" ii = ii
                         alive[] = false
                         break
                     end
-                    call!(s, ai, bp, date, PositionClose(); kwargs...)
+                    call!(s, ii, bp, date, PositionClose(); kwargs...)
                     alive[] = false
                     break
                 end
             catch e
                 e isa InterruptException && rethrow(e)
                 alive[] = false
-                @error "PaperMode: position close failed" ai = ai exception = (e, catch_backtrace())
+                @error "PaperMode: position close failed" ii = ii exception = (e, catch_backtrace())
             end
         end
         # Initialize task state (without scheduling)
         Misc.init_task(task, IdDict())
         # Register task for cleanup on stop BEFORE scheduling it
-        pos_tasks[ai] = (task, alive)
+        pos_tasks[ii] = (task, alive)
         push!(tasks, task)
         # Now schedule the task
         schedule(task)

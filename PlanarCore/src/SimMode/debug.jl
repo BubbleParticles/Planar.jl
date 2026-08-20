@@ -24,8 +24,8 @@ end
 
 _vv(v) = v isa Vector ? (isempty(v) ? nothing : v[end]) : v
 
-function _showcash(s, ai)
-    @show s.cash s.cash_committed cash(ai) committed(ai)
+function _showcash(s, ii)
+    @show s.cash s.cash_committed cash(ii) committed(ii)
 end
 
 function _showorder(o)
@@ -65,27 +65,27 @@ function _afterorder(s)
     !isnothing(ds) && (ds.cto[] += 1)
 end
 
-function _beforetrade(s, ai, o, trade, actual_price)
+function _beforetrade(s, ii, o, trade, actual_price)
     @ifdebug @assert trade.size != DFT(0.0) "Trade must not be empty, size was $(trade.size)."
     ds = _get_debug_state(s)
     !isnothing(ds) && (ds.ctr[] += 1)
     ds = _get_debug_state(s)
     !isnothing(ds) && push!(ds.cash_tracking, actual_price)
     get(s.attrs, :verbose, false) || return nothing
-    _showcash(s, ai)
+    _showcash(s, ii)
     _showorder(o)
 end
 
-function _aftertrade(s, ai, o)
+function _aftertrade(s, ii, o)
     get(s.attrs, :verbose, false) || return nothing
     _showorder(o)
-    _showcash(s, ai)
+    _showcash(s, ii)
     println("\n")
     ds = _get_debug_state(s)
     !isnothing(ds) && get(s.attrs, :debug_maxtrades, Inf) == ds.ctr[] && @error "Debug max trades reached"
 end
 
-function _check_committments(s::Strategy, ai)
+function _check_committments(s::Strategy, ii)
     ds = _get_debug_state(s)
     cash_comm = DFT(0.0)
     n = 0
@@ -108,18 +108,18 @@ function _check_committments(s::Strategy, ai)
         iszero(cash_comm) && approxzero(s.cash_committed)
     else
         isapprox(cash_comm, s.cash_committed, atol=2s.cash_committed.precision) || haskey(s.attrs, :sim_fees)
-    end (; cash_comm, s.cash_committed.value, ai, n)
+    end (; cash_comm, s.cash_committed.value, ii, n)
 end
 
-function _check_committments(s, ai::AssetInstance, t::Trade)
+function _check_committments(s, ii::InstrumentInstance, t::Trade)
     get(s.attrs, :verbose, false) && begin
-        @show (@something ai.longpos ai).cash_committed
-        @show (@something ai.shortpos ai).cash_committed
+        @show (@something ii.longpos ii).cash_committed
+        @show (@something ii.shortpos ii).cash_committed
     end
     orders_long = DFT(0.0)
     orders_short = DFT(0.0)
-    for (_, o) in orders(s, ai, positionside(t)())
-        @ifdebug @assert o.asset == ai.asset
+    for (_, o) in orders(s, ii, positionside(t)())
+        @ifdebug @assert o.asset == ii.asset
         if o isa SellOrder
             @ifdebug @assert positionside(o) == Long o
             orders_long += committed(o)
@@ -128,8 +128,8 @@ function _check_committments(s, ai::AssetInstance, t::Trade)
             orders_short += committed(o)
         end
     end
-    asset_long = committed(ai, Long())
-    asset_short = committed(ai, Short())
+    asset_long = committed(ii, Long())
+    asset_short = committed(ii, Short())
     if t isa ShortBuyTrade
         asset_short -= committed(t.order)
     end

@@ -1,22 +1,22 @@
-# Test helper for creating mock AssetInstance and Strategy objects.
+# Test helper for creating mock InstrumentInstance and Strategy objects.
 #
 # Usage:
 #   include("test_helpers.jl")
-#   ai = make_assetinstance("BTC/USDT", 50000.0)
-#   strategy = make_strategy([ai])
+#   ii = make_assetinstance("BTC/USDT", 50000.0)
+#   strategy = make_strategy([ii])
 #
 # Requires the following packages to be available in the test environment:
 #   Instances (via Metrics.Instances)
 #   ExchangeTypes, ExchangeTypes (for mock exchange)
 #   Data, TimeTicks, Lang, Misc
-#   Collections (for AssetCollection)
+#   Collections (for InstrumentCollection)
 #   DataFrames, DataStructures (for SortedDict)
 #   OrderTypes (for Trade)
 
 using Test
 using PlanarCore.Metrics
-using PlanarCore.Metrics.Instances: AssetInstance, NoMarginInstance, ohlcv
-using PlanarCore.Metrics.Instances.Instruments: AbstractAsset, parse, raw, cash!
+using PlanarCore.Metrics.Instances: InstrumentInstance, NoMarginInstance, ohlcv
+using PlanarCore.Metrics.Instances.Instruments: AbstractInstrument, parse, raw, cash!
 using PlanarCore.Metrics.Instances.Misc: NoMargin, Sim, Config
 using PlanarCore.Metrics.Instances.Exchanges.ExchangeTypes: CcxtExchange, ExchangeID, ExcPrecisionMode
 using PlanarCore.Metrics.Instances.Exchanges.ExchangeTypes.OrderedCollections: OrderedSet
@@ -24,7 +24,7 @@ using PlanarCore.Metrics.ect.TimeTicks: TimeFrame, DateTime, TimeTicks, Minute, 
 using PlanarCore.Metrics.st.Data.DataFrames: DataFrame
 using PlanarCore.Metrics.st.Data.DataStructures: SortedDict
 using PlanarCore.Metrics.st.Data: DFUtils
-using PlanarCore.Collections: AssetCollection
+using PlanarCore.Collections: InstrumentCollection
 
 function make_exchange(name::Symbol=:test)
     id = ExchangeID{name}()
@@ -74,14 +74,14 @@ function make_ohlcv(price, n=10)
     )
 end
 
-# Creates a minimal AssetInstance with OHLCV data and optional trades.
+# Creates a minimal InstrumentInstance with OHLCV data and optional trades.
 # Trades require Order/Trade objects from OrderTypes, see OrderTypes/test/ for examples.
 function make_assetinstance(
     symbol="BTC/USDT"; price=50000.0, timeframe=TimeFrame("1m"), n_ohlcv=10
 )
-    a = parse(AbstractAsset, symbol)
+    a = parse(AbstractInstrument, symbol)
     data = SortedDict(timeframe => make_ohlcv(price, n_ohlcv))
-    AssetInstance(
+    InstrumentInstance(
         a, data, mock_exchange, NoMargin();
         limits=(; leverage=(; min=1.0, max=100.0), amount=(; min=1e-6, max=1e8),
                 price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
@@ -90,12 +90,12 @@ function make_assetinstance(
     )
 end
 
-# Creates a minimal Strategy with mock AssetInstance objects in universe.
+# Creates a minimal Strategy with mock InstrumentInstance objects in universe.
 function make_strategy(assets=nothing; cash=10000.0, tf=TimeFrame("1m"))
     if assets === nothing
         assets = [make_assetinstance("BTC/USDT")]
     end
-    uni = AssetCollection(assets)
+    uni = InstrumentCollection(assets)
     cfg = Config(; qc=:USDT, initial_cash=cash, sandbox=true)
     # Note: Strategy construction requires a module with @interface
     # Use the Stubs.StubStrategy pattern or define a minimal module:
@@ -105,16 +105,16 @@ function make_strategy(assets=nothing; cash=10000.0, tf=TimeFrame("1m"))
 end
 
 # Example test block (uncomment and run when dependencies are available):
-# @testset "AssetInstance mock" begin
-#     ai = make_assetinstance("BTC/USDT")
-#     @test ai isa AssetInstance
-#     @test length(ai.data) == 1
-#     @test :close in names(first(values(ai.data)))
+# @testset "InstrumentInstance mock" begin
+#     ii = make_assetinstance("BTC/USDT")
+#     @test ii isa InstrumentInstance
+#     @test length(ii.data) == 1
+#     @test :close in names(first(values(ii.data)))
 #
 #     # Empty history tests
-#     @test isempty(ai.history)
+#     @test isempty(ii.history)
 #     # Uncomment when Metrics functions are imported:
-#     # @test Metrics.trades_duration(ai; tf=TimeFrame("1m")) == Millisecond(0)
-#     # @test isempty(Metrics.trades_size(ai))
-#     # @test isempty(Metrics.trades_leverage(ai))
+#     # @test Metrics.trades_duration(ii; tf=TimeFrame("1m")) == Millisecond(0)
+#     # @test isempty(Metrics.trades_size(ii))
+#     # @test isempty(Metrics.trades_leverage(ii))
 # end

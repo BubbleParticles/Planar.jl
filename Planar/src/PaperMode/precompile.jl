@@ -23,18 +23,18 @@ if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
                     s = st.strategy(st.BareStrat; mode=Paper(), kwargs...)
                     s[:log_to_stdout] = true
                     sml = SimMode.sml
-                    for ai in s.universe
+                    for ii in s.universe
                         append!(
-                            ohlcv_dict(ai)[s.timeframe],
+                            ohlcv_dict(ii)[s.timeframe],
                             sml.Processing.Data.to_ohlcv(sml.synthohlcv());
                             cols=:union,
                         )
                     end
                     sml.Random.seed!(1)
-                    ai = first(s.universe)
-                    amount = ai.limits.amount.min
+                    ii = first(s.universe)
+                    amount = ii.limits.amount.min
                     date = now()
-                    price = ai.limits.price.min * 2
+                    price = ii.limits.price.min * 2
                     ot = OrderTypes
 
                     # Precompilation workload - runs during Base.generating_output() == true
@@ -76,18 +76,18 @@ end
                 s = st.strategy(st.BareStrat; mode=Paper(), kwargs...)
                 s[:log_to_stdout] = true
                 sml = SimMode.sml
-                for ai in s.universe
+                for ii in s.universe
                     append!(
-                        ohlcv_dict(ai)[s.timeframe],
+                        ohlcv_dict(ii)[s.timeframe],
                         sml.Processing.Data.to_ohlcv(sml.synthohlcv());
                         cols=:union,
                     )
                 end
                 sml.Random.seed!(1)
-                ai = first(s.universe)
-                amount = ai.limits.amount.min
+                ii = first(s.universe)
+                amount = ii.limits.amount.min
                 date = now()
-                price = ai.limits.price.min * 2
+                price = ii.limits.price.min * 2
                 ot = OrderTypes
 
                 try

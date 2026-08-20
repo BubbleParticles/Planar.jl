@@ -5,7 +5,7 @@ using PlanarCore
 using PlanarDownloadTool
 using PlanarDownloadTool: selectsyms, timeframe!, fromassets, swapfname!, workers!
 using PlanarDownloadTool: csvtodf, timestamp!, _tempdir, WORKERS, TF, SEM, HTTP_PARAMS
-using PlanarCore.Instruments: Asset, AbstractAsset, bc, qc, @a_str
+using PlanarCore.Instruments: Instrument, AbstractInstrument, bc, qc, @a_str
 using PlanarCore.Data.DataFrames: DataFrame
 
 const _Dates = PlanarCore.TimeTicks.Dates

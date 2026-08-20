@@ -3,8 +3,8 @@ using Test
 using Serialization: serialize, deserialize
 const Instruments = PlanarCore.OrderTypes.Instruments
 const _Dates = Instruments.Misc.TimeTicks.Dates
-using PlanarCore.Instruments: Asset, AbstractAsset, @a_str
-using PlanarCore.OrderTypes: ExchangeID, Exchange, ExchangeEvent, AssetEvent, StrategyEvent
+using PlanarCore.Instruments: Instrument, AbstractInstrument, @a_str
+using PlanarCore.OrderTypes: ExchangeID, Exchange, ExchangeEvent, InstrumentEvent, StrategyEvent
 using PlanarCore.OrderTypes: Trade, orderside, positionside, pricetime
 using PlanarCore.OrderTypes: signedamount, signedsize, isliquidation, sidetopos
 using PlanarCore.OrderTypes: ByPos, BySide, ReduceOnlyOrder
@@ -256,10 +256,10 @@ end
 # 12. Event System
 # ============================================================
 @testset "Event system" begin
-    @test AssetEvent{:test} <: ExchangeEvent
+    @test InstrumentEvent{:test} <: ExchangeEvent
     @test StrategyEvent{:test} <: ExchangeEvent
 
-    ae = AssetEvent{:test}(:my_tag, :my_group, (key="val",))
+    ae = InstrumentEvent{:test}(:my_tag, :my_group, (key="val",))
     @test ae.tag == :my_tag
     @test ae.group == :my_group
     @test ae.data.key == "val"
@@ -269,7 +269,7 @@ end
     @test se.group == :other_group
     @test se.data.num == 42
 
-    @test AssetEvent{:test}(:t, :g, (k=1,)) isa ExchangeEvent
+    @test InstrumentEvent{:test}(:t, :g, (k=1,)) isa ExchangeEvent
 end
 
 # ============================================================
@@ -332,7 +332,7 @@ end
 
     @test ReduceOnlyOrder(Long) == OrderTypes.LongReduceOnlyOrder
     @test ReduceOnlyOrder(Short) == OrderTypes.ShortReduceOnlyOrder
-    @test ReduceOnlyOrder(Long, Asset) == OrderTypes.LongReduceOnlyOrder{Asset}
+    @test ReduceOnlyOrder(Long, Instrument) == OrderTypes.LongReduceOnlyOrder{Instrument}
 end
 
 # ============================================================
@@ -405,8 +405,8 @@ end
 # 20. ReduceOnlyOrder multi-param dispatch
 # ============================================================
 @testset "ReduceOnlyOrder multi-param" begin
-    @test ReduceOnlyOrder(Long, Asset, ExchangeID) == OrderTypes.LongReduceOnlyOrder{Asset, ExchangeID}
-    @test ReduceOnlyOrder(Short, Asset, ExchangeID) == OrderTypes.ShortReduceOnlyOrder{Asset, ExchangeID}
+    @test ReduceOnlyOrder(Long, Instrument, ExchangeID) == OrderTypes.LongReduceOnlyOrder{Instrument, ExchangeID}
+    @test ReduceOnlyOrder(Short, Instrument, ExchangeID) == OrderTypes.ShortReduceOnlyOrder{Instrument, ExchangeID}
 end
 
 # ============================================================

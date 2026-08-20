@@ -10,7 +10,7 @@ using ..Data: load, zi, empty_ohlcv
 using ..Data.DFUtils
 using ..Data.DataStructures: SortedDict
 
-using ..Instruments: fiatnames, AbstractAsset, Asset, AbstractCash, compactnum as cnum
+using ..Instruments: fiatnames, AbstractInstrument, Instrument, AbstractCash, compactnum as cnum
 using ..Instruments.Derivatives
 using ..Instruments: Misc
 using ..Misc: TimeTicks, Lang
@@ -27,17 +27,17 @@ import ..Misc: reset!
 Holds a DataFrame of asset instances indexed by exchange, asset, and instance.
 Thread-safe via internal ReentrantLock.
 """
-struct AssetCollection
+struct InstrumentCollection
     data::DataFrame
     lock::ReentrantLock
-    function AssetCollection(
+    function InstrumentCollection(
         df=DataFrame(;
-            exchange=ExchangeID[], asset=AbstractAsset[], instance=AssetInstance[]
+            exchange=ExchangeID[], asset=AbstractInstrument[], instance=InstrumentInstance[]
         ),
     )
         new(df, ReentrantLock())
     end
-    function AssetCollection(instances::Iterable{<:AssetInstance})
+    function InstrumentCollection(instances::Iterable{<:InstrumentInstance})
         new(
             DataFrame(
                 (; exchange=inst.exchange.id, asset=inst.asset, instance=inst) for
@@ -48,8 +48,8 @@ struct AssetCollection
         )
     end
 end
-    function AssetCollection(
-        assets::Union{Iterable{String},Iterable{<:AbstractAsset}};
+    function InstrumentCollection(
+        assets::Union{Iterable{String},Iterable{<:AbstractInstrument}};
         timeframe="1m",
         exc::Exchange,
         margin::MarginMode,
@@ -57,7 +57,7 @@ end
         load_data=true,
     )
         if eltype(assets) == String
-            assets = [parse(AbstractAsset, name) for name in assets]
+            assets = [parse(AbstractInstrument, name) for name in assets]
         end
 
         tf = convert(TimeFrame, timeframe)
@@ -66,45 +66,45 @@ end
         else
             (_) -> empty_ohlcv()
         end
-        function get_instance(aa::AbstractAsset)
+        function get_instance(aa::AbstractInstrument)
             loaded = load_func(aa)
             data = SortedDict(tf => isnothing(loaded) ? empty_ohlcv() : loaded)
-            AssetInstance(aa; data, exc, margin, min_amount)
+            InstrumentInstance(aa; data, exc, margin, min_amount)
         end
         instances_ord = Dict(raw(k) => n for (n, k) in enumerate(assets))
-        instances = Vector{AssetInstance}(undef, length(assets))
+        instances = Vector{InstrumentInstance}(undef, length(assets))
         @sync for (i, ast) in enumerate(assets)
             t = @async instances[i] = get_instance(ast)
             errormonitor(t)
         end
-        sort!(instances; by=(ai) -> instances_ord[raw(ai)])
-        AssetCollection(instances)
+        sort!(instances; by=(ii) -> instances_ord[raw(ii)])
+        InstrumentCollection(instances)
     end
 
-@enum AssetCollectionColumn exchange = 1 asset = 2 instance = 3
-const AssetCollectionTypes = OrderedDict([
-    exchange => ExchangeID, asset => AbstractAsset, instance => AssetInstance
+@enum InstrumentCollectionColumn exchange = 1 asset = 2 instance = 3
+const InstrumentCollectionTypes = OrderedDict([
+    exchange => ExchangeID, asset => AbstractInstrument, instance => InstrumentInstance
 ])
-const AssetCollectionColumns4 = Symbol.(keys(sort!(AssetCollectionTypes)))
-AssetCollectionColumns = AssetCollectionColumns4
+const AssetCollectionColumns4 = Symbol.(keys(sort!(InstrumentCollectionTypes)))
+InstrumentCollectionColumns = AssetCollectionColumns4
 # HACK: const/types definitions inside macros can't be revised
-if !isdefined(@__MODULE__, :AssetCollectionRow)
-    const AssetCollectionRow = @NamedTuple{
-        exchange::ExchangeID, asset::AbstractAsset, instance::AssetInstance
+if !isdefined(@__MODULE__, :InstrumentCollectionRow)
+    const InstrumentCollectionRow = @NamedTuple{
+        exchange::ExchangeID, asset::AbstractInstrument, instance::InstrumentInstance
     }
 end
 
 using ..Instruments: isbase, isquote
-function Base.getindex(ac::AssetCollection, i::ExchangeID, col=Colon())
+function Base.getindex(ac::InstrumentCollection, i::ExchangeID, col=Colon())
     @view ac.data[ac.data.exchange .== i, col]
 end
-function Base.getindex(ac::AssetCollection, i::AbstractAsset, col=Colon())
+function Base.getindex(ac::InstrumentCollection, i::AbstractInstrument, col=Colon())
     @view ac.data[ac.data.asset .== i, col]
 end
-function Base.getindex(ac::AssetCollection, i::AbstractString, col=Colon())
+function Base.getindex(ac::InstrumentCollection, i::AbstractString, col=Colon())
     @view ac.data[ac.data.asset .== i, col]
 end
-function Base.getindex(ac::AssetCollection, i::MatchString, col=Colon())
+function Base.getindex(ac::InstrumentCollection, i::MatchString, col=Colon())
     v = @view ac.data[startswith.(getproperty.(ac.data.asset, :raw), uppercase(i.s)), :]
     isempty(v) && return v
     if col == Colon()
@@ -113,8 +113,8 @@ function Base.getindex(ac::AssetCollection, i::MatchString, col=Colon())
         @view v[begin, col]
     end
 end
-Base.getindex(ac::AssetCollection, i, i2, i3) = ac[i, i2][i3]
-Base.get(ac::AssetCollection, i, val) = get(ac.data.instance, i, val)
+Base.getindex(ac::InstrumentCollection, i, i2, i3) = ac[i, i2][i3]
+Base.get(ac::InstrumentCollection, i, val) = get(ac.data.instance, i, val)
 
 # TODO: this should use a macro...
 @doc "Dispatch based on either base, quote currency, or exchange."
@@ -141,7 +141,7 @@ bqe(df::DataFrame, b::T, ::Nothing, e::Nothing) where {T<:Symbol} = begin
 end
 
 function Base.getindex(
-    ac::AssetCollection;
+    ac::InstrumentCollection;
     b::Union{Symbol,Nothing}=nothing,
     q::Union{Symbol,Nothing}=nothing,
     e::Union{Symbol,Nothing}=nothing,
@@ -150,9 +150,9 @@ function Base.getindex(
     @view ac.data[idx, :]
 end
 
-_cashstr(ai::NoMarginInstance) = (; cash=cash(ai).value)
-function _cashstr(ai::MarginInstance)
-    let cl = cash(ai, Long()), cs = cash(ai, Short())
+_cashstr(ii::NoMarginInstance) = (; cash=cash(ii).value)
+function _cashstr(ii::MarginInstance)
+    let cl = cash(ii, Long()), cs = cash(ii, Short())
         (;
             cash_long = isnothing(cl) ? 0.0 : cl.value,
             cash_short = isnothing(cs) ? 0.0 : cs.value,
@@ -160,16 +160,16 @@ function _cashstr(ai::MarginInstance)
     end
 end
 
-@doc """Pretty prints the AssetCollection DataFrame.
+@doc """Pretty prints the InstrumentCollection DataFrame.
 
 $(TYPEDSIGNATURES)
 
 The `prettydf` function takes the following parameters:
 
-- `ac`: an AssetCollection object which encapsulates a collection of assets.
+- `ac`: an InstrumentCollection object which encapsulates a collection of assets.
 - `full` (optional, default is false): a boolean that indicates whether to print the full DataFrame. If true, the function prints the full DataFrame. If false, it prints a truncated version.
 """
-function prettydf(ac::AssetCollection; full=false)
+function prettydf(ac::InstrumentCollection; full=false)
     limit = full ? size(ac.data)[1] : displaysize(stdout)[1] - 1
     limit = min(size(ac.data)[1], limit)
     get_row(n) = begin
@@ -184,7 +184,7 @@ function prettydf(ac::AssetCollection; full=false)
     df
 end
 
-Base.show(io::IO, ac::AssetCollection) = write(io, string(prettydf(ac)))
+Base.show(io::IO, ac::InstrumentCollection) = write(io, string(prettydf(ac)))
 
 @doc """Returns a dictionary of all the OHLCV dataframes present in the asset collection.
 
@@ -192,12 +192,12 @@ $(TYPEDSIGNATURES)
 
 The `flatten` function takes the following parameter:
 
-- `ac`: an AssetCollection object which encapsulates a collection of assets.
+- `ac`: an InstrumentCollection object which encapsulates a collection of assets.
 
 The function returns a SortedDict where the keys are TimeFrame objects and the values are vectors of DataFrames that represent OHLCV (Open, High, Low, Close, Volume) data. The dictionary is sorted by the TimeFrame keys.
 
 """
-function flatten(ac::AssetCollection; noempty=false)::SortedDict{TimeFrame,Vector{DataFrame}}
+function flatten(ac::InstrumentCollection; noempty=false)::SortedDict{TimeFrame,Vector{DataFrame}}
     out = SortedDict{TimeFrame,Vector{DataFrame}}()
     if noempty
         return _flatten_noempty!(out, ac)
@@ -205,7 +205,7 @@ function flatten(ac::AssetCollection; noempty=false)::SortedDict{TimeFrame,Vecto
     return _flatten!(out, ac)
 end
 
-function _flatten!(out, ac::AssetCollection)
+function _flatten!(out, ac::InstrumentCollection)
     @eachrow ac.data for (tf, df) in :instance.data
         metadata!(df, "asset_instance", :instance; style=Symbol("note"))
         push!(@lget!(out, tf, DataFrame[]), df)
@@ -213,7 +213,7 @@ function _flatten!(out, ac::AssetCollection)
     out
 end
 
-function _flatten_noempty!(out, ac::AssetCollection)
+function _flatten_noempty!(out, ac::InstrumentCollection)
     @eachrow ac.data for (tf, df) in :instance.data
         if !isempty(df)
             metadata!(df, "asset_instance", :instance; style=Symbol("note"))
@@ -223,7 +223,7 @@ function _flatten_noempty!(out, ac::AssetCollection)
     out
 end
 
-Base.first(ac::AssetCollection, a::AbstractAsset)::DataFrame =
+Base.first(ac::InstrumentCollection, a::AbstractInstrument)::DataFrame =
     first(first(ac[a].instance).data)[2]
 
 @doc """Makes a date range that spans the common minimum and maximum dates of the collection.
@@ -232,12 +232,12 @@ $(TYPEDSIGNATURES)
 
 The `DateRange` function takes the following parameters:
 
-- `ac`: an AssetCollection object which encapsulates a collection of assets.
-- `tf` (optional): a TimeFrame object that represents a specific time frame. If not provided, the function will calculate the date range based on all time frames in the AssetCollection.
+- `ac`: an InstrumentCollection object which encapsulates a collection of assets.
+- `tf` (optional): a TimeFrame object that represents a specific time frame. If not provided, the function will calculate the date range based on all time frames in the InstrumentCollection.
 - `skip_empty` (optional, default is false): a boolean that indicates whether to skip empty data frames in the calculation of the date range.
 
 """
-function TimeTicks.DateRange(ac::AssetCollection, tf=nothing; full=false, kwargs...)
+function TimeTicks.DateRange(ac::InstrumentCollection, tf=nothing; full=false, kwargs...)
     if full
         _daterange_full(ac, tf; kwargs...)
     else
@@ -245,15 +245,15 @@ function TimeTicks.DateRange(ac::AssetCollection, tf=nothing; full=false, kwargs
     end
 end
 
-function _daterange(ac::AssetCollection, tf=nothing; skip_empty=false)
+function _daterange(ac::InstrumentCollection, tf=nothing; skip_empty=false)
     m = typemin(Int64)
     M = typemax(Int64)
-    for ai in ac.data.instance
-        df = first(values(ai.data))
+    for ii in ac.data.instance
+        df = first(values(ii.data))
         isempty(df) && continue
         d_min = firstdate(df)
         d_min > m && (m = d_min)
-        d_max = lastdate(last(ai.data).second)
+        d_max = lastdate(last(ii.data).second)
         d_max < M && (M = d_max)
     end
     tf = @something tf first(ac.data[begin, :instance].data).first
@@ -272,24 +272,24 @@ end
 $(TYPEDSIGNATURES)
 
 The `daterange` function returns a `DateRange` covering the earliest available timestamp
-and the latest available timestamp across all assets' OHLCV data in the `AssetCollection`.
+and the latest available timestamp across all assets' OHLCV data in the `InstrumentCollection`.
 
 Parameters:
 
-- `ac`: the `AssetCollection`
+- `ac`: the `InstrumentCollection`
 - `tf` (optional): a `TimeFrame`. If not provided, it is inferred from the first asset instance
 """
-function _daterange_full(ac::AssetCollection, tf=nothing; kwargs...)
+function _daterange_full(ac::InstrumentCollection, tf=nothing; kwargs...)
     m = typemax(Int64)
     M = typemin(Int64)
-    for ai in ac.data.instance
+    for ii in ac.data.instance
         # Consider the first and last dataframes in the SortedDict for breadth
-        df_first = first(values(ai.data))
+        df_first = first(values(ii.data))
         if !isempty(df_first)
             d_min = firstdate(df_first)
             d_min < m && (m = d_min)
         end
-        df_last = last(ai.data).second
+        df_last = last(ii.data).second
         if !isempty(df_last)
             d_max = lastdate(df_last)
             d_max > M && (M = d_max)
@@ -305,14 +305,14 @@ function _daterange_full(ac::AssetCollection, tf=nothing; kwargs...)
     DateRange(dt(m), dt(M) + tf, tf)
 end
 
-Base.iterate(ac::AssetCollection) = iterate(ac.data.instance)
-Base.iterate(ac::AssetCollection, s) = iterate(ac.data.instance, s)
-Base.first(ac::AssetCollection) = first(ac.data.instance)
-Base.last(ac::AssetCollection) = last(ac.data.instance)
-Base.length(ac::AssetCollection) = nrow(ac.data)
-Base.size(ac::AssetCollection) = size(ac.data)
-Base.similar(ac::AssetCollection) = begin
-    AssetCollection(similar.(ac.data.instance))
+Base.iterate(ac::InstrumentCollection) = iterate(ac.data.instance)
+Base.iterate(ac::InstrumentCollection, s) = iterate(ac.data.instance, s)
+Base.first(ac::InstrumentCollection) = first(ac.data.instance)
+Base.last(ac::InstrumentCollection) = last(ac.data.instance)
+Base.length(ac::InstrumentCollection) = nrow(ac.data)
+Base.size(ac::InstrumentCollection) = size(ac.data)
+Base.similar(ac::InstrumentCollection) = begin
+    InstrumentCollection(similar.(ac.data.instance))
 end
 
 @doc """Checks that all assets in the universe match the cash currency.
@@ -322,28 +322,28 @@ $(TYPEDSIGNATURES)
 The `iscashable` function takes the following parameters:
 
 - `c`: an AbstractCash object which encapsulates a representation of cash.
-- `ac`: an AssetCollection object which encapsulates a collection of assets.
+- `ac`: an InstrumentCollection object which encapsulates a collection of assets.
 """
-iscashable(c::AbstractCash, ac::AssetCollection) = begin
-    for ai in ac
-        if ai.asset.qc != nameof(c)
+iscashable(c::AbstractCash, ac::InstrumentCollection) = begin
+    for ii in ac
+        if ii.asset.qc != nameof(c)
             return false
         end
     end
     return true
 end
 
-reset!(ac::AssetCollection) = begin
+reset!(ac::InstrumentCollection) = begin
     ais = ac.data.instance
     foreach(eachindex(ais)) do idx
-        ai = ais[idx]
-        this_exc = exchange(ai)
+        ii = ais[idx]
+        this_exc = exchange(ii)
         eid = exchangeid(this_exc)
         acc = account(this_exc)
         params = this_exc.params
         sandbox = issandbox(this_exc)
-        ais[idx] = similar(ai; exc=getexchange!(eid, params; sandbox, account=acc))
+        ais[idx] = similar(ii; exc=getexchange!(eid, params; sandbox, account=acc))
     end
 end
 
-export AssetCollection, flatten, iscashable
+export InstrumentCollection, flatten, iscashable

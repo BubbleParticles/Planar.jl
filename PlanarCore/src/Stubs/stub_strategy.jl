@@ -40,7 +40,7 @@ end
 function call!(t::Type{<:S}, config, ::LoadStrategy)
     syms = call!(S, StrategyMarkets())
     exc = st.Exchanges.getexchange!(config.exchange; sandbox=true)
-    uni = st.AssetCollection(syms; load_data=false, timeframe=TF, exc, config.margin)
+    uni = st.InstrumentCollection(syms; load_data=false, timeframe=TF, exc, config.margin)
     s = Strategy(@__MODULE__, config.mode, config.margin, TF, exc, uni; config)
     s.attrs[:buydiff] = 1.01
     s.attrs[:selldiff] = 1.005
@@ -53,39 +53,39 @@ end
 
 function call!(s::S, ts::DateTime, ctx)
     date = ts
-    foreach(s.universe) do ai
-        if isopen(ai)
+    foreach(s.universe) do ii
+        if isopen(ii)
             if rand(RNG, Bool)
-                call!(s, ai, MarketOrder{Sell}; amount=cash(ai), date)
+                call!(s, ii, MarketOrder{Sell}; amount=cash(ii), date)
             end
-        elseif cash(s) > ai.limits.cost.min && rand(RNG, Bool)
+        elseif cash(s) > ii.limits.cost.min && rand(RNG, Bool)
             call!(
                 s,
-                ai,
+                ii,
                 MarketOrder{Buy};
-                amount=max(ai.limits.amount.min, ai.limits.cost.min / closeat(ai, ts)),
+                amount=max(ii.limits.amount.min, ii.limits.cost.min / closeat(ii, ts)),
                 date,
             )
         end
     end
 end
 
-function buy!(s::S, ai, ats, ts)
-    call!(s, ai, ect.CancelOrders(); t=Sell)
-    @deassert ai.asset.qc == nameof(s.cash)
-    price = closeat(ai.ohlcv, ats)
+function buy!(s::S, ii, ats, ts)
+    call!(s, ii, ect.CancelOrders(); t=Sell)
+    @deassert ii.asset.qc == nameof(s.cash)
+    price = closeat(ii.ohlcv, ats)
     amount = st.freecash(s) / 10.0 / price
     if amount > 0.0
-        t = call!(s, ai, IOCOrder{Buy}; amount, date=ts)
+        t = call!(s, ii, IOCOrder{Buy}; amount, date=ts)
     end
 end
 
-function sell!(s::S, ai, ats, ts)
-    call!(s, ai, ect.CancelOrders(); t=Buy)
-    amount = max(inv(closeat(ai, ats)), inst.freecash(ai))
-    price = closeat(ai.ohlcv, ats)
+function sell!(s::S, ii, ats, ts)
+    call!(s, ii, ect.CancelOrders(); t=Buy)
+    amount = max(inv(closeat(ii, ats)), inst.freecash(ii))
+    price = closeat(ii.ohlcv, ats)
     if amount > 0.0
-        t = call!(s, ai, IOCOrder{Sell}; amount, date=ts)
+        t = call!(s, ii, IOCOrder{Sell}; amount, date=ts)
     end
 end
 

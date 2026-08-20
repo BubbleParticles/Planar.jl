@@ -118,9 +118,9 @@ This function is useful for testing and prototyping purposes when actual market 
 
 """
 function stub!(
-    ai::AssetInstance,
+    ii::InstrumentInstance,
     len=1000,
-    tfs::Vector{TimeFrame}=collect(keys(ai.data));
+    tfs::Vector{TimeFrame}=collect(keys(ii.data));
     seed_price=100.0,
     seed_vol=1000.0,
     vt_price=3.0,
@@ -129,15 +129,15 @@ function stub!(
 )
     isempty(tfs) && (tfs = config.timeframes)
     sort!(tfs)
-    empty!(ai.data)
+    empty!(ii.data)
     min_tf = first(tfs)
     ohlcv =
         synthohlcv(len; tf=min_tf, vt_price, vt_vol, seed_price, seed_vol, start_date) |>
         to_ohlcv
-    _setorappend(ai.data, min_tf, ohlcv)
+    _setorappend(ii.data, min_tf, ohlcv)
     if length(tfs) > 1
         for t in tfs[2:end]
-            _setorappend(ai.data, t, resample(ohlcv, min_tf, t))
+            _setorappend(ii.data, t, resample(ohlcv, min_tf, t))
         end
     end
 end
@@ -205,8 +205,8 @@ The synthetic funding rates are generated using the `synthfunding` function.
 If the `force` parameter is set to `true`, the synthetic funding rates will replace any existing funding rates in the asset instance.
 
 """
-function stub!(ai::AssetInstance, ::Val{:funding}; force=false)
-    data = ohlcv(ai)
+function stub!(ii::InstrumentInstance, ::Val{:funding}; force=false)
+    data = ohlcv(ii)
     if force || "funding" ∉ metadatakeys(data)
         funding = synthfunding(data)
         metadata!(data, "funding", funding, style=:default)

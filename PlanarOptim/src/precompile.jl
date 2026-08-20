@@ -13,9 +13,9 @@ function _precomp_strat(mod=@__MODULE__)
         end
         if !isnothing(s)
             sml = PlanarCore.Simulations
-            for ai in s.universe
+            for ii in s.universe
                 append!(
-                    PlanarCore.SimMode.Executors.st.Instances.ohlcv_dict(ai)[s.timeframe],
+                    PlanarCore.SimMode.Executors.st.Instances.ohlcv_dict(ii)[s.timeframe],
                     sml.Processing.Data.to_ohlcv(sml.synthohlcv());
                     cols=:union,
                 )
@@ -45,13 +45,13 @@ end
         x = attrs[:param_x]
         y = attrs[:param_y]
         side = ifelse(rand(1:x) < 2, st.Buy, st.Sell)
-        for ai in s.universe
+        for ii in s.universe
             amount = if side == st.Buy
                 st.cash(s)
             else
-                @something st.cash(ai) 0.0
-            end / st.closeat(ai, ts) / 3
-            ect.call!(s, ai, st.OrderTypes.MarketOrder{side}; amount, date=ts)
+                @something st.cash(ii) 0.0
+            end / st.closeat(ii, ts) / 3
+            ect.call!(s, ii, st.OrderTypes.MarketOrder{side}; amount, date=ts)
         end
     end
 

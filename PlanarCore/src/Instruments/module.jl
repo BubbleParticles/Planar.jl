@@ -29,10 +29,10 @@ has_punct(s::AbstractString) = !isnothing(match(r"[[:punct:]]", s))
 
 Defines the interface and common functionality for all asset types.
 """
-abstract type AbstractAsset end
+abstract type AbstractInstrument end
 
 # TYPENUM
-@doc """An `Asset` represents a parsed raw (usually ccxt) pair of base and quote currency.
+@doc """An `Instrument` represents a parsed raw (usually ccxt) pair of base and quote currency.
 
 - `raw`: The raw underlying string e.g. 'BTC/USDT'
 - `bc`: base currency (Symbol)
@@ -44,18 +44,18 @@ abstract type AbstractAsset end
 ```julia
 > asset = a"BTC/USDT"
 > typeof(asset)
-Asset{:BTC, :USDT}
+Instrument{:BTC, :USDT}
 end
 ```
 """
-struct Asset <: AbstractAsset
+struct Instrument <: AbstractInstrument
     raw::SubString
     bc::BaseCurrency
     qc::QuoteCurrency
     fiat::Bool
     leveraged::Bool
     unleveraged_bc::BaseCurrency
-    function Asset(s::SubString, b::T, q::T) where {T<:AbstractString}
+    function Instrument(s::SubString, b::T, q::T) where {T<:AbstractString}
         B = Symbol(b)
         Q = Symbol(q)
         fiat = isfiatpair(b, q)
@@ -63,23 +63,23 @@ struct Asset <: AbstractAsset
         unlev = lev ? deleverage_pair(s; split=true)[1] : B
         new(s, B, Q, fiat, lev, Symbol(unlev))
     end
-    Asset(s::AbstractString) = parse(Asset, s)
+    Instrument(s::AbstractString) = parse(Instrument, s)
 end
 
 _check_parse(pair, s) = begin
     if length(pair) > 2 || has_punct(pair[1]) || has_punct(pair[2])
-        throw(InexactError(:Asset, Asset, s))
+        throw(InexactError(:Instrument, Instrument, s))
     end
 end
-function Base.parse(::Type{Asset}, s::AbstractString)
+function Base.parse(::Type{Instrument}, s::AbstractString)
     pair = splitpair(s)
     _check_parse(pair, s)
-    Asset(SubString(s), pair[1], pair[2])
+    Instrument(SubString(s), pair[1], pair[2])
 end
 const symbol_rgx_cache = Dict{String,Regex}()
 const symbol_rgx_cache_lock = ReentrantLock()
 function Base.parse(
-    ::Type{<:AbstractAsset}, s::AbstractString, qc::AbstractString; raise=true
+    ::Type{<:AbstractInstrument}, s::AbstractString, qc::AbstractString; raise=true
 )
     pair = splitpair(s)
     rx = lock(symbol_rgx_cache_lock) do
@@ -91,36 +91,36 @@ function Base.parse(
     end
     m = match(rx, pair[1])
     if isnothing(m)
-        raise && throw(InexactError(:Asset, Asset, s))
+        raise && throw(InexactError(:Instrument, Instrument, s))
         return nothing
     end
-    Asset(SubString(s), m.captures[1], m.captures[2])
+    Instrument(SubString(s), m.captures[1], m.captures[2])
 end
 function Base.parse(
-    ::Type{<:AbstractAsset}, s::AbstractString, qcs::Union{AbstractVector,AbstractSet}
+    ::Type{<:AbstractInstrument}, s::AbstractString, qcs::Union{AbstractVector,AbstractSet}
 )
     for qc in qcs
-        p = parse(Asset, s, qc; raise=false)
+        p = parse(Instrument, s, qc; raise=false)
         !isnothing(p) && return p
     end
-    throw(InexactError(:Asset, Asset, s))
+    throw(InexactError(:Instrument, Instrument, s))
 end
-_hashtuple(a::AbstractAsset) = (a.bc, a.qc)
-Base.hash(a::AbstractAsset) = hash(_hashtuple(a))
-Base.hash(a::AbstractAsset, h::UInt) = hash(_hashtuple(a), h)
-Base.isequal(a::AbstractAsset, b::AbstractAsset) = raw(a) == raw(b)
-Base.:(==)(a::AbstractAsset, b::AbstractAsset) = raw(a) == raw(b)
-Base.convert(::Type{String}, a::AbstractAsset) = a.raw
-Base.string(a::AbstractAsset) = "Asset($(a.bc)/$(a.qc))"
-Base.show(buf::IO, a::AbstractAsset) = write(buf, string(a))
-Base.display(a::AbstractAsset) = show(stdout, a)
+_hashtuple(a::AbstractInstrument) = (a.bc, a.qc)
+Base.hash(a::AbstractInstrument) = hash(_hashtuple(a))
+Base.hash(a::AbstractInstrument, h::UInt) = hash(_hashtuple(a), h)
+Base.isequal(a::AbstractInstrument, b::AbstractInstrument) = raw(a) == raw(b)
+Base.:(==)(a::AbstractInstrument, b::AbstractInstrument) = raw(a) == raw(b)
+Base.convert(::Type{String}, a::AbstractInstrument) = a.raw
+Base.string(a::AbstractInstrument) = "Instrument($(a.bc)/$(a.qc))"
+Base.show(buf::IO, a::AbstractInstrument) = write(buf, string(a))
+Base.display(a::AbstractInstrument) = show(stdout, a)
 raw(::Nothing) = ""
 raw(v::AbstractString) = v
-@doc """Convert an AbstractAsset object a to its raw representation.
+@doc """Convert an AbstractInstrument object a to its raw representation.
 
 $(TYPEDSIGNATURES)
 
-The function returns a new AbstractAsset object with special characters escaped using backslashes.
+The function returns a new AbstractInstrument object with special characters escaped using backslashes.
 
 Example:
 ```julia
@@ -128,25 +128,25 @@ a = parse("BTC/USDT")
 raw(a) # returns "BTC/USDT"
 ```
 """
-raw(a::AbstractAsset) = convert(String, a)
+raw(a::AbstractInstrument) = convert(String, a)
 @doc " Returns the quote currency of `a`."
-qc(a::AbstractAsset) = a.qc
+qc(a::AbstractInstrument) = a.qc
 @doc " Returns the base currency of `a`."
-bc(a::AbstractAsset) = a.bc
+bc(a::AbstractInstrument) = a.bc
 
 const QuoteTuple = @NamedTuple{q::Symbol}
 const BaseTuple = @NamedTuple{b::Symbol}
 const BaseQuoteTuple = @NamedTuple{b::Symbol, q::Symbol}
 const CurrencyTuple = Union{QuoteTuple,BaseTuple,BaseQuoteTuple}
-Base.Broadcast.broadcastable(q::Asset) = Ref(q)
-Base.in(a::Asset, t::QuoteTuple) = a.qc == t.q
-Base.in(a::Asset, t::BaseTuple) = a.bc == t.b
-Base.in(a::Asset, t::BaseQuoteTuple) = a.bc == t.b && a.qc == t.q
-==(a::AbstractAsset, s::AbstractString) = a.raw == s
-==(a::Asset, b::Asset) = a.qc == b.qc && a.bc == b.bc
+Base.Broadcast.broadcastable(q::Instrument) = Ref(q)
+Base.in(a::Instrument, t::QuoteTuple) = a.qc == t.q
+Base.in(a::Instrument, t::BaseTuple) = a.bc == t.b
+Base.in(a::Instrument, t::BaseQuoteTuple) = a.bc == t.b && a.qc == t.q
+==(a::AbstractInstrument, s::AbstractString) = a.raw == s
+==(a::Instrument, b::Instrument) = a.qc == b.qc && a.bc == b.bc
 
-isbase(a::AbstractAsset, b) = a.bc == b
-isquote(a::AbstractAsset, q) = a.qc == q
+isbase(a::AbstractInstrument, b) = a.bc == b
+isquote(a::AbstractInstrument, q) = a.qc == q
 
 @doc "A regular expression pattern used to match leveraged naming conventions in market symbols. It captures the separator used in leveraged pairs."
 const leverage_pair_rgx = r"(?:(?:BULL)|(?:BEAR)|(?:[0-9]+L)|(?:[0-9]+S)|(?:UP)|(?:DOWN)|(?:[0-9]+LONG)|(?:[0-9+]SHORT))([\/\-\_\.])"
@@ -205,16 +205,16 @@ end
 isfiatpair(p::Vector{T}) where {T<:AbstractString} = isfiatpair(p[1], p[2])
 isfiatpair(pair::AbstractString) = isfiatpair(splitpair(pair))
 @doc "Check if quote currency is a stablecoin."
-isfiatquote(aa::AbstractAsset) = aa.qc ∈ fiatsyms
-isfiatquote(pair::AbstractString) = isfiatquote(parse(AbstractAsset, pair))
+isfiatquote(aa::AbstractInstrument) = aa.qc ∈ fiatsyms
+isfiatquote(pair::AbstractString) = isfiatquote(parse(AbstractInstrument, pair))
 
-@doc """Parses `pair` to an `Asset` type.
+@doc """Parses `pair` to an `Instrument` type.
 ```julia
 > typeof(a"BTC/USDT")
-Instruments.Asset
+Instruments.Instrument
 """
 macro a_str(pair)
-    :($(parse(Asset, pair)))
+    :($(parse(Instrument, pair)))
 end
 
 @doc """Rewrites `sym` as a perpetual usdt symbol.
@@ -227,7 +227,7 @@ macro pusdt_str(sym)
     :($(uppercase(sym) * "/USDT:USDT"))
 end
 
-export Cash, Asset, AbstractAsset
+export Cash, Instrument, AbstractInstrument
 export raw, bc, qc
 export isfiatpair, deleverage_pair, isleveragedpair
 export @a_str, @c_str

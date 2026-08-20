@@ -11,7 +11,7 @@ using PlanarCore.Data: load, zi
 using PlanarCore.Processing: normalize as norm, normalize! as norm!
 
 using PlanarCore.Strategies.Exchanges: getexchange!
-using PlanarCore.Strategies: Strategy, Strategies as st, AssetInstance
+using PlanarCore.Strategies: Strategy, Strategies as st, InstrumentInstance
 using PlanarCore.OrderTypes
 using PlanarCore.Instruments
 
@@ -105,15 +105,15 @@ $(TYPEDSIGNATURES)
 This function generates OHLCV (Open, High, Low, Close, Volume) data for a given set of trades within a specified timeframe.
 It asserts that the trades history is not shorter than the specified 'from' and 'to' indices and that the trades date accuracy matches the strategy timeframe.
 """
-function trades_ohlcv(tf, ai, from, to)
-    @assert length(ai.history) >= from "Trades history is shorter than $from."
-    to = @something to lastindex(ai.history)
-    @assert length(ai.history) >= to "Trades history is shorter than $to."
-    trade_date = first(ai.history).date
+function trades_ohlcv(tf, ii, from, to)
+    @assert length(ii.history) >= from "Trades history is shorter than $from."
+    to = @something to lastindex(ii.history)
+    @assert length(ii.history) >= to "Trades history is shorter than $to."
+    trade_date = first(ii.history).date
     @assert apply(tf, trade_date) == trade_date "Trades date accuracy not matching strategy timeframe."
-    from_date = ai.history[from].date
-    to_date = ai.history[to].date
-    df = ai.ohlcv[DateRange(from_date, to_date), :]
+    from_date = ii.history[from].date
+    to_date = ii.history[to].date
+    df = ii.ohlcv[DateRange(from_date, to_date), :]
     df, to
 end
 
@@ -171,18 +171,18 @@ end
 $(TYPEDSIGNATURES)
 
 This function plots a subset of trades history of an asset instance.
-It takes a `Strategy` and an `AssetInstance` as parameters and optionally a `Figure` and additional arguments.
+It takes a `Strategy` and an `InstrumentInstance` as parameters and optionally a `Figure` and additional arguments.
 It returns the result of the base `tradesticks!` function.
 """
 function tradesticks(s::Strategy, fig::Figure=makefig(), args...; kwargs...)
     tradesticks!(fig, first(s.universe), args...; kwargs...)
 end
 function tradesticks(s::Strategy, aa, fig::Figure=makefig(), args...; kwargs...)
-    ai = s.universe[aa, :instance, 1]
-    tradesticks!(fig, ai, args...; kwargs...)
+    ii = s.universe[aa, :instance, 1]
+    tradesticks!(fig, ii, args...; kwargs...)
 end
-function tradesticks(ai::AssetInstance, fig::Figure=makefig(), args...; kwargs...)
-    tradesticks!(fig, ai, args...; kwargs...)
+function tradesticks(ii::InstrumentInstance, fig::Figure=makefig(), args...; kwargs...)
+    tradesticks!(fig, ii, args...; kwargs...)
 end
 @doc """ Plots trades on a figure for a given asset instance.
 
@@ -193,9 +193,9 @@ It generates OHLCV data for trades, checks the size of the dataframe, prepares t
 The function returns the figure.
 """
 function tradesticks!(
-    fig::Figure, ai::AssetInstance, tf=timeframe(ai.ohlcv); from=1, to=nothing, force=false
+    fig::Figure, ii::InstrumentInstance, tf=timeframe(ii.ohlcv); from=1, to=nothing, force=false
 )
-    df, to = trades_ohlcv(tf, ai, from, to)
+    df, to = trades_ohlcv(tf, ii, from, to)
     check_df(df, force)
     fig, trades_ax, price_ax = trades_fig(df, fig)
     linkaxes!(trades_ax, price_ax)
@@ -213,7 +213,7 @@ function tradesticks!(
     triangleofs(::IncreaseTrade, y) = y - ofs
     triangleofs(::ReduceTrade, y) = y + ofs
     ld = lastdate(df)
-    for t in @view ai.history[from:to]
+    for t in @view ii.history[from:to]
         t.date > ld && break
         x = dateindex(df, t.date)
         y = gety(t, x)
@@ -270,7 +270,7 @@ ellipsis(cx, cy, rx, ry) = begin
     Point2f.(zip(getellipsepoints(cx, cy, rx, ry, θ)...))
 end
 
-_tradeasset(row, ai) = string(@something ai row.instance)
+_tradeasset(row, ii) = string(@something ii row.instance)
 
 @doc """ Generates a formatted string for aggregated trades.
 
@@ -278,8 +278,8 @@ $(TYPEDSIGNATURES)
 
 This function generates a formatted string that includes information about the asset, trades count, entry/exit, quote balance, base balance, base volume, quote volume, and timestamp.
 """
-aggtrades_str(row, ai=nothing) = begin
-    """Asset: $(_tradeasset(row, ai))
+aggtrades_str(row, ii=nothing) = begin
+    """Instrument: $(_tradeasset(row, ii))
     Trades Count: $(cn(row.trades_count, 1))
     Entry/Exit: $(cn(row.entries, 1))/$(cn(row.exits, 1))
     Quote Balance: $(cn(row.quote_balance))
@@ -333,7 +333,7 @@ The tooltip displays the aggregated trade details when a user hovers over a spec
 The tooltip position is determined by the `tooltip_position!` function with `ellipsis_middle` and `ellipsis_edge` as the position functions.
 """
 function balloons_tooltip_func(
-    trades_df; ai=nothing, ispos=false, pos_func2=ellipsis_edge(ispos)
+    trades_df; ii=nothing, ispos=false, pos_func2=ellipsis_edge(ispos)
 )
     function f(inspector, plot, idx, _)
         try
@@ -341,7 +341,7 @@ function balloons_tooltip_func(
                 inspector, plot, idx; vertices=100, pos_func1=ellipsis_middle, pos_func2
             )
             row = trades_df[true_idx, :]
-            tooltip_text!(inspector, aggtrades_str(row, @something(ai, row.instance));)
+            tooltip_text!(inspector, aggtrades_str(row, @something(ii, row.instance));)
         catch
         end
         return true
@@ -388,7 +388,7 @@ $(TYPEDSIGNATURES)
 This function draws data when there is a single dataframe to draw over (a benchmark).
 It creates ellipses for each trade, with the size and color of the ellipse indicating the quote volume and trades count, respectively.
 """
-function _draw_trades!(df::DataFrame, trades_df, trades_ax, ai=nothing)
+function _draw_trades!(df::DataFrame, trades_df, trades_ax, ii=nothing)
     mm = maximum(df.close)
     anchor(::Val{:pos}, x, n) = ellipsis(x, df[x, :high] + 32n, n / 16, 32n)
     anchor(::Val{:neg}, x, n) = ellipsis(x, df[x, :low] - 32n, n / 16, 32n)
@@ -428,7 +428,7 @@ function _draw_trades!(df::DataFrame, trades_df, trades_ax, ai=nothing)
         strokecolor=:black,
         strokewidth=0.33,
         inspector_hover=balloons_tooltip_func(
-            @view(neganchors.trades[neg_z_index, :]); ai, ispos=false
+            @view(neganchors.trades[neg_z_index, :]); ii, ispos=false
         ),
     )
     pos_z_index[:] = sortperm(pos_z_index; rev=true)
@@ -439,7 +439,7 @@ function _draw_trades!(df::DataFrame, trades_df, trades_ax, ai=nothing)
         strokecolor=:black,
         strokewidth=0.33,
         inspector_hover=balloons_tooltip_func(
-            @view(posanchors.trades[pos_z_index, :]); ai, ispos=true
+            @view(posanchors.trades[pos_z_index, :]); ii, ispos=true
         ),
     )
 end
@@ -476,26 +476,26 @@ This function plots all trades for a single asset instance, aggregating data to 
 It generates OHLCV data for trades, checks the size of the dataframe, prepares the figure for trade plotting, and creates triangles for IncreaseTrade and ReduceTrade.
 The function returns the figure.
 """
-function balloons(s::Strategy, ai::AssetInstance; tf=tf"1d", force=false)
-    df = resample(ai.ohlcv, s.timeframe, tf)
+function balloons(s::Strategy, ii::InstrumentInstance; tf=tf"1d", force=false)
+    df = resample(ii.ohlcv, s.timeframe, tf)
     check_df(df, force)
     fig, trades_ax, price_ax = trades_fig(df)
-    trades_df = resample_trades(ai, tf)
-    _draw_trades!(df, trades_df, trades_ax, ai)
+    trades_df = resample_trades(ii, tf)
+    _draw_trades!(df, trades_df, trades_ax, ii)
     linkaxes!(trades_ax, price_ax)
 
-    balance_df = trades_balance(ai; tf, df, return_all=true, s.initial_cash)
+    balance_df = trades_balance(ii; tf, df, return_all=true, s.initial_cash)
     value_balance = balance_df.cum_value_balance
     ai_value_func(idx, _=nothing) = value_balance[idx]
     color_func = Returns((:blue, 0.5))
-    balance_ax = _draw_balance!(s, fig, balance_df, ai_value_func, color_func, [ai])
+    balance_ax = _draw_balance!(s, fig, balance_df, ai_value_func, color_func, [ii])
     linkxaxes!(balance_ax, price_ax)
     fig
 end
 
 function balloons(s::Strategy, aa; kwargs...)
-    ai = s.universe[aa, :instance, 1]
-    balloons(s, ai; kwargs...)
+    ii = s.universe[aa, :instance, 1]
+    balloons(s, ii; kwargs...)
 end
 
 @doc """ Loads benchmark according to input being a dataframe or a symbol.
@@ -516,7 +516,7 @@ function _load_benchmark(
             return nothing
         else
             let sym = Symbol(uppercase(string(benchmark))),
-                idx = findfirst(ai -> ai.bc == sym, s.universe.data.instance)
+                idx = findfirst(ii -> ii.bc == sym, s.universe.data.instance)
 
                 if isnothing(idx)
                     load(
@@ -551,8 +551,8 @@ It creates ellipses for each trade, with the size and color of the ellipse indic
 function _draw_trades!(
     ax_closes::Dict, tf::TimeFrame, trades_df, trades_ax, dates, colors_dict
 )
-    anchor(ai, x, n) = begin
-        v = ax_closes[ai].norm[x]
+    anchor(ii, x, n) = begin
+        v = ax_closes[ii].norm[x]
         ellipsis(x, v, n, n)
     end
     anchors = Vector{Point2f}[]
@@ -561,16 +561,16 @@ function _draw_trades!(
     chart_timestamps = apply.(tf, dates)
     _normtrades!(trades_df)
     for row in eachrow(trades_df)
-        ai = row.instance
+        ii = row.instance
         x = dateindex(chart_timestamps, row.timestamp)
         if iszero(x)
-            @error "plotting: missing date" ai row.timestamp first_ts = first(
+            @error "plotting: missing date" ii row.timestamp first_ts = first(
                 chart_timestamps
             )
             error()
         end
-        push!(anchors, anchor(ai, x, row.norm_qv))
-        clr = colors_dict[ai]
+        push!(anchors, anchor(ii, x, row.norm_qv))
+        clr = colors_dict[ii]
         push!(colors, (RGBAf(clr.r, clr.g, clr.b, max(0.1, row.norm_tc))))
         push!(z_index, row.norm_qv)
     end
@@ -630,8 +630,8 @@ function _pricelines!(s, fig; tf)
     # hideydecorations!(price_ax)
     min_date = dates.start
     ax_closes = Dict(
-        ai => (
-            let r = ai.ohlcv[dates]
+        ii => (
+            let r = ii.ohlcv[dates]
                 ohlcv = resample(r, tf, false, :ohlcv, false)
                 norm = if !isempty(r)
                     ai_min_date = first(r.timestamp)
@@ -647,19 +647,19 @@ function _pricelines!(s, fig; tf)
                 end
                 (ax=axis!(fig), norm, ohlcv)
             end
-        ) for ai in s.universe
+        ) for ii in s.universe
     )
     colors = Dict()
     let s = 0
-        for (ai, (ax, norm, ohlcv)) in ax_closes
-            colors[ai] = color = RGBf(rand(seed!(s), 3)...)
+        for (ii, (ax, norm, ohlcv)) in ax_closes
+            colors[ii] = color = RGBf(rand(seed!(s), 3)...)
             deregister_interactions!(ax, ())
             lines!(
                 ax,
                 norm;
                 color,
-                label=ai.asset.raw,
-                inspector_hover=price_tooltip_func(ohlcv, ai.asset),
+                label=ii.asset.raw,
+                inspector_hover=price_tooltip_func(ohlcv, ii.asset),
             )
 
             s += 1
@@ -699,19 +699,19 @@ function _draw_balance!(s, fig, balance_df, ai_value_func, ai_color_func, ais=s.
     Assets($(_nonzero(ai_value_func(idx)))): $(cn(sum(values(ai_value_func(idx)))))
     Total: $(cn(balance[idx]))
     T: $(timestamp[idx])"""
-    make_str_func(ai) = begin
+    make_str_func(ii) = begin
         (idx) -> """
-     $(ai.asset.bc): $(cn(ai_value_func(idx, ai)))
+     $(ii.asset.bc): $(cn(ai_value_func(idx, ii)))
      T: $(timestamp[idx])"""
     end
-    function drawband!(lower, upper, ytooltip=cash, ai=nothing)
+    function drawband!(lower, upper, ytooltip=cash, ii=nothing)
         band!(
             balance_ax,
             lower, # lower
             upper; # upper
-            color=(isnothing(ai) ? :orange : ai_color_func(ai)),
+            color=(isnothing(ii) ? :orange : ai_color_func(ii)),
             inspector_hover=make_tooltip_func(
-                ytooltip, isnothing(ai) ? cash_str : make_str_func(ai)
+                ytooltip, isnothing(ii) ? cash_str : make_str_func(ii)
             ),
         )
     end
@@ -722,13 +722,13 @@ function _draw_balance!(s, fig, balance_df, ai_value_func, ai_color_func, ais=s.
         last_upper, # upper
     )
     # Draw assets
-    for ai in ais
+    for ii in ais
         y = Float32[]
         upper = [
-            Point2f(n, push!(y, last_upper[n][2] + ai_value_func(n, ai))[n]) for
+            Point2f(n, push!(y, last_upper[n][2] + ai_value_func(n, ii))[n]) for
             n in 1:length(timestamp)
         ]
-        drawband!(last_upper, upper, y, ai)
+        drawband!(last_upper, upper, y, ii)
         last_upper = upper
     end
     balance_ax
@@ -762,8 +762,8 @@ The function returns the figure.
 function balloons(s::Strategy; benchmark=:all, tf=tf"1d", force=false)
     start_date, stop_date = st.tradesedge(DateTime, s)
     trades_df = let
-        byinstance(trades, ai) = begin
-            max_date = apply(tf, last(ai.ohlcv.timestamp))
+        byinstance(trades, ii) = begin
+            max_date = apply(tf, last(ii.ohlcv.timestamp))
             remove_outofbounds!(trades, max_date)
         end
         resample_trades(s, tf; byinstance)
@@ -779,7 +779,7 @@ function balloons(s::Strategy; benchmark=:all, tf=tf"1d", force=false)
         fig, trades_ax, price_ax = trades_fig(df)
         _draw_trades!(df, trades_df, trades_ax)
         axes = ()
-        colors = Dict(ai => RGBf(rand(seed!(n), 3)...) for (n, ai) in enumerate(s.universe))
+        colors = Dict(ii => RGBf(rand(seed!(n), 3)...) for (n, ii) in enumerate(s.universe))
     end
 
     linkaxes!(trades_ax, axes..., price_ax)
@@ -787,8 +787,8 @@ function balloons(s::Strategy; benchmark=:all, tf=tf"1d", force=false)
     balance_df = trades_balance(s; tf, return_all=true, byasset=true)
     @deassert all(balance_df.timestamp .== first(values(ax_closes)).ohlcv.timestamp)
     byasset = balance_df.byasset
-    ai_value_func(idx, ai=nothing) = isnothing(ai) ? byasset[idx] : byasset[idx][ai]
-    color_func = ai -> RGBAf(_allfields(colors[ai])..., 0.5)
+    ai_value_func(idx, ii=nothing) = isnothing(ii) ? byasset[idx] : byasset[idx][ii]
+    color_func = ii -> RGBAf(_allfields(colors[ii])..., 0.5)
     balance_ax = _draw_balance!(s, fig, balance_df, ai_value_func, color_func)
     linkxaxes!(balance_ax, price_ax)
     rowsize!(fig.layout, 2, Aspect(1, 0.1))

@@ -29,7 +29,7 @@ using Planar
 using PlanarCore.Data.DataFrames
 using PlanarCore.Data.DataStructures: SortedDict
 using PlanarCore.Fetch: fetch_trades
-using PlanarCore.Instances: AssetInstance, setticks!, ohlcv
+using PlanarCore.Instances: InstrumentInstance, setticks!, ohlcv
 using PlanarCore.Misc: Config
 
 # ── configuration (env-overridable) ─────────────────────────────────
@@ -42,7 +42,7 @@ CASH = parse(Float64, get(ENV, "TICK_CASH", "10000.0"))
 
 @doc """Aggregate a tick DataFrame into `tf`-sized OHLCV candles.
 
-Gives the asset a real data dict so the standard `ohlcv(ai)` accessor works
+Gives the asset a real data dict so the standard `ohlcv(ii)` accessor works
 alongside the tick feed (the tick backtest itself only reads the ticks).
 """
 function ohlcv_from_ticks(df; tf=Minute(1))
@@ -66,11 +66,11 @@ function ohlcv_from_ticks(df; tf=Minute(1))
     out
 end
 
-@doc """Build an `AssetInstance` seeded with ticks + aggregated OHLCV data."""
+@doc """Build an `InstrumentInstance` seeded with ticks + aggregated OHLCV data."""
 function make_asset(sym, tick_df, exc)
-    a = sm.Asset(sym)
+    a = sm.Instrument(sym)
     data = SortedDict(tf"1m" => ohlcv_from_ticks(tick_df))
-    ai = AssetInstance(
+    ii = InstrumentInstance(
         a, data, exc, sm.NoMargin();
         limits=(;
             leverage=(; min=1.0, max=100.0),
@@ -81,8 +81,8 @@ function make_asset(sym, tick_df, exc)
         precision=(; amount=8, price=2),
         fees=(; taker=0.001, maker=0.001, min=0.001, max=0.001),
     )
-    setticks!(ai, tick_df)
-    ai
+    setticks!(ii, tick_df)
+    ii
 end
 
 # ── exchange + data ─────────────────────────────────────────────────
@@ -90,7 +90,7 @@ println("connecting to ccxt gateway — exchange=$(EXC) sandbox=$(SANDBOX)")
 exc = getexchange!(EXC; sandbox=SANDBOX)
 
 data = fetch_trades(exc, SYMBOLS; limit=LIMIT, pages=PAGES)
-ais = AssetInstance[]
+ais = InstrumentInstance[]
 for sym in SYMBOLS
     df = data[sym]
     if isnothing(df) || isempty(df)
@@ -106,7 +106,7 @@ isempty(ais) && error("no tick data — nothing to backtest")
 include(joinpath(@__DIR__, "..", "user", "strategies", "TickStrat", "src", "TickStrat.jl"))
 
 cfg = Config(; qc=:USDT, initial_cash=CASH, sandbox=SANDBOX)
-uni = st.AssetCollection(ais)
+uni = st.InstrumentCollection(ais)
 s = st.Strategy(TickStrat, sm.Sim(), sm.NoMargin(), TickStrat.TF, exc, uni; config=cfg)
 st.reset!(s)
 
@@ -119,8 +119,8 @@ println("\n── results ──")
 println("ticks processed : $(length(rng))")
 println("orders filled   : $(ect.tradescount(s))")
 println("final balance   : $(st.current_total(s))")
-for ai in s.universe
-    tdf = inst.ticks(ai)
+for ii in s.universe
+    tdf = inst.ticks(ii)
     last_ts, last_px = last(tdf.timestamp), last(tdf.price)
-    println("  $(inst.raw(ai)): last_tick=$last_ts price=$last_px held=$(float(ai))")
+    println("  $(inst.raw(ii)): last_tick=$last_ts price=$last_px held=$(float(ii))")
 end

@@ -35,11 +35,11 @@ using Base: negate
 import .Instances: posside
 
 _ispossym(py, sym, eid::EIDType) = string(resp_position_symbol(py, eid)) == sym
-posside(s::Strategy, ai::MarginInstance) = @something posside(ai) get_position_side(s, ai)
+posside(s::Strategy, ii::MarginInstance) = @something posside(ii) get_position_side(s, ii)
 
-function _handle_pos_resp(resp, ai, side)
-    sym = raw(ai)
-    eid = exchangeid(ai)
+function _handle_pos_resp(resp, ii, side)
+    sym = raw(ii)
+    eid = exchangeid(ii)
     if resp isa Exception
         @debug "force fetch pos: error $sym($side)" _module = LogPosFetch resp
         return nothing
@@ -53,65 +53,65 @@ function _handle_pos_resp(resp, ai, side)
     end
 end
 
-function _force_fetchpos(s, ai, side; waitfor=s[:positions_base_timeout][], fallback_kwargs)
+function _force_fetchpos(s, ii, side; waitfor=s[:positions_base_timeout][], fallback_kwargs)
     @timeout_start
     let cache = _positions_resp_cache(s.attrs)
         @lock cache.lock empty!(cache.data)
     end
     w = positions_watcher(s)
     last_time = lastdate(w)
-    prev_pup = get_positions(s, ai, side)
+    prev_pup = get_positions(s, ii, side)
 
     function skip_if_updated(waitfor=@timeout_now)
-        @debug "force fetch pos: checking if updated" _module = LogPosForceFetch ai islocked(
+        @debug "force fetch pos: checking if updated" _module = LogPosForceFetch ii islocked(
             w
         )
-        if _isupdated(w, prev_pup, last_time; this_v_func=() -> get_positions(s, ai, side))
-            @debug "force fetch pos: updated" _module = LogPosForceFetch ai islocked(w)
-            waitsync(ai; waitfor)
+        if _isupdated(w, prev_pup, last_time; this_v_func=() -> get_positions(s, ii, side))
+            @debug "force fetch pos: updated" _module = LogPosForceFetch ii islocked(w)
+            waitsync(ii; waitfor)
             true
         else
             false
         end
     end
 
-    @debug "force fetch pos: waiting" _module = LogPosForceFetch ai islocked(w) f = @caller(10)
-    waitsync(ai; waitfor=@timeout_now)
+    @debug "force fetch pos: waiting" _module = LogPosForceFetch ii islocked(w) f = @caller(10)
+    waitsync(ii; waitfor=@timeout_now)
     skip_if_updated() && return nothing
 
-    @debug "force fetch pos: locking" _module = LogPosForceFetch ai islocked(w)
+    @debug "force fetch pos: locking" _module = LogPosForceFetch ii islocked(w)
     resp = @lock w begin
         skip_if_updated() && return nothing
         timeout = @timeout_now()
         if timeout > Second(0)
-            @debug "force fetch pos: fetching" _module = LogPosForceFetch ai timeout
+            @debug "force fetch pos: fetching" _module = LogPosForceFetch ii timeout
             let resp = fetch_positions(s; timeout, fallback_kwargs...)
-                _handle_pos_resp(resp, ai, side)
+                _handle_pos_resp(resp, ii, side)
             end
         end
     end
     if !isnothing(resp)
-        @debug "force fetch pos:" _module = LogPosForceFetch ai amount = try
+        @debug "force fetch pos:" _module = LogPosForceFetch ii amount = try
             if isempty(resp)
                 nothing
             else
-                resp_position_contracts(first(resp), exchangeid(ai))
+                resp_position_contracts(first(resp), exchangeid(ii))
             end
         catch e
             e isa InterruptException && rethrow(e)
             @warn "force fetch pos: error getting contracts" exception = (e, catch_backtrace()) _module = LogPosForceFetch
             @debug_backtrace LogPosForceFetch
-        end exchangeid(ai)
-        @debug "force fetch pos: processing" _module = LogPosForceFetch ai
-        _process_force_fetch_resp!(w, s, resp, ai, side)
+        end exchangeid(ii)
+        @debug "force fetch pos: processing" _module = LogPosForceFetch ii
+        _process_force_fetch_resp!(w, s, resp, ii, side)
         skip_if_updated() && return nothing
-        waitsync(ai; waitfor=@timeout_now)
+        waitsync(ii; waitfor=@timeout_now)
     end
-    @debug "force fetch pos: done" _module = LogPosForceFetch ai lastdate(w)
+    @debug "force fetch pos: done" _module = LogPosForceFetch ii lastdate(w)
 end
 
-function _process_force_fetch_resp!(w, s, resp, ai, side)
-    eid = exchangeid(ai)
+function _process_force_fetch_resp!(w, s, resp, ii, side)
+    eid = exchangeid(ii)
     data_date = TimeTicks.now()
     long_dict = w.view.long
     short_dict = w.view.short
@@ -138,26 +138,26 @@ function _process_force_fetch_resp!(w, s, resp, ai, side)
             last_dict[sym] = pos_side
             safenotify(w.beacon.process)
         end
-        ai[:last_event_date] = data_date
+        ii[:last_event_date] = data_date
     end
     return nothing
 end
 
-function _isstale(ai, pup, side, since)
+function _isstale(ii, pup, side, since)
     if isnothing(pup)
         true
     elseif isnothing(since)
         false
     else
-        time = @something(pytodate(pup.resp, exchangeid(ai)), timestamp(ai, side))
+        time = @something(pytodate(pup.resp, exchangeid(ii)), timestamp(ii, side))
         time < since
     end
 end
 
 function live_position(
     s::LiveStrategy,
-    ai,
-    side=get_position_side(s, ai);
+    ii,
+    side=get_position_side(s, ii);
     fallback_kwargs=(),
     since=nothing,
     force=false,
@@ -166,17 +166,17 @@ function live_position(
     drift=Millisecond(5),
 )
     @timeout_start
-    getpos()::Option{PositionTuple} = get_positions(s, ai, side)
-    waitw(waitfor=@timeout_now) = waitsync(ai; since, waitfor)
-    forcepos() = _force_fetchpos(s, ai, side; waitfor, fallback_kwargs)
+    getpos()::Option{PositionTuple} = get_positions(s, ii, side)
+    waitw(waitfor=@timeout_now) = waitsync(ii; since, waitfor)
+    forcepos() = _force_fetchpos(s, ii, side; waitfor, fallback_kwargs)
 
     return if !isnothing(since)
-        function waitsincefunc(pup=get_positions(s, ai, side))
+        function waitsincefunc(pup=get_positions(s, ii, side))
             !isnothing(pup) && pup.date + drift >= since
         end
         waitforcond(waitsincefunc, @timeout_now())
         if @istimeout()
-            @debug "live pos: since timeout" _module = LogPosFetch ai side since
+            @debug "live pos: since timeout" _module = LogPosFetch ii side since
             if !waitsincefunc()
                 if force
                     forcepos()
@@ -192,7 +192,7 @@ function live_position(
             getpos()
         end
     elseif force
-        @debug "live pos: force fetching position" _module = LogPosFetch ai side
+        @debug "live pos: force fetching position" _module = LogPosFetch ii side
         forcepos()
         waitw()
         getpos()
@@ -204,8 +204,8 @@ function live_position(
     end
 end
 
-function _pup(s, ai, args...; kwargs...)
-    pup = live_position(s, ai, args...; kwargs...)
+function _pup(s, ii, args...; kwargs...)
+    pup = live_position(s, ii, args...; kwargs...)
     if isnothing(pup)
         @debug "live pup: " _module = LogPosFetch f = @caller
     else
@@ -216,7 +216,7 @@ end
 
 function live_contracts(
     s::LiveStrategy,
-    ai,
+    ii,
     pside=nothing,
     args...;
     synced=false,
@@ -226,17 +226,17 @@ function live_contracts(
 )
     @timeout_start
     watch_positions!(s)
-    waitsync(ai; waitfor=@timeout_now)
-    pup = _pup(s, ai, pside, args...; synced, waitfor, kwargs...)
+    waitsync(ii; waitfor=@timeout_now)
+    pup = _pup(s, ii, pside, args...; synced, waitfor, kwargs...)
     function dosync()
         if !pup.read[]
-            waitsync(ai; since=timestamp(ai, pside), waitfor=@timeout_now)
-            live_sync_position!(s, ai, pside, pup; waitfor=@timeout_now)
-            waitsync(ai, waitfor=@timeout_now)
+            waitsync(ii; since=timestamp(ii, pside), waitfor=@timeout_now)
+            live_sync_position!(s, ii, pside, pup; waitfor=@timeout_now)
+            waitsync(ii, waitfor=@timeout_now)
         end
     end
     if isnothing(pside)
-        pside = posside(ai)
+        pside = posside(ii)
         if isnothing(pside)
             @debug "live contracts: no side" _module = LogPosFetch
             return 0.0
@@ -246,27 +246,27 @@ function live_contracts(
         @debug "live contracts: no position" _module = LogPosFetch isnothing(pup) closed =
             isnothing(pup) ? nothing : pup.closed[]
         if local_fallback
-            @debug "live contracts: fallback" _module = LogPosFetch ai pside
-            cash(ai, pside).value
+            @debug "live contracts: fallback" _module = LogPosFetch ii pside
+            cash(ii, pside).value
         else
             0.0
         end
     else
         dosync()
-        cash(ai, pside).value
+        cash(ii, pside).value
     end
 end
 
-function live_notional(s::LiveStrategy, ai, args...; kwargs...)
-    @debug "live notional:" _module = LogPosSync ai
-    pup = _pup(s, ai, args...; kwargs...)
+function live_notional(s::LiveStrategy, ii, args...; kwargs...)
+    @debug "live notional:" _module = LogPosSync ii
+    pup = _pup(s, ii, args...; kwargs...)
     if isnothing(pup) || pup.closed[]
         0.0
     else
-        eid = exchangeid(ai)
+        eid = exchangeid(ii)
         ntl = resp_position_notional(pup.resp, eid)
-        if iszero(ntl) && timestamp(ai) >= get_time(pup.resp, eid)
-            notional(ai, get_position_side(s, ai))
+        if iszero(ntl) && timestamp(ii) >= get_time(pup.resp, eid)
+            notional(ii, get_position_side(s, ii))
         else
             ntl
         end |> abs
@@ -350,14 +350,14 @@ _ccxtposside(v::String) =
         error("wrong position side value $v")
     end
 
-function _ccxtposprice(ai, update)
-    eid = exchangeid(ai)
+function _ccxtposprice(ii, update)
+    eid = exchangeid(ii)
     lp = resp_position_lastprice(update, eid)
     if lp <= zero(DFT)
         lp = resp_position_markprice(update, eid)
         if lp <= zero(DFT)
             date = resp_position_timestamp(update, eid)
-            lastprice(ai, date)
+            lastprice(ii, date)
         else
             lp
         end
@@ -438,19 +438,19 @@ end
 
 function waitposclose(
     s::LiveStrategy,
-    ai,
-    bp::ByPos=get_position_side(s, ai);
+    ii,
+    bp::ByPos=get_position_side(s, ii);
     waitfor=Second(5),
     since=nothing,
     synced=true,
     force=false,
 )
     @timeout_start
-    isclosed() = !isopen(ai, bp)
+    isclosed() = !isopen(ii, bp)
     while true
         try
-            pup = live_position(s, ai, bp; since, synced, force, waitfor=@timeout_now())
-            waitsync(ai; since, waitfor=@timeout_now)
+            pup = live_position(s, ii, bp; since, synced, force, waitfor=@timeout_now())
+            waitsync(ii; since, waitfor=@timeout_now)
             if !isnothing(pup)
                 if isclosed()
                     return true
@@ -462,7 +462,7 @@ function waitposclose(
             end
         catch e
             e isa InterruptException && rethrow(e)
-            @error "waitposclose: error" exception=(e, catch_backtrace()) ai
+            @error "waitposclose: error" exception=(e, catch_backtrace()) ii
             return false
         end
     end

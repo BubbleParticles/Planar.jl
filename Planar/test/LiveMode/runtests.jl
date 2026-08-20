@@ -107,8 +107,8 @@ _ohclv() = [Any[1705276800000, 50000.0, 51000.0, 49000.0, 50500.0, 100.0]]
     @test LiveMode.get_float(d, "i") == 10.0
     @test LiveMode.get_bool(d, "b") == true
     @test LiveMode.get_bool(d, "x") == false
-    # 3-arg version requires ai keyword
-    @test LiveMode.get_float(d, "x", 1.0; ai=nothing) == 1.0
+    # 3-arg version requires ii keyword
+    @test LiveMode.get_float(d, "x", 1.0; ii=nothing) == 1.0
 end
 
 @testset "_option_float" begin
@@ -372,12 +372,12 @@ end
 # ══════════════════════════════════════════════════════════════
 
 @testset "pending counters — signature check" begin
-    @test hasmethod(LiveMode.pending_orders, Tuple{LiveMode.AssetInstance})
-    @test hasmethod(LiveMode.inc_pending_orders!, Tuple{LiveMode.AssetInstance})
-    @test hasmethod(LiveMode.dec_pending_orders!, Tuple{LiveMode.AssetInstance})
-    @test hasmethod(LiveMode.pending_trades, Tuple{LiveMode.AssetInstance})
-    @test hasmethod(LiveMode.inc_pending_trades!, Tuple{LiveMode.AssetInstance})
-    @test hasmethod(LiveMode.dec_pending_trades!, Tuple{LiveMode.AssetInstance})
+    @test hasmethod(LiveMode.pending_orders, Tuple{LiveMode.InstrumentInstance})
+    @test hasmethod(LiveMode.inc_pending_orders!, Tuple{LiveMode.InstrumentInstance})
+    @test hasmethod(LiveMode.dec_pending_orders!, Tuple{LiveMode.InstrumentInstance})
+    @test hasmethod(LiveMode.pending_trades, Tuple{LiveMode.InstrumentInstance})
+    @test hasmethod(LiveMode.inc_pending_trades!, Tuple{LiveMode.InstrumentInstance})
+    @test hasmethod(LiveMode.dec_pending_trades!, Tuple{LiveMode.InstrumentInstance})
 end
 
 # ══════════════════════════════════════════════════════════════
@@ -385,11 +385,11 @@ end
 # ══════════════════════════════════════════════════════════════
 
 @testset "handler utilities — method exists" begin
-    @test hasmethod(LiveMode.condition, Tuple{LiveMode.AssetInstance})
-    @test hasmethod(LiveMode.get_events, Tuple{LiveMode.AssetInstance})
-    @test hasmethod(LiveMode.lasteventrun!, Tuple{LiveMode.AssetInstance, DateTime})
-    @test hasmethod(LiveMode.lasteventrun!, Tuple{LiveMode.AssetInstance})
-    @test hasmethod(LiveMode.sendrequest!, Tuple{LiveMode.AssetInstance, DateTime, Function})
+    @test hasmethod(LiveMode.condition, Tuple{LiveMode.InstrumentInstance})
+    @test hasmethod(LiveMode.get_events, Tuple{LiveMode.InstrumentInstance})
+    @test hasmethod(LiveMode.lasteventrun!, Tuple{LiveMode.InstrumentInstance, DateTime})
+    @test hasmethod(LiveMode.lasteventrun!, Tuple{LiveMode.InstrumentInstance})
+    @test hasmethod(LiveMode.sendrequest!, Tuple{LiveMode.InstrumentInstance, DateTime, Function})
 end
 
 # ══════════════════════════════════════════════════════════════
@@ -771,10 +771,10 @@ end
 end
 
 # ══════════════════════════════════════════════════════════════
-# get_float resp with ai kwarg
+# get_float resp with ii kwarg
 # ══════════════════════════════════════════════════════════════
 
-@testset "get_float with ai kwarg" begin
+@testset "get_float with ii kwarg" begin
     d = Dict{String,Any}("price" => 50000.0)
     @test hasmethod(LiveMode.get_float, Tuple{Any,Any,Any})
 end

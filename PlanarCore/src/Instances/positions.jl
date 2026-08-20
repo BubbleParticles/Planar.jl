@@ -32,11 +32,11 @@ $(FIELDS)
 @kwdef struct Position{P<:PositionSide,E<:ExchangeID,M<:MarginMode}
     "Current status of the position"
     status::Vector{PositionStatus} = [PositionClose()]
-    "Asset being tracked"
+    "Instrument being tracked"
     asset::Derivative
     "Timestamp of the last update"
     timestamp::Vector{DateTime} = [DateTime(0)]
-    "Asset liquidation price"
+    "Instrument liquidation price"
     liquidation_price::OneVec = [0.0]
     "Price at which the position was entered"
     entryprice::OneVec = [0.0]

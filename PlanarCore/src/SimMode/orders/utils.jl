@@ -1,8 +1,8 @@
 using Random
 
 @doc "The price at a particular date for a buy order (default to low)."
-_pricebyside(::AnyBuyOrder, date, ai) = st.lowat(ai, date)
-_pricebyside(::AnySellOrder, date, ai) = st.highat(ai, date)
+_pricebyside(::AnyBuyOrder, date, ii) = st.lowat(ii, date)
+_pricebyside(::AnySellOrder, date, ii) = st.highat(ii, date)
 
 @doc """ Sets default attributes for simulation mode.
 

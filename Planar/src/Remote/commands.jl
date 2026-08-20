@@ -181,15 +181,15 @@ function _rolling(cl::TelegramClient, s; period, text, chat_id)
     try
         cur = nameof(s.cash)
         asset_data = []
-        for ai in s.universe
-            asset_trades = trades(ai)
+        for ii in s.universe
+            asset_trades = trades(ii)
             idx = findfirst(t -> t.date >= now() - period, asset_trades)
             if idx isa Number
                 n_trades = length(asset_trades) - (length(asset_trades) - idx)
                 balance = sum(t.size for t in @view(asset_trades[idx:end]))
                 volume = sum(abs(t.size) for t in @view(asset_trades[idx:end]))
                 if n_trades > 0
-                    push!(asset_data, (ai=ai, n_trades=n_trades, balance=balance, volume=volume))
+                    push!(asset_data, (ii=ii, n_trades=n_trades, balance=balance, volume=volume))
                 end
             end
         end
@@ -198,7 +198,7 @@ function _rolling(cl::TelegramClient, s; period, text, chat_id)
         sort!(asset_data, by=x -> x.volume, rev=true)
 
         for data in asset_data
-            ai, n_trades, balance, volume = data.ai, data.n_trades, data.balance, data.volume
+            ii, n_trades, balance, volume = data.ii, data.n_trades, data.balance, data.volume
             write(
                 io,
                 if balance > 0.0
@@ -210,7 +210,7 @@ function _rolling(cl::TelegramClient, s; period, text, chat_id)
                 end,
                 " ",
                 "*",
-                raw(ai),
+                raw(ii),
                 "*",
                 "\n",
                 "_",
@@ -246,12 +246,12 @@ function monthly(cl::TelegramClient, s; text, chat_id, kwargs...)
     _rolling(cl, s; period=Day(30), text, chat_id)
 end
 
-_ai_cash(ai, func) = abs(something(func(ai), 0.0))
-function _ai_cash(ai::HedgedInstance, func)
-    abs(something(func(ai, Long()), 0.0)) + abs(something(func(ai, Short()), 0.0))
+_ai_cash(ii, func) = abs(something(func(ii), 0.0))
+function _ai_cash(ii::HedgedInstance, func)
+    abs(something(func(ii, Long()), 0.0)) + abs(something(func(ii, Short()), 0.0))
 end
-total_cash(ai) = _ai_cash(ai, cash)
-comm_cash(ai) = _ai_cash(ai, committed)
+total_cash(ii) = _ai_cash(ii, cash)
+comm_cash(ii) = _ai_cash(ii, committed)
 @doc """ Provides the balance of a strategy
 
 $(TYPEDSIGNATURES)
@@ -263,27 +263,27 @@ The balances are presented in a DataFrame.
 function balance(cl::TelegramClient, s; text, chat_id, kwargs...)
     df = DataFrame()
     prices = zeros(Float64, length(s.universe))
-    @sync for (i, ai) in enumerate(s.universe)
+    @sync for (i, ii) in enumerate(s.universe)
         @async prices[i] = try
-            st.lastprice(ai)
+            st.lastprice(ii)
         catch e
-            @error "balance: failed to get price" ai asset=raw(ai) exception = (e, catch_backtrace())
+            @error "balance: failed to get price" ii asset=raw(ii) exception = (e, catch_backtrace())
             zero(Float64)
         end
     end
-    prices_dict = Dict(ai => prices[i] for (i, ai) in enumerate(s.universe))
+    prices_dict = Dict(ii => prices[i] for (i, ii) in enumerate(s.universe))
     total_asset_size = 0.0
-    for ai in s.universe
-        amount = total_cash(ai)
-        price = prices_dict[ai]
+    for ii in s.universe
+        amount = total_cash(ii)
+        price = prices_dict[ii]
         size = amount * price
-        leverage_factor = if ai isa MarginInstance
-            max(abs(leverage(ai, Long())), abs(leverage(ai, Short())))
+        leverage_factor = if ii isa MarginInstance
+            max(abs(leverage(ii, Long())), abs(leverage(ii, Short())))
         else
             1.0
         end
         if amount != 0 || size != 0
-            asset_name = first(raw(ai), 20)
+            asset_name = first(raw(ii), 20)
             leveraged_asset_name = leverage_factor == 1.0 ? asset_name : "$(round(Int, leverage_factor))x$asset_name"
             push!(df, (; asset=leveraged_asset_name, amount, size))
         end
@@ -370,8 +370,8 @@ function assets(cl::TelegramClient, s; text, chat_id, isinput, kwargs...)
         return false
     else
         sym = text
-        ai = s[MatchString(sym)]
-        ai_trades = trades(ai)
+        ii = s[MatchString(sym)]
+        ai_trades = trades(ii)
         n_trades = length(ai_trades)
         io = IOBuffer()
         try
@@ -386,19 +386,19 @@ function assets(cl::TelegramClient, s; text, chat_id, isinput, kwargs...)
                 )
                 write(io, "```\n")
             end
-            if ai isa MarginInstance
+            if ii isa MarginInstance
                 anyopen = false
                 for pos in (Long, Short)
-                    if isopen(ai, pos)
+                    if isopen(ii, pos)
                         anyopen = true
-                        show(io, position(ai, pos))
+                        show(io, position(ii, pos))
                     end
                 end
                 if !anyopen
                     write(io, "No positions open for ", sym)
                 end
             else
-                show(io, cnum(cash(ai)))
+                show(io, cnum(cash(ii)))
             end
             sendMessage(cl; text=String(take!(io)), chat_id, parse_mode="markdown")
         finally

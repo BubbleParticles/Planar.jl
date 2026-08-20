@@ -7,11 +7,11 @@ If there is no decisive active side, the last active position remains.
 
 """
 function set_active_position!(
-    ai;
-    cash_long=cash(ai, Long()),
-    cash_short=cash(ai, Short()),
-    ts_long=position(ai, Long()).timestamp[],
-    ts_short=position(ai, Short()).timestamp[],
+    ii;
+    cash_long=cash(ii, Long()),
+    cash_short=cash(ii, Short()),
+    ts_long=position(ii, Long()).timestamp[],
+    ts_short=position(ii, Short()).timestamp[],
     default_date=TimeTicks.now(),
 )::Option{Position}
     active_side = if iszero(cash_long)
@@ -25,7 +25,7 @@ function set_active_position!(
     else
         Short()
     end
-    ai.lastpos[] = if !isnothing(active_side)
-        position(ai, active_side)
+    ii.lastpos[] = if !isnothing(active_side)
+        position(ii, active_side)
     end
 end

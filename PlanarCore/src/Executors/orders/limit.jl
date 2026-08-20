@@ -47,45 +47,45 @@ This function places a limit order with specified parameters in the strategy `s`
 """
 function limitorder(
     s::Strategy,
-    ai,
+    ii,
     amount;
     date,
     type,
-    price=priceat(s, type, ai, date),
+    price=priceat(s, type, ii, date),
     take=nothing,
     stop=nothing,
     skipcommit=false,
     kwargs...,
 )
-    @debug "limitorder: entry" ai = raw(ai) date type price take stop kwargs
-    @debug "limitorder: limits" ai.limits.price.min ai.precision.price
-    @price! ai price take stop
-    @amount! ai amount
-    comm = Ref(committment(type, ai, price, amount))
-    is_comm = iscommittable(s, type, comm, ai)
-    free = try freecash(ai, posside(ai)) catch err; nothing end
-    @debug "create limitorder:" ai = raw(ai) price amount comm[] is_comm free
+    @debug "limitorder: entry" ii = raw(ii) date type price take stop kwargs
+    @debug "limitorder: limits" ii.limits.price.min ii.precision.price
+    @price! ii price take stop
+    @amount! ii amount
+    comm = Ref(committment(type, ii, price, amount))
+    is_comm = iscommittable(s, type, comm, ii)
+    free = try freecash(ii, posside(ii)) catch err; nothing end
+    @debug "create limitorder:" ii = raw(ii) price amount comm[] is_comm free
     if skipcommit || is_comm
-        basicorder(ai, price, amount, comm, SanitizeOff(); date, type, kwargs...)
+        basicorder(ii, price, amount, comm, SanitizeOff(); date, type, kwargs...)
     end
 end
 
 _cashfrom(s, _, o::IncreaseOrder) = st.freecash(s) + committed(o)
-_cashfrom(_, ai, o::ReduceOrder) = st.freecash(ai, positionside(o)()) + committed(o)
+_cashfrom(_, ii, o::ReduceOrder) = st.freecash(ii, positionside(o)()) + committed(o)
 
 @doc """ Checks if the provided trade is the last fill for the given asset instance.
 
 $(TYPEDSIGNATURES)
 """
-function islastfill(ai::AssetInstance, t::Trade{<:LimitOrderType})
+function islastfill(ii::InstrumentInstance, t::Trade{<:LimitOrderType})
     o = t.order
-    t.amount != o.amount && isfilled(ai, o)
+    t.amount != o.amount && isfilled(ii, o)
 end
 @doc """ Checks if the provided trade is the first fill for the given asset instance.
 
 $(TYPEDSIGNATURES)
 """
-function isfirstfill(::AssetInstance, t::Trade{<:LimitOrderType})
+function isfirstfill(::InstrumentInstance, t::Trade{<:LimitOrderType})
     o = t.order
     attr(o, :unfilled)[] == negate(t.amount)
 end
@@ -97,14 +97,14 @@ $(TYPEDSIGNATURES)
 This function takes a strategy, a limit order of type LimitOrderType{S}, and an asset instance as arguments. It adds the limit order to the pending orders of the strategy. If `skipcommit` is set to false (default), the order is committed and held. Returns true if the order was successfully added, otherwise false.
 """
 function queue!(
-    s::Strategy, o::Order{<:LimitOrderType{S}}, ai; skipcommit=false
+    s::Strategy, o::Order{<:LimitOrderType{S}}, ii; skipcommit=false
 ) where {S<:OrderSide}
-    @debug "queue limitorder:" is_comm = iscommittable(s, o, ai)
+    @debug "queue limitorder:" is_comm = iscommittable(s, o, ii)
     # This is already done in general by the function that creates the order
-    skipcommit || iscommittable(s, o, ai) || return false
-    push!(s, ai, o)
-    @deassert hasorders(s, ai, positionside(o))
-    skipcommit || commit!(s, o, ai)
-    hold!(s, ai, o)
+    skipcommit || iscommittable(s, o, ii) || return false
+    push!(s, ii, o)
+    @deassert hasorders(s, ii, positionside(o))
+    skipcommit || commit!(s, o, ii)
+    hold!(s, ii, o)
     return true
 end

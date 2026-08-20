@@ -26,17 +26,17 @@ function _tradesdf(trades::AbstractVector)
     rename!(df, :date => :timestamp)
     df
 end
-@doc """ Retrieves trades from an `AssetInstance` within a specified range and transforms them into a DataFrame.
+@doc """ Retrieves trades from an `InstrumentInstance` within a specified range and transforms them into a DataFrame.
 
 $(TYPEDSIGNATURES)
 
 The function retrieves trades within this range and then transforms them into a DataFrame using the `_tradesdf()` function.
 """
-function _tradesdf(ai::AssetInstance, from=firstindex(ai.history), to=lastindex(ai.history))
+function _tradesdf(ii::InstrumentInstance, from=firstindex(ii.history), to=lastindex(ii.history))
     isempty(from:to) || isempty(s.history) && return nothing
-    _tradesdf(@view ai.history[from:to])
+    _tradesdf(@view ii.history[from:to])
 end
-tradesdf(ai) = _tradesdf(ai.history)
+tradesdf(ii) = _tradesdf(ii.history)
 
 @doc """Checks if an `Order` is an `IncreaseOrder`."""
 isincreaseorder(::O) where {O<:IncreaseOrder} = true
@@ -186,18 +186,18 @@ end
 
 $(TYPEDSIGNATURES)
 
-This function takes an `AssetInstance` and a target timeframe `to_tf` as parameters, as well as optional `style` and `custom` parameters for additional customization.
-It extracts the trades data from the `AssetInstance` and resamples it to the target timeframe. 
-Volume adjustments are made based on the margin mode of the `AssetInstance`.
+This function takes an `InstrumentInstance` and a target timeframe `to_tf` as parameters, as well as optional `style` and `custom` parameters for additional customization.
+It extracts the trades data from the `InstrumentInstance` and resamples it to the target timeframe. 
+Volume adjustments are made based on the margin mode of the `InstrumentInstance`.
 The data is then grouped by date, transformed according to the margin mode, style, and custom parameters, and combined into a new DataFrame. 
 Finally, the target timeframe is applied to the timestamps in the DataFrame.
 """
-function resample_trades(ai::AssetInstance, to_tf; style=:full, custom=())
-    data = tradesdf(ai)
+function resample_trades(ii::InstrumentInstance, to_tf; style=:full, custom=())
+    data = tradesdf(ii)
     isnothing(data) && return nothing
-    tradesvolume!(marginmode(ai), data)
+    tradesvolume!(marginmode(ii), data)
     gb = bydate(data, to_tf)
-    df = combine(gb, transforms(marginmode(ai), style, custom)...; renamecols=false)
+    df = combine(gb, transforms(marginmode(ii), style, custom)...; renamecols=false)
     applytimeframe!(df, to_tf)
 end
 
@@ -228,7 +228,7 @@ end
 
 $(TYPEDSIGNATURES)
 
-`byinstance`: `(trades_df, ai) -> nothing` can modify the dataframe of a single instance before it is appended
+`byinstance`: `(trades_df, ii) -> nothing` can modify the dataframe of a single instance before it is appended
 to the full df.
 `style`: `:full` or `:minimal` specifies what columns should be aggregated in the resampled df
 `custom`: similar to `style` but instead allows you to define custom aggregation rules (according to `DataFrame`)
@@ -243,11 +243,11 @@ function resample_trades(
     expand_dates=false,
 )
     df = DataFrame()
-    for ai in s.universe
-        isempty(ai.history) && continue
-        tdf = tradesdf(ai)
-        tdf[!, :instance] .= ai
-        byinstance(tdf, ai)
+    for ii in s.universe
+        isempty(ii.history) && continue
+        tdf = tradesdf(ii)
+        tdf[!, :instance] .= ii
+        byinstance(tdf, ii)
         append!(df, tdf)
     end
     if isempty(df)

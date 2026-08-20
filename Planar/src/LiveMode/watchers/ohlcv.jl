@@ -11,13 +11,13 @@ $(TYPEDSIGNATURES)
 Subscribes to the watcher's process Subject, propagating OHLCV data to the asset instance on each signal.
 
 """
-function setup_propagate!(s::RTStrategy, ai, w::Watcher)
-    data = ai.data
+function setup_propagate!(s::RTStrategy, ii, w::Watcher)
+    data = ii.data
     met = ohlcvmethod(s)
     pipeline = getproperty(w.beacon, :process) |> Rocket.map(Nothing, _ -> begin
         try
             propagate_ohlcv!(data)
-            cached_ohlcv!(ai, met)
+            cached_ohlcv!(ii, met)
         catch exception
             exception isa InterruptException && rethrow(exception)
             @warn "watchers: propagate loop failed" exception = (exception, catch_backtrace()) _module = LogWatchOHLCV
@@ -40,9 +40,9 @@ Subscribes to the watcher's process Subject, propagating OHLCV data for each ass
 """
 function setup_propagate!(s::RTStrategy, w::Watcher)
     pipeline = getproperty(w.beacon, :process) |> Rocket.map(Nothing, _ -> begin
-        for ai in s.universe
+        for ii in s.universe
             try
-                propagate_ohlcv!(ai.data)
+                propagate_ohlcv!(ii.data)
             catch exception
                 exception isa InterruptException && rethrow(exception)
                 @warn "watchers: propagate loop failed" exception = (exception, catch_backtrace()) _module = LogWatchOHLCV
@@ -67,7 +67,7 @@ values: `tickers`, `trades`, `candles`
 
 """
 ohlcvmethod(s::Strategy) = attr(s, :live_ohlcv_method, :candles)
-ohlcvmethod(ai::AssetInstance) = attr(ai, :live_ohlcv_method, :candles)
+ohlcvmethod(ii::InstrumentInstance) = attr(ii, :live_ohlcv_method, :candles)
 function ohlcvmethod!(s::Strategy, m=nothing)
     if m ∉ (:tickers, :candles, :trades, :average, nothing)
         error("ohlcv methods supported are `tickers`, `candles`, `trades` and `average`")
@@ -75,8 +75,8 @@ function ohlcvmethod!(s::Strategy, m=nothing)
     k = :live_ohlcv_method
     setfunc = isnothing(m) ? (d, _) -> attr!(d, k, :candles) : (d, m) -> setattr!(d, m, k)
     setfunc(s, m)
-    for ai in universe(s)
-        setfunc(ai, m)
+    for ii in universe(s)
+        setfunc(ii, m)
     end
     @something m :tickers
 end
@@ -92,7 +92,7 @@ Otherwise, it returns the single watcher for the strategy `s`.
 """
 function ohlcv_watchers(s::RTStrategy)
     if ohlcvmethod!(s) == :trades
-        @lget! s.attrs :live_ohlcv_watchers Dict{AssetInstance,Watcher}()
+        @lget! s.attrs :live_ohlcv_watchers Dict{InstrumentInstance,Watcher}()
     else
         attr(s, :live_ohlcv_watcher, nothing)
     end
@@ -111,16 +111,16 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
     ow = ohlcv_watchers(s)
     met = ohlcvmethod(s)
     if met == :trades
-        function start_watcher(ai)
+        function start_watcher(ii)
             # NOTE: define it as local, otherwise async would clobber it before
             # being saved in the dict
             local w
-            sym = raw(ai)
+            sym = raw(ii)
             eid = exchangeid(exc)
-            default_view = @lget! ai.data s.timeframe cached_ohlcv!(
+            default_view = @lget! ii.data s.timeframe cached_ohlcv!(
                 eid, met, s.timeframe, sym
             )
-            prev_w = get(ow, ai, missing)
+            prev_w = get(ow, ii, missing)
             if !ismissing(prev_w)
                 if isrunning(prev_w)
                     close(prev_w)
@@ -128,24 +128,24 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
             end
             w = ccxt_ohlcv_watcher(exc, sym; s.timeframe, default_view)
             Watchers.load!(w)
-            w[:propagate_sub] = setup_propagate!(s, ai, w)
+            w[:propagate_sub] = setup_propagate!(s, ii, w)
             start!(w)
-            ow[ai] = w
+            ow[ii] = w
         end
-        @sync for ai in s.universe
+        @sync for ii in s.universe
             @async try
-                start_watcher(ai)
+                start_watcher(ii)
             catch e
                 e isa InterruptException && rethrow(e)
-                @error "ohlcv: start watcher failed" ai = raw(ai) exception = (e, catch_backtrace())
+                @error "ohlcv: start watcher failed" ii = raw(ii) exception = (e, catch_backtrace())
             end
         end
     else
         eid = exchangeid(s)
         default_view = Dict{String,DataFrame}(
-            raw(ai) =>
-                @lget!(ai.data, s.timeframe, cached_ohlcv!(eid, met, s.timeframe, raw(ai)))
-            for ai in s.universe
+            raw(ii) =>
+                @lget!(ii.data, s.timeframe, cached_ohlcv!(eid, met, s.timeframe, raw(ii)))
+            for ii in s.universe
         )
         buffer_capacity = attr(s, :live_buffer_capacity, 100)
         view_capacity = attr(
@@ -154,9 +154,9 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
         n_jobs = attr(s, :live_ohlcv_jobs, 8)
         function propagate_callback(_, sym)
             @debug "watchers: propagating" _module = LogWatchOHLCV sym
-            ai = asset_bysym(s, sym)
-            ohlcv_dict(ai) |> propagate_ohlcv!
-            cached_ohlcv!(ai, met)
+            ii = asset_bysym(s, sym)
+            ohlcv_dict(ii) |> propagate_ohlcv!
+            cached_ohlcv!(ii, met)
         end
         watcher_func = if met == :tickers
             (exc; kwargs...) -> ccxt_ohlcv_tickers_watcher(exc; kwargs...)
@@ -190,7 +190,7 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
             w = watcher_func(
                 exc;
                 timeframe=s.timeframe,
-                syms=(raw(ai) for ai in s.universe),
+                syms=(raw(ii) for ii in s.universe),
                 flush=false,
                 logfile=logpath(s; name="ohlcv_watcher_$(nameof(s))"),
                 load_path=load_path,
@@ -204,9 +204,9 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
         w[:resync_noncontig] = true
         w[:startup_task] = @start_task IdDict() try
             wv = w.view
-            @sync for ai in s.universe
-                sym = raw(ai)
-                wv[sym] = ai.data[s.timeframe]
+            @sync for ii in s.universe
+                sym = raw(ii)
+                wv[sym] = ii.data[s.timeframe]
                 @async try
                     Watchers.load!(w, sym)
                 catch e
@@ -259,7 +259,7 @@ function stop_watch_ohlcv!(s::RTStrategy)
             if isrunning(ai_w)
                 startup_task = attr(ai_w, :startup_task, nothing)
                 if startup_task isa Task && istaskrunning(startup_task)
-                    @debug "ohlcv watcher: stopping startup task" _module = LogWatchOHLCV ai = raw(asset_bysym(s, get(ai_w.attrs, :sym, "")))
+                    @debug "ohlcv watcher: stopping startup task" _module = LogWatchOHLCV ii = raw(asset_bysym(s, get(ai_w.attrs, :sym, "")))
                     stop_task(startup_task)
                 end
                 propagate_sub = attr(ai_w, :propagate_sub, nothing)
@@ -280,32 +280,32 @@ function stop_watch_ohlcv!(s::RTStrategy)
     end
 end
 
-function empty_ohlcv(s::Strategy, ai::AssetInstance)
-    cached_ohlcv!(exchangeid(s), ohlcvmethod(s), period(s.timeframe), raw(ai))
+function empty_ohlcv(s::Strategy, ii::InstrumentInstance)
+    cached_ohlcv!(exchangeid(s), ohlcvmethod(s), period(s.timeframe), raw(ii))
 end
 
 export ohlcvmethod!, ohlcvmethod, sourceohlcv!, ensure_propagate!, addcallback!, stack_propagate_ohlcv_callback, addpropagatetask!
 
-function empty_ohlcv(ai::AssetInstance, tf::TimeFrame; met=:candles)
-    cached_ohlcv!(exchangeid(ai), ohlcvmethod(ai), period(tf), raw(ai))
+function empty_ohlcv(ii::InstrumentInstance, tf::TimeFrame; met=:candles)
+    cached_ohlcv!(exchangeid(ii), ohlcvmethod(ii), period(tf), raw(ii))
 end
 
 @doc "Ensures dataframes in the strategy are present in the cache"
 function cached_ohlcv!(s::Strategy)
     eid = exchangeid(s)
     met = ohlcvmethod!(s)
-    for ai in universe(s)
-        sym = raw(ai)
-        for (tf, data) in ohlcv_dict(ai)
+    for ii in universe(s)
+        sym = raw(ii)
+        for (tf, data) in ohlcv_dict(ii)
             cached_ohlcv!(eid, met, period(tf), sym; def=data)
         end
     end
 end
 
-function cached_ohlcv!(ai::AssetInstance, met=:candles)
-    eid = exchangeid(ai)()
-    sym = raw(ai) |> string
-    for (tf, data) in ohlcv_dict(ai)
+function cached_ohlcv!(ii::InstrumentInstance, met=:candles)
+    eid = exchangeid(ii)()
+    sym = raw(ii) |> string
+    for (tf, data) in ohlcv_dict(ii)
         cached_ohlcv!(eid, met, period(tf), sym; def=data)
     end
 end
@@ -318,20 +318,20 @@ function sourceohlcv!(s::RTStrategy, from_strat::Strategy)
     # Override this strategy ohlcv data with ohlcv data from the source strategy
     @info "ohlcv: sourcing from strategy" from_strat
     this_timeframes = s.timeframes
-    for ai in universe(s)
-        fs_ai = asset_bysym(from_strat, raw(ai))
+    for ii in universe(s)
+        fs_ai = asset_bysym(from_strat, raw(ii))
         if isnothing(fs_ai)
-            @warn "ohlcv: can't source for asset" ai from_strat
+            @warn "ohlcv: can't source for asset" ii from_strat
         else
             dict = ohlcv_dict(fs_ai)
             for tf in this_timeframes
                 data = get(dict, tf, nothing)
                 if !isnothing(data)
-                    ohlcv_dict(ai)[tf] = data
+                    ohlcv_dict(ii)[tf] = data
                 else
-                    @warn "ohlcv: can't source for timeframe" ai tf from_strat
-                    if !haskey(ohlcv_dict(ai), tf)
-                        ohlcv_dict(ai)[tf] = Data.empty_ohlcv()
+                    @warn "ohlcv: can't source for timeframe" ii tf from_strat
+                    if !haskey(ohlcv_dict(ii), tf)
+                        ohlcv_dict(ii)[tf] = Data.empty_ohlcv()
                     end
                 end
             end
@@ -351,11 +351,11 @@ function ensure_propagate!(s::RTStrategy, from_strat::Strategy)
         if w isa Watcher
             addcallback!(w, s, stack_propagate_ohlcv_callback(s, w.callback))
         elseif w isa Dict && valtype(w) <: Watcher
-            for ai in universe(s)
-                this_sym = raw(ai)
+            for ii in universe(s)
+                this_sym = raw(ii)
                 this_w = get(w, this_sym, nothing)
                 if !isnothing(this_w)
-                    addpropagatetask!(this_w, s, ai)
+                    addpropagatetask!(this_w, s, ii)
                 else
                     @info "ohlcv: no source watcher for symbol" from_strat this_sym
                 end
@@ -398,7 +398,7 @@ function addcallback!(w::Watcher, s::RTStrategy, new_cb=nothing)
     end
 end
 
-function addpropagatetask!(w::Watcher, s::RTStrategy, ai::AssetInstance)
+function addpropagatetask!(w::Watcher, s::RTStrategy, ii::InstrumentInstance)
     n = 1
     this_sym = Symbol(:propagate_sub, string(n))
     sub::Union{Rocket.Subscription,Nothing} = nothing
@@ -408,7 +408,7 @@ function addpropagatetask!(w::Watcher, s::RTStrategy, ai::AssetInstance)
         n += 1
         this_sym = Symbol(:propagate_sub, string(n))
     end
-    w[this_sym] = setup_propagate!(s, ai, w)
+    w[this_sym] = setup_propagate!(s, ii, w)
 end
 
 export ohlcvmethod!, ohlcvmethod, sourceohlcv!, ensure_propagate!, addcallback!, stack_propagate_ohlcv_callback, addpropagatetask!

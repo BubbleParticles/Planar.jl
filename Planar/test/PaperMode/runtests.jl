@@ -16,7 +16,7 @@ const EID = PaperMode.OrderTypes.ExchangeTypes.ExchangeID
 using Logging: SimpleLogger, with_logger
 
 # ── Test fixtures ──────────────────────────────────────────
-_asset = PaperMode.SimMode.Asset("BTC/USDT")
+_asset = PaperMode.SimMode.Instrument("BTC/USDT")
 _eid = EID(:test)
 _dt = DateTime(2024, 1, 1)
 
@@ -88,7 +88,7 @@ function make_mock_exchange()
 end
 
 function make_asset_instance(exc)
-    ai = PaperMode.Instances.AssetInstance(
+    ii = PaperMode.Instances.InstrumentInstance(
         _asset,
         PaperMode.Instances.DataStructures.SortedDict(),
         exc,
@@ -128,8 +128,8 @@ function call!(
 end
 end
 
-function _make_paper_strategy(exc, ai)
-    uni = PlanarCore.Collections.AssetCollection([ai])
+function _make_paper_strategy(exc, ii)
+    uni = PlanarCore.Collections.InstrumentCollection([ii])
     cfg = PlanarCore.Strategies.Instances.Misc.Config(;
         qc=:USDT, initial_cash=10000.0, sandbox=true,
     )
@@ -210,8 +210,8 @@ end
     # calls resolve locally and never touch the live gateway (same stub-cache
     # mechanism the SimMode suite uses to avoid spawning a gateway).
     PaperMode.Instances.Exchanges.ExchangeTypes.sb_exchanges[(:test, "")] = exc
-    ai = make_asset_instance(exc)
-    s = _make_paper_strategy(exc, ai)
+    ii = make_asset_instance(exc)
+    s = _make_paper_strategy(exc, ii)
     # Mark the strategy running so _doping enters its loop (normally done by start!).
     s[:is_running] = Ref(true)
     PaperMode._doping(s; throttle=0.001)

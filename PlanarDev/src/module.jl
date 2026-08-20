@@ -11,7 +11,7 @@ using PlanarCore.Lang
 using PlanarCore: PlanarCore
 
 import PlanarCore.Data: stub!
-global s, ai, e
+global s, ii, e
 
 function backtest_strat(sym; mode=Sim(), config_attrs=(;), kwargs...)
     @info "btstrat: newconfig"
@@ -41,7 +41,7 @@ function symnames(s=Main.s)
 end
 
 function symnames(data::Dict)
-    String[lowercase(string(parse(st.Instruments.AbstractAsset, k).bc)) for k in keys(data)]
+    String[lowercase(string(parse(st.Instruments.AbstractInstrument, k).bc)) for k in keys(data)]
 end
 
 function default_data_loader(load_func=nothing)
@@ -86,7 +86,7 @@ end
 
 function loadstrat!(strat=:Example, bind=:s; load=false, stub=false, mode=Sim(), kwargs...)
     @eval Main begin
-        global $bind, ai
+        global $bind, ii
         if isdefined(Main, $(QuoteNode(bind))) && $bind isa st.Strategy{<:Union{Paper,Live}}
             try
                 exs.ExchangeTypes._closeall()
@@ -110,7 +110,7 @@ function loadstrat!(strat=:Example, bind=:s; load=false, stub=false, mode=Sim(),
             end
         end
         st.default!($bind)
-        ai = try
+        ii = try
             first($bind.universe)
         catch
         end

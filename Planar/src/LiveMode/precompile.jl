@@ -14,7 +14,7 @@ if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
     using .Instances
     using .Exchanges
     using .Exchanges: gettimeout, resptobool
-    using .st: Strategy, MarginStrategy, NoMarginStrategy, LiveStrategy, call!, RTStrategy, throttle, ExchangeAsset, universe, WarmupPeriod
+    using .st: Strategy, MarginStrategy, NoMarginStrategy, LiveStrategy, call!, RTStrategy, throttle, ExchangeInstrument, universe, WarmupPeriod
     using .OrderTypes
     using .Misc
     using .Misc.TimeTicks
@@ -49,8 +49,8 @@ if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
                     SimMode.@compile_call
                     
                     # Precompile watcher functions (just the function signatures)
-                    for ai in s.universe
-                        asset_tasks(ai)
+                    for ii in s.universe
+                        asset_tasks(ii)
                     end
                 catch e
                     @warn "PRECOMP: BareStrat construction failed" exception = (e, catch_backtrace())

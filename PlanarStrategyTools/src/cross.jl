@@ -18,7 +18,7 @@ Extracts the `sig.value` from the property of the dictionary item identified by 
 get_signal_value(ct, k) = getproperty(ct, k).state.value
 ismissingvalue(v::F) where {F<:AbstractFloat} = isnan(v)
 ismissingvalue(v) = ismissing(v)
-function cmptarget(s, ai; data, ats, prev_date)
+function cmptarget(s, ii; data, ats, prev_date)
     a = closeat(data, ats)
     prev_a = closeat(data, prev_date)
     (; a, prev_a)
@@ -31,30 +31,30 @@ $(TYPEDSIGNATURES)
 Evaluates if the closing prices at specified times cross a threshold in the direction `drc`.
 Uses timeframes and signals to determine the crossover.
 """
-function iscrossed(s, ai, ats, sig_b, drc::Val)
+function iscrossed(s, ii, ats, sig_b, drc::Val)
     tf = signal_timeframe(s, sig_b)
     prev_date = available(tf, ats)
-    data = ohlcv(ai, tf)
+    data = ohlcv(ii, tf)
     if firstdate(data) > prev_date
         @debug "crossed: not enough candles"
         return false
     else
-        data = ohlcv(ai, tf)
+        data = ohlcv(ii, tf)
         ats = apply(tf, ats)
 
-        sig = strategy_signal(s, ai, sig_b)
+        sig = strategy_signal(s, ii, sig_b)
         sig_val = signal_value(sig.state; sig)
         prev_sig_val = signal_prev(sig.state; sig)
         if ismissingvalue(sig_val) || ismissingvalue(prev_sig_val)
-            @debug "crossed: signal missing" ai sig_b
+            @debug "crossed: signal missing" ii sig_b
             return false
         elseif sig.date < prev_date
             @warn "crossed: stale signal" maxlog = 1 sig.date prev_date
             return false
         end
-        a, prev_a = cmptarget(s, ai; data, ats, prev_date)
+        a, prev_a = cmptarget(s, ii; data, ats, prev_date)
         if ismissingvalue(a) || ismissingvalue(prev_a)
-            @debug "crossed: cmptarget missing values" ai ats sig_b a prev_a
+            @debug "crossed: cmptarget missing values" ii ats sig_b a prev_a
             return false
         end
         @debug "crossed: " drc a sig_b
@@ -62,14 +62,14 @@ function iscrossed(s, ai, ats, sig_b, drc::Val)
     end
 end
 
-function iscrossed(s, ai, ats, sig_a_name, sig_b_name, drc::Val)
+function iscrossed(s, ii, ats, sig_a_name, sig_b_name, drc::Val)
     tf_a = signal_timeframe(s, sig_a_name)
     tf_b = signal_timeframe(s, sig_b_name)
     tf_s = s.timeframe
-    sig_a = strategy_signal(s, ai, sig_a_name)
+    sig_a = strategy_signal(s, ii, sig_a_name)
     @assert sig_a.date >= ats
     prev_sig_a_val = signal_prev(sig_a.state; sig=sig_a)
-    sig_b = strategy_signal(s, ai, sig_b_name)
+    sig_b = strategy_signal(s, ii, sig_b_name)
     @assert sig_b.date >= ats
     prev_sig_b_val = signal_prev(sig_b.state; sig=sig_b)
     a = signal_value(sig_a.state; sig=sig_a)
@@ -78,7 +78,7 @@ function iscrossed(s, ai, ats, sig_a_name, sig_b_name, drc::Val)
         ismissingvalue(b) ||
         ismissingvalue(prev_sig_a_val) ||
         ismissingvalue(prev_sig_b_val)
-        @debug "crossed: signal missing" ai sig_a sig_b
+        @debug "crossed: signal missing" ii sig_a sig_b
         return false
     elseif sig_a.date < available(tf_a, ats) || sig_b.date < available(tf_b, ats)
         @warn "crossed: stale signal" sig_a_name sig_b_name
@@ -88,11 +88,11 @@ function iscrossed(s, ai, ats, sig_a_name, sig_b_name, drc::Val)
     iscrossed(drc; a, b, prev_a=prev_sig_a_val, prev_b=prev_sig_b_val)
 end
 
-function iscrossed(s, ai, ats, sig_name, field_a, field_b, drc::Val)
-    sig = strategy_signal(s, ai, sig_name)
+function iscrossed(s, ii, ats, sig_name, field_a, field_b, drc::Val)
+    sig = strategy_signal(s, ii, sig_name)
     hist = signal_prev(sig.state; sig)
     if ismissingvalue(sig.state.value)
-        @debug "crossed: signal field missing" ai sig_name field_a field_b
+        @debug "crossed: signal field missing" ii sig_name field_a field_b
         return false
     end
     current_val_a = getproperty(sig.state.value, field_a)
@@ -102,7 +102,7 @@ function iscrossed(s, ai, ats, sig_name, field_a, field_b, drc::Val)
     if ismissingvalue(current_val_a) ||
         ismissingvalue(current_val_b) ||
         ismissingvalue(hist)
-        @debug "crossed: signal field missing" ai sig_name field_a field_b
+        @debug "crossed: signal field missing" ii sig_name field_a field_b
         return false
     elseif sig.date < available(tf, ats)
         @warn "crossed: stale signal" sig_name sig.date ats signal_timeframe(s, sig_name)

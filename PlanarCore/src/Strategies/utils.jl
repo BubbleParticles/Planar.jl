@@ -6,12 +6,12 @@ using ..Instruments: @importcash!, AbstractCash
 @importcash!
 
 @doc "Get the candle for the asset at `date` with timeframe `tf`."
-function candleat(ai::AssetInstance, date, tf; kwargs...)
-    candleat(ai.data[tf], date; kwargs...)
+function candleat(ii::InstrumentInstance, date, tf; kwargs...)
+    candleat(ii.data[tf], date; kwargs...)
 end
 
-function candleat(s::Strategy, ai::AssetInstance, date; tf=s.timeframe, kwargs...)
-    candleat(ai, date, tf; kwargs...)
+function candleat(s::Strategy, ii::InstrumentInstance, date; tf=s.timeframe, kwargs...)
+    candleat(ii, date, tf; kwargs...)
 end
 
 @doc """ Defines a set of functions for a given candle function.
@@ -19,7 +19,7 @@ end
 $(TYPEDSIGNATURES)
 
 This macro generates two functions for each candle function passed to it.
-The first function is for getting the candle data from an `AssetInstance` at a specific date.
+The first function is for getting the candle data from an `InstrumentInstance` at a specific date.
 The second function is for getting the candle data from a `Strategy` at a specific date with a specified timeframe.
 The timeframe defaults to the strategy's timeframe if not provided.
 
@@ -27,15 +27,15 @@ The timeframe defaults to the strategy's timeframe if not provided.
 macro define_candle_func(fname)
     fname = esc(Symbol(eval(fname)))
     ex1 = quote
-        function func(ai::AssetInstance, date; kwargs...)
-            func(ohlcv(ai), date; kwargs...)
+        function func(ii::InstrumentInstance, date; kwargs...)
+            func(ohlcv(ii), date; kwargs...)
         end
     end
     ex1.args[2].args[1].args[1] = fname
     ex1.args[2].args[2].args[3].args[1] = fname
     ex2 = quote
-        function func(s::Strategy, ai::AssetInstance, date; tf=s.timeframe, kwargs...)
-            func(ai.data[tf], date; kwargs...)
+        function func(s::Strategy, ii::InstrumentInstance, date; tf=s.timeframe, kwargs...)
+            func(ii.data[tf], date; kwargs...)
         end
     end
     ex2.args[2].args[1].args[1] = fname
@@ -50,9 +50,9 @@ for sym in (openat, highat, lowat, closeat, volumeat)
 end
 
 @doc "The asset close price of the candle where the last trade was performed."
-lasttrade_price_func(ai) = begin
-    h = ai.history
-    data = ohlcv(ai)
+lasttrade_price_func(ii) = begin
+    h = ii.history
+    data = ohlcv(ii)
     if !isempty(h)
         h[end].price
     elseif !isempty(data)
@@ -75,8 +75,8 @@ The default price function used is `lasttrade_price_func`, which returns the clo
 """
 function current_total(s::NoMarginStrategy{Sim}; price_func=lasttrade_price_func, kwargs...)
     worth = zero(DFT)
-    for ai in s.holdings
-        worth += cash(ai) * price_func(ai)
+    for ii in s.holdings
+        worth += cash(ii) * price_func(ii)
     end
     worth + cash(s)
 end
@@ -94,11 +94,11 @@ function current_total(
     s::NoMarginStrategy{Paper}; price_func=lasttrade_price_func, kwargs...
 )
     partials = zeros(DFT, length(s.holdings))
-    @sync for (i, ai) in enumerate(s.holdings)
+    @sync for (i, ii) in enumerate(s.holdings)
         Threads.@spawn partials[i] = try
-            cash(ai) * price_func(ai)
+            cash(ii) * price_func(ii)
         catch e
-            @error "current_total: failed to value holding" ai asset=raw(ai) exception = (
+            @error "current_total: failed to value holding" ii asset=raw(ii) exception = (
                 e, catch_backtrace()
             )
             rethrow(e)
@@ -118,16 +118,16 @@ The default price function used is `lasttrade_price_func`, which returns the clo
 """
 function current_total(s::MarginStrategy{Sim}; price_func=lasttrade_price_func, kwargs...)
     worth = zero(DFT)
-    for ai in s.holdings
+    for ii in s.holdings
         try
-            cp = price_func(ai)
+            cp = price_func(ii)
             for p in (Long, Short)
-                if isopen(ai, p)
-                    worth += value(ai, p; current_price=cp)
+                if isopen(ii, p)
+                    worth += value(ii, p; current_price=cp)
                 end
             end
         catch e
-            @error "current_total: failed to value holding" ai asset=raw(ai) exception = (
+            @error "current_total: failed to value holding" ii asset=raw(ii) exception = (
                 e, catch_backtrace()
             )
             rethrow(e)
@@ -147,19 +147,19 @@ The default price function used is `lasttrade_price_func`, which returns the clo
 """
 function current_total(s::MarginStrategy{Paper}, price_func=lasttrade_price_func; kwargs...)
     partials = zeros(DFT, length(s.holdings) * 2)
-    @sync for (i, ai) in enumerate(s.holdings)
+    @sync for (i, ii) in enumerate(s.holdings)
         Threads.@spawn begin
             current_price = try
-                price_func(ai)
+                price_func(ii)
             catch e
-                @error "current_total: failed to price holding" ai asset=raw(ai) exception = (
+                @error "current_total: failed to price holding" ii asset=raw(ii) exception = (
                     e, catch_backtrace()
                 )
                 rethrow(e)
             end
             local idx = (i - 1) * 2
             for (j, p) in enumerate((Long, Short))
-                partials[idx + j] = isopen(ai, p) ? value(ai, p; current_price) : zero(DFT)
+                partials[idx + j] = isopen(ii, p) ? value(ii, p; current_price) : zero(DFT)
             end
         end
     end
@@ -170,20 +170,20 @@ end
 
 $(TYPEDSIGNATURES)
 
-This function returns the date of the last trade for an `AssetInstance`.
+This function returns the date of the last trade for an `InstrumentInstance`.
 If the history of the asset instance is empty, it returns the timestamp of the last candle.
 
 """
-function lasttrade_date(ai, def=nothing)
-    if isempty(ai.history)
-        # Default originally computed as `ohlcv(ai).timestamp[end]`, but that
+function lasttrade_date(ii, def=nothing)
+    if isempty(ii.history)
+        # Default originally computed as `ohlcv(ii).timestamp[end]`, but that
         # throws BoundsError when the asset has no OHLCV data loaded yet.
         # Compute it lazily and guard the empty case.
         isnothing(def) || return def
-        df = ohlcv(ai)
+        df = ohlcv(ii)
         return isempty(df) ? TimeTicks.now() : df.timestamp[end]
     end
-    last(ai.history).date
+    last(ii.history).date
 end
 
 @doc """ Returns a function for the last trade date of a strategy.
@@ -210,13 +210,13 @@ If there are no trades, it returns `nothing`.
 function tradesedge(s::Strategy)
     first_trade = nothing
     last_trade = nothing
-    for ai in universe(s)
-        isempty(ai.history) && continue
-        this_trade = first(ai.history)
+    for ii in universe(s)
+        isempty(ii.history) && continue
+        this_trade = first(ii.history)
         if isnothing(first_trade) || this_trade.date < first_trade.date
             first_trade = this_trade
         end
-        this_trade = last(ai.history)
+        this_trade = last(ii.history)
         if isnothing(last_trade) || this_trade.date > last_trade.date
             last_trade = this_trade
         end
@@ -279,17 +279,17 @@ function sizehint!(s::Strategy)
     _sizehint!(s.sellorders, s_sizes, :sellorders)
     _sizehint!(s.holdings, s_sizes, :holdings)
     o_b_sizes = @lget! sizes :_ob_sizes Dict{String,Int}()
-    for (ai, d) in s.buyorders
-        _sizehint!(d, o_b_sizes, ai.asset.raw)
+    for (ii, d) in s.buyorders
+        _sizehint!(d, o_b_sizes, ii.asset.raw)
     end
     o_s_sizes = @lget! sizes :_os_sizes Dict{String,Int}()
-    for (ai, d) in s.sellorders
-        _sizehint!(d, o_s_sizes, ai.asset.raw)
+    for (ii, d) in s.sellorders
+        _sizehint!(d, o_s_sizes, ii.asset.raw)
     end
-    ai_sizes = @lget! sizes :_ai_sizes Dict{String,Int}()
-    ai_logs_sizes = @lget! sizes :_ai_logs_sizes Dict{String,Int}()
-    for ai in universe(s)
-        _sizehint!(ai.history, ai_sizes, ai.asset.raw)
+    ai_sizes = @lget! sizes :_ii_sizes Dict{String,Int}()
+    ai_logs_sizes = @lget! sizes :_ii_logs_sizes Dict{String,Int}()
+    for ii in universe(s)
+        _sizehint!(ii.history, ai_sizes, ii.asset.raw)
     end
 end
 

@@ -6,22 +6,22 @@ function ccxt_orders_func!(a, exc::Exchange{ExchangeID{:bybit}})
         @assert has(exc, (:fetchOpenOrders, :fetchClosedOrders))
         fetch_open_func = first(exc, :fetchOpenOrdersWs, :fetchOpenOrders)
         fetch_closed_func = first(exc, :fetchClosedOrdersWs, :fetchClosedOrders)
-        (ai; ids=(), side=BuyOrSell, kwargs...) -> begin
-            sym = raw(ai)
+        (ii; ids=(), side=BuyOrSell, kwargs...) -> begin
+            sym = raw(ii)
             if isempty(ids)
                 out = []
                 @sync begin
                     @async try
-                        append!(out, _fetch_orders(ai, fetch_open_func; side, kwargs...))
+                        append!(out, _fetch_orders(ii, fetch_open_func; side, kwargs...))
                     catch e
                         e isa InterruptException && rethrow(e)
-                        @error "adhoc ccxt: fetch open orders failed" ai exception = (e, catch_backtrace())
+                        @error "adhoc ccxt: fetch open orders failed" ii exception = (e, catch_backtrace())
                     end
                     @async try
-                        append!(out, _fetch_orders(ai, fetch_closed_func; side, kwargs...))
+                        append!(out, _fetch_orders(ii, fetch_closed_func; side, kwargs...))
                     catch e
                         e isa InterruptException && rethrow(e)
-                        @error "adhoc ccxt: fetch closed orders failed" ai exception = (e, catch_backtrace())
+                        @error "adhoc ccxt: fetch closed orders failed" ii exception = (e, catch_backtrace())
                     end
                 end
             else
@@ -55,8 +55,8 @@ function ccxt_open_orders_func!(a, exc::Exchange{ExchangeID{:phemex}}; open=true
     eid = typeof(exchangeid(exc))
     a[names.key] = if !isnothing(orders_func)
         if open
-            (ai; kwargs...) -> begin
-                ans = _fetch_orders(ai, orders_func; eid, kwargs...)
+            (ii; kwargs...) -> begin
+                ans = _fetch_orders(ii, orders_func; eid, kwargs...)
                 @debug "open/closed orders phemex: " ans
                 if isnothing(ans)
                     return []
@@ -67,20 +67,20 @@ function ccxt_open_orders_func!(a, exc::Exchange{ExchangeID{:phemex}}; open=true
         else
             open_names = _func_syms(true)
             open_orders_func = first(exc, open_names.ws, open_names.fetch)
-            (ai; kwargs...) -> begin
+            (ii; kwargs...) -> begin
                 ot, ct = @sync begin
                     (@async try
-                        _fetch_orders(ai, open_orders_func; eid, kwargs...)
+                        _fetch_orders(ii, open_orders_func; eid, kwargs...)
                     catch e
                         e isa InterruptException && rethrow(e)
-                        @error "adhoc ccxt: open orders fetch failed" ai exception = (e, catch_backtrace())
+                        @error "adhoc ccxt: open orders fetch failed" ii exception = (e, catch_backtrace())
                         []
                     end),
                     (@async try
-                        _fetch_orders(ai, orders_func; eid, kwargs...)
+                        _fetch_orders(ii, orders_func; eid, kwargs...)
                     catch e
                         e isa InterruptException && rethrow(e)
-                        @error "adhoc ccxt: orders fetch failed" ai exception = (e, catch_backtrace())
+                        @error "adhoc ccxt: orders fetch failed" ii exception = (e, catch_backtrace())
                         []
                     end)
                 end
@@ -103,9 +103,9 @@ function ccxt_open_orders_func!(a, exc::Exchange{ExchangeID{:phemex}}; open=true
         else
             !pred_func
         end
-        (ai; kwargs...) -> begin
+        (ii; kwargs...) -> begin
             out = []
-            all_orders = fetch_func(ai; kwargs...)
+            all_orders = fetch_func(ii; kwargs...)
             for o in all_orders
                 status_pred_func(o) && push!(out, o)
             end

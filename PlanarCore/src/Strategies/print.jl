@@ -9,12 +9,12 @@ $(TYPEDSIGNATURES)
 
 Given an asset instance, a value, and the current minimum and maximum holdings, this function updates the minimum and maximum holdings if the provided value is less than the current minimum or greater than the current maximum. It returns the updated minimum and maximum holdings.
 """
-_mmh(ai, val, min_hold, max_hold) = begin
+_mmh(ii, val, min_hold, max_hold) = begin
     if val > max_hold[2]
-        max_hold = (ai.asset.bc, val)
+        max_hold = (ii.asset.bc, val)
     end
     if 0 < val < min_hold[2]
-        min_hold = (ai.asset.bc, val)
+        min_hold = (ii.asset.bc, val)
     end
     (min_hold, max_hold)
 end
@@ -25,12 +25,12 @@ $(TYPEDSIGNATURES)
 
 This function iterates over both long and short positions. If the asset instance for a position is not zero, it increments the number of holdings and calculates the value of the asset for the position at the current price. It then updates the minimum and maximum holdings using the `_mmh` function. The function returns the updated number of holdings, minimum holdings, and maximum holdings.
 """
-function _assetval(ai::MarginInstance, n_holdings, min_hold, max_hold; price)
+function _assetval(ii::MarginInstance, n_holdings, min_hold, max_hold; price)
     for p in (Long(), Short())
-        iszero(ai, p) && continue
+        iszero(ii, p) && continue
         n_holdings += 1
-        val = value(ai, p; current_price=price)
-        min_hold, max_hold = _mmh(ai, val, min_hold, max_hold)
+        val = value(ii, p; current_price=price)
+        min_hold, max_hold = _mmh(ii, val, min_hold, max_hold)
     end
     (n_holdings, min_hold, max_hold)
 end
@@ -40,11 +40,11 @@ $(TYPEDSIGNATURES)
 
 This function checks if the cash of the NoMarginInstance is not zero. If it's not, it increments the number of holdings and calculates the value of the asset at the current price. It then updates the minimum and maximum holdings using the `_mmh` function. The function returns the updated number of holdings, minimum holdings, and maximum holdings.
 """
-function _assetval(ai::NoMarginInstance, n_holdings, min_hold, max_hold; price)
-    iszero(cash(ai)) || begin
+function _assetval(ii::NoMarginInstance, n_holdings, min_hold, max_hold; price)
+    iszero(cash(ii)) || begin
         n_holdings += 1
-        val = cash(ai) * price
-        min_hold, max_hold = _mmh(ai, val, min_hold, max_hold)
+        val = cash(ii) * price
+        min_hold, max_hold = _mmh(ii, val, min_hold, max_hold)
     end
     (n_holdings, min_hold, max_hold)
 end
@@ -60,9 +60,9 @@ function minmax_holdings(s::Strategy)
     max_hold = (nameof(s.cash), 0.0)
     min_hold = (nameof(s.cash), Inf)
     datef = lasttrade_func(s)
-    for ai in s.holdings
-        iszero(ai) && continue
-        df = ohlcv(ai)
+    for ii in s.holdings
+        iszero(ii) && continue
+        df = ohlcv(ii)
         price = try
             closeat(df, datef(df.timestamp))
         catch
@@ -74,7 +74,7 @@ function minmax_holdings(s::Strategy)
             end
         end
         (n_holdings, min_hold, max_hold) = _assetval(
-            ai, n_holdings, min_hold, max_hold; price
+            ii, n_holdings, min_hold, max_hold; price
         )
     end
     (min=min_hold, max=max_hold, count=n_holdings)
@@ -83,8 +83,8 @@ end
 @doc "All trades recorded in the strategy universe (includes liquidations)."
 trades_count(s::Strategy) = begin
     n_trades = 0
-    for ai in universe(s)
-        n_trades += length(ai.history)
+    for ii in universe(s)
+        n_trades += length(ii.history)
     end
     n_trades
 end
@@ -98,8 +98,8 @@ This function iterates over the universe of a strategy. For each asset instance 
 function trades_count(s::Strategy, ::Val{:liquidations})
     ntrades = 0
     liquidations = 0
-    foreach(universe(s)) do ai
-        this_trades = trades(ai)
+    foreach(universe(s)) do ii
+        this_trades = trades(ii)
         asset_liquidations = count((x -> x isa LiquidationTrade), this_trades)
         ntrades += length(this_trades) - asset_liquidations
         liquidations += asset_liquidations
@@ -107,8 +107,8 @@ function trades_count(s::Strategy, ::Val{:liquidations})
     (; trades=ntrades, liquidations)
 end
 
-function _count_trades(ai::AssetInstance; long=0, short=0, long_liq=0, short_liq=0)
-    foreach(trades(ai)) do t
+function _count_trades(ii::InstrumentInstance; long=0, short=0, long_liq=0, short_liq=0)
+    foreach(trades(ii)) do t
         if t isa LongTrade
             long += 1
         elseif t isa ShortTrade
@@ -133,9 +133,9 @@ function trades_count(s::Strategy, ::Val{:positions})
     short = 0
     long_liq = 0
     short_liq = 0
-    for ai in universe(s)
+    for ii in universe(s)
         long, short, long_liq, short_liq = _count_trades(
-            ai; long, short, long_liq, short_liq
+            ii; long, short, long_liq, short_liq
         )
     end
     (; long, short, liquidations=long_liq + short_liq)

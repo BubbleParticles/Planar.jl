@@ -14,13 +14,13 @@ test_synth(s) = begin
     @test closeval(s, m"btc") == 123.0
 end
 
-_ai_trades(s) = s[m"eth"].history
+_ii_trades(s) = s[m"eth"].history
 eq1(a, b) = isapprox(a, b; atol=1e-1)
 test_nomargin_market(s) = begin
     @test egn.marginmode(s) isa egn.NoMargin
     s.attrs[:overrides] = (; ordertype=:market)
     egn.start!(s)
-    @test first(_ai_trades(s)).order isa egn.MarketOrder
+    @test first(_ii_trades(s)).order isa egn.MarketOrder
     @info "TEST: " s.cash.value
     @test eq1(Cash(:USDT, 9.39228334), s.cash.value)
     @test eq1(Cash(:USDT, 0.0), s.cash_committed)
@@ -37,7 +37,7 @@ test_nomargin_gtc(s) = begin
     @test marginmode(s) isa egn.NoMargin
     s.attrs[:overrides] = (; ordertype=:gtc)
     egn.start!(s)
-    @test first(_ai_trades(s)).order isa egn.GTCOrder
+    @test first(_ii_trades(s)).order isa egn.GTCOrder
     @info "TEST: " s.cash.value
     @test eq1(Cash(:USDT, 7615.8), s.cash.value)
     @test eq1(Cash(:USDT, 0.0), s.cash_committed)
@@ -54,7 +54,7 @@ test_nomargin_ioc(s) = begin
     @test marginmode(s) isa egn.NoMargin
     s.attrs[:overrides] = (; ordertype=:ioc)
     egn.start!(s)
-    @test first(_ai_trades(s)).order isa egn.IOCOrder
+    @test first(_ii_trades(s)).order isa egn.IOCOrder
     @info "TEST: " s.cash.value
     @test Cash(:USDT, 694.909e3) ≈ s.cash atol = 1
     @info "TEST: " s.cash_committed.value
@@ -75,7 +75,7 @@ test_nomargin_fok(s) = begin
     s.config.initial_cash = 1e6
     s.config.min_size = 1e3
     egn.start!(s)
-    @test first(_ai_trades(s)).order isa egn.FOKOrder
+    @test first(_ii_trades(s)).order isa egn.FOKOrder
     @test Cash(:USDT, 999.547) ≈ s.cash atol = 1e-1
     @test Cash(:USDT, 0.0) ≈ s.cash_committed atol = 1e-7
     @test st.trades_count(s) == 2051
@@ -107,7 +107,7 @@ test_margin_market(s) = begin
     @test marginmode(s) isa egn.Isolated
     s.attrs[:overrides] = margin_overrides(:market)
     egn.start!(s)
-    @test first(_ai_trades(s)).order isa ect.AnyMarketOrder
+    @test first(_ii_trades(s)).order isa ect.AnyMarketOrder
     @test Cash(:USDT, -0.056) ≈ s.cash atol = 1e-3
     @test Cash(:USDT, 0.0) ≈ s.cash_committed atol = 1e-1
     @test ect.tradescount(s) == st.trades_count(s) == 480
@@ -123,7 +123,7 @@ test_margin_gtc(s) = begin
     @test marginmode(s) isa egn.Isolated
     s.attrs[:overrides] = margin_overrides(:gtc)
     egn.start!(s)
-    @test first(_ai_trades(s)).order isa ect.AnyGTCOrder
+    @test first(_ii_trades(s)).order isa ect.AnyGTCOrder
     @test Cash(:USDT, -0.105) ≈ s.cash atol = 1e-3
     @test Cash(:USDT, 0.0) ≈ s.cash_committed atol = 1e-1
     @test st.trades_count(s) == 541
@@ -143,7 +143,7 @@ test_margin_fok(s) = begin
     s.config.initial_cash = 1e6
     s.config.min_size = 1e3
     egn.start!(s)
-    @test first(_ai_trades(s)).order isa ect.AnyFOKOrder
+    @test first(_ii_trades(s)).order isa ect.AnyFOKOrder
     @test Cash(:USDT, -0.036) ≈ s.cash atol = 1e1
     @test Cash(:USDT, 0.0) ≈ s.cash_committed atol = 1e1
     @test st.trades_count(s) == 2352
@@ -163,7 +163,7 @@ test_margin_ioc(s) = begin
     s.config.initial_cash = 1e6
     s.config.min_size = 1e3
     egn.start!(s)
-    @test first(_ai_trades(s)).order isa ect.AnyIOCOrder
+    @test first(_ii_trades(s)).order isa ect.AnyIOCOrder
     @test Cash(:USDT, -0.048) ≈ s.cash atol = 1e1
     @test Cash(:USDT, 0.0) ≈ s.cash_committed atol = 1e-1
     @test st.trades_count(s) == 2354

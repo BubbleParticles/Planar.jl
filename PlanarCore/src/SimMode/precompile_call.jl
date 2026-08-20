@@ -9,9 +9,9 @@ macro compile_call()
         end
 
         let
-            ai = first(s.universe)
-            amount = ai.limits.amount.min
-            prc = min(ai.limits.price.min * 10, ai.limits.price.max)
+            ii = first(s.universe)
+            amount = ii.limits.amount.min
+            prc = min(ii.limits.price.min * 10, ii.limits.price.max)
             date = now()
             function dispatched_orders()
                 out = Type{<:Order}[]
@@ -31,7 +31,7 @@ macro compile_call()
                 for otp in dispatched_orders()
                     if !Base.generating_output()
                         try
-                            @async call!(s, ai, otp; amount, date, prc, synced=false)
+                            @async call!(s, ii, otp; amount, date, prc, synced=false)
                         catch e
                             if e isa InterruptException
                                 rethrow(e)
@@ -86,7 +86,7 @@ macro compile_call()
                 end
                 if !Base.generating_output()
                     try
-                        @async call!(s, ai, 1.0, ect.UpdateLeverage(); pos=Long(), synced=false)
+                        @async call!(s, ii, 1.0, ect.UpdateLeverage(); pos=Long(), synced=false)
                     catch e
                         if e isa InterruptException
                             rethrow(e)
@@ -96,7 +96,7 @@ macro compile_call()
                 end
                 if !Base.generating_output()
                     try
-                        @async call!(s, ai, Short(), date, ect.PositionClose(), synced=false)
+                        @async call!(s, ii, Short(), date, ect.PositionClose(), synced=false)
                     catch e
                         if e isa InterruptException
                             rethrow(e)
@@ -106,7 +106,7 @@ macro compile_call()
                 end
                 if !Base.generating_output()
                     try
-                        @async call!(s, ai, ect.CancelOrders(), synced=false)
+                        @async call!(s, ii, ect.CancelOrders(), synced=false)
                     catch e
                         if e isa InterruptException
                             rethrow(e)

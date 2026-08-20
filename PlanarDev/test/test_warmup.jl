@@ -54,9 +54,9 @@ function test_init_sim_warmup()
             @test s.attrs[:warmup_candles] >= 100
 
             # Check that all assets in universe are marked as not warmed up
-            for ai in s.universe
-                @test haskey(s.attrs[:warmup], ai)
-                @test s.attrs[:warmup][ai] == false
+            for ii in s.universe
+                @test haskey(s.attrs[:warmup], ii)
+                @test s.attrs[:warmup][ii] == false
             end
         end
 
@@ -79,8 +79,8 @@ function test_init_sim_warmup()
             st.call!(s, init_action)
 
             # When marked as warmup sim, all assets should be marked as warmed up
-            for ai in s.universe
-                @test s.attrs[:warmup][ai] == true
+            for ii in s.universe
+                @test s.attrs[:warmup][ii] == true
             end
             @test s.attrs[:warmup_candles] == 0
         end
@@ -92,7 +92,7 @@ function test_sim_warmup_basic()
         using PlanarDev.Planar.Engine: Engine as egn
         using .egn.Strategies: Strategies as st
         using .egn.TimeTicks: Minute, Day, Hour
-        using .egn.Instances: AssetInstance
+        using .egn.Instances: InstrumentInstance
         PlanarDev.@environment!
         PlanarDev.tools!()  # Load PlanarStrategyTools
     end
@@ -103,13 +103,13 @@ function test_sim_warmup_basic()
         warmup_action = stt.SimWarmup()
 
         @testset "Skip warmup if already warmed" begin
-            ai = first(s.universe)
-            s.attrs[:warmup][ai] = true  # Mark as already warmed
+            ii = first(s.universe)
+            s.attrs[:warmup][ii] = true  # Mark as already warmed
 
             callback_called = false
             test_callback = (args...) -> callback_called = true
 
-            st.call!(test_callback, s, ai, DateTime(2024, 1, 15), warmup_action)
+            st.call!(test_callback, s, ii, DateTime(2024, 1, 15), warmup_action)
 
             @test !callback_called  # Should not call callback if already warmed
         end
@@ -117,13 +117,13 @@ function test_sim_warmup_basic()
         @testset "Skip warmup if already running" begin
             s = create_mock_strategy()
             st.call!(s, stt.InitSimWarmup())
-            ai = first(s.universe)
+            ii = first(s.universe)
             s.attrs[:warmup_running] = true  # Mark as running
 
             callback_called = false
             test_callback = (args...) -> callback_called = true
 
-            st.call!(test_callback, s, ai, DateTime(2024, 1, 15), warmup_action)
+            st.call!(test_callback, s, ii, DateTime(2024, 1, 15), warmup_action)
 
             @test !callback_called  # Should not call callback if warmup already running
         end
@@ -141,8 +141,8 @@ function test_sim_warmup_basic()
 
             # Test skip if all assets already warmed
             s.attrs[:warmup_running] = false
-            for ai in s.universe
-                s.attrs[:warmup][ai] = true
+            for ii in s.universe
+                s.attrs[:warmup][ii] = true
             end
             st.call!(test_callback, s, warmup_action)
             @test !callback_called
@@ -197,7 +197,7 @@ function test_warmup_edge_cases()
             callback_called = false
 
             # Test with single asset
-            ai = first(s.universe)
+            ii = first(s.universe)
             test_callback = (args...) -> begin
                 callback_called = true
                 # Just verify callback receives expected number of arguments
@@ -205,7 +205,7 @@ function test_warmup_edge_cases()
             end
 
             # This should not crash even if underlying data is insufficient
-            st.call!(test_callback, s, ai, DateTime(2024, 1, 15),
+            st.call!(test_callback, s, ii, DateTime(2024, 1, 15),
                     stt.SimWarmup(); n_candles=custom_candles)
         end
     end
@@ -252,9 +252,9 @@ function test_warmup_attributes()
 
             # All assets should initially be marked as not warmed
             @test length(s.attrs[:warmup]) == length(s.universe)
-            for ai in s.universe
-                @test haskey(s.attrs[:warmup], ai)
-                @test s.attrs[:warmup][ai] == false
+            for ii in s.universe
+                @test haskey(s.attrs[:warmup], ii)
+                @test s.attrs[:warmup][ii] == false
             end
         end
     end

@@ -4,12 +4,12 @@ using PlanarCore.Instruments: splitpair, isleveragedpair, deleverage_pair, isfia
 using PlanarCore.Instruments.Derivatives: Derivative, DerivativeKind
 
 # ──────────────────────────────────────────────
-# Asset type
+# Instrument type
 # ──────────────────────────────────────────────
-@testset "Asset type" begin
+@testset "Instrument type" begin
     a = a"BTC/USDT"
-    @test a isa Asset
-    @test a isa AbstractAsset
+    @test a isa Instrument
+    @test a isa AbstractInstrument
     @test raw(a) == "BTC/USDT"
     @test bc(a) == :BTC
     @test qc(a) == :USDT
@@ -24,17 +24,17 @@ using PlanarCore.Instruments.Derivatives: Derivative, DerivativeKind
     @test c.unleveraged_bc == :ETH
 end
 
-@testset "Asset parsing" begin
-    a = parse(Asset, "ETH/BTC")
-    @test a isa Asset
+@testset "Instrument parsing" begin
+    a = parse(Instrument, "ETH/BTC")
+    @test a isa Instrument
     @test raw(a) == "ETH/BTC"
 
-    a2 = parse(AbstractAsset, "XRPUSDT", "USDT")
+    a2 = parse(AbstractInstrument, "XRPUSDT", "USDT")
     @test !isnothing(a2)
     @test bc(a2) == :XRP
 end
 
-@testset "Asset equality" begin
+@testset "Instrument equality" begin
     @test a"BTC/USDT" == a"BTC/USDT"
     @test a"BTC/USDT" == "BTC/USDT"
     @test a"BTC/USDT" != a"ETH/USDT"
@@ -98,7 +98,7 @@ end
 # String macro
 # ──────────────────────────────────────────────
 @testset "String macros" begin
-    @test a"BTC/USDT" isa Asset
+    @test a"BTC/USDT" isa Instrument
 end
 
 # ──────────────────────────────────────────────

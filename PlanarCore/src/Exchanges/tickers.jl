@@ -166,7 +166,7 @@ function ticker!(
             end
     end
 end
-ticker!(a::AbstractAsset, args...; kwargs...) = ticker!(a.raw, args...; kwargs...)
+ticker!(a::AbstractInstrument, args...; kwargs...) = ticker!(a.raw, args...; kwargs...)
 @doc """Fetch the latest price for a specific pair from an exchange.
 
 $(TYPEDSIGNATURES)

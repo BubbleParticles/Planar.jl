@@ -41,54 +41,54 @@ end
 function test_buysell(s)
     @testset "orders Tests" begin
         # Mock strategy and asset instance for testing
-        ai = s."btc"
+        ii = s."btc"
         # Mock orders for testing
         date = DateTime(2022, 1, 1)
         buy_order = basicorder(
-            ai, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Buy}, date
+            ii, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Buy}, date
         )
         sell_order = basicorder(
-            ai, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Sell}, date
+            ii, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Sell}, date
         )
 
         # Add orders to the strategy
-        push!(s, ai, buy_order)
-        push!(s, ai, sell_order)
+        push!(s, ii, buy_order)
+        push!(s, ii, sell_order)
 
         # Test orders function
-        @test count(Returns(true), orders(s, ai)) == 2
-        @test buyorders(s, ai) == s.buyorders[ai]
-        @test sellorders(s, ai) == s.sellorders[ai]
-        @test buy_order in values(buyorders(s, ai))
-        @test sell_order in values(sellorders(s, ai))
+        @test count(Returns(true), orders(s, ii)) == 2
+        @test buyorders(s, ii) == s.buyorders[ii]
+        @test sellorders(s, ii) == s.sellorders[ii]
+        @test buy_order in values(buyorders(s, ii))
+        @test sell_order in values(sellorders(s, ii))
     end
 end
 function test_hasorders(s)
     @testset "hasorders Tests" begin
         # Mock asset instance for testing
-        ai = s."btc"
+        ii = s."btc"
 
         # Mock orders for testing
         date = DateTime(2022, 1, 1)
         buy_order = basicorder(
-            ai, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Buy}, date
+            ii, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Buy}, date
         )
         sell_order = basicorder(
-            ai, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Sell}, date
+            ii, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Sell}, date
         )
 
         @test hasorders(s) == false
-        @test hasorders(s, ai) == false
-        @test hasorders(s, ai, Buy) == false
-        @test hasorders(s, ai, Sell) == false
+        @test hasorders(s, ii) == false
+        @test hasorders(s, ii, Buy) == false
+        @test hasorders(s, ii, Sell) == false
 
         if s isa MarginStrategy
             # Test hasorders with position side
-            @test hasorders(s, ai, Long()) == false
-            @test hasorders(s, ai, Short()) == false
+            @test hasorders(s, ii, Long()) == false
+            @test hasorders(s, ii, Short()) == false
 
             # Test hasorders with ByPos
-            @test hasorders(s, ai, buy_order) == false
+            @test hasorders(s, ii, buy_order) == false
 
             # Test hasorders with strategy and position side
             @test hasorders(s, Long()) == false
@@ -103,31 +103,31 @@ function test_hasorders(s)
         end
 
         # Add orders to the strategy
-        push!(s, ai, buy_order)
-        push!(s, ai, sell_order)
+        push!(s, ii, buy_order)
+        push!(s, ii, sell_order)
 
         # Test hasorders function
         @test hasorders(s) == true
-        @test hasorders(s, ai) == true
-        @test hasorders(s, ai, Buy) == true
-        @test hasorders(s, ai, Sell) == true
+        @test hasorders(s, ii) == true
+        @test hasorders(s, ii, Buy) == true
+        @test hasorders(s, ii, Sell) == true
 
         if s isa MarginStrategy
             # Test hasorders with position side
-            @test hasorders(s, ai, Long()) == true
-            @test hasorders(s, ai, Short()) == false
+            @test hasorders(s, ii, Long()) == true
+            @test hasorders(s, ii, Short()) == false
 
             short_order = basicorder(
-                ai, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=ShortGTCOrder{Buy}, date
+                ii, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=ShortGTCOrder{Buy}, date
             )
             # Test hasorders with ByPos
-            @test hasorders(s, ai, buy_order) == true
-            @test hasorders(s, ai, short_order) == false
+            @test hasorders(s, ii, buy_order) == true
+            @test hasorders(s, ii, short_order) == false
 
             # Test hasorders with strategy and position side
             @test hasorders(s, Long()) == false
             @test hasorders(s, Short()) == false
-            push!(s.holdings, ai)
+            push!(s.holdings, ii)
             @test hasorders(s, Long()) == true
             @test hasorders(s, Short()) == false
 
@@ -141,12 +141,12 @@ end
 function test_orderiterator(s)
     @testset "OrderIterator Tests" begin
         # Mock asset instance for testing
-        ai = s."btc"
+        ii = s."btc"
 
         # Mock orders for testing
         date = DateTime(2022, 1, 1)
         buy_order1 = basicorder(
-            ai,
+            ii,
             100.0,
             10.0,
             Ref(10.0),
@@ -155,7 +155,7 @@ function test_orderiterator(s)
             date=DateTime(2022, 1, 1),
         )
         buy_order2 = basicorder(
-            ai,
+            ii,
             101.0,
             10.0,
             Ref(10.0),
@@ -164,7 +164,7 @@ function test_orderiterator(s)
             date=DateTime(2022, 1, 2),
         )
         sell_order1 = basicorder(
-            ai,
+            ii,
             102.0,
             10.0,
             Ref(10.0),
@@ -173,7 +173,7 @@ function test_orderiterator(s)
             date=DateTime(2022, 1, 3),
         )
         sell_order2 = basicorder(
-            ai,
+            ii,
             103.0,
             10.0,
             Ref(10.0),
@@ -183,14 +183,14 @@ function test_orderiterator(s)
         )
 
         # Add orders to the strategy
-        push!(s, ai, buy_order1)
-        push!(s, ai, buy_order2)
-        push!(s, ai, sell_order1)
-        push!(s, ai, sell_order2)
+        push!(s, ii, buy_order1)
+        push!(s, ii, buy_order2)
+        push!(s, ii, sell_order1)
+        push!(s, ii, sell_order2)
 
         # Get order generators
-        buy_orders_gen = orders(s, ai, Buy)
-        sell_orders_gen = orders(s, ai, Sell)
+        buy_orders_gen = orders(s, ii, Buy)
+        sell_orders_gen = orders(s, ii, Sell)
 
         # Create OrderIterator instance
         oi = OrderIterator(buy_orders_gen, sell_orders_gen)
@@ -248,15 +248,15 @@ end
 function test_unfillment(s)
     @testset "unfillment Tests" begin
         # Mock asset instance for testing
-        ai = s."btc"
+        ii = s."btc"
 
         # Mock orders for testing
         date = DateTime(2022, 1, 1)
         buy_order = basicorder(
-            ai, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Buy}, date
+            ii, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Buy}, date
         )
         sell_order = basicorder(
-            ai, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Sell}, date
+            ii, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Sell}, date
         )
 
         # Test unfillment for BuyOrder
@@ -280,68 +280,68 @@ end
 function test_iscommittable(s)
     @testset "iscommittable Tests" begin
         # Mock asset instance for testing
-        ai = s."btc"
+        ii = s."btc"
 
         # Mock orders for testing
         date = DateTime(2022, 1, 1)
         increase_order = basicorder(
-            ai, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Buy}, date
+            ii, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Buy}, date
         )
         sell_order = basicorder(
-            ai, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Sell}, date
+            ii, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Sell}, date
         )
         short_buy_order = basicorder(
-            ai, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=ShortGTCOrder{Buy}, date
+            ii, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=ShortGTCOrder{Buy}, date
         )
 
         # Mock commitment values
-        commit_increase = Ref(committment(typeof(increase_order), ai, 100.0, 10.0))
-        commit_sell = Ref(committment(typeof(sell_order), ai, 100.0, 10.0))
-        commit_short_buy = Ref(committment(typeof(short_buy_order), ai, 100.0, 10.0))
+        commit_increase = Ref(committment(typeof(increase_order), ii, 100.0, 10.0))
+        commit_sell = Ref(committment(typeof(sell_order), ii, 100.0, 10.0))
+        commit_short_buy = Ref(committment(typeof(short_buy_order), ii, 100.0, 10.0))
 
         cash!(s.cash, 1e4)
         @test s.cash == 1e4
         # Test iscommittable for IncreaseOrder
         @info "TEST: iscommittable for IncreaseOrder" commit_increase
-        @test iscommittable(s, typeof(increase_order), commit_increase, ai) == true
+        @test iscommittable(s, typeof(increase_order), commit_increase, ii) == true
 
         # Test iscommittable for SellOrder
         @info "TEST: iscommittable for SellOrder" commit_sell
-        @test iszero(ai, Long())
-        cash!(ai, 1e4, Long())
-        @test iscommittable(s, typeof(sell_order), commit_sell, ai)
+        @test iszero(ii, Long())
+        cash!(ii, 1e4, Long())
+        @test iscommittable(s, typeof(sell_order), commit_sell, ii)
 
-        @test iszero(ai, Short())
-        cash!(ai, 1e4, Short())
+        @test iszero(ii, Short())
+        cash!(ii, 1e4, Short())
         # NOTE: short positions cash is always held negative so this should be false (also should never be the case)
-        @test iscommittable(s, typeof(short_buy_order), commit_short_buy, ai) == false
-        cash!(ai, -1e4, Short())
-        @test iscommittable(s, typeof(short_buy_order), commit_short_buy, ai)
+        @test iscommittable(s, typeof(short_buy_order), commit_short_buy, ii) == false
+        cash!(ii, -1e4, Short())
+        @test iscommittable(s, typeof(short_buy_order), commit_short_buy, ii)
 
         # Test iscommittable with insufficient funds (edge case)
         cash!(s.cash, 0.0)
-        @test iscommittable(s, typeof(increase_order), commit_increase, ai) == false
-        cash!(ai, 0.0, Long())
-        @test iscommittable(s, typeof(sell_order), commit_sell, ai) == false
-        cash!(ai, 0.0, Short())
-        @test iscommittable(s, typeof(short_buy_order), commit_short_buy, ai) == false
+        @test iscommittable(s, typeof(increase_order), commit_increase, ii) == false
+        cash!(ii, 0.0, Long())
+        @test iscommittable(s, typeof(sell_order), commit_sell, ii) == false
+        cash!(ii, 0.0, Short())
+        @test iscommittable(s, typeof(short_buy_order), commit_short_buy, ii) == false
     end
 end
 
 function test_orderscount(s)
     @testset "orderscount Tests" begin
         # Mock asset instance for testing
-        ai = s."btc"
+        ii = s."btc"
         if s isa MarginStrategy
-            @test ai isa MarginInstance
+            @test ii isa MarginInstance
         else
-            @test ai isa NoMarginInstance
+            @test ii isa NoMarginInstance
         end
 
         # Mock orders for testing
         date = DateTime(2022, 1, 1)
         buy_order = basicorder(
-            ai,
+            ii,
             100.0,
             10.0,
             Ref(10.0),
@@ -350,7 +350,7 @@ function test_orderscount(s)
             date=DateTime(2022, 1, 1),
         )
         sell_order = basicorder(
-            ai,
+            ii,
             100.0,
             10.0,
             Ref(10.0),
@@ -360,7 +360,7 @@ function test_orderscount(s)
         )
         if s isa MarginStrategy
             increase_order = basicorder(
-                ai,
+                ii,
                 100.0,
                 10.0,
                 Ref(10.0),
@@ -369,7 +369,7 @@ function test_orderscount(s)
                 date=DateTime(2022, 3, 1),
             )
             reduce_order = basicorder(
-                ai,
+                ii,
                 100.0,
                 10.0,
                 Ref(10.0),
@@ -377,14 +377,14 @@ function test_orderscount(s)
                 type=ShortGTCOrder{Buy},
                 date=DateTime(2022, 4, 1),
             )
-            push!(s, ai, increase_order)
-            push!(s, ai, reduce_order)
+            push!(s, ii, increase_order)
+            push!(s, ii, reduce_order)
         end
 
         # Add orders to the strategy
-        push!(s, ai, buy_order)
-        push!(s, ai, sell_order)
-        push!(s.holdings, ai)
+        push!(s, ii, buy_order)
+        push!(s, ii, sell_order)
+        push!(s.holdings, ii)
 
         # Test orderscount for all orders
         @test orderscount(s) == (s isa MarginStrategy ? 4 : 2)
@@ -405,16 +405,16 @@ function test_orderscount(s)
         @test orderscount(s, Val(:inc_red)) == (s isa MarginStrategy ? (2, 2) : (1, 1))
 
         # Test orderscount for an asset instance
-        @test orderscount(s, ai) == (s isa MarginStrategy ? 4 : 2)
+        @test orderscount(s, ii) == (s isa MarginStrategy ? 4 : 2)
 
         # Test orderscount for an asset instance and Buy orders
-        @test orderscount(s, ai, Buy) == (s isa MarginStrategy ? 2 : 1)
+        @test orderscount(s, ii, Buy) == (s isa MarginStrategy ? 2 : 1)
 
         # Test orderscount for an asset instance and Sell orders
-        @test orderscount(s, ai, Sell) == (s isa MarginStrategy ? 2 : 1)
+        @test orderscount(s, ii, Sell) == (s isa MarginStrategy ? 2 : 1)
 
         # Test orderscount for an asset instance and BuyOrSell orders
-        @test orderscount(s, ai, BuyOrSell) == (s isa MarginStrategy ? 4 : 2)
+        @test orderscount(s, ii, BuyOrSell) == (s isa MarginStrategy ? 4 : 2)
 
         # Test orderscount for empty strategy (edge case)
         reset!(s)
@@ -430,10 +430,10 @@ end
 function test_hascash(s)
     @testset "hascash Tests" begin
         # Mock asset instance for testing
-        ai = s."btc"
+        ii = s."btc"
 
         # Add orders to the strategy
-        push!(s.holdings, ai)
+        push!(s.holdings, ii)
 
         # Test hascash with non-zero cash
         @test hascash(s) == false
@@ -443,13 +443,13 @@ function test_hascash(s)
         @test hascash(s) == false
         cash!(s.cash, 1e4)
         @test hascash(s) == false
-        cash!(ai, 1e4, Long())
+        cash!(ii, 1e4, Long())
         @test hascash(s) == true
-        cash!(ai, 0.0, Long())
+        cash!(ii, 0.0, Long())
         @test hascash(s) == false
-        cash!(ai, 1e4, Short())
+        cash!(ii, 1e4, Short())
         @test hascash(s) == true
-        cash!(ai, 0.0, Short())
+        cash!(ii, 0.0, Short())
         @test hascash(s) == false
     end
 end
@@ -457,37 +457,37 @@ end
 function test_buyorders_sellorders(s)
     @testset "buyorders and sellorders Tests" begin
         # Mock asset instance for testing
-        ai = s."btc"
+        ii = s."btc"
         
         # Mock orders for testing
         date = DateTime(2022, 1, 1)
-        buy_order1 = basicorder(ai, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Buy}, date=DateTime(2022, 5, 1))
-        buy_order2 = basicorder(ai, 101.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Buy}, date=DateTime(2022, 6, 1))
-        sell_order1 = basicorder(ai, 102.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Sell}, date=DateTime(2022, 7, 1))
-        sell_order2 = basicorder(ai, 103.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Sell}, date=DateTime(2022, 8, 1))
+        buy_order1 = basicorder(ii, 100.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Buy}, date=DateTime(2022, 5, 1))
+        buy_order2 = basicorder(ii, 101.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Buy}, date=DateTime(2022, 6, 1))
+        sell_order1 = basicorder(ii, 102.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Sell}, date=DateTime(2022, 7, 1))
+        sell_order2 = basicorder(ii, 103.0, 10.0, Ref(10.0), SanitizeOff(); type=GTCOrder{Sell}, date=DateTime(2022, 8, 1))
         
         # Add orders to the strategy
-        push!(s, ai, buy_order1)
-        push!(s, ai, buy_order2)
-        push!(s, ai, sell_order1)
-        push!(s, ai, sell_order2)
+        push!(s, ii, buy_order1)
+        push!(s, ii, buy_order2)
+        push!(s, ii, sell_order1)
+        push!(s, ii, sell_order2)
         
         # Test buyorders function
-        buy_orders = buyorders(s, ai)
+        buy_orders = buyorders(s, ii)
         @test length(buy_orders) == 2
         @test buy_order1 in values(buy_orders)
         @test buy_order2 in values(buy_orders)
         
         # Test sellorders function
-        sell_orders = sellorders(s, ai)
+        sell_orders = sellorders(s, ii)
         @test length(sell_orders) == 2
         @test sell_order1 in values(sell_orders)
         @test sell_order2 in values(sell_orders)
         
         # Test buyorders and sellorders with empty strategy (edge case)
         reset!(s)
-        @test length(buyorders(s, ai)) == 0
-        @test length(sellorders(s, ai)) == 0
+        @test length(buyorders(s, ii)) == 0
+        @test length(sellorders(s, ii)) == 0
     end
 end
 
