@@ -1,6 +1,7 @@
 module Runtests
 
 using Test
+import TOML
 using PlanarCore
 using PlanarCore.Collections
 using PlanarCore.Strategies
@@ -431,6 +432,41 @@ end
         # many concurrent calls must all agree with the reference (no dropped/duplicated holdings)
         for _ in 1:50
             @test Strategies.current_total(s) ≈ ref
+        end
+    end
+    @testset "strategy auto-registration from user/strategies" begin
+        mktempdir() do dir
+            planartoml = joinpath(dir, "planar.toml")
+            open(planartoml, "w") do f
+                TOML.print(f, Dict{String,Any}("exchange" => "binance"))
+            end
+            src = :AutoRegTestStrat
+            rel = "strategies/$src/Project.toml"
+            strat_dir = joinpath(dir, "strategies", string(src))
+            mkpath(strat_dir)
+            open(joinpath(strat_dir, "Project.toml"), "w") do f
+                TOML.print(f, Dict{String,Any}("name" => string(src)))
+            end
+
+            cfg = Config(; qc=:USDT, sandbox=true)
+            cfg.path = planartoml
+            empty!(cfg.sources)
+
+            # Present in user/strategies → registers and updates cfg.sources.
+            @test Strategies._register_present_strategy!(src, cfg)
+            @test cfg.sources[src] == rel
+            @test Strategies._file(src, cfg, false) == rel
+            written = TOML.parsefile(planartoml)
+            @test get(get(written, "sources", Dict()), string(src), nothing) == rel
+
+            # Idempotent: calling again does not error and keeps the entry.
+            @test Strategies._register_present_strategy!(src, cfg)
+            @test cfg.sources[src] == rel
+
+            # Absent project dir → returns false and leaves the config untouched.
+            missing_src = :NoSuchStrat
+            @test !Strategies._register_present_strategy!(missing_src, cfg)
+            @test !haskey(cfg.sources, missing_src)
         end
     end
 
