@@ -2,7 +2,7 @@
 
 julia_version = "1.12.7"
 manifest_format = "2.0"
-project_hash = "a310b2cb78492651f9959a334f15e6dcba615c02"
+project_hash = "879dac0b191fd11ac061918fec68d34a7f421d54"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -777,7 +777,7 @@ uuid = "a475c859-e357-4be2-a5e3-43038ab4b158"
 version = "1.0.0"
 
 [[deps.PlanarDev]]
-deps = ["Pkg", "Planar", "PlanarCore", "PlanarDownloadTool", "PlanarStrategyTools", "Random", "Reexport", "StrategyFramework"]
+deps = ["Pkg", "Planar", "PlanarCore", "PlanarDownloadTool", "PlanarStrategyTools", "Random", "Reexport"]
 path = "."
 uuid = "df15b565-ff7f-4c64-9bc8-38e9343ea891"
 version = "0.1.0"
@@ -1026,12 +1026,6 @@ version = "2.2.1"
     [deps.StatsFuns.weakdeps]
     ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
     InverseFunctions = "3587e190-3f89-42d0-90ee-14403ec27112"
-
-[[deps.StrategyFramework]]
-deps = ["Logging", "LoggingExtras", "Planar", "PlanarStrategyTools", "Printf", "Statistics", "TOML"]
-path = "../user/strategies/StrategyFramework"
-uuid = "9b60b5e6-bdac-4044-850f-77bd11bb38c6"
-version = "0.1.0"
 
 [[deps.StringManipulation]]
 deps = ["PrecompileTools"]
