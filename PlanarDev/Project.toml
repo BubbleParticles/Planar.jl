@@ -12,7 +12,6 @@ PlanarDownloadTool = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
 PlanarStrategyTools = "bc793e09-ff97-408c-9766-388aa928ad5c"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
-StrategyFramework = "9b60b5e6-bdac-4044-850f-77bd11bb38c6"
 
 [sources]
 Planar = {path = "../Planar"}
@@ -21,7 +20,6 @@ PlanarDownloadTool = {path = "../PlanarDownloadTool"}
 PlanarOptim = {path = "../PlanarOptim"}
 PlanarStrategyStats = {path = "../PlanarStrategyStats"}
 PlanarStrategyTools = {path = "../PlanarStrategyTools"}
-StrategyFramework = {path = "../user/strategies/StrategyFramework"}
 
 [compat]
 Aqua = "0.8.16"
