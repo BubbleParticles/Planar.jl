@@ -1,6 +1,7 @@
 using ..Data.Cache: save_cache, load_cache
 using ..Misc: user_dir, config_path
 using ..Misc.Lang: @debug_backtrace
+using TOML
 
 @doc """ Raises an error when a strategy is not found at a given path.  """
 macro notfound(path)
@@ -224,7 +225,13 @@ function strategy!(src::Symbol, cfg::Config)
     # --- Project-based strategies only ---
     file = _file(src, cfg, false)
     if isnothing(file)
-        error("Strategy `$src` not found. Add it under `[sources]` in `user/planar.toml`.")
+        # A strategy project under `user/strategies/$src` can be loaded without an
+        # explicit `[sources]` entry: register it on the fly and proceed.
+        if _register_present_strategy!(src, cfg)
+            file = _file(src, cfg, false)
+        else
+            error("Strategy `$src` not found. Add it under `[sources]` in `user/planar.toml`.")
+        end
     end
     if splitext(file)[2] != ".toml"
         error("Strategy `$src` at `$file` is not a project-based strategy. " *
@@ -475,4 +482,31 @@ function _no_inv_contracts(exc::Exchange, uni)
         sym = raw(ii)
         @assert something(get(exc.markets[sym], "linear", true), true) "Inverse contracts are not supported by SimMode. $(sym)"
     end
+end
+
+#= Registers a strategy project found under `user/strategies/$src` by appending a
+`[sources]` entry to `planar.toml` (the file at `cfg.path`) and updating `cfg.sources`.
+
+Returns `true` if the strategy project exists and was registered, `false` otherwise. =#
+function _register_present_strategy!(src::Symbol, cfg::Config)
+    rel = "strategies/$src/Project.toml"
+    candidates = (
+        rel,
+        joinpath(pwd(), rel),
+        joinpath(user_dir(), rel),
+        joinpath(dirname(realpath(cfg.path)), rel),
+    )
+    any(isfile, candidates) || return false
+    cfg.sources[src] = rel
+    user_config = TOML.parsefile(cfg.path)
+    sources = @lget! user_config "sources" Dict{String,Any}()
+    key = string(src)
+    if key ∉ keys(sources)
+        sources[key] = rel
+        open(cfg.path, "w") do f
+            TOML.print(f, SortedDict(user_config))
+        end
+        @info "Registered strategy `$src` under [sources] in $(cfg.path)"
+    end
+    return true
 end
