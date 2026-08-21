@@ -244,7 +244,8 @@ const _ii_eth_std = Instances.InstrumentInstance(
         coll = Collections.InstrumentCollection([ai_btc])
         similar = Base.similar(coll)
         @test similar isa Collections.InstrumentCollection
-        @test length(similar) == length(coll)
+        @test isempty(similar)
+        @test length(similar) == 0
     end
 
     @testset "iterate" begin

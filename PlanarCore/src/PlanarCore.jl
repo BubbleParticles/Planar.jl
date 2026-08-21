@@ -19,4 +19,5 @@ module PlanarCore
     include("submodules/SimMode.jl")
     include("submodules/Metrics.jl")
     include("submodules/Stubs.jl")
+    include("Misc/pretty.jl")
 end

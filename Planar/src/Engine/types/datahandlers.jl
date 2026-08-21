@@ -2,11 +2,11 @@ import .Data: propagate_ohlcv!
 using .Data.DFUtils: copysubs!
 using .LiveMode: cached_ohlcv!
 
-@doc """[`fill!`](@ref) all the instances with given timeframes data...
+@doc """[`load_universe!`](@ref) all the instances with given timeframes data...
 
 $(TYPEDSIGNATURES)
 """
-function Base.fill!(ac::InstrumentCollection, tfs...; kwargs...)
+function load_universe!(ac::InstrumentCollection, tfs...; kwargs...)
     @eachrow ac.data fill!(:instance, tfs...; kwargs...)
 end
 
@@ -38,7 +38,7 @@ end
 
 $(TYPEDSIGNATURES)
 
-The `stub!` function takes the following parameters:
+The `stub_universe!` function takes the following parameters:
 
 - `ac`: an InstrumentCollection object which encapsulates a collection of assets.
 - `src`: The mapping, should be a pair `TimeFrame => Dict{String, PairData}`.
@@ -55,10 +55,10 @@ setexchange!(:binanceusdm)
 cfg = Config(Symbol(exc.id))
 strat = strategy!(:Example, cfg)
 data = bn.binanceload()
-stub!(strat.universe, data)
+stub_universe!(strat.universe, data)
 ```
 """
-function stub!(ac::InstrumentCollection, src; fromfiat=true)
+function stub_universe!(ac::InstrumentCollection, src; fromfiat=true)
     parse_args = fromfiat ? (fiatnames,) : ()
     src_dict = swapkeys(src; parse_args)
     for ii in ac.data.instance

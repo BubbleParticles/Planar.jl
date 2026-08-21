@@ -100,7 +100,6 @@ struct InstrumentInstance{T<:AbstractInstrument,E<:ExchangeID,M<:MarginMode} <: 
     function InstrumentInstance(
         a::A, data, e::Exchange{E}, margin::M; limits, precision, fees
     ) where {A<:AbstractInstrument,E<:ExchangeID,M<:MarginMode}
-        @assert !ishedged(margin) "Hedged margin not yet supported."
         local longpos, shortpos
         longpos, shortpos = positions(M, a, limits, e)
         cash, comm = if M == NoMargin
@@ -136,14 +135,10 @@ end
 
 @doc "A type alias representing an asset instance with no margin."
 const NoMarginInstance = InstrumentInstance{<:AbstractInstrument,<:ExchangeID,NoMargin}
-@doc "A type alias for an asset instance with either isolated or cross margin."
-const MarginInstance{M<:Union{Isolated,Cross}} = InstrumentInstance{
-    <:AbstractInstrument,<:ExchangeID,M
-}
+@doc "A type alias for an asset instance with either isolated or cross margin (including hedged)."
+const MarginInstance{M<:WithMargin} = InstrumentInstance{<:AbstractInstrument,<:ExchangeID,M}
 @doc "A type alias for an asset instance with either isolated or cross hedged margin."
-const HedgedInstance{M<:Union{IsolatedHedged,CrossHedged}} = InstrumentInstance{
-    <:AbstractInstrument,<:ExchangeID,M
-}
+const HedgedInstance{M<:Union{IsolatedHedged,CrossHedged}} = InstrumentInstance{<:AbstractInstrument,<:ExchangeID,M}
 @doc "A type alias representing an asset instance with cross margin."
 const CrossInstance{M<:CrossMargin} = InstrumentInstance{<:AbstractInstrument,<:ExchangeID,M}
 @doc " Retrieve the margin mode of an `InstrumentInstance`. "
@@ -852,6 +847,8 @@ position(ii::MarginInstance, ::ByPos{S}) where {S<:PositionSide} = position(ii, 
 position(ii::MarginInstance) = getfield(ii, :lastpos)[]
 @doc "Get the trade history of an `InstrumentInstance`."
 trades(ii::InstrumentInstance) = getfield(ii, :history)
+@doc "Typed function barrier for appending a trade to an instance's history (specializes on the trade's concrete type)."
+pushtrade!(ii::InstrumentInstance, t::Trade) = push!(ii.history, t)
 _history_timestamp(ii) =
     let history = trades(ii)
         if isempty(history)
