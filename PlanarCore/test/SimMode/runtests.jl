@@ -15,6 +15,7 @@ using PlanarCore.Strategies.Instances.Instruments: AbstractInstrument
 using PlanarCore.Strategies.Instances: InstrumentInstance, ohlcv, ohlcv_dict, ticks, setticks!, _check_ticks_ordered!, _ohlcv_keys
 using PlanarCore.Strategies.Instances.DataStructures: SortedDict
 using PlanarCore.Strategies.Instances.Data: DataFrame
+using PlanarCore.Instances.TimeTicks: @tf_str
 
 const OT = SimMode.OrderTypes
 const Order = OT.Order
