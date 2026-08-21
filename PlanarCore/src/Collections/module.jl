@@ -23,11 +23,8 @@ using ..Misc.DocStringExtensions
 import ..Misc: reset!
 
 @doc """A type representing a collection of asset instances.
-
-Holds a DataFrame of asset instances indexed by exchange, asset, and instance.
-Thread-safe via internal ReentrantLock.
 """
-struct InstrumentCollection
+struct InstrumentCollection{T<:AbstractInstrument, I<:InstrumentInstance}
     data::DataFrame
     lock::ReentrantLock
     function InstrumentCollection(
@@ -35,27 +32,39 @@ struct InstrumentCollection
             exchange=ExchangeID[], asset=AbstractInstrument[], instance=InstrumentInstance[]
         ),
     )
-        new(df, ReentrantLock())
+        new{AbstractInstrument, InstrumentInstance}(df, ReentrantLock())
+    end
+    function InstrumentCollection{T,I}() where {T<:AbstractInstrument, I<:InstrumentInstance}
+        new{T,I}(
+            DataFrame(;
+                exchange=ExchangeID[], asset=T[], instance=I[]
+            ),
+            ReentrantLock(),
+        )
     end
     function InstrumentCollection(instances::Iterable{<:InstrumentInstance})
-        new(
+        inst_vec = collect(instances)
+        T = promote_type(typeof.(getproperty.(inst_vec, :asset))...)
+        I = promote_type(typeof.(inst_vec)...)
+        new{T, I}(
             DataFrame(
                 (; exchange=inst.exchange.id, asset=inst.asset, instance=inst) for
-                inst in instances;
+                inst in inst_vec;
                 copycols=false,
             ),
             ReentrantLock(),
         )
     end
 end
-    function InstrumentCollection(
-        assets::Union{Iterable{String},Iterable{<:AbstractInstrument}};
-        timeframe="1m",
-        exc::Exchange,
-        margin::MarginMode,
-        min_amount=1e-8,
-        load_data=true,
-    )
+
+function InstrumentCollection(
+    assets::Union{Iterable{String},Iterable{<:AbstractInstrument}};
+    timeframe="1m",
+    exc::Exchange,
+    margin::MarginMode,
+    min_amount=1e-8,
+    load_data=true,
+)
         if eltype(assets) == String
             assets = [parse(AbstractInstrument, name) for name in assets]
         end
@@ -305,14 +314,18 @@ function _daterange_full(ac::InstrumentCollection, tf=nothing; kwargs...)
     DateRange(dt(m), dt(M) + tf, tf)
 end
 
-Base.iterate(ac::InstrumentCollection) = iterate(ac.data.instance)
-Base.iterate(ac::InstrumentCollection, s) = iterate(ac.data.instance, s)
-Base.first(ac::InstrumentCollection) = first(ac.data.instance)
-Base.last(ac::InstrumentCollection) = last(ac.data.instance)
+function snapshot(ac::InstrumentCollection{T,I}) where {T,I}
+    @lock ac.lock copy(ac.data.instance::Vector{I})
+end
+
+Base.iterate(ac::InstrumentCollection) = iterate(snapshot(ac))
+Base.iterate(ac::InstrumentCollection, s) = iterate(snapshot(ac), s)
+Base.first(ac::InstrumentCollection) = first(snapshot(ac))
+Base.last(ac::InstrumentCollection) = last(snapshot(ac))
 Base.length(ac::InstrumentCollection) = nrow(ac.data)
 Base.size(ac::InstrumentCollection) = size(ac.data)
 Base.similar(ac::InstrumentCollection) = begin
-    InstrumentCollection(similar.(ac.data.instance))
+    InstrumentCollection{eltype(ac.data.asset), eltype(ac.data.instance)}()
 end
 
 @doc """Checks that all assets in the universe match the cash currency.
@@ -346,4 +359,64 @@ reset!(ac::InstrumentCollection) = begin
     end
 end
 
-export InstrumentCollection, flatten, iscashable
+# --- Dynamic universe mutation (thread-safe) ---
+#
+# These allow assets to be added/removed from a running strategy's universe.
+
+function Base.push!(ac::InstrumentCollection, ii::InstrumentInstance)
+    @lock ac.lock begin
+        if !(ii isa eltype(ac.data.instance))
+            # The new instance is a different concrete subtype: widen the stored
+            # columns so the collection can hold heterogeneous instances.
+            ac.data.instance = convert(Vector{InstrumentInstance}, ac.data.instance)
+            ac.data.asset = convert(Vector{AbstractInstrument}, ac.data.asset)
+        end
+        push!(ac.data, (exchange=ii.exchange.id, asset=ii.asset, instance=ii))
+    end
+    return ac
+end
+
+_matchmask(df::DataFrame, key::ExchangeID) = df.exchange .== key
+_matchmask(df::DataFrame, key::AbstractString) = string.(raw.(df.asset)) .== key
+_matchmask(df::DataFrame, key::InstrumentInstance) = df.instance .=== key
+
+function Base.delete!(ac::InstrumentCollection, key)
+    @lock ac.lock begin
+        mask = _matchmask(ac.data, key)
+        isempty(mask) && return ac
+        deleteat!(ac.data, findall(mask))
+    end
+    return ac
+end
+
+function Base.pop!(ac::InstrumentCollection)
+    @lock ac.lock begin
+        isempty(ac.data) && error("InstrumentCollection is empty")
+        ii = ac.data.instance[end]
+        deleteat!(ac.data, nrow(ac.data))
+        return ii
+    end
+end
+
+@doc """Iterates the collection yielding concretely typed rows `(; exchange, asset, instance)`."""
+function rows(ac::InstrumentCollection)
+    ((; exchange=ac.data.exchange[i], asset=ac.data.asset[i], instance=ac.data.instance[i]) for i in 1:nrow(ac.data))
+end
+
+@doc """ Fills the universe (InstrumentCollection) with OHLCV data for given timeframes.
+
+$(TYPEDSIGNATURES)
+
+This function loads OHLCV data for the specified timeframes into each instrument instance
+of the collection. It calls the `fill!` function on each instance.
+"""
+function fill_universe!(ac::InstrumentCollection, tfs...; kwargs...)
+    @lock ac.lock begin
+        for ii in ac.data.instance
+            fill!(ii, tfs...; kwargs...)
+        end
+    end
+end
+
+export InstrumentCollection, flatten, iscashable, fill_universe!
+export push!, delete!, pop!, rows, _matchmask

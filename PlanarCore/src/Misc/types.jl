@@ -26,7 +26,7 @@ struct NotHedged <: HedgedMode end
 abstract type MarginMode{H<:HedgedMode} end
 @doc "Isolated margin mode handles margin for each asset separately."
 struct IsolatedMargin{H} <: MarginMode{H} end
-@doc "Cross margin mode handles margin across all assets (NOT IMPLEMENTED)."
+@doc "Cross margin mode handles margin across all assets on the same exchange (shared collateral pool)."
 struct CrossMargin{H} <: MarginMode{H} end
 @doc "No margin mode, margin handling is disabled (usually in simple spot markets)."
 struct NoMargin <: MarginMode{NotHedged} end
@@ -39,8 +39,8 @@ const IsolatedHedged = IsolatedMargin{Hedged}
 const Cross = CrossMargin{NotHedged}
 @doc "Hedged CrossMargin mode."
 const CrossHedged = CrossMargin{Hedged}
-@doc "Any margin mode."
-const WithMargin = Union{Cross,Isolated}
+@doc "Any margin mode (including hedged variants)."
+const WithMargin = Union{Cross, Isolated, CrossHedged, IsolatedHedged}
 @doc "Returns the margin mode of the arguments."
 marginmode(args...; kwargs...) = NoMargin()
 marginmode(v::String) =
@@ -131,6 +131,6 @@ export DFT, ATOL, ZERO, ONE
 export QUOTE_CURRENCY, DEFAULT_ASSETS
 export Iterable, StrOrVec, ContiguityException
 export ExecMode, execmode, ExecAction, Sim, Paper, Live
-export MarginMode, marginmode, Isolated, Cross
+export MarginMode, marginmode, Isolated, Cross, IsolatedHedged, CrossHedged
 export NoMargin, WithMargin, Hedged, NotHedged
 export PositionSide, Long, Short, opposite

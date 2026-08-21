@@ -402,6 +402,10 @@ attr(d, k) = attrs(d)[k]
 $(TYPEDSIGNATURES)
 "
 attr(d, k, v) = get(attrs(d), k, v)
+@doc "Typed read of an `attrs` value, converting it to type `V`."
+attr(d, ::Type{V}, k) where {V} = convert(V, attr(d, k))
+@doc "Typed read of an `attrs` value with a default, converting it to type `V`."
+attr(d, ::Type{V}, k, default) where {V} = convert(V, attr(d, k, default))
 @doc "Get `k` from the `attrs` field of the input object, or `v` if `k` is not present, setting `k` to `v`.
 
 $(TYPEDSIGNATURES)

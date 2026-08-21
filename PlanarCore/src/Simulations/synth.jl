@@ -117,7 +117,7 @@ The start date for the synthetic data can also be specified.
 This function is useful for testing and prototyping purposes when actual market data is not available or not necessary.
 
 """
-function stub!(
+function synth_stub!(
     ii::InstrumentInstance,
     len=1000,
     tfs::Vector{TimeFrame}=collect(keys(ii.data));
@@ -205,7 +205,7 @@ The synthetic funding rates are generated using the `synthfunding` function.
 If the `force` parameter is set to `true`, the synthetic funding rates will replace any existing funding rates in the asset instance.
 
 """
-function stub!(ii::InstrumentInstance, ::Val{:funding}; force=false)
+function synth_stub_funding!(ii::InstrumentInstance; force=false)
     data = ohlcv(ii)
     if force || "funding" ∉ metadatakeys(data)
         funding = synthfunding(data)

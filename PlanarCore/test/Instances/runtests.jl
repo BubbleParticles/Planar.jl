@@ -756,3 +756,43 @@ end
     Instances.Instruments.add!(Instances.cash(longpos), 0.001)
     @test Instances.nondust(ii, 50000.0, Long()) > 0.0
 end
+
+# =============================================================
+# 24. Typed attrs and pushtrade! (2nd-round Task 1)
+# =============================================================
+@testset "Typed attrs and pushtrade!" begin
+    using .Instances.OrderTypes: Trade, Order, MarketOrder, Buy, Long
+
+    limits = (leverage=(min=1.0, max=10.0), amount=(min=1e-8, max=1e8),
+              price=(min=1e-8, max=1e8), cost=(min=1e-8, max=1e8))
+    precision = (amount=1e-8, price=1e-8)
+    fees = (taker=0.01, maker=0.01, min=0.01, max=0.01)
+    data = SortedDict{TimeFrame,DataFrame}(tf"1m" => DataFrame())
+    ii = Instances.InstrumentInstance(a, data, exc, NoMargin(); limits=limits, precision=precision, fees=fees)
+
+    # attr!/attr/hasattr on the flexible Dict{Symbol,Any}
+    @test Instances.attr!(ii, :mykey, 42) == 42
+    @test Instances.attr(ii, :mykey) == 42
+    @test Instances.hasattr(ii, :mykey)
+    @test !Instances.hasattr(ii, :absent)
+
+    # typed accessor returns a concrete type (not Any)
+    vt = Instances.attr(ii, Int, :mykey)
+    @test vt == 42
+    @test vt isa Int
+
+    # typed accessor with default + convert
+    @test Instances.attr(ii, Int, :absent, 0) == 0
+    @test Instances.attr(ii, Float64, :mykey) == 42.0
+    @test Instances.attr(ii, Float64, :mykey) isa Float64
+
+    # pushtrade! appends to history (typed barrier)
+    eid = Instances.exchangeid(exc)
+    o = Order(a, eid, MarketOrder{Buy}; price=DFT(50000.0), amount=1.0, date=_Dates.DateTime(2024, 1, 1))
+    t = Trade(o; date=_Dates.DateTime(2024, 1, 1), amount=1.0, price=DFT(50000.0),
+              fees=0.01, size=50000.0, lev=1.0, entryprice=DFT(50000.0), fees_base=0.0)
+    @test isempty(Instances.trades(ii))
+    Instances.pushtrade!(ii, t)
+    @test length(Instances.trades(ii)) == 1
+    @test Instances.trades(ii)[end] === t
+end

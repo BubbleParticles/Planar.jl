@@ -1,25 +1,10 @@
-module PlottingTests
-    # Tests for the Plotting submodule (moved from PlanarCore to PlanarOptim)
-    using Test
-    using PlanarOptim.Plotting
-    using PlanarOptim.Plotting.Makie
-    using Random
+module PlanarOptimTests
 
-    @testset "Plotting" begin
-        @testset "Module loads" begin
-            @test isdefined(Plotting, :ohlcv)
-            @test isdefined(Plotting, :ohlcv!)
-            @test isdefined(Plotting, :tradesticks)
-            @test isdefined(Plotting, :tradesticks!)
-            @test isdefined(Plotting, :balloons)
-        end
+using Test
+using PlanarOptim
 
-        @testset "Basic plot functions exist" begin
-            @test isdefined(Plotting, :ohlcv)
-            @test isdefined(Plotting, :ohlcv!)
-            @test isdefined(Plotting, :tradesticks)
-            @test isdefined(Plotting, :tradesticks!)
-            @test isdefined(Plotting, :balloons)
-        end
-    end
+@testset "PlanarOptim" begin
+    include("plotting.jl")
 end
+
+end # module

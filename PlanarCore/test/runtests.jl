@@ -3,6 +3,9 @@ using Test
 @testset "PlanarCore" begin
     include("Ccxt/runtests.jl")
     include("Collections/runtests.jl")
+    include("collections_typing.jl")
+    include("dynamic_universe.jl")
+    include("hedged_margin.jl")
     include("Data/runtests.jl")
     include("ExchangeTypes/runtests.jl")
     include("Exchanges/runtests.jl")
@@ -12,7 +15,7 @@ using Test
     include("Instruments/runtests.jl")
     include("Lang/runtests.jl")
     include("Metrics/runtests.jl")
-    include("Misc/runtests.jl")
+    include("pretty.jl")
     include("OrderTypes/runtests.jl")
     include("Pbar/runtests.jl")
     include("Processing/runtests.jl")

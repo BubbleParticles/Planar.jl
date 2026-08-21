@@ -21,8 +21,7 @@ function load_ohlcv(
     exc = exchange(s)
     tf_str = string(tf)
     pairs_str = collect(pairs)
-    Data.load_ohlcv(exc, pairs_str, tf_str)
-    fill!(s)
+    load_ohlcv!(s)
 end
 
 function fetch_ohlcv!(s::Strategy)

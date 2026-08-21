@@ -107,6 +107,18 @@ Base.nameof(::Type{<:Strategy{<:ExecMode,N}}) where {N<:Symbol} = N
 Base.nameof(s::Strategy) = typeof(s).parameters[2]
 @doc "The strategy `InstrumentCollection`."
 universe(s::Strategy) = getfield(s, :universe)
+
+@doc "Add an asset instance to the strategy's universe at runtime (thread-safe)."
+function addasset!(s::Strategy, ii::InstrumentInstance)
+    @lock s push!(universe(s), ii)
+    return s
+end
+
+@doc "Remove an asset from the strategy's universe by instance, asset, or exchange id (thread-safe)."
+function removeasset!(s::Strategy, key)
+    @lock s delete!(universe(s), key)
+    return s
+end
 @doc "The `throttle` attribute determines the strategy polling interval."
 throttle(s::Strategy) = attr(s, :throttle, Second(5))
 @doc "The strategy `Config` attributes."
@@ -184,20 +196,19 @@ end
 const config_fields = fieldnames(Config)
 @doc "Set strategy defaults."
 default!(s::Strategy) = nothing
-
-@doc """ Fills the strategy with the specified timeframes.
+@doc """ Loads OHLCV data for the strategy's timeframes.
 
 $(TYPEDSIGNATURES)
 
-This function fills the strategy with the specified timeframes. It first creates a set of timeframes and adds the strategy's timeframe, the timeframes from the strategy's configuration, and the timeframe attribute of the strategy. It then fills the universe of the strategy with these timeframes.
+This function loads OHLCV data for the strategy's timeframes. It first creates a set of timeframes and adds the strategy's timeframe, the timeframes from the strategy's configuration, and the timeframe attribute of the strategy. It then fills the universe of the strategy with these timeframes.
 """
-Base.fill!(s::Strategy; kwargs...) = begin
+function load_ohlcv!(s::Strategy; kwargs...)
     tfs = Set{TimeFrame}()
     push!(tfs, s.timeframe)
     push!(tfs, s.config.timeframes...)
     push!(tfs, attr(s, :timeframe, s.timeframe))
     uni = universe(s)
-    coll.fill!(uni, tfs...; kwargs...)
+    fill_universe!(uni, tfs...; kwargs...)
     for ii in uni
         propagate_ohlcv!(ohlcv_dict(ii))
     end

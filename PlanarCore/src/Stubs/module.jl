@@ -53,9 +53,7 @@ end
 
 @doc "Generates trades and saves them to the stubs shed."
 function gensave_trades(n=10_000; s, dosave=true)
-    for ii in s.universe
-        sml.stub!(ii, n)
-    end
+        sml.synth_stub!(ii, n)
     SimMode.start!(s; doreset=true)
     if dosave
         for ii in s.universe
@@ -66,7 +64,7 @@ end
 
 function do_stub!(s::Strategy, n=10_000; trades=true)
     for ii in s.universe
-        sml.stub!(ii, n)
+        sml.synth_stub!(ii, n)
     end
     if trades
         for ii in s.universe

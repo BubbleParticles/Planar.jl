@@ -1,4 +1,4 @@
-using ..Collections: InstrumentCollection, Collections as coll, Instances, Data
+using ..Collections: InstrumentCollection, Collections as coll, Instances, Data, fill_universe!
 
 using ..Instances: InstrumentInstance, Position, MarginMode, PositionSide, ishedged, Instances
 using ..Instances: CurrencyCash, CCash
@@ -106,7 +106,6 @@ struct Strategy{X<:ExecMode,N,E<:ExchangeID,M<:MarginMode,C} <: AbstractStrategy
         uni::InstrumentCollection;
         config::Config
     )
-        @assert !ishedged(margin) "Hedged margin not yet supported."
         ca = CurrencyCash(exc, config.qc, config.initial_cash)
         if !isempty(uni) && !coll.iscashable(ca, uni)
             @warn "Assets within the strategy universe don't match the strategy cash! ($(nameof(ca)))"
@@ -197,9 +196,8 @@ include("load.jl")
 include("utils.jl")
 include("print.jl")
 
-export Strategy, strategy, strategy!, reset!, default!
-export @interface, id, assets, exchange, universe, throttle, marketsid, asset_bysym, symsdict, @tf_str
+export Strategy, strategy, strategy!, reset!, default!, load_ohlcv!
 export StartStrategy, StopStrategy, LoadStrategy, ResetStrategy, WarmupPeriod, StrategyMarkets
 export SimStrategy, PaperStrategy, LiveStrategy, RTStrategy, IsolatedStrategy, CrossStrategy
-export attr, attrs, setattr!
+export addasset!, removeasset!
 export issim, ispaper, islive
