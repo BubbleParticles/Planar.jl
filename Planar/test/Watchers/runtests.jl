@@ -1,23 +1,36 @@
 module WatchersTests
 
 using Test
-using PlanarCore
 using Planar.Watchers
+using Planar.Watchers.HTTP
+using JSON3
 using Planar.Watchers: HasFunction, Interval, Capacity, Beacon, BufferEntry, Exec
-using Planar.Watchers.Fetch.Exchanges: Exchange
+using Planar.Watchers.DBNomics: set_http_get! as set_dbnomics_http_get!
 import Planar.Watchers.Rocket
 using Planar.Watchers: _check_flush_interval, _notimpl, WATCHERS, logerror, lasterror, errors
 using Planar.Watchers.Misc: ConcurrentCollections
 import Planar.Watchers: _fetch!, _init!, _load!, _flush!, _process!, _get, _push!, _pop!, _start!, _stop!, _delete!
 using Planar.Watchers: isstale, isstarted, isstopped, pushnew!, pushstart!, buffer, watcher, lastdate
 
+using Planar.Watchers.WatchersImpls: dbnomics_watcher, alpha_vantage_watcher, newsdata_watcher
+using Planar.Watchers.WatchersImpls: defillama_tvl_watcher, defillama_stablecoins_watcher, defillama_supply_ratio_watcher
+using Planar.Watchers.WatchersImpls: glassnode_active_addresses_watcher, glassnode_holders_profit_watcher, glassnode_large_movements_watcher
+using Planar.Watchers.WatchersImpls: DbnomicsVal, AvTickerVal, NewsDataVal
+using Planar.Watchers.WatchersImpls: DefillamaTvlVal, DefillamaStablecoinsVal, DefillamaSupplyRatioVal
+using Planar.Watchers.WatchersImpls: GlassnodeActiveAddressesVal, GlassnodeHoldersProfitVal, GlassnodeLargeMovementsVal
+# Mock HTTP functions for testing
+using Planar.Watchers.DBNomics: set_http_get! as set_dbnomics_http_get!
+using Planar.Watchers.AlphaVantage: set_http_get! as set_av_http_get!
+using Planar.Watchers.NewsData: set_http_get! as set_nd_http_get!
+using Planar.Watchers.DefiLlama: set_http_get! as set_dfl_http_get!
+using Planar.Watchers.Glassnode: set_http_get! as set_gn_http_get!
 const _Dates = Watchers.Misc.TimeTicks.Dates
 using Planar.Watchers.Misc.TimeTicks
 using Planar.Watchers.Misc: rangebetween
 using Planar.Watchers.Data: empty_ohlcv
 using Planar.Watchers.WatchersImpls: CcxtTicker, TempCandle, TickerWatcherSymbolState2, CandleWatcherSymbolState4, WatcherHandler2
 using Planar.Watchers.WatchersImpls: _parse_ticker_snapshot, sym_procstate!, default_load_timeframe, _update_sym_ohlcv, ccxt_ohlcv_tickers_watcher, Warmed, TempCandle, TickerWatcherSymbolState2, CandleWatcherSymbolState4, WatcherHandler2, _do_check_contig, _ensure_ohlcv_check_contig!, _dedup_view!
-using Planar.Watchers.Ccxt
+using PlanarCore.ExchangeTypes: Exchange
 using PlanarCore.Ccxt.CcxtGateway: ping, start_exchange, stop_exchange, exchange_ready
 
 # Define watcher methods for test watcher type
@@ -185,6 +198,11 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         @testset "cg_ticker_watcher" begin
             @test isdefined(Watchers.WatchersImpls, :CgTickerVal)
             @test isdefined(Watchers.WatchersImpls, :cg_ticker_watcher)
+        end
+
+        @testset "alpha_vantage_watcher" begin
+            @test isdefined(Watchers.WatchersImpls, :AvTickerVal)
+            @test isdefined(Watchers.WatchersImpls, :alpha_vantage_watcher)
         end
 
         @testset "cg_derivatives_watcher" begin
@@ -1331,6 +1349,273 @@ _delete!(w::Watcher, ::Val{:testwatcher}) = nothing
         @test !haskey(result, "NULLSYM")
         @test !haskey(result, "NOSYM")
     end
-end
+    @testset "Third-party API watchers (mock HTTP)" begin
+        # Test DBNomics watcher with mock HTTP
+        @testset "dbnomics_watcher" begin
+            mock_response = Dict(
+                "series" => Dict(
+                    "WB/USA/UNRATE" => Dict(
+                        "period" => ["2024-01-01", "2024-02-01"],
+                        "value" => [3.5, 3.6],
+                    )
+                )
+            )
+            set_dbnomics_http_get!((url; query, headers) -> begin
+                return HTTP.Messages.Response(200, ["Content-Type" => "application/json"], JSON3.write(mock_response))
+            end)
+            w = dbnomics_watcher(["WB/USA/UNRATE"]; start=false, load=false, process=false, flush=false)
+            result = _fetch!(w, DbnomicsVal())
+            @test result == true
+            buf = buffer(w)
+            @test length(buf) == 1
+            val = buf[1].value
+            @test haskey(val, :WB_USA_UNRATE)
+            series_val = val.WB_USA_UNRATE
+            @test series_val.series_id == "WB/USA/UNRATE"
+            @test series_val.value == 3.6
+            @test series_val.timestamp == DateTime("2024-02-01")
+            Watchers.close(w; doflush=false)
+            # Reset mock to passthrough
+            set_dbnomics_http_get!((url; query, headers) -> HTTP.get(url; query, headers))
+        end
 
+        # Test AlphaVantage watcher with mock HTTP
+        @testset "alpha_vantage_watcher" begin
+            mock_response = Dict(
+                "Meta Data" => Dict("2. Symbol" => "AAPL"),
+                "Time Series (Daily)" => Dict(
+                    "2024-01-15" => Dict("1. open" => "185.00", "2. high" => "187.50", "3. low" => "184.20", "4. close" => "186.80", "5. volume" => "50000000"),
+                    "2024-01-12" => Dict("1. open" => "183.00", "2. high" => "185.00", "3. low" => "182.50", "4. close" => "184.50", "5. volume" => "45000000"),
+                ),
+            )
+            set_av_http_get!((url; query, headers) -> begin
+                return HTTP.Messages.Response(200, ["Content-Type" => "application/json"], JSON3.write(mock_response))
+            end)
+            w = alpha_vantage_watcher(["AAPL"]; start=false, load=false, process=false, flush=false)
+            result = _fetch!(w, AvTickerVal())
+            @test result == true
+            buf = buffer(w)
+            @test length(buf) == 1
+            val = buf[1].value
+            @test haskey(val, :AAPL)
+            tick = val.AAPL
+            @test tick.symbol == :AAPL
+            @test tick.timestamp == DateTime("2024-01-15")
+            @test tick.open ≈ 185.00
+            @test tick.high ≈ 187.50
+            @test tick.low ≈ 184.20
+            @test tick.close ≈ 186.80
+            @test tick.volume == 50000000
+            Watchers.close(w; doflush=false)
+            # Reset mock to passthrough
+            set_av_http_get!((url; query, headers) -> HTTP.get(url; query, headers))
+        end
+
+        # Test NewsData watcher with mock HTTP
+        @testset "newsdata_watcher" begin
+            mock_response = Dict(
+                "status" => "success",
+                "totalResults" => 2,
+                "results" => [
+                    Dict("title" => "Test Article 1", "description" => "Description 1", "content" => "Content 1", "link" => "https://example.com/1", "image_url" => "https://example.com/img1.jpg", "source_id" => "source1", "source_name" => "Source 1", "source_url" => "https://source1.com", "category" => ["business", "technology"], "language" => "en", "country" => "us", "pubDate" => "2024-01-15 10:30:00"),
+                    Dict("title" => "Test Article 2", "description" => "Description 2", "content" => "Content 2", "link" => "https://example.com/2", "image_url" => "https://example.com/img2.jpg", "source_id" => "source2", "source_name" => "Source 2", "source_url" => "https://source2.com", "category" => ["finance"], "language" => "en", "country" => "us", "pubDate" => "2024-01-15 11:00:00"),
+                ],
+            )
+            set_nd_http_get!((url; query, headers) -> begin
+                return HTTP.Messages.Response(200, ["Content-Type" => "application/json"], JSON3.write(mock_response))
+            end)
+            w = newsdata_watcher(; apikey="test_key", start=false, load=false, process=false, flush=false)
+            result = _fetch!(w, NewsDataVal())
+            @test result == true
+            buf = buffer(w)
+            @test length(buf) == 2
+            article1 = buf[1].value
+            @test article1.title == "Test Article 1"
+            @test article1.url == "https://example.com/1"
+            @test article1.source_name == "Source 1"
+            @test article1.category == ["business", "technology"]
+            @test article1.language == "en"
+            @test article1.country == "us"
+            @test article1.published_at == DateTime("2024-01-15T10:30:00")
+            article2 = buf[2].value
+            @test article2.title == "Test Article 2"
+            @test article2.source_name == "Source 2"
+            Watchers.close(w; doflush=false)
+            # Reset mock to passthrough
+            set_nd_http_get!((url; query, headers) -> HTTP.get(url; query, headers))
+        end
+
+        # Test DefiLlama TVL watcher with mock HTTP
+        @testset "defillama_tvl_watcher" begin
+            mock_response = Dict(
+                "name" => "Lido", "symbol" => "LDO", "category" => "Liquid Staking", "chains" => ["Ethereum"], "chain" => "Ethereum",
+                "tvl" => [
+                    Dict("date" => "2024-01-13", "totalLiquidityUSD" => 25000000000.0),
+                    Dict("date" => "2024-01-14", "totalLiquidityUSD" => 25500000000.0),
+                    Dict("date" => "2024-01-15", "totalLiquidityUSD" => 26000000000.0),
+                ],
+                "change_1d" => 2.0, "change_7d" => 5.0,
+            )
+            set_dfl_http_get!((url; query, headers) -> HTTP.Messages.Response(200, ["Content-Type" => "application/json"], JSON3.write(mock_response)))
+            w = defillama_tvl_watcher(["Lido"]; start=false, load=false, process=false, flush=false)
+            result = _fetch!(w, DefillamaTvlVal())
+            @test result == true
+            buf = buffer(w)
+            @test length(buf) == 1
+            val = buf[1].value
+            @test haskey(val, :Lido)
+            tvl = val.Lido
+            @test tvl.protocol == "Lido"
+            @test tvl.tvl == 26000000000.0
+            @test tvl.timestamp == DateTime("2024-01-15")
+            @test tvl.change_1d != nothing
+            @test tvl.category == "Liquid Staking"
+            @test tvl.chain == "Ethereum"
+            Watchers.close(w; doflush=false)
+            set_dfl_http_get!(HTTP.get)
+        end
+
+        # Test DefiLlama Stablecoins watcher with mock HTTP
+        @testset "defillama_stablecoins_watcher" begin
+            mock_response = Dict(
+                "id" => "USDT", "name" => "Tether", "symbol" => "USDT", "pegType" => "Fiat", "pegMechanism" => "Collateralized", "chain" => "Ethereum",
+                "totalCirculating" => [
+                    Dict("date" => 1705276800000, "totalCirculating" => 95000000000.0, "peggedUSD" => 95000000000.0),
+                    Dict("date" => 1705363200000, "totalCirculating" => 95500000000.0, "peggedUSD" => 95500000000.0),
+                ],
+                "totalUnreleased" => [
+                    Dict("date" => 1705276800000, "totalUnreleased" => 0.0),
+                    Dict("date" => 1705363200000, "totalUnreleased" => 0.0),
+                ],
+                "totalBridgedToCirculating" => [
+                    Dict("date" => 1705276800000, "totalBridgedToCirculating" => 1000000000.0),
+                    Dict("date" => 1705363200000, "totalBridgedToCirculating" => 1100000000.0),
+                ],
+            )
+            set_dfl_http_get!((url; query, headers) -> HTTP.Messages.Response(200, ["Content-Type" => "application/json"], JSON3.write(mock_response)))
+            w = defillama_stablecoins_watcher(["USDT"]; start=false, load=false, process=false, flush=false)
+            result = _fetch!(w, DefillamaStablecoinsVal())
+            @test result == true
+            buf = buffer(w)
+            @test length(buf) == 1
+            val = buf[1].value
+            @test haskey(val, :USDT)
+            sc = val.USDT
+            @test sc.stablecoin == "USDT"
+            @test sc.total_circulating == 95500000000.0
+            @test sc.total_unreleased == 0.0
+            @test sc.total_bridged == 1100000000.0
+            @test sc.circulating_pegged_usd == 95500000000.0
+            @test sc.peg_type == "Fiat"
+            @test sc.chain == "Ethereum"
+            @test sc.timestamp == unix2datetime(1705363200)
+            Watchers.close(w; doflush=false)
+            set_dfl_http_get!(HTTP.get)
+        end
+
+        # Test DefiLlama Supply Ratio watcher with mock HTTP
+        @testset "defillama_supply_ratio_watcher" begin
+            mock_response = Dict(
+                "stablecoinSupply" => 125000000000.0,
+                "totalSupply" => 2500000000000.0,
+                "chain" => "Ethereum",
+            )
+            set_dfl_http_get!((url; query, headers) -> HTTP.Messages.Response(200, ["Content-Type" => "application/json"], JSON3.write(mock_response)))
+            w = defillama_supply_ratio_watcher(["ethereum"]; start=false, load=false, process=false, flush=false)
+            result = _fetch!(w, DefillamaSupplyRatioVal())
+            @test result == true
+            buf = buffer(w)
+            @test length(buf) == 1
+            val = buf[1].value
+            sr = val.ethereum
+            @test sr.stablecoin_supply == 125000000000.0
+            @test sr.total_supply == 2500000000000.0
+            @test sr.supply_ratio ≈ 0.05
+            @test sr.chain == "Ethereum"
+            @test sr.timestamp isa DateTime
+            Watchers.close(w; doflush=false)
+            set_dfl_http_get!(HTTP.get)
+        end
+
+        # Test Glassnode Active Addresses watcher with mock HTTP
+        @testset "glassnode_active_addresses_watcher" begin
+            mock_response = Dict(
+                "v" => [
+                    Dict("t" => 1705276800000, "v" => 850000.0, "newAddresses" => 50000.0, "zeroBalanceAddresses" => 100000.0),
+                    Dict("t" => 1705363200000, "v" => 870000.0, "newAddresses" => 55000.0, "zeroBalanceAddresses" => 105000.0),
+                ],
+            )
+            set_gn_http_get!((url; query, headers) -> HTTP.Messages.Response(200, ["Content-Type" => "application/json"], JSON3.write(mock_response)))
+            w = glassnode_active_addresses_watcher(["BTC"]; start=false, load=false, process=false, flush=false)
+            result = _fetch!(w, GlassnodeActiveAddressesVal())
+            @test result == true
+            buf = buffer(w)
+            @test length(buf) == 1
+            val = buf[1].value
+            @test haskey(val, :BTC)
+            aa = val.BTC
+            @test aa.asset == "BTC"
+            @test aa.active_addresses == 870000
+            @test aa.new_addresses == 55000
+            @test aa.zero_balance_addresses == 105000
+            @test aa.timestamp == unix2datetime(1705363200)
+            Watchers.close(w; doflush=false)
+            set_gn_http_get!(HTTP.get)
+        end
+
+        @testset "glassnode_holders_profit_watcher" begin
+            mock_response = Dict(
+                "v" => [
+                    Dict("t" => 1705276800000, "v" => 75.5, "holdersProfitPercent" => 75.5, "holdersLossPercent" => 20.0, "holdersBreakevenPercent" => 4.5, "supplyInProfitPercent" => 80.0, "supplyInLossPercent" => 15.0),
+                    Dict("t" => 1705363200000, "v" => 78.0, "holdersProfitPercent" => 78.0, "holdersLossPercent" => 18.0, "holdersBreakevenPercent" => 4.0, "supplyInProfitPercent" => 82.0, "supplyInLossPercent" => 14.0),
+                ],
+            )
+            set_gn_http_get!((url; query, headers) -> HTTP.Messages.Response(200, ["Content-Type" => "application/json"], JSON3.write(mock_response)))
+            w = glassnode_holders_profit_watcher(["BTC"]; start=false, load=false, process=false, flush=false)
+            result = _fetch!(w, GlassnodeHoldersProfitVal())
+            @test result == true
+            buf = buffer(w)
+            @test length(buf) == 1
+            val = buf[1].value
+            @test haskey(val, :BTC)
+            hp = val.BTC
+            @test hp.asset == "BTC"
+            @test hp.holders_profit_pct == 78.0
+            @test hp.holders_loss_pct == 18.0
+            @test hp.holders_breakeven_pct == 4.0
+            @test hp.supply_in_profit_pct == 82.0
+            @test hp.supply_in_loss_pct == 14.0
+            @test hp.timestamp == unix2datetime(1705363200)
+            Watchers.close(w; doflush=false)
+            set_gn_http_get!(HTTP.get)
+        end
+
+        # Test Glassnode Large Movements watcher with mock HTTP
+        @testset "glassnode_large_movements_watcher" begin
+            mock_response = Dict(
+                "v" => [
+                    Dict("t" => 1705276800000, "v" => 5000000000.0, "txCount" => 150, "volumeUSD" => 5000000000.0, "volumeNative" => 100000.0, "avgTxSizeUSD" => 33333333.33, "avgTxSizeNative" => 666.67),
+                    Dict("t" => 1705363200000, "v" => 6000000000.0, "txCount" => 180, "volumeUSD" => 6000000000.0, "volumeNative" => 120000.0, "avgTxSizeUSD" => 33333333.33, "avgTxSizeNative" => 666.67),
+                ],
+            )
+            set_gn_http_get!((url; query, headers) -> HTTP.Messages.Response(200, ["Content-Type" => "application/json"], JSON3.write(mock_response)))
+            w = glassnode_large_movements_watcher(["BTC"]; start=false, load=false, process=false, flush=false)
+            result = _fetch!(w, GlassnodeLargeMovementsVal())
+            @test result == true
+            buf = buffer(w)
+            @test length(buf) == 1
+            val = buf[1].value
+            @test haskey(val, :BTC)
+            lm = val.BTC
+            @test lm.asset == "BTC"
+            @test lm.tx_count == 180
+            @test lm.volume_usd == 6000000000.0
+            @test lm.volume_native == 120000.0
+            @test lm.avg_tx_size_native == 666.67
+            @test lm.timestamp == unix2datetime(1705363200)
+            Watchers.close(w; doflush=false)
+            set_gn_http_get!(HTTP.get)
+        end
+    end
+    end
 end
