@@ -408,12 +408,12 @@ end
 $(TYPEDSIGNATURES)
 
 This function loads OHLCV data for the specified timeframes into each instrument instance
-of the collection. It calls the `fill!` function on each instance.
+of the collection. It calls the `load_ohlcv!` function on each instance.
 """
 function fill_universe!(ac::InstrumentCollection, tfs...; kwargs...)
     @lock ac.lock begin
         for ii in ac.data.instance
-            fill!(ii, tfs...; kwargs...)
+            load_ohlcv!(ii, tfs...; kwargs...)
         end
     end
 end

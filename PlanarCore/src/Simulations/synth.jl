@@ -6,7 +6,7 @@ using ..Misc: config, FUNDING_PERIOD
 using ..Lang: @deassert
 using Statistics: mean, median
 using ..Data.DataFrames: groupby, combine, DataFrame, metadata!, metadatakeys
-import ..Data: stub!
+import ..Data: seeddata!
 
 const DEFAULT_DATE = dt"2020-01-01"
 

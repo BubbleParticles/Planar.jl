@@ -383,7 +383,7 @@ function test_asset_instance_functions1()
     @test ishedged(sim_ai) == ishedged(ii)
 
     # Test stub! function (skipped due to TimeTicks isless bug comparing Millisecond vs Month in Julia 1.12)
-    @test_skip stub!(ii, da.empty_ohlcv())
+    @test_skip seeddata!(ii, da.empty_ohlcv())
 
 end
 function test_asset_instance_functions2()

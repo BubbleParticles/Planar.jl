@@ -10,7 +10,7 @@ using PlanarCore.Misc
 using PlanarCore.Lang
 using PlanarCore: PlanarCore
 
-import PlanarCore.Data: stub!
+import PlanarCore.Data: seeddata!
 global s, ii, e
 
 function backtest_strat(sym; mode=Sim(), config_attrs=(;), kwargs...)
@@ -31,7 +31,7 @@ function backtest_strat(sym; mode=Sim(), config_attrs=(;), kwargs...)
     Random.seed!(1)
     mode == Sim() && begin
         @info "btstrat: stub!"
-        PlanarCore.Stubs.stub!(s; trades=false)
+        PlanarCore.Stubs.seeddata!(s; trades=false)
     end
     s
 end
@@ -65,7 +65,7 @@ function safe_from(s, pairs)
     egn.now() - len_per_pair * tf
 end
 
-function stub!(
+function seeddata!(
     pairs=symnames(); s=Main.s, loader=default_data_loader(), safeoom=length(pairs) > 10
 )
     isempty(pairs) && return nothing
@@ -75,7 +75,7 @@ function stub!(
         qc = string(nameof(this_s.cash))
         kwargs = $safeoom ? (; from=$safe_from(this_s, $pairs)) : ()
         data = $(loader)($(pairs), qc; kwargs...)
-        t = Threads.@spawn egn.stub!(this_s.universe, data)
+        t = Threads.@spawn egn.seeddata!(this_s.universe, data)
         errormonitor(t)
         while !istaskdone(t)
             GC.gc(true)
@@ -98,7 +98,7 @@ function loadstrat!(strat=:Example, bind=:s; load=false, stub=false, mode=Sim(),
         $bind = st.strategy($(QuoteNode(strat)); mode=$mode, $(kwargs)...)
         if st.issim($bind)
             if $load
-                fill!(
+                load_universe!(
                     $bind.universe,
                     $bind.timeframe,
                     $bind.config.timeframes[(begin+1):end]...,
@@ -106,7 +106,7 @@ function loadstrat!(strat=:Example, bind=:s; load=false, stub=false, mode=Sim(),
             end
             if $stub
                 pairs = symnames($bind)
-                stub!(pairs; s=$bind)
+                seeddata!(pairs; s=$bind)
             end
         end
         st.default!($bind)
@@ -154,4 +154,4 @@ function _doinit()
 end
 
 export backtest_strat, loadstrat!, symnames, default_data_loader
-export @environment!, stub!, resetenv!, togglewatch!, tools!
+export @environment!, seeddata!, resetenv!, togglewatch!, tools!

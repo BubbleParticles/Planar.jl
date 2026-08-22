@@ -6,8 +6,8 @@ const CHECK_FUNCTIONS = Function[]
 # Required by external modules
 using DataStructures: DataStructures
 
-@doc """A `stub!` function usually fills a container with readily available data."""
-stub!(args...; kwargs...) = error("not implemented")
+@doc """A `seeddata!` function usually fills a container with readily available data."""
+seeddata!(args...; kwargs...) = error("not implemented")
 
 tobytes(buf::IOBuffer, data) = begin
     @ifdebug @assert position(buf) == 0

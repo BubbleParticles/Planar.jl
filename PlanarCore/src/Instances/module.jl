@@ -6,7 +6,7 @@ using ..Exchanges: CurrencyCash, Data, TICKERS_CACHE10, markettype, @tickers!
 using ..OrderTypes: ByPos, InstrumentEvent, positionside, Instruments, ordertype
 using .Data: load, zi, empty_ohlcv, DataFrame, DataStructures
 using .Data.DFUtils: daterange, timeframe
-import .Data: stub!
+import .Data: seeddata!
 using .Data.DataFrames: metadata, metadata!
 using .Instruments: Instruments, compactnum, AbstractInstrument, Cash, add!, sub!, Misc
 import .Instruments: _hashtuple, cash!, cash, freecash, value, raw, bc, qc
@@ -807,7 +807,7 @@ $(TYPEDSIGNATURES)
 This function stabs data of an `InstrumentInstance` with a given `DataFrame`. It's used for testing or simulating scenarios with pre-defined data.
 
 """
-stub!(ii::InstrumentInstance, df::DataFrame) = begin
+seeddata!(ii::InstrumentInstance, df::DataFrame) = begin
     tf = timeframe!(df)
     ii.data[tf] = df
 end

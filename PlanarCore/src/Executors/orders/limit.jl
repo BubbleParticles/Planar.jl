@@ -6,7 +6,6 @@ using ..Strategies: NoMarginStrategy
 using Base: negate
 using ..Misc: Long, Short
 using ..Lang: @ifdebug
-import Base: fill!
 
 @doc "Union type representing limit order increase operations. Includes Buy and Sell Short orders."
 const IncreaseLimitOrder{A,E} = Union{LimitOrder{Buy,A,E},ShortLimitOrder{Sell,A,E}}

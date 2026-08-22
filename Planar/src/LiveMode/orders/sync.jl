@@ -501,7 +501,7 @@ After applying the trade, the function performs actions specified in 'aftertrade
 """
 function apply_trade!(s::LiveStrategy, ii, o, trade; decommit=false)
     isnothing(trade) && return nothing
-    fill!(s, ii, o, trade)
+    applyfill!(s, ii, o, trade)
     push!(ii.history, trade)
     @deassert trade.order == o
     @ifdebug let found = findorder(s, ii; id=o.id, side=orderside(o))
