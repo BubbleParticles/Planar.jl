@@ -18,7 +18,7 @@ function Misc.swapkeys(dict::AbstractDict; parse_args=(fiatnames,))
     swapkeys(dict, NTuple{2,Symbol}, swap_func)
 end
 
-function _stubfill!(ii::InstrumentInstance, src_dict)
+function _seedfill!(ii::InstrumentInstance, src_dict)
     pd = get(src_dict, (ii.asset.bc, ii.asset.qc), nothing)
     if !isnothing(pd)
         for tf in keys(ii.data)
@@ -149,7 +149,7 @@ end
 
 $(TYPEDSIGNATURES)
 
-This `fill!` function takes the following parameters:
+This `load_ohlcv!` function takes the following parameters:
 
 - `ii`: an InstrumentInstance object which represents an instance of an asset.
 - `tfs...`: one or more TimeFrame objects that represent the desired timeframes to fill the data for.
@@ -160,7 +160,7 @@ This `fill!` function takes the following parameters:
 Fills the data for the specified timeframes. If the data is already present and `force` is false, the function does nothing.
 
 """
-function Base.fill!(ii::InstrumentInstance, tfs...; exc=ii.exchange, force=false, from=nothing)
+function load_ohlcv!(ii::InstrumentInstance, tfs...; exc=ii.exchange, force=false, from=nothing)
     # asset timeframes dict is sorted
     (from_tf, from_data) = first(ii.data)
     _check_timeframes(tfs, from_tf)

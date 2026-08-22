@@ -9,7 +9,6 @@ using ..Instruments
 using ..Instruments: @importcash!, AbstractInstrument
 import .Checks: cost
 @importcash!
-import Base: fill!
 import ..Misc: reset!, attr
 
 ##  committed::DFT # committed is `cost + fees` for buying or `amount` for selling
@@ -231,7 +230,7 @@ _check_unfillment(o::ShortOrder) = attr(o, :unfilled)[] < 0.0
 $(TYPEDSIGNATURES)
 
 """
-function fill!(
+function applyfill!(
     ::Strategy{<:Union{Sim,Paper}}, ii::NoMarginInstance, o::BuyOrder, t::BuyTrade
 )
     @deassert o isa IncreaseOrder && _check_unfillment(o) unfilled(o), typeof(o)
@@ -250,7 +249,7 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function fill!(
+function applyfill!(
     ::Strategy{<:Union{Sim,Paper}}, ii::InstrumentInstance, o::SellOrder, t::SellTrade
 )
     @deassert o isa SellOrder && _check_unfillment(o)
@@ -268,7 +267,7 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function fill!(
+function applyfill!(
     ::Strategy{<:Union{Sim,Paper}}, ii::InstrumentInstance, o::ShortBuyOrder, t::ShortBuyTrade
 )
     @deassert o isa ShortBuyOrder && _check_unfillment(o) o
@@ -287,7 +286,7 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function fill!(
+function applyfill!(
     ::MarginStrategy{<:Union{Sim,Paper}},
     ii::MarginInstance,
     o::IncreaseOrder,

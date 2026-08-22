@@ -84,7 +84,7 @@ function _update_from_trade!(s::Strategy, ii, o, trade; actual_price)
     # record trade
     @deassert !isdust(ii, o) committed(o), o
     # Fills the order
-    fill!(s, ii, o, trade)
+    applyfill!(s, ii, o, trade)
     push!(trades(ii), trade)
     push!(trades(o), trade)
     # update asset cash and strategy cash

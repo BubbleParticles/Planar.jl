@@ -1,10 +1,9 @@
 using .PaperMode.Instances: amount_with_fees
 using Base: negate
 using .Executors: attr, committment, _check_unfillment, IncreaseLimitOrder, strategycash!
-import Base: fill!
 
 # NOTE: unfilled is always negative
-function fill!(::NoMarginStrategy{Live}, ii::NoMarginInstance, o::BuyOrder, t::BuyTrade)
+function applyfill!(::NoMarginStrategy{Live}, ii::NoMarginInstance, o::BuyOrder, t::BuyTrade)
     @deassert o isa IncreaseOrder && _check_unfillment(o) unfilled(o), typeof(o)
     @deassert committed(o) == o.attrs.committed[] && committed(o) >= 0.0
     # from neg to 0 (buy amount is pos)
@@ -21,7 +20,7 @@ function fill!(::NoMarginStrategy{Live}, ii::NoMarginInstance, o::BuyOrder, t::B
         o, committed(o), attr(o, :unfilled)[], committment(ii, t), t.fees_base, t.fees
     )
 end
-function fill!(::LiveStrategy, ii::InstrumentInstance, o::SellOrder, t::SellTrade)
+function applyfill!(::LiveStrategy, ii::InstrumentInstance, o::SellOrder, t::SellTrade)
     @deassert o isa SellOrder && _check_unfillment(o)
     @deassert committed(o) == o.attrs.committed[] && gtxzero(ii, committed(o), Val(:amount))
     # from pos to 0 (sell amount is neg)
@@ -37,7 +36,7 @@ function fill!(::LiveStrategy, ii::InstrumentInstance, o::SellOrder, t::SellTrad
         committed(o), attr(o, :unfilled)[], t.fees, t.fees_base
     )
 end
-function fill!(
+function applyfill!(
     ::MarginStrategy{Live}, ii::InstrumentInstance, o::ShortBuyOrder, t::ShortBuyTrade
 )
     @deassert o isa ShortBuyOrder && _check_unfillment(o) o
@@ -61,7 +60,7 @@ It updates the unfilled and committed attributes of the order according to the t
 Note:
 When entering positions, the cash committed from the trade must be downsized by leverage (at the time of the trade).
 """
-function fill!(
+function applyfill!(
     ::MarginStrategy{Live}, ii::MarginInstance, o::IncreaseOrder, t::IncreaseTrade
 )
     @deassert o isa IncreaseOrder && _check_unfillment(o) o

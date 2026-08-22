@@ -11,7 +11,7 @@ using PlanarCore.Instances
 using PlanarCore.Exchanges: Exchanges, market_fees, market_limits, market_precision
 using PlanarCore.Exchanges: getexchange!
 using PlanarCore.Data
-import PlanarCore.Data: stub!
+import PlanarCore.Data: seeddata!
 using PlanarCore.Data: load, zi
 using PlanarCore.Data.DataFramesMeta
 using PlanarCore.Data.DFUtils

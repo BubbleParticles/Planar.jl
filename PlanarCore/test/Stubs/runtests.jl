@@ -7,7 +7,7 @@ using PlanarCore.Stubs
 @testset "Stubs module loads" begin
     @test isdefined(Stubs, :StubStrategy)
     @test isdefined(Stubs, :stub_strategy)
-    @test isdefined(Stubs, :stub!)
+    @test isdefined(Stubs, :seeddata!)
     @test isdefined(Stubs, :do_stub!)
     @test isdefined(Stubs, :read_ohlcv)
     @test isdefined(Stubs, :stubscache_path)

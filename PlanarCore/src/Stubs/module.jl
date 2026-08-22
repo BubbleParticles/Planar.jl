@@ -7,7 +7,7 @@ using ..Misc.TimeTicks
 using ..Misc.Lang
 using ..Data: Data as da, Cache as ca
 using ..Data.DataFrames: DataFrame
-import ..Data: stub!
+import ..Data: seeddata!
 using CSV: CSV as CSV
 using Pkg: Pkg
 
@@ -74,7 +74,7 @@ function do_stub!(s::Strategy, n=10_000; trades=true)
     s
 end
 
-stub!(s::Strategy, n=10_000; trades=true) = do_stub!(s, n; trades)
+seeddata!(s::Strategy, n=10_000; trades=true) = do_stub!(s, n; trades)
 
 function stub_strategy(mod=StubStrategy, args...; dostub=true, cfg=Config(), kwargs...)
     s = Strategies.strategy(mod, cfg; kwargs...)
