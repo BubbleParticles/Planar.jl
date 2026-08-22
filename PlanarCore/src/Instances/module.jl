@@ -636,6 +636,91 @@ ohlcv(ii::InstrumentInstance) = getfield(ii, :data)[first(_ohlcv_keys(ii))]
 ohlcv(ii::InstrumentInstance, tf::TimeFrame) = getfield(ii, :data)[tf]
 @doc "Get the asset instance ohlcv data dictionary."
 ohlcv_dict(ii::InstrumentInstance) = getfield(ii, :data)
+
+function _check_timeframes(tfs, from_tf)
+    s_tfs = sort([t for t in tfs])
+    sort!(s_tfs)
+    if tfs[begin] < from_tf
+        throw(
+            ArgumentError("Timeframe $(tfs[begin]) is shorter than the shortest available.")
+        )
+    end
+end
+
+# Check if we have available data
+function _load_smallest!(i, tfs, from_data, from_tf, exc, force=false)
+    if size(from_data)[1] == 0 || force
+        force && begin
+            copysubs!(from_data, empty, empty!)
+        end
+        copysubs!(from_data)
+        loaded = load(zi, exc.name, i.asset.raw, string(from_tf))
+        isnothing(loaded) || append!(from_data, loaded)
+        if size(from_data)[1] == 0 || force
+            for to_tf in tfs
+                to_tf == from_tf && continue
+                if force
+                    data = i.data[to_tf]
+                    copysubs!(data, empty, empty!)
+                else
+                    i.data[to_tf] = empty_ohlcv(i, to_tf)
+                end
+            end
+            return force
+        end
+        true
+    else
+        true
+    end
+end
+
+function _load_rest!(
+    ii, tfs, from_tf, from_data, exc=ii.exchange, force=false; from=nothing
+)
+    exc_name = exc.name
+    name = ii.asset.raw
+    dr = daterange(from_data)
+    ai_tfs = Set(keys(ii.data))
+    from = @something from dr.start
+    for to_tf in tfs
+        if to_tf ∉ ai_tfs || force # current tfs
+            from_sto = load(zi, exc_name, ii.asset.raw, string(to_tf); from, to=dr.stop)
+            ii.data[to_tf] =
+                if size(from_sto)[1] > 0 && let dr_sto = daterange(from_sto)
+                    dr_sto.start >= apply(to_tf, from) &&
+                        dr_sto.stop <= apply(to_tf, dr.stop)
+                end
+                    from_sto
+                else
+                    resample(from_data, from_tf, to_tf; exc_name, name)
+                end
+        end
+    end
+end
+
+@doc """Load OHLCV data for an `InstrumentInstance` for given timeframes.
+
+$(TYPEDSIGNATURES)
+
+This function loads OHLCV data for the specified timeframes into the instance.
+It pulls data from storage or resamples from the smallest timeframe available.
+
+# Arguments
+- `ii::InstrumentInstance`: the instrument instance to load data for
+- `tfs...`: one or more TimeFrame objects representing desired timeframes
+- `exc` (optional): Exchange to pull data from (defaults to `ii.exchange`)
+- `force` (optional): force loading even if data exists
+- `from` (optional): starting DateTime to load from
+
+Returns `nothing` if no data loaded.
+"""
+function load_ohlcv!(ii::InstrumentInstance, tfs...; exc=ii.exchange, force=false, from=nothing)
+    (from_tf, from_data) = first(ii.data)
+    _check_timeframes(tfs, from_tf)
+    _load_smallest!(ii, tfs, from_data, from_tf, exc, force) || return nothing
+    _load_rest!(ii, tfs, from_tf, from_data, exc, force; from)
+end
+
 Instruments.add!(ii::NoMarginInstance, v, args...) = add!(cash(ii), v)
 Instruments.add!(ii::MarginInstance, v, p::PositionSide) =
     let c = cash(ii, p)
