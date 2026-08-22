@@ -8,6 +8,7 @@ using PlanarCore.SimMode: Executors, Executors as ect
 using PlanarCore.Strategies
 using PlanarCore.Collections
 using PlanarCore.Instances
+import PlanarCore.Instances: load_ohlcv!
 using PlanarCore.Exchanges: Exchanges, market_fees, market_limits, market_precision
 using PlanarCore.Exchanges: getexchange!
 using PlanarCore.Data

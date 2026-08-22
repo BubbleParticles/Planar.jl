@@ -419,4 +419,5 @@ function fill_universe!(ac::InstrumentCollection, tfs...; kwargs...)
 end
 
 export InstrumentCollection, flatten, iscashable, fill_universe!
+import ..Instances: load_ohlcv!
 export push!, delete!, pop!, rows, _matchmask
