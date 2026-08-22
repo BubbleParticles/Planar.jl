@@ -149,16 +149,12 @@ end
     cfg.mode = Sim()
     cfg.margin = NoMargin()
     cfg.initial_cash = 1000.0
-    strat = nothing
-    try
-        strat = Strategies.Strategy(
-            @__MODULE__, Sim(), NoMargin(), TimeFrame("1m"), mock_exc,
-            Collections.InstrumentCollection([btc, eth]); config=cfg,
-        )
-    catch e
-        @test_skip "Strategy construction requires an exchange/network context: $e"
-        return
-    end
+    # `mock_exc` is fully self-contained (markets dict, no network), so strategy
+    # construction succeeds without a live gateway/exchange context.
+    strat = Strategies.Strategy(
+        @__MODULE__, Sim(), NoMargin(), TimeFrame("1m"), mock_exc,
+        Collections.InstrumentCollection([btc, eth]); config=cfg,
+    )
     @test length(Strategies.universe(strat)) == 2
     addasset!(strat, sol)
     @test length(Strategies.universe(strat)) == 3
@@ -186,16 +182,12 @@ end
     cfg.mode = Sim()
     cfg.margin = NoMargin()
     cfg.initial_cash = 1000.0
-    strat = nothing
-    try
-        strat = Strategies.Strategy(
-            @__MODULE__, Sim(), NoMargin(), TimeFrame("1m"), mock_exc,
-            Collections.InstrumentCollection([btc, eth]); config=cfg,
-        )
-    catch e
-        @test_skip "Strategy construction requires an exchange/network context: $e"
-        return
-    end
+    # `mock_exc` is fully self-contained (markets dict, no network), so strategy
+    # construction succeeds without a live gateway/exchange context.
+    strat = Strategies.Strategy(
+        @__MODULE__, Sim(), NoMargin(), TimeFrame("1m"), mock_exc,
+        Collections.InstrumentCollection([btc, eth]); config=cfg,
+    )
     # The strategy holds one shared cash pool across all instances
     @test strat.cash.value == 1000.0
     @test Strategies.freecash(strat) == 1000.0
