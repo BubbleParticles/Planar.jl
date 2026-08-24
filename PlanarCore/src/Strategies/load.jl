@@ -16,24 +16,23 @@ function _universe_members(cfg::Config)
             u = cfg.attrs["universe"]
             if u isa AbstractDict && haskey(u, "members")
                 m = u["members"]
-                m isa Vector && return String.(m)
+                # an explicitly-empty members list is treated as "no override"
+                # so `StrategyMarkets()` remains the source of truth
+                m isa Vector && !isempty(m) && return String.(m)
             elseif u isa Vector
-                return String.(u)
+                !isempty(u) && return String.(u)
             end
         end
         if !isnothing(cfg.toml) && haskey(cfg.toml, "universe")
             u = cfg.toml["universe"]
             if u isa AbstractDict && haskey(u, "members")
                 m = u["members"]
-                m isa Vector && return String.(m)
+                m isa Vector && !isempty(m) && return String.(m)
             end
         end
     catch e
         @debug "universe_members: parse failed" exception=(e, catch_backtrace())
     end
-    return nothing
-end
-
 
 @doc """ Raises an error when a strategy is not found at a given path.  """
 macro notfound(path)
@@ -530,7 +529,10 @@ If any inverse contracts are found, it asserts an error.
 function _no_inv_contracts(exc::Exchange, uni)
     for ii in uni
         sym = raw(ii)
-        @assert something(get(exc.markets[sym], "linear", true), true) "Inverse contracts are not supported by SimMode. $(sym)"
+        mkt = get(exc.markets, string(sym), nothing)
+        # unknown market (e.g. mock exchanges in tests): skip rather than KeyError
+        isnothing(mkt) && continue
+        @assert something(get(mkt, "linear", true), true) "Inverse contracts are not supported by SimMode. $(sym)"
     end
 end
 

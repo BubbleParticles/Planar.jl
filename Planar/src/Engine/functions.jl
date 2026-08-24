@@ -31,11 +31,6 @@ function fetch_ohlcv!(s::Strategy)
     snap = snapshot(s.universe)
     @sync for ii in snap
         @async try
-            # guard: if removed mid-loop, skip propagate
-            if isnothing(try s.universe[string(raw(ii))] catch; nothing end) && !(ii in snapshot(s.universe))
-                # still fetch but skip propagate if no longer member
-                nothing
-            end
             exc = exchange(ii)
             sym = raw(ii)
             v = fetch_ohlcv(exc, s.timeframe, sym, from=-2000)
