@@ -119,16 +119,17 @@ function _notify_universe_change!(s::Strategy, added::Vector, removed::Vector)
         catch e
             @warn "universe callback failed" exception=(e, catch_backtrace())
         end
-        try
-            if hasmethod(on_universe_added, Tuple{typeof(s), typeof(added)})
-                on_universe_added(s, added)
-            end
-            if hasmethod(on_universe_removed, Tuple{typeof(s), typeof(removed)})
-                on_universe_removed(s, removed)
-            end
-        catch e
-            @warn "universe lifecycle hook failed" exception=(e, catch_backtrace())
+    end
+    # lifecycle hooks fire ONCE per event (not per subscriber)
+    try
+        if !isempty(added) && hasmethod(on_universe_added, Tuple{typeof(s), typeof(added)})
+            on_universe_added(s, added)
         end
+        if !isempty(removed) && hasmethod(on_universe_removed, Tuple{typeof(s), typeof(removed)})
+            on_universe_removed(s, removed)
+        end
+    catch e
+        @warn "universe lifecycle hook failed" exception=(e, catch_backtrace())
     end
 end
 

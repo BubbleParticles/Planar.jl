@@ -470,6 +470,19 @@ Idempotent and atomic; empty `new` is allowed.
 function replace_universe!(ac::InstrumentCollection, new::Vector{<:InstrumentInstance})
     @lock ac.lock begin
         old = copy(ac.data.instance)
+        # dedupe `new` by raw symbol (last occurrence wins) — duplicates would
+        # otherwise violate the unique-members invariant of the collection
+        seen = Set{String}()
+        uniq = InstrumentInstance[]
+        for ii in reverse(new)
+            k = string(raw(ii))
+            if k ∉ seen
+                push!(seen, k)
+                push!(uniq, ii)
+            end
+        end
+        reverse!(uniq)
+        new = uniq
         old_raw = Set(string(raw(ii)) for ii in old)
         new_raw = Set(string(raw(ii)) for ii in new)
         added = InstrumentInstance[ ii for ii in new if string(raw(ii)) ∉ old_raw ]
