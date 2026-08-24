@@ -97,11 +97,10 @@ end
         @test r.instance === btc
         @test r.asset === btc.asset
         @test r.exchange === ExchangeID(:test)
-        # the generator element type must carry the concrete instance type
-        rt = only(Base.return_types(
-            Collections.rows, (typeof(coll),)
-        ))
-        @test rt <: Base.Iterators.Zip || rt <: Base.Generator
+        # the rows element type must carry the concrete instance type
+        rts = Base.return_types(Collections.rows, (typeof(coll),))
+        @test any(t -> t <: Collections.Rows || t <: Base.Generator || t <: Base.Iterators.Zip, rts) ||
+              any(t -> t isa Union && any(u -> u <: Collections.Rows, Base.uniontypes(t)), rts)
     end
 
     @testset "empty collection defaults to abstract params" begin

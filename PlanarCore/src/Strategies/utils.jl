@@ -300,5 +300,20 @@ Returns a unique identifier for a strategy instance, concatenating the strategy 
 function id(s::Strategy)
     string(nameof(s), "_", Symbol(exchangeid(s)), "_", getfield(getfield(s, :config), :account))
 end
+export id, iswarmed
 
-export id
+"""
+    iswarmed(s::Strategy, ii::InstrumentInstance; min_rows=attr(s, :warmup, 20))::Bool
+
+Returns true if `ohlcv(ii, s.timeframe)` has at least `min_rows` rows.
+Newly added assets with short history are not warmed and signal code should skip them.
+"""
+function iswarmed(s::Strategy, ii::InstrumentInstance; min_rows::Int=attr(s, :warmup, 20))::Bool
+    try
+        df = ohlcv(ii, s.timeframe)
+        return nrow(df) >= min_rows
+    catch
+        return false
+    end
+end
+

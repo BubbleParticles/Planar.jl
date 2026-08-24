@@ -1,6 +1,6 @@
 using .Checks: sanitize_price, sanitize_amount
 using .Checks: iscost, ismonotonic, SanitizeOff, cost, withfees
-using ..Strategies: PriceTime, universe
+using ..Strategies: PriceTime, universe, inuniverse, Strategies as st
 using ..Instances:
     MarginInstance, NoMarginInstance, InstrumentInstance, @rprice, @ramount, amount_with_fees
 using ..OrderTypes:
@@ -181,18 +181,19 @@ Checks if a strategy can commit to an increase order.
 $(TYPEDSIGNATURES)
 """
 function iscommittable(s::Strategy, ::Type{<:IncreaseOrder}, commit, ii)
+    inuniverse(ii, s) || return false
     @deassert st.freecash(s) |> gtxzero
     c = st.freecash(s)
     comm = commit[]
-    c >= comm || isapprox(c, comm)
+    c >= comm
 end
-
 @doc """
 Checks if a strategy can commit to a sell order.
 
 $(TYPEDSIGNATURES)
 """
 function iscommittable(s::Strategy, ::Type{<:SellOrder}, commit, ii)
+    inuniverse(ii, s) || return false
     @deassert Instances.freecash(ii, Long()) |> gtxzero
     @deassert commit[] |> gtxzero
     c = Instances.freecash(ii, Long())
@@ -205,7 +206,8 @@ Checks if a strategy can commit to a short buy order.
 
 $(TYPEDSIGNATURES)
 """
-function iscommittable(::Strategy, ::Type{<:ShortBuyOrder}, commit, ii)
+function iscommittable(s::Strategy, ::Type{<:ShortBuyOrder}, commit, ii)
+    inuniverse(ii, s) || return false
     @deassert Instances.freecash(ii, Short()) |> ltxzero
     @deassert commit[] |> ltxzero
     c = Instances.freecash(ii, Short())

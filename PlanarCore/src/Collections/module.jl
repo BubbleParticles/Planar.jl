@@ -23,6 +23,13 @@ using ..Misc.DocStringExtensions
 import ..Misc: reset!
 
 @doc """A type representing a collection of asset instances.
+
+Invariants: `eltype(data.asset)` is the runtime asset type (authoritative) and
+`eltype(data.instance)` is the runtime instance type. The type parameters `T,I`
+reflect the construction-time concrete types when homogeneous; after a
+heterogeneous `push!` the `DataFrame` columns widen to abstract and `T/I` become
+stale. Callers should use `eltype(ac.data.asset)` / `eltype(ac.data.instance)`
+or `assettype(ac)` / `eltype(ac)` for runtime truth.
 """
 struct InstrumentCollection{T<:AbstractInstrument, I<:InstrumentInstance}
     data::DataFrame
@@ -44,8 +51,14 @@ struct InstrumentCollection{T<:AbstractInstrument, I<:InstrumentInstance}
     end
     function InstrumentCollection(instances::Iterable{<:InstrumentInstance})
         inst_vec = collect(instances)
-        T = promote_type(typeof.(getproperty.(inst_vec, :asset))...)
-        I = promote_type(typeof.(inst_vec)...)
+        if isempty(inst_vec)
+            return new{AbstractInstrument, InstrumentInstance}(
+                DataFrame(; exchange=ExchangeID[], asset=AbstractInstrument[], instance=InstrumentInstance[]),
+                ReentrantLock(),
+            )
+        end
+        I = mapreduce(typeof, promote_type, inst_vec)
+        T = mapreduce(typeof, promote_type, (ii.asset for ii in inst_vec))
         new{T, I}(
             DataFrame(
                 (; exchange=inst.exchange.id, asset=inst.asset, instance=inst) for
@@ -81,7 +94,11 @@ function InstrumentCollection(
             InstrumentInstance(aa; data, exc, margin, min_amount)
         end
         instances_ord = Dict(raw(k) => n for (n, k) in enumerate(assets))
-        instances = Vector{InstrumentInstance}(undef, length(assets))
+        A2 = eltype(assets) == String ? Instrument : eltype(assets)
+        E = typeof(exc.id)
+        M = typeof(margin)
+        I_conc = isconcretetype(A2) ? InstrumentInstance{A2,E,M} : InstrumentInstance
+        instances = Vector{I_conc}(undef, length(assets))
         @sync for (i, ast) in enumerate(assets)
             t = @async instances[i] = get_instance(ast)
             errormonitor(t)
@@ -89,6 +106,13 @@ function InstrumentCollection(
         sort!(instances; by=(ii) -> instances_ord[raw(ii)])
         InstrumentCollection(instances)
     end
+
+@inline assettype(::InstrumentCollection{T,I}) where {T,I} = T
+@inline assettype(::Type{<:InstrumentCollection{T,I}}) where {T,I} = T
+Base.eltype(::Type{<:InstrumentCollection{T,I}}) where {T,I} = I
+Base.eltype(ac::InstrumentCollection{T,I}) where {T,I} = I
+Base.IteratorSize(::Type{<:InstrumentCollection}) = Base.HasLength()
+Base.IteratorEltype(::Type{<:InstrumentCollection}) = Base.HasEltype()
 
 @enum InstrumentCollectionColumn exchange = 1 asset = 2 instance = 3
 const InstrumentCollectionTypes = OrderedDict([
@@ -123,7 +147,8 @@ function Base.getindex(ac::InstrumentCollection, i::MatchString, col=Colon())
     end
 end
 Base.getindex(ac::InstrumentCollection, i, i2, i3) = ac[i, i2][i3]
-Base.get(ac::InstrumentCollection, i, val) = get(ac.data.instance, i, val)
+Base.get(ac::InstrumentCollection{T,I}, i::Int, val) where {T,I} = get(ac.data.instance::Vector{I}, i, val)::Union{I, typeof(val)}
+Base.get(ac::InstrumentCollection, i::Int, val) = get(ac.data.instance, i, val)
 
 # TODO: this should use a macro...
 @doc "Dispatch based on either base, quote currency, or exchange."
@@ -314,12 +339,20 @@ function _daterange_full(ac::InstrumentCollection, tf=nothing; kwargs...)
     DateRange(dt(m), dt(M) + tf, tf)
 end
 
-function snapshot(ac::InstrumentCollection{T,I}) where {T,I}
-    @lock ac.lock copy(ac.data.instance::Vector{I})
+function snapshot(ac::InstrumentCollection)
+    @lock ac.lock copy(ac.data.instance)
 end
 
-Base.iterate(ac::InstrumentCollection) = iterate(snapshot(ac))
-Base.iterate(ac::InstrumentCollection, s) = iterate(snapshot(ac), s)
+@inline function Base.iterate(ac::InstrumentCollection)
+    v = snapshot(ac)
+    isempty(v) && return nothing
+    return (v[1], (v, 2))
+end
+@inline function Base.iterate(ac::InstrumentCollection, state)
+    v, idx = state
+    idx > length(v) && return nothing
+    return (v[idx], (v, idx+1))
+end
 Base.first(ac::InstrumentCollection) = first(snapshot(ac))
 Base.last(ac::InstrumentCollection) = last(snapshot(ac))
 Base.length(ac::InstrumentCollection) = nrow(ac.data)
@@ -327,6 +360,7 @@ Base.size(ac::InstrumentCollection) = size(ac.data)
 Base.similar(ac::InstrumentCollection) = begin
     InstrumentCollection{eltype(ac.data.asset), eltype(ac.data.instance)}()
 end
+Base.similar(ac::InstrumentCollection{T,I}) where {T,I} = InstrumentCollection{T,I}()
 
 @doc """Checks that all assets in the universe match the cash currency.
 
@@ -363,13 +397,35 @@ end
 #
 # These allow assets to be added/removed from a running strategy's universe.
 
+function _maybe_narrow!(ac::InstrumentCollection)
+    if eltype(ac.data.instance) === InstrumentInstance || eltype(ac.data.asset) === AbstractInstrument
+        isempty(ac.data) && return
+        I2 = mapreduce(typeof, promote_type, ac.data.instance)
+        T2 = mapreduce(typeof, promote_type, ac.data.asset)
+        if I2 !== eltype(ac.data.instance)
+            ac.data.instance = convert(Vector{I2}, ac.data.instance)
+        end
+        if T2 !== eltype(ac.data.asset)
+            ac.data.asset = convert(Vector{T2}, ac.data.asset)
+        end
+    end
+end
+
 function Base.push!(ac::InstrumentCollection, ii::InstrumentInstance)
     @lock ac.lock begin
-        if !(ii isa eltype(ac.data.instance))
-            # The new instance is a different concrete subtype: widen the stored
-            # columns so the collection can hold heterogeneous instances.
-            ac.data.instance = convert(Vector{InstrumentInstance}, ac.data.instance)
-            ac.data.asset = convert(Vector{AbstractInstrument}, ac.data.asset)
+        Icur = eltype(ac.data.instance)
+        Tcur = eltype(ac.data.asset)
+        need_I = !(ii isa Icur)
+        need_T = !(ii.asset isa Tcur)
+        if need_I || need_T
+            if need_I
+                I2 = promote_type(Icur, typeof(ii))
+                ac.data.instance = convert(Vector{I2}, ac.data.instance)
+            end
+            if need_T
+                T2 = promote_type(Tcur, typeof(ii.asset))
+                ac.data.asset = convert(Vector{T2}, ac.data.asset)
+            end
         end
         push!(ac.data, (exchange=ii.exchange.id, asset=ii.asset, instance=ii))
     end
@@ -385,6 +441,7 @@ function Base.delete!(ac::InstrumentCollection, key)
         mask = _matchmask(ac.data, key)
         isempty(mask) && return ac
         deleteat!(ac.data, findall(mask))
+        _maybe_narrow!(ac)
     end
     return ac
 end
@@ -394,13 +451,95 @@ function Base.pop!(ac::InstrumentCollection)
         isempty(ac.data) && error("InstrumentCollection is empty")
         ii = ac.data.instance[end]
         deleteat!(ac.data, nrow(ac.data))
+        _maybe_narrow!(ac)
         return ii
     end
+end
+function Base.replace!(ac::InstrumentCollection, new::Vector{<:InstrumentInstance})
+    replace_universe!(ac, new)
+end
+
+"""
+    replace_universe!(ac::InstrumentCollection, new::Vector{<:InstrumentInstance})
+
+Atomically replace the collection contents with `new`. Computes `added`/`removed`
+by `raw` symbol, replaces `ac.data` in one assignment under `ac.lock`,
+calls `_maybe_narrow!`, and returns `(added, removed)`.
+Idempotent and atomic; empty `new` is allowed.
+"""
+function replace_universe!(ac::InstrumentCollection, new::Vector{<:InstrumentInstance})
+    @lock ac.lock begin
+        old = copy(ac.data.instance)
+        old_raw = Set(string(raw(ii)) for ii in old)
+        new_raw = Set(string(raw(ii)) for ii in new)
+        added = InstrumentInstance[ ii for ii in new if string(raw(ii)) ∉ old_raw ]
+        removed = InstrumentInstance[ ii for ii in old if string(raw(ii)) ∉ new_raw ]
+        if isempty(new)
+            empty!(ac.data)
+        else
+            Icur = eltype(ac.data.instance)
+            Tcur = eltype(ac.data.asset)
+            I2 = mapreduce(typeof, promote_type, new)
+            T2 = mapreduce(x -> typeof(x.asset), promote_type, new)
+            need_I = !(I2 <: Icur)
+            need_T = !(T2 <: Tcur)
+            if need_I
+                Iprom = promote_type(Icur, I2)
+                ac.data.instance = convert(Vector{Iprom}, ac.data.instance)
+            end
+            if need_T
+                Tprom = promote_type(Tcur, T2)
+                ac.data.asset = convert(Vector{Tprom}, ac.data.asset)
+            end
+            empty!(ac.data)
+            if need_I || need_T
+                # columns already widened, now append
+                for ii in new
+                    push!(ac.data, (exchange=ii.exchange.id, asset=ii.asset, instance=ii))
+                end
+            else
+                df_tmp = DataFrame(
+                    exchange=[ii.exchange.id for ii in new],
+                    asset=[ii.asset for ii in new],
+                    instance=Vector{InstrumentInstance}(new),
+                )
+                append!(ac.data, df_tmp)
+            end
+        end
+        _maybe_narrow!(ac)
+        return (added, removed)
+    end
+end
+
+
+
+struct Rows{T<:AbstractInstrument, I<:InstrumentInstance}
+    ac::InstrumentCollection{T,I}
+end
+Base.eltype(::Type{Rows{T,I}}) where {T,I} = @NamedTuple{exchange::ExchangeID, asset::T, instance::I}
+Base.length(r::Rows) = nrow(r.ac.data)
+Base.IteratorSize(::Type{<:Rows}) = Base.HasLength()
+Base.IteratorEltype(::Type{<:Rows}) = Base.HasEltype()
+@inline function Base.iterate(r::Rows)
+    n = nrow(r.ac.data)
+    n == 0 && return nothing
+    return ((; exchange=r.ac.data.exchange[1], asset=r.ac.data.asset[1], instance=r.ac.data.instance[1]), 2)
+end
+@inline function Base.iterate(r::Rows, idx::Int)
+    n = nrow(r.ac.data)
+    idx > n && return nothing
+    return ((; exchange=r.ac.data.exchange[idx], asset=r.ac.data.asset[idx], instance=r.ac.data.instance[idx]), idx + 1)
 end
 
 @doc """Iterates the collection yielding concretely typed rows `(; exchange, asset, instance)`."""
 function rows(ac::InstrumentCollection)
-    ((; exchange=ac.data.exchange[i], asset=ac.data.asset[i], instance=ac.data.instance[i]) for i in 1:nrow(ac.data))
+    as_el = eltype(ac.data.asset)
+    is_el = eltype(ac.data.instance)
+    if isconcretetype(is_el) && isconcretetype(as_el) && eltype(ac.data.exchange) <: ExchangeID
+        return Rows{as_el, is_el}(ac)
+    else
+        return ((; exchange=ac.data.exchange[i], asset=ac.data.asset[i], instance=ac.data.instance[i]) for i in 1:nrow(ac.data))
+    end
 end
 
 @doc """ Fills the universe (InstrumentCollection) with OHLCV data for given timeframes.

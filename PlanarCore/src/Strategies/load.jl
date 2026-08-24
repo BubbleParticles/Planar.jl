@@ -1,7 +1,39 @@
 using ..Data.Cache: save_cache, load_cache
+using ..Collections: snapshot
+using ..Instances: raw, InstrumentInstance
+using ..Instances.Instruments: AbstractInstrument, parse as parse_instrument
+using ..Instances.DataStructures: SortedDict
+using ..Instances.Data.TimeTicks: TimeFrame
+using ..Instances.Data.DataFrames: DataFrame
 using ..Misc: user_dir, config_path
 using ..Misc.Lang: @debug_backtrace
 using TOML
+using JSON3
+
+function _universe_members(cfg::Config)
+    try
+        if haskey(cfg.attrs, "universe")
+            u = cfg.attrs["universe"]
+            if u isa AbstractDict && haskey(u, "members")
+                m = u["members"]
+                m isa Vector && return String.(m)
+            elseif u isa Vector
+                return String.(u)
+            end
+        end
+        if !isnothing(cfg.toml) && haskey(cfg.toml, "universe")
+            u = cfg.toml["universe"]
+            if u isa AbstractDict && haskey(u, "members")
+                m = u["members"]
+                m isa Vector && return String.(m)
+            end
+        end
+    catch e
+        @debug "universe_members: parse failed" exception=(e, catch_backtrace())
+    end
+    return nothing
+end
+
 
 @doc """ Raises an error when a strategy is not found at a given path.  """
 macro notfound(path)
@@ -156,13 +188,14 @@ function default_load(mod::Module, t::Type, config::Config)
     else
         call!
     end
-    assets = invokelatest(call_func, t, StrategyMarkets())
+    assets = @something _universe_members(config) invokelatest(call_func, t, StrategyMarkets())
     if config.mode == Paper()
         config.sandbox = true
     end
     s = Strategy(mod, assets; config)
     _strat_load_checks(s, config)
 end
+
 
 @doc """ Loads a strategy without default settings.
 
@@ -180,7 +213,7 @@ function bare_load(mod::Module, t::Type, config::Config)
     else
         call!
     end
-    syms = invokelatest(call_func, t, StrategyMarkets())
+    syms = @something _universe_members(config) invokelatest(call_func, t, StrategyMarkets())
     exc = Exchanges.getexchange!(config.exchange; sandbox=true, config.account)
     TF = invokelatest(getfield, mod, :TF)
     uni = InstrumentCollection(syms; load_data=false, timeframe=TF, exc, config.margin)
@@ -384,6 +417,23 @@ function strategy!(mod::Module, cfg::Config)
     if cfg.mode in (Paper(), Live())
         atexit(() -> stop!(s))
     end
+    # auto-restore persisted universe if present and not overridden by config
+    try
+        upath = logpath(s; name="universe.json")
+        if isfile(upath)
+            cfg_members = _universe_members(cfg)
+            persist_flag = get(cfg.attrs, "persist_universe", get(cfg.attrs, :persist_universe, false))
+            # string/symbol key tolerance
+            if persist_flag === true || persist_flag === "true"
+                load_universe!(s, upath)
+            elseif cfg_members === nothing
+                # no explicit config members → restore persisted (kill-and-resume)
+                load_universe!(s, upath)
+            end
+        end
+    catch e
+        @debug "auto load_universe! failed" exception=(e, catch_backtrace())
+    end
     return s
 end
 
@@ -509,4 +559,55 @@ function _register_present_strategy!(src::Symbol, cfg::Config)
         @info "Registered strategy `$src` under [sources] in $(cfg.path)"
     end
     return true
+end
+
+function save_universe!(s::Strategy, path=logpath(s; name="universe.json"))
+    try
+        ver = get(attrs(s), :universe_version, 0)
+        members = [string(raw(ii)) for ii in snapshot(universe(s))]
+        data = Dict("version" => ver, "members" => members)
+        mkpath(dirname(path))
+        open(path, "w") do io
+            JSON3.write(io, data)
+        end
+        @info "save_universe!: saved" path ver members
+    catch e
+        @warn "save_universe! failed" exception=(e, catch_backtrace())
+    end
+    return path
+end
+
+function load_universe!(s::Strategy, path=logpath(s; name="universe.json"))
+    isfile(path) || return nothing
+    try
+        data = open(path, "r") do io
+            JSON3.read(io, Dict{String,Any})
+        end
+        ver = get(data, "version", 0)
+        members = get(data, "members", String[])
+        # Prefer exchange already in universe to avoid gateway lookup for mock :test
+        exc = try
+            snap = snapshot(universe(s))
+            !isempty(snap) ? first(snap).exchange : exchange(s)
+        catch
+            try exchange(s) catch; first(snapshot(universe(s))).exchange end
+        end
+        new_instances = InstrumentInstance[]
+        for sym in members
+            try
+                a = parse_instrument(AbstractInstrument, string(sym))
+                ii = InstrumentInstance(a; data=SortedDict{TimeFrame, DataFrame}(), exc, margin=s.margin)
+                push!(new_instances, ii)
+            catch e
+                @warn "load_universe!: failed to resolve" sym exception=(e, catch_backtrace())
+            end
+        end
+        replace_universe!(s, new_instances)
+        attrs(s)[:universe_version] = ver
+        @info "load_universe!: loaded" path ver members
+        return s
+    catch e
+        @warn "load_universe! failed" exception=(e, catch_backtrace())
+        return nothing
+    end
 end
