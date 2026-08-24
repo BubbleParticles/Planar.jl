@@ -88,7 +88,7 @@ function channel_indicator!(fig::Figure, lines...; df=nothing, opacity=0.25, row
             ax,
             lower,
             upper;
-            color=RGBAf(rand(seed!(n), 3)..., opacity),
+            color=line_color(n; opacity),
             inspector_hover=make_tooltip_func(ylower, str_func),
         )
     end

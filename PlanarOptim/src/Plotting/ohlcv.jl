@@ -63,15 +63,11 @@ $(TYPEDSIGNATURES)
 
 The function takes a dataframe `df` and a time frame `tf` as parameters.
 If `tf` is not `nothing`, the dataframe is resampled according to the time frame.
+Defaults to the dataframe's native timeframe (inferred from its metadata/timestamps).
+Figure-level keyword arguments (e.g. `size=(w, h)`) are forwarded to `makefig`.
 """
-ohlcv(df::AbstractDataFrame, tf=tf"1d"; kwargs...) = ohlcv!(makefig(), df, tf; kwargs...)
-
-# function definescaler(f; limits=(0.0, 100.0), interval=-Inf .. Inf)
-#     @eval begin
-#         Makie.defaultlimits(::typeof($f)) = $limits
-#         Makie.defined_interval(::typeof($f)) = $interval
-#     end
-# end
+ohlcv(df::AbstractDataFrame, tf=nothing; fig_kwargs...) =
+    ohlcv!(makefig(; fig_kwargs...), df, tf)
 
 @doc """ Plots ohlcv data from dataframe `df`, resampling to `tf` on an existing figure
 
@@ -81,7 +77,7 @@ The function takes a figure `fig`, a dataframe `df`, and a time frame `tf` as pa
 If `tf` is not `nothing`, the dataframe is resampled according to the time frame.
 The function then plots the ohlcv data on the provided figure.
 """
-function ohlcv!(fig::Figure, df::AbstractDataFrame, tf=tf"1d")
+function ohlcv!(fig::Figure, df::AbstractDataFrame, tf=nothing)
     isnothing(tf) || (df = resample(df, timeframe!(df), tf))
     # Axis creation (Order is important)
     vol_ax = Axis(fig[1, 1]; ytickformat=ytickscompact, ylabel="Volume", yaxisposition=:right)
