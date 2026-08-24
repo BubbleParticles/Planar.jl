@@ -1,6 +1,7 @@
 using .Checks: sanitize_price, sanitize_amount
 using .Checks: iscost, ismonotonic, SanitizeOff, cost, withfees
 using ..Strategies: PriceTime, universe, inuniverse, Strategies as st
+using ..Collections: snapshot
 using ..Instances:
     MarginInstance, NoMarginInstance, InstrumentInstance, @rprice, @ramount, amount_with_fees
 using ..OrderTypes:
@@ -244,7 +245,7 @@ Iterates over all the orders in a strategy (all the assets in the universe).
 $(TYPEDSIGNATURES)
 """
 function orders(s::Strategy, ::Val{:universe})
-    OrderIterator((orders(s, ii, side) for side in (Buy, Sell) for ii in s.universe))
+    OrderIterator((orders(s, ii, side) for side in (Buy, Sell) for ii in snapshot(s.universe)))
 end
 
 @doc """
@@ -253,7 +254,7 @@ Iterates orderlessly over all the orders in a strategy (all the assets in the un
 $(TYPEDSIGNATURES)
 """
 function orders(s::Strategy, ::Val{:orderless}, ::Val{:universe})
-    OrderIterator((orders(s, ii, side) for side in (Buy, Sell) for ii in s.universe))
+    OrderIterator((orders(s, ii, side) for side in (Buy, Sell) for ii in snapshot(s.universe)))
 end
 
 @doc """

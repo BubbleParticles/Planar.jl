@@ -2,6 +2,7 @@ using .ect.Instances: NoMarginInstance, MarginInstance
 using .ect.OrderTypes: PositionSide
 using .ect.Executors.Checks: withfees
 using .ect.Strategies: tradesedge
+using ..Collections: snapshot
 using .ect.Strategies: DateRange
 
 @doc """ Replaces missing values in a vector with 0.0.
@@ -201,7 +202,7 @@ function trades_balance(
                 ep=Ref(zero(elt)),
                 pos=Ref{PositionSide}(Long()),
                 fees=Ref(zero(elt)),
-            ) for ii in s.universe
+            ) for ii in snapshot(s.universe)
         )
 
         @inbounds @eachrow! df begin

@@ -189,7 +189,7 @@ This function stops all tasks associated with all assets in the strategy `s`. If
 """
 function stop_all_asset_tasks(s::RTStrategy; reset=false, kwargs...)
     if reset
-        @sync for ii in s.universe
+        @sync for ii in snapshot(s.universe)
             @async try
                 stop_asset_tasks(s, ii; reset, kwargs...)
             catch e
@@ -199,7 +199,7 @@ function stop_all_asset_tasks(s::RTStrategy; reset=false, kwargs...)
             end
         end
     else
-        for ii in s.universe
+        for ii in snapshot(s.universe)
             _persistent_stop_asset_tasks(s, ii; reset, kwargs...)
         end
     end
@@ -278,11 +278,11 @@ function stop_all_tasks(s::RTStrategy; reset=true)
     @debug "strategy: stopping watch balance" _module = LogTasks s = nameof(s)
     stop_watch_balance!(s)
     @debug "strategy: stopping watch trades" _module = LogTasks s = nameof(s)
-    for ii in universe(s)
+    for ii in snapshot(universe(s))
         stop_watch_trades!(s, ii)
     end
     @debug "strategy: stopping watch orders" _module = LogTasks s = nameof(s)
-    for ii in universe(s)
+    for ii in snapshot(universe(s))
         stop_watch_orders!(s, ii)
     end
 
@@ -514,7 +514,7 @@ function fetch_positions(s, args...; kwargs...)
 end
 @doc """ Retrieves all asset positions for a strategy. """
 fetch_positions(s; kwargs...) =
-    fetch_positions(s, ((ii for ii in s.universe)...,); kwargs...)
+    fetch_positions(s, ((ii for ii in snapshot(s.universe))...,); kwargs...)
 @doc """ Cancels orders of an asset by order identifier. """
 cancel_orders(s, args...; kwargs...) = @retry s[:live_cancel_func](args...; kwargs...)
 @doc """ Cancels all orders of an asset. """

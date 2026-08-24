@@ -87,6 +87,7 @@ The formatting is done using the `compactnum` function from the `Instruments` mo
 """
 ytickscompact(t) = cn.(t)
 
+const _TABCOLORS = to_colormap(cgrad(:tab10, 10))
 """
     line_color(n; opacity=1.0)
 Return the n-th color from a deterministic colormap (Makie's `:tab10`).
@@ -95,9 +96,8 @@ non-deterministic across Julia sessions (RNG state varies), making
 reproducible plots impossible for AI verification.
 """
 function line_color(n; opacity=1.0)
-    colors = to_colormap(cgrad(:tab10, 10))
-    i = mod1(n, length(colors))
-    c = colors[i]
+    i = mod1(n, length(_TABCOLORS))
+    c = _TABCOLORS[i]
     RGBAf(c.r, c.g, c.b, opacity)
 end
 @doc """ Retrieves the price axis from a figure """

@@ -38,11 +38,32 @@ Restored `return nothing` and `end` at line 36-37 to close `_universe_members` b
 ### Note on Point2f
 `Point2f` is **NOT** deprecated in Makie 0.24.13 — it's a valid alias for `Point{2, Float32}`. `Point2f32` is NOT defined in this version. No change needed.
 
-### Test Results
-- All 30 tests pass (`Pkg.test()`)
+### Performance Fixes (Second Session)
+1. **Memoized colormap** (`utils.jl`): `line_color(n)` now uses a module-level `const _TABCOLORS = to_colormap(cgrad(:tab10, 10))` instead of calling `to_colormap(cgrad(:tab10, 10))` on every invocation. The `cgrad` call allocates a new colormap object each time.
+
+### Bug Fixes (Second Session)
+1. **Non-deterministic colors in `_pricelines!`** (`trades.jl:655`): `RGBf(rand(seed!(s), 3)...)` replaced with `line_color(s; opacity=1.0)`. The `s` variable here is a local counter (not the strategy `s`), so colors are now deterministic.
+2. **Non-deterministic colors in `balloons` benchmark path** (`trades.jl:782`): `Dict(ii => RGBf(rand(seed!(n), 3)...) for (n, ii) in enumerate(s.universe))` replaced with `Dict(ii => line_color(n; opacity=1.0) for (n, ii) in enumerate(snapshot(s.universe)))`. Also fixed direct `s.universe` iteration.
+3. **Non-deterministic colors in `line_indicator!`** (`inds.jl:41`): `RGBf(rand(seed!(n), 3)...)` replaced with `line_color(n; opacity=1.0)`.
+4. **Direct `s.universe` iteration in `_pricelines!`** (`trades.jl:650`): `for ii in s.universe` replaced with `for ii in snapshot(s.universe)` in the Dict comprehension.
+5. **Removed unused `Random: seed!` import** from `trades.jl` — no longer needed after removing all `rand(seed!(...))` calls.
+6. **Added `using PlanarCore.Collections: snapshot`** to `trades.jl` — needed for the snapshot fix in `_pricelines!` and `balloons`.
+
+### Files Modified (Second Session)
+- `PlanarOptim/src/Plotting/utils.jl` — memoized colormap via `_TABCOLORS` const
+- `PlanarOptim/src/Plotting/trades.jl` — deterministic colors (3 sites), snapshot fix (2 sites), removed `Random: seed!` import, added `Collections: snapshot` import
+- `PlanarOptim/src/Plotting/inds.jl` — deterministic color in `line_indicator!`
+- `PlanarCore/src/Executors/orders/iter.jl` — snapshot for `trades(s)` and `tradescount(s)`
+- `PlanarCore/src/Executors/orders/utils.jl` — snapshot for `orders(s, ::Val{:universe})` and `orders(s, ::Val{:orderless}, ::Val{:universe})`
+- `PlanarCore/src/Metrics/trades_balance.jl` — snapshot in `trades_balance` generator
+
+### Test Results (Second Session)
+- All 30 Plotting tests pass (run via test env)
+- All 659 Planar submodule tests pass
+- All 10,662 PlanarCore tests pass
 
 ## Files Modified
 - `PlanarCore/src/Strategies/load.jl` (3 insertions) — parse error fix
 - `PlanarOptim/src/Plotting/ohlcv.jl` (14 changes) — lossy default, dead code removal, kwargs forwarding
-- `PlanarOptim/src/Plotting/utils.jl` (29 changes) — figure size, deterministic colors, tooltip validation, dead code removal
+- `PlanarOptim/src/Plotting/utils.jl` (29 changes + 1 const) — figure size, deterministic colors, tooltip validation, dead code removal, memoized colormap
 - `PlanarOptim/src/Plotting/inds.jl` (2 changes) — deterministic colors, dead code removal

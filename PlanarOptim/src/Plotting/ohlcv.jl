@@ -78,6 +78,7 @@ If `tf` is not `nothing`, the dataframe is resampled according to the time frame
 The function then plots the ohlcv data on the provided figure.
 """
 function ohlcv!(fig::Figure, df::AbstractDataFrame, tf=nothing)
+    isempty(df) && return fig
     isnothing(tf) || (df = resample(df, timeframe!(df), tf))
     # Axis creation (Order is important)
     vol_ax = Axis(fig[1, 1]; ytickformat=ytickscompact, ylabel="Volume", yaxisposition=:right)
@@ -117,9 +118,7 @@ function ohlcv!(fig::Figure, df::AbstractDataFrame, tf=nothing)
     # Constructs all the polygons from the candles Points (order is important)
     poly!(vol_ax, vol_points; color=(:grey, 0.5), inspectable=false, poly_kwargs...)
     poly!(price_ax, hl_points; color=colors, inspectable=false, poly_kwargs...)
-    poly!(price_ax, oc_points; color=colors, poly_kwargs...)
-    # Ansure that volume and price axies are linked
-    # such that when we zoom/pan they move together
+    # Ensure that volume and price axes are linked
     # But only link x axes to keep vol always in the background when zooming
     linkxaxes!(price_ax, vol_ax)
 

@@ -6,7 +6,7 @@ if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
         try
             s = Stubs.stub_strategy(; dostub=false)
             Stubs.gensave_trades(; s, dosave=false)
-            ii = first(s.universe)
+            ii = first(PlanarCore.Collections.snapshot(s.universe))
             ohlcv_1d = resample(ii.ohlcv, tf"1d")
             r_len = size(ohlcv_1d, 1)
             r1 = rand(-1:0.001:1, r_len) .+ ohlcv_1d.high

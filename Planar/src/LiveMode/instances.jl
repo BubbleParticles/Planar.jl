@@ -103,7 +103,7 @@ The timeframe `tf` for the update can be specified, with the default being the t
 """
 function update!(f::Function, s::RTStrategy, cols::Vararg{Symbol}; tf=s.timeframe)
     updates = updates_dict(s)
-    for ii in s.universe
+    for ii in snapshot(s.universe)
         update!(f, s, ii, cols; updates, tf)
     end
 end

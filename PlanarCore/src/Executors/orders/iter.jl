@@ -1,4 +1,5 @@
 using ..Strategies: PriceTime, asset_bysym
+using ..Collections: snapshot
 import ..Instances: trades
 
 @doc """
@@ -105,10 +106,9 @@ Counts the number of elements in the OrderIterator.
 $(TYPEDSIGNATURES)
 """
 Base.count(oi::OrderIterator) = count((_) -> true, oi)
-
-trades(s::Strategy) = Iterators.flatten(trades(ii) for ii in s.universe)
+trades(s::Strategy) = Iterators.flatten(trades(ii) for ii in snapshot(s.universe))
 function tradescount(s::Strategy)
-    sum((length(trades(ii)) for ii in s.universe); init=0) +
+    sum((length(trades(ii)) for ii in snapshot(s.universe)); init=0) +
     sum((length(trades(o)) for o in values(s)); init=0)
 end
 

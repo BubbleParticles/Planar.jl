@@ -302,7 +302,7 @@ function st.current_total(
         s_tot = zero(s_tot)
     end
     @debug "total: loop" _module = LogTasks
-    @sync for ii in s.universe
+    @sync for ii in snapshot(s.universe)
         @async try
             let v = if local_bal
                     current_price = try
@@ -379,7 +379,7 @@ function st.current_total(
             zero(tot[])
         end
     end
-    @sync for ii in s.universe
+    @sync for ii in snapshot(s.universe)
         @async try
             let v = if local_bal
                     cash(ii).value

@@ -1,4 +1,4 @@
-using Random: seed!
+using PlanarCore.Collections: snapshot
 using PlanarCore.Metrics: trades_balance, expand
 using Base: remove_linenums!
 using Makie: point_in_triangle, point_in_quad_parameter
@@ -267,7 +267,8 @@ The rotation angle θ is set to 0.0.
 """
 ellipsis(cx, cy, rx, ry) = begin
     θ = 0.0
-    Point2f.(zip(getellipsepoints(cx, cy, rx, ry, θ)...))
+    x, y = getellipsepoints(cx, cy, rx, ry, θ)
+    Point2f.(x, y)
 end
 
 _tradeasset(row, ii) = string(@something ii row.instance)
@@ -347,6 +348,8 @@ function balloons_tooltip_func(
         return true
     end
 end
+balance_str(date, balance) = """Date: $(date)
+Balance: $(cn(balance))"""
 
 @doc """ Generates a tooltip for balance data.
 
@@ -647,12 +650,12 @@ function _pricelines!(s, fig; tf)
                 end
                 (ax=axis!(fig), norm, ohlcv)
             end
-        ) for ii in s.universe
+        ) for ii in snapshot(s.universe)
     )
     colors = Dict()
     let s = 0
         for (ii, (ax, norm, ohlcv)) in ax_closes
-            colors[ii] = color = RGBf(rand(seed!(s), 3)...)
+            colors[ii] = color = line_color(s; opacity=1.0)
             deregister_interactions!(ax, ())
             lines!(
                 ax,
@@ -779,7 +782,7 @@ function balloons(s::Strategy; benchmark=:all, tf=tf"1d", force=false)
         fig, trades_ax, price_ax = trades_fig(df)
         _draw_trades!(df, trades_df, trades_ax)
         axes = ()
-        colors = Dict(ii => RGBf(rand(seed!(n), 3)...) for (n, ii) in enumerate(s.universe))
+        colors = Dict(ii => line_color(n; opacity=1.0) for (n, ii) in enumerate(snapshot(s.universe)))
     end
 
     linkaxes!(trades_ax, axes..., price_ax)

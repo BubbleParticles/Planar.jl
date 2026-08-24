@@ -196,7 +196,7 @@ end
 
 function start_handlers!(s::LiveStrategy)
     _start_handler!(s)
-    for ii in universe(s)
+    for ii in snapshot(universe(s))
         _start_handler!(ii)
     end
 end
@@ -245,7 +245,7 @@ end
 
 function stop_handlers!(s::LiveStrategy)
     s_task = _stop_handler!(s)
-    ai_tasks = [_stop_handler!(ii) for ii in universe(s)]
+    ai_tasks = [_stop_handler!(ii) for ii in snapshot(universe(s))]
     @debug "handlers: waiting termination" _module = LogEvents
     if istaskrunning(s_task)
         waitforcond(() -> !istaskrunning(s_task), Second(5))
@@ -253,7 +253,7 @@ function stop_handlers!(s::LiveStrategy)
             @warn "handlers: strategy handler task did not terminate" _module = LogEvents
         end
     end
-    for (i, ii) in enumerate(universe(s))
+    for (i, ii) in enumerate(snapshot(universe(s)))
         t = ai_tasks[i]
         if istaskrunning(t)
             waitforcond(() -> !istaskrunning(t), Second(5))
@@ -267,7 +267,7 @@ end
 
 function reset_events!(s::LiveStrategy)
     empty!(get_events(s))
-    foreach(empty!, (get_events(ii) for ii in universe(s)))
+    foreach(empty!, (get_events(ii) for ii in snapshot(universe(s))))
 end
 
 function restart_handlers!(s::LiveStrategy)
