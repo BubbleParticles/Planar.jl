@@ -33,6 +33,9 @@ function _universe_members(cfg::Config)
     catch e
         @debug "universe_members: parse failed" exception=(e, catch_backtrace())
     end
+    return nothing
+end
+
 
 @doc """ Raises an error when a strategy is not found at a given path.  """
 macro notfound(path)

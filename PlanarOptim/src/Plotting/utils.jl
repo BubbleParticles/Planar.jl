@@ -1,8 +1,11 @@
 using PlanarCore.Instruments: compactnum as cn
 
-makefig() = begin
-    Figure(; size=(1900, 900))
-end
+"""
+    makefig(; size=(1920, 1080))
+Create a Makie `Figure` with a configurable size for AI-headless rendering.
+Defaults to 1920×1080. Pass `size=(w, h)` for server-side rendering at different dimensions.
+"""
+makefig(; size=(1920, 1080)) = Figure(; size=size)
 
 @doc """ Deregisters interactions from an axis
 
@@ -36,9 +39,9 @@ function tooltip_position!(
     pos_func1=((pos) -> ((pos[1] + pos[2]) / 2)),
     pos_func2=((a, b) -> b),
 )
-    # Get the scene BarPlot lives in
     scene = parent_scene(plot)
     true_idx = div(idx - 1, vertices) + 1
+    @assert 1 <= true_idx <= size(plot[1][], 1) "tooltip_position!: index $(true_idx) out of range (1..$(size(plot[1][], 1))); check `vertices` matches the plot type"
     # fetch the position of the candle mesh
     pos = plot[1][][true_idx]
     proj_pos = shift_project(scene, plot, pos_func1(pos))
@@ -84,11 +87,19 @@ The formatting is done using the `compactnum` function from the `Instruments` mo
 """
 ytickscompact(t) = cn.(t)
 
-# @doc "Formats the Y axis values"
-# function makeyticks()
-#     (t) -> cn.(t)
-# end
-
+"""
+    line_color(n; opacity=1.0)
+Return the n-th color from a deterministic colormap (Makie's `:tab10`).
+This replaces the previous `rand(seed!(n), 3)` approach which was
+non-deterministic across Julia sessions (RNG state varies), making
+reproducible plots impossible for AI verification.
+"""
+function line_color(n; opacity=1.0)
+    colors = to_colormap(cgrad(:tab10, 10))
+    i = mod1(n, length(colors))
+    c = colors[i]
+    RGBAf(c.r, c.g, c.b, opacity)
+end
 @doc """ Retrieves the price axis from a figure """
 _price_ax(fig::Figure) = fig.attributes[:price_ax][]
 @doc """ Creates a price axis in a figure
