@@ -150,7 +150,6 @@ julia
 using Planar  # or PlanarOptim for plotting and optimization
 ```
 
-julia --project=PlanarDev/ -e 'import Pkg; Pkg.instantiate(); Pkg.test()'
 
 ## ⚠️ Experimental Features
 
