@@ -152,4 +152,53 @@ using Planar  # or PlanarOptim for plotting and optimization
 
 julia --project=PlanarDev/ -e 'import Pkg; Pkg.instantiate(); Pkg.test()'
 
+## ⚠️ Experimental Features
+
+The following capabilities are functional and covered by tests, but are
+considered **experimental** — APIs may still shift and edge cases may surface
+in production. Use them with care and report issues.
+
+### Tick-based Backtesting
+- `SimMode.start!(s::Strategy{Sim}, ctx::TickContext; ...)` and the
+  `TradeTickRange` entry points run the backtester as a literal tick loop over
+  a `TickContext` rather than a coarse bar replay. This exercises the same
+  per-tick `update!`/`ping!` pipeline used by live trading, so simulation
+  fidelity is higher than bar-only backtests.
+- A `universe_schedule::Vector{Tuple{DateTime,Vector{String}}}` argument can be
+  passed to `start!` to replay timed universe changes (assets added/removed at
+  specific timestamps) during a backtest, letting you reproduce a dynamic
+  universe historically.
+
+### Cross Margin & Hedged Strategies
+- Margin modes `Cross`, `CrossHedged`, `Isolated`, `IsolatedHedged`
+  (`CrossMargin`/`IsolatedMargin` parameterized by `Hedged`/`NotHedged`) are
+  supported alongside `NoMargin`.
+- **Caveat:** only `Isolated` + `NotHedged` position management is fully
+  implemented end-to-end. `Cross*` and `*Hedged` modes construct valid
+  instances and propagate through the universe machinery, but their live
+  position/order reconciliation paths are not yet complete — treat them as
+  experimental until those flows are finished.
+- Margin-mode instruments must be **derivative** symbols (e.g. `BTC/USDT:USDT`,
+  parsed as a `Derivative`), not plain spot `Instrument`s; building a margined
+  instance from a spot symbol fails at construction.
+
+### Dynamic Universe
+- Assets can be added or removed from a running strategy **without restart**
+  via `addasset!` / `removeasset!` / `replace_universe!`. Mutations are
+  atomic under the collection lock and emit `on_universe_change!` callbacks
+  (with `on_universe_added` / `on_universe_removed` lifecycle hooks).
+- Works in `Sim`, `Paper`, and `Live` modes. Watchers, the data plane, and
+  execution plane all react to universe events (backfill/stop per symbol,
+  orphan-order policy on remove).
+- Universe membership can be persisted (`save_universe!` / `load_universe!`)
+  and overridden at config time via `[universe] members = [...]` in
+  `planar.toml` (or `config.attrs["universe"]["members"]`).
+- **Caveat:** removing an asset that has open orders/positions follows the
+  strategy's `:on_remove_with_open_orders` / `:on_remove_with_position`
+  policy (`cancel`/`hold`/`close`); verify your policy matches your risk
+  tolerance before relying on hot removal in live trading.
+
+See [`docs/dynamic-universe.md`](docs/dynamic-universe.md) for the full
+contract, invariants, and the chaos/fuzz harness.
+
 Read the :book: documentation ([link](https://planar.pages.dev/docs/)) to learn how to get started with the bot.
