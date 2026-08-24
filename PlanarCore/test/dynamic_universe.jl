@@ -198,3 +198,125 @@ end
     Instances.cash!(strat.cash_committed, 0.0)
     @test Strategies.freecash(strat) == 1000.0
 end
+
+@testset "replace_universe! atomicity and idempotency" begin
+    btc = _make_instance("BTC/USDT", 50000.0)
+    eth = _make_instance("ETH/USDT", 3000.0)
+    sol = _make_instance("SOL/USDT", 150.0)
+    # collection level
+    coll = Collections.InstrumentCollection([btc, eth])
+    @test length(coll) == 2
+    added, removed = Collections.replace_universe!(coll, [btc, eth, sol])
+    @test length(coll) == 3
+    @test length(added) == 1 && string(raw(added[1])) == "SOL/USDT"
+    @test isempty(removed)
+    # idempotency: replace with same set -> no change
+    added2, removed2 = Collections.replace_universe!(coll, [btc, eth, sol])
+    @test isempty(added2) && isempty(removed2)
+    @test length(coll) == 3
+    # atomicity with strategy validation: unknown symbol
+    cfg = Config()
+    cfg.mode = Sim()
+    cfg.margin = NoMargin()
+    cfg.initial_cash = 1000.0
+    strat = Strategies.Strategy(
+        @__MODULE__, Sim(), NoMargin(), TimeFrame("1m"), mock_exc,
+        Collections.InstrumentCollection([btc, eth]); config=cfg,
+    )
+    # create instance with unknown symbol (not in mock_exc markets)
+    unk = _make_instance("FAKE/USDT", 1.0)
+    # validation should throw and leave universe unchanged
+    @test_throws ArgumentError addasset!(strat, unk)
+    @test length(Strategies.universe(strat)) == 2
+    @test_throws ArgumentError replace_universe!(strat, [btc, unk])
+    @test length(Strategies.universe(strat)) == 2
+    # idempotency at strategy level: add same ii twice
+    addasset!(strat, sol)
+    @test length(Strategies.universe(strat)) == 3
+    addasset!(strat, sol)
+    @test length(Strategies.universe(strat)) == 3
+    # symsdict cleared on remove
+    sd = Strategies.symsdict(strat)
+    @test haskey(sd, "SOL/USDT")
+    removeasset!(strat, sol)
+    @test !haskey(sd, "SOL/USDT")
+    @test length(Strategies.universe(strat)) == 2
+    @test isnothing(Strategies.asset_bysym(strat, "SOL/USDT"))
+    # remove absent is no-op
+    removeasset!(strat, "SOL/USDT")
+    @test length(Strategies.universe(strat)) == 2
+    # empty universe allowed
+    Strategies.replace_universe!(strat, InstrumentInstance[])
+    @test length(Strategies.universe(strat)) == 0
+    @test isempty(Strategies.universe(strat).data)
+end
+
+@testset "on_universe_change! event emission order" begin
+    btc = _make_instance("BTC/USDT", 50000.0)
+    eth = _make_instance("ETH/USDT", 3000.0)
+    sol = _make_instance("SOL/USDT", 150.0)
+    cfg = Config()
+    cfg.mode = Sim()
+    cfg.margin = NoMargin()
+    cfg.initial_cash = 1000.0
+    strat = Strategies.Strategy(
+        @__MODULE__, Sim(), NoMargin(), TimeFrame("1m"), mock_exc,
+        Collections.InstrumentCollection([btc]); config=cfg,
+    )
+    seen = Ref{Tuple{Vector{String},Vector{String}}}((String[], String[]))
+    cb = (s, added, removed) -> begin
+        seen[] = (sort([string(raw(ii)) for ii in added]), sort([string(raw(ii)) for ii in removed]))
+        # callback sees snapshot diff matching added/removed
+        snap = Set(string(raw(ii)) for ii in Strategies.universe(s).data.instance)
+        @test all(k in snap for k in seen[][1])
+        @test all(k ∉ snap for k in seen[][2])
+    end
+    tok = on_universe_change!(strat, cb)
+    @test tok isa Symbol
+    addasset!(strat, eth)
+    @test seen[] == (["ETH/USDT"], String[])
+    addasset!(strat, sol)
+    @test seen[] == (["SOL/USDT"], String[])
+    removeasset!(strat, eth)
+    @test seen[] == (String[], ["ETH/USDT"])
+    # replace
+    Strategies.replace_universe!(strat, [btc])
+    @test seen[][2] == ["SOL/USDT"]
+    @test off_universe_change!(strat, tok) == true
+    @test off_universe_change!(strat, tok) == false
+    # after off, callback not invoked
+    seen[] = (["X"], ["Y"])
+    addasset!(strat, eth)
+    @test seen[] == (["X"], ["Y"])
+    # version bump
+    @test get(Strategies.attrs(strat), :universe_version, 0) >= 4
+end
+
+@testset "parallel addasset!/removeasset! on one Strategy" begin
+    btc = _make_instance("BTC/USDT", 50000.0)
+    eth = _make_instance("ETH/USDT", 3000.0)
+    sol = _make_instance("SOL/USDT", 150.0)
+    cfg = Config()
+    cfg.mode = Sim()
+    cfg.margin = NoMargin()
+    cfg.initial_cash = 1000.0
+    strat = Strategies.Strategy(
+        @__MODULE__, Sim(), NoMargin(), TimeFrame("1m"), mock_exc,
+        Collections.InstrumentCollection([btc]); config=cfg,
+    )
+    tasks = Task[]
+    for _ in 1:50
+        push!(tasks, Threads.@spawn addasset!(strat, eth))
+        push!(tasks, Threads.@spawn addasset!(strat, sol))
+        push!(tasks, Threads.@spawn removeasset!(strat, "ETH/USDT"))
+        push!(tasks, Threads.@spawn removeasset!(strat, sol))
+    end
+    for t in tasks
+        wait(t)
+    end
+    # after concurrent ops, length is consistent and no crash
+    @test length(Strategies.universe(strat)) in 1:3
+    for ii in Strategies.universe(strat)
+        @test ii isa InstrumentInstance
+    end
+end

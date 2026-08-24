@@ -199,5 +199,6 @@ include("print.jl")
 export Strategy, strategy, strategy!, reset!, default!, load_ohlcv!
 export StartStrategy, StopStrategy, LoadStrategy, ResetStrategy, WarmupPeriod, StrategyMarkets
 export SimStrategy, PaperStrategy, LiveStrategy, RTStrategy, IsolatedStrategy, CrossStrategy
-export addasset!, removeasset!
+export addasset!, removeasset!, replace_universe!, on_universe_change!, off_universe_change!
+export on_universe_added, on_universe_removed
 export issim, ispaper, islive

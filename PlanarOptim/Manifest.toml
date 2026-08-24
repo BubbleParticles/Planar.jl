@@ -1898,7 +1898,7 @@ uuid = "eebad327-c553-4316-9ea0-9fa01ccd7688"
 version = "0.3.3"
 
 [[deps.Planar]]
-deps = ["DocStringExtensions", "Documenter", "HTTP", "JSON3", "LRUCache", "MacroTools", "Pkg", "PlanarCore", "PlanarStrategyStats", "PrettyTables", "REPL", "Random", "Rocket", "Statistics", "Suppressor", "Telegram", "TimeFrames", "URIs"]
+deps = ["DataFrames", "Dates", "DocStringExtensions", "Documenter", "HTTP", "JSON3", "LRUCache", "MacroTools", "Pkg", "PlanarCore", "PlanarStrategyStats", "PrettyTables", "REPL", "Random", "Rocket", "Statistics", "Suppressor", "Telegram", "TimeFrames", "URIs"]
 path = "../Planar"
 uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 version = "1.8.0"
@@ -1914,9 +1914,6 @@ deps = ["CSV", "CodecZlib", "Comonicon", "EzXML", "HTTP", "PlanarCore", "URIs", 
 path = "../PlanarDownloadTool"
 uuid = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
 version = "0.1.0"
-
-    [deps.PlanarDownloadTool.weakdeps]
-    DBnomics = "3114853a-1e9b-44f2-8156-91b1682c6b69"
 
 [[deps.PlanarOptim]]
 deps = ["BlackBoxOptim", "Makie", "Optimization", "OptimizationBBO", "OptimizationCMAEvolutionStrategy", "OptimizationEvolutionary", "OptimizationManopt", "OptimizationOptimJL", "Pkg", "Planar", "PlanarCore", "PlanarDownloadTool", "Printf", "REPL", "Random", "Symbolics"]

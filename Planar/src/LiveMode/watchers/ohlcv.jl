@@ -1,6 +1,9 @@
+import Planar.Watchers.WatchersImpls as WatcherImpls
 using Planar.Watchers.WatchersImpls:
     ccxt_ohlcv_watcher, ccxt_ohlcv_tickers_watcher, ccxt_ohlcv_candles_watcher, ccxt_average_ohlcv_watcher
 import Planar.Watchers.WatchersImpls: cached_ohlcv!
+using Planar.Watchers: Watcher
+using PlanarCore.Misc: DFT
 using .st: logpath
 using .Data: DataFrame, propagate_ohlcv!
 
@@ -219,6 +222,100 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
             @error "ohlcv startup: task failed" exception = (e, catch_backtrace())
         end
         start!(w)
+        try
+            Strategies.on_universe_change!(s) do _, added, removed
+                for ii in added
+                    try
+                        sym = string(raw(ii))
+                        if met == :trades
+                            # trades path: start per-asset watcher via local closure
+                            @async try
+                                local w2
+                                eid2 = exchangeid(exc)
+                                default_view2 = @lget! ii.data s.timeframe cached_ohlcv!(eid2, met, s.timeframe, sym)
+                                w2 = ccxt_ohlcv_watcher(exc, sym; s.timeframe, default_view2)
+                                Watchers.load!(w2)
+                                w2[:propagate_sub] = setup_propagate!(s, ii, w2)
+                                start!(w2)
+                                ow[ii] = w2
+                            catch e
+                                @warn "dynamic universe ohlcv add failed" sym exception=(e, catch_backtrace())
+                            end
+                        else
+                            # aggregated watcher (candles/tickers/average): update ids/symstates/view and trigger backfill
+                            # aggregated watcher (candles/tickers/average): update ids/symstates/view and trigger backfill
+                            try
+                                ids = w.attrs[:ids]
+                                if sym ∉ ids
+                                    push!(ids, sym)
+                                    # create symbol state if watcher type supports it
+                                    try
+                                        if haskey(w.attrs, :symstates)
+                                            T = WatcherImpls.CandleWatcherSymbolState4
+                                            w.attrs[:symstates][sym] = T(; sym)
+                                        end
+                                    catch e
+                                        @debug "dynamic universe: could not create symstate" sym exception=(e, catch_backtrace())
+                                    end
+                                    # ensure view entry exists
+                                    try
+                                        get!(w.view, sym) do
+                                            DataFrame(timestamp=DateTime[], open=DFT[], high=DFT[], low=DFT[], close=DFT[], volume=DFT[])
+                                        end
+                                    catch
+                                    end
+                                    # ensure strategy data dict entry exists
+                                    try
+                                        @lget! ii.data s.timeframe DataFrame(timestamp=DateTime[], open=DFT[], high=DFT[], low=DFT[], close=DFT[], volume=DFT[])
+                                    catch
+                                    end
+                                    # trigger async backfill for the new symbol
+                                    @async try
+                                        Watchers.load!(w, sym)
+                                    catch e
+                                        @debug "dynamic universe: load! for added sym failed" sym exception=(e, catch_backtrace())
+                                    end
+                                end
+                                @info "dynamic universe: added symbol to aggregated ohlcv watcher" sym met
+                            catch e
+                                @warn "dynamic universe aggregated add failed" sym exception=(e, catch_backtrace())
+                            end
+                        end
+                    catch e
+                        @warn "dynamic universe ohlcv add handler failed" exception=(e, catch_backtrace())
+                    end
+                end
+                for ii in removed
+                    try
+                        sym = string(raw(ii))
+                        w2 = get(ow, ii, nothing)
+                        if !isnothing(w2)
+                            try close(w2) catch; end
+                            delete!(ow, ii)
+                        end
+                        if met != :trades
+                            try
+                                ids = w.attrs[:ids]
+                                filter!(x -> x != sym, ids)
+                                if haskey(w.attrs, :symstates)
+                                    delete!(w.attrs[:symstates], sym)
+                                end
+                                try delete!(w.view, sym) catch; end
+                            catch e
+                                @debug "dynamic universe aggregated remove cleanup failed" sym exception=(e, catch_backtrace())
+                            end
+                        end
+                        if get(attrs(s), :purge_on_remove, false) == true
+                            try empty_ohlcv(s, ii) catch; end
+                        end
+                    catch e
+                        @warn "dynamic universe ohlcv remove handler failed" exception=(e, catch_backtrace())
+                    end
+                end
+            end
+        catch e
+            @warn "dynamic universe: failed to register ohlcv callback" exception=(e, catch_backtrace())
+        end
     end
 end
 

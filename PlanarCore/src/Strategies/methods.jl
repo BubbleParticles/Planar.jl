@@ -2,8 +2,8 @@ using ..Lang: @lget!, @deassert, MatchString, @caller, Option
 using ..Instances: ohlcv_dict
 using ..Data: propagate_ohlcv!
 import ..Instances.ExchangeTypes: exchangeid, exchange
-import ..Instances.Exchanges: marketsid
-import ..Instruments: cash!, add!, sub!, addzero!, subzero!, freecash, cash
+import ..Instances.Exchanges: marketsid, getexchange!
+import ..Instruments: cash!, add!, sub!, addzero!, subzero!, freecash, cash, raw
 using ..Misc: attr, setattr!
 import ..Misc: marginmode
 using ..OrderTypes: IncreaseTrade, ReduceTrade, SellTrade, ShortBuyTrade
@@ -108,17 +108,167 @@ Base.nameof(s::Strategy) = typeof(s).parameters[2]
 @doc "The strategy `InstrumentCollection`."
 universe(s::Strategy) = getfield(s, :universe)
 
+const UNIVERSE_CALLBACKS = Dict{UInt, Vector{Pair{Symbol,Function}}}()
+const UNIVERSE_CALLBACKS_LOCK = ReentrantLock()
+
+function _notify_universe_change!(s::Strategy, added::Vector, removed::Vector)
+    cbs = @lock UNIVERSE_CALLBACKS_LOCK copy(get(UNIVERSE_CALLBACKS, objectid(s), Pair{Symbol,Function}[]))
+    for (_, cb) in cbs
+        try
+            cb(s, added, removed)
+        catch e
+            @warn "universe callback failed" exception=(e, catch_backtrace())
+        end
+        try
+            if hasmethod(on_universe_added, Tuple{typeof(s), typeof(added)})
+                on_universe_added(s, added)
+            end
+            if hasmethod(on_universe_removed, Tuple{typeof(s), typeof(removed)})
+                on_universe_removed(s, removed)
+            end
+        catch e
+            @warn "universe lifecycle hook failed" exception=(e, catch_backtrace())
+        end
+    end
+end
+
+function on_universe_added(s::Strategy, added)
+    return nothing
+end
+function on_universe_removed(s::Strategy, removed)
+    return nothing
+end
+
+function on_universe_change!(s::Strategy, cb::Function)::Symbol
+    token = gensym(:universe_cb)
+    @lock UNIVERSE_CALLBACKS_LOCK begin
+        vec = get!(UNIVERSE_CALLBACKS, objectid(s), Pair{Symbol,Function}[])
+        push!(vec, token => cb)
+    end
+    return token
+end
+on_universe_change!(cb::Function, s::Strategy)::Symbol = on_universe_change!(s, cb)
+
+function off_universe_change!(s::Strategy, token::Symbol)
+    @lock UNIVERSE_CALLBACKS_LOCK begin
+        vec = get(UNIVERSE_CALLBACKS, objectid(s), nothing)
+        isnothing(vec) && return false
+        idx = findfirst(p -> p.first === token, vec)
+        isnothing(idx) && return false
+        deleteat!(vec, idx)
+        isempty(vec) && delete!(UNIVERSE_CALLBACKS, objectid(s))
+        return true
+    end
+end
+
+function _validate_asset!(ii::InstrumentInstance)
+    exc = ii.exchange
+    sym = string(raw(ii))
+    try
+        mkts = exc.markets
+        if isempty(mkts)
+            exc2 = getexchange!(exc.id; sandbox=false)
+            mkts = exc2.markets
+        end
+        if !isempty(mkts) && !haskey(mkts, sym)
+            throw(ArgumentError("unknown symbol $sym for $(exc.id)"))
+        end
+    catch e
+        e isa ArgumentError && rethrow(e)
+        @warn "universe validation: could not verify markets" sym exception=(e, catch_backtrace())
+    end
+    return true
+end
+
 @doc "Add an asset instance to the strategy's universe at runtime (thread-safe)."
 function addasset!(s::Strategy, ii::InstrumentInstance)
-    @lock s push!(universe(s), ii)
+    _validate_asset!(ii)
+    added = InstrumentInstance[]
+    @lock s begin
+        # idempotency: check by raw
+        k = string(raw(ii))
+        exists = any(string(raw(x)) == k for x in universe(s).data.instance)
+        if !exists
+            push!(universe(s), ii)
+            # update symsdict cache
+            try
+                symsdict(s)[k] = ii
+            catch; end
+            push!(added, ii)
+            # bump version
+            ver = get(attrs(s), :universe_version, 0)
+            attrs(s)[:universe_version] = ver + 1
+        end
+    end
+    if !isempty(added)
+        _notify_universe_change!(s, added, InstrumentInstance[])
+    end
     return s
 end
 
 @doc "Remove an asset from the strategy's universe by instance, asset, or exchange id (thread-safe)."
 function removeasset!(s::Strategy, key)
-    @lock s delete!(universe(s), key)
+    removed = InstrumentInstance[]
+    @lock s begin
+        # capture to-be-removed by raw matching
+        mask = coll._matchmask(universe(s).data, key)
+        idxs = findall(mask)
+        for i in idxs
+            push!(removed, universe(s).data.instance[i])
+        end
+        if !isempty(removed)
+            delete!(universe(s), key)
+            try
+                sd = symsdict(s)
+                for ii in removed
+                    delete!(sd, string(raw(ii)))
+                end
+            catch; end
+            ver = get(attrs(s), :universe_version, 0)
+            attrs(s)[:universe_version] = ver + 1
+        end
+    end
+    if !isempty(removed)
+        _notify_universe_change!(s, InstrumentInstance[], removed)
+    end
     return s
 end
+
+"""
+    replace_universe!(s::Strategy, new::Vector{InstrumentInstance})
+
+Atomically replace the strategy's universe with `new`. Validates every `ii` before mutating;
+on any validation failure throws `ArgumentError` and mutates nothing. Returns `(added, removed)`.
+"""
+function replace_universe!(s::Strategy, new::Vector{<:InstrumentInstance})
+    for ii in new
+        _validate_asset!(ii)
+    end
+    added = InstrumentInstance[]
+    removed = InstrumentInstance[]
+    @lock s begin
+        a, r = coll.replace_universe!(universe(s), Vector{InstrumentInstance}(new))
+        added = a
+        removed = r
+        # refresh symsdict
+        try
+            sd = symsdict(s)
+            empty!(sd)
+            for ii in new
+                sd[string(raw(ii))] = ii
+            end
+        catch; end
+        if !isempty(added) || !isempty(removed)
+            ver = get(attrs(s), :universe_version, 0)
+            attrs(s)[:universe_version] = ver + 1
+        end
+    end
+    if !isempty(added) || !isempty(removed)
+        _notify_universe_change!(s, added, removed)
+    end
+    return (added, removed)
+end
+
 @doc "The `throttle` attribute determines the strategy polling interval."
 throttle(s::Strategy) = attr(s, :throttle, Second(5))
 @doc "The strategy `Config` attributes."

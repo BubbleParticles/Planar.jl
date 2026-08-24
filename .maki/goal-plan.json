@@ -1,0 +1,53 @@
+{
+  "tasks": [
+    {
+      "id": "t1",
+      "title": "Audit current universe assumptions and define dynamic-universe contract",
+      "description": "Inventory every place that assumes a static universe: Instances/Universe construction, Strategies selection/universe filtering, Fetch/load paths, Watchers subscriptions, Engine/SimMode/LiveMode/PaperMode loops, persistence (store/load), and tests. Document implicit invariants (e.g., universe size fixed after init, assets never removed mid-run). Produce a concise dynamic-universe contract: what 'dynamic' means (add/remove at runtime without restart), allowed triggers (config change, listing/delisting event, strategy signal), ordering guarantees, and no-go invariants. This is discovery-only, no behavior change.",
+      "acceptance": "Markdown audit in docs or .maki/ with grep/file:line refs for all static-universe assumptions, plus a 1-page contract defining add/remove semantics, lifecycle events, and invariants; reviewed gap list with no open 'unknown' areas blocks t2-t6 only by reference, not by code dep.",
+      "deps": []
+    },
+    {
+      "id": "t2",
+      "title": "Universe manager: hot add/remove API with event bus",
+      "description": "Implement/verify a single UniverseManager (or equivalent in Instances/PlanarCore) that owns the dynamic asset set. Supports add_assets!(universe, assets), remove_assets!(universe, assets), replace_universe!(universe, new_set) atomically, with versioned snapshot and pub/sub event (added/removed/replaced). Thread-safe, idempotent, validated against exchange markets (unknown symbol rejected with typed error). No direct coupling to data or strategy; just the state + events. Providers subscribe instead of polling.",
+      "acceptance": "Public API for add/remove/replace with unit tests: idempotency, atomicity, validation, concurrency (parallel adds/removes), event emission order and payload; 100% unit coverage on manager module and no fetch/strategy imports required to test it.",
+      "deps": []
+    },
+    {
+      "id": "t3",
+      "title": "Market data plane: watchers/fetch adapt to changing symbols",
+      "description": "Make data ingestion react to universe events without restart. On add: subscribe/fetch OHLCV, trades, tickers, funding for new symbols, backfill history to align with existing timeframe, handle gaps. On remove: unsubscribe, drain buffers, optionally retain/purge cached Zarr/DataFrames per policy. Covers Fetch, Data, Watchers, Ccxt/CcxtGateway subscriptions. Must handle races (add then immediate remove, fetch in-flight) and partial failures (one symbol fails without breaking others).",
+      "acceptance": "Adding N symbols mid-run yields subscribed watchers and fetchable OHLCV within one timeframe interval; removing symbols stops network calls and frees buffers (assert via gateway mock counts); chaos test add->remove->add same symbol preserves contiguity; no restart required; mocked CcxtGateway tests pass.",
+      "deps": []
+    },
+    {
+      "id": "t4",
+      "title": "Strategy plane: strategies observe dynamic universe without restart",
+      "description": "Ensure Strategies receive universe deltas cleanly: universe snapshot injected per tick/bar, filters recomputed, signals only emitted for current members, no stale-asset signals after removal. Includes strategy helpers (universe selection, asset iteration, warmup for newly added assets) and SimMode/LiveMode strategy lifecycle hooks (on_add/on_remove callbacks if needed). Test with a dummy strategy that logs active set each tick. No dependency on execution or persistence impl.",
+      "acceptance": "Reference strategy running over a 3-phase universe (A -> A+B -> A) produces signals only for active members each phase (assert via recorded universe snapshots); newly added asset warmup handled (no NaN signal crash); property test random add/remove sequence never yields signal for non-member; works with mocked data plane.",
+      "deps": []
+    },
+    {
+      "id": "t5",
+      "title": "Execution plane: orders/positions/portfolio for added/removed assets",
+      "description": "Verify/fix order and position handling when universe changes: new assets can be traded immediately (limits, precision, fees resolved); removed assets trigger policy (cancel open orders, optionally close/reduce positions, freeze new orders) configurable per strategy/engine. Portfolio PnL, exposure, and risk checks reflect current set without leaking removed assets. Covers Executors, PaperMode, LiveMode order sync, and Instances position book. Race: order in-flight for asset being removed must resolve deterministically.",
+      "acceptance": "Integration tests with mock exchange: place orders for newly added asset succeeds; remove asset with open orders cancels them and emits event; remove with open position follows configured policy (close or hold) and portfolio totals exclude removed if closed; no orphan orders/positions after 10 random add/remove cycles; risk limits recomputed on universe change.",
+      "deps": []
+    },
+    {
+      "id": "t6",
+      "title": "Persistence, config, and cross-mode parity (Sim/Live/Paper) for dynamic universe",
+      "description": "Make dynamic universe durable and consistent across modes. Persist universe version/history and per-asset state (Zarr/LMDB) so restart resumes at latest set; config (TOML/env) can declare initial universe and allow runtime overrides; SimMode replays historical add/remove timelines, PaperMode and LiveMode share same manager/events. Backtest can replay a recorded dynamic-universe schedule. No coupling to specific strategy; purely state/config layer.",
+      "acceptance": "Kill-and-resume test: bot restarted after mid-run universe change resumes with same active set and no duplicate/missing data; SimMode backtest with scheduled add/remove timeline reproduces same portfolio as recorded run within tolerance; config round-trip (save/load TOML) preserves universe; docs for operator workflow.",
+      "deps": []
+    },
+    {
+      "id": "t7",
+      "title": "Verification harness: coverage, fuzz/chaos, and CI gate for dynamic universes",
+      "description": "Close the 'not 100% tested' gap. Build a standalone harness: unit tests for manager, mocked-gateway tests for data plane, strategy/execution integration tests, plus fuzz/chaos runner that generates random add/remove sequences (including dupes, rapid flaps, empty universe, max-size) and asserts invariants from t1. Measure coverage for universe-related modules and enforce CI gate. Benchmark overhead of dynamic vs static universe (should be negligible when unchanged).",
+      "acceptance": "Harness runs in CI with >90% line coverage on universe manager/data/strategy/execution touchpoints; nightly chaos job (1000 random sequences) green for 7 days; documented invariants checked on every run; perf regression <5% for static universe; single `julia --project -e 'using Pkg; Pkg.test()'` entry point covers all new tests.",
+      "deps": []
+    }
+  ]
+}

@@ -1,6 +1,9 @@
 using ..Executors: orderscount
 using ..Executors: isoutof_orders
 using ..Instances.Data.DFUtils: lastdate
+using ..Instances.Instruments: AbstractInstrument, parse as parse_instrument
+using ..Instances: InstrumentInstance
+using ..Instances.DataStructures: SortedDict
 using ..Misc.LoggingExtras
 using Base: with_logger
 using .st: universe, current_total, trades_count
@@ -152,11 +155,44 @@ positions, and executing the strategy's `call!` function at each step.
 
 """
 function start!(
-    s::Strategy{Sim}, ctx::Context; trim_universe=false, doreset=true, resetctx=true, show_progress=:off, fail_fast=true
+    s::Strategy{Sim}, ctx::Context; trim_universe=false, doreset=true, resetctx=true, show_progress=:off, fail_fast=true, universe_schedule=nothing
 )
     # Check for empty universe early
     _sim_start!(s, doreset) || return s
-    # ensure that universe data start at the same time
+    # resolve schedule from attrs if not passed explicitly (config-driven)
+    if isnothing(universe_schedule)
+        universe_schedule = get(attrs(s), :universe_schedule, nothing)
+        if isnothing(universe_schedule)
+            try
+                toml = s.config.toml
+                if !isnothing(toml) && haskey(toml, "universe") && haskey(toml["universe"], "schedule")
+                    raw_sched = toml["universe"]["schedule"]
+                    if raw_sched isa Vector
+                        parsed = Tuple{DateTime,Vector{String}}[]
+                        for entry in raw_sched
+                            if entry isa AbstractDict && haskey(entry, "at") && haskey(entry, "members")
+                                dt = entry["at"] isa DateTime ? entry["at"] : DateTime(string(entry["at"]))
+                                ms = String.(entry["members"]::Vector)
+                                push!(parsed, (dt, ms))
+                            end
+                        end
+                        universe_schedule = isempty(parsed) ? nothing : parsed
+                    end
+                end
+            catch e
+                @debug "universe_schedule toml parse failed" exception=(e, catch_backtrace())
+            end
+        end
+    end
+    # normalize schedule to sorted Vector{Tuple{DateTime,Vector{String}}}
+    _schedule = if isnothing(universe_schedule) || isempty(universe_schedule)
+        nothing
+    else
+        sort!(collect(universe_schedule); by=first)
+    end
+    _sched_idx = Ref(1)
+    # cache for instances created for scheduled symbols (preserve OHLCV data if reused)
+    _sched_cache = Dict{String,InstrumentInstance}()
     @ifdebug _resetglobals!(s)
     if trim_universe
         let data = st.coll.flatten(st.universe(s))
@@ -176,10 +212,53 @@ function start!(
         trimmed_range = trimmed_start:ctx.range.step:ctx.range.stop
 
         step = function (date)
+            # apply scheduled universe mutations whose time <= date (once per entry)
+            if !isnothing(_schedule)
+                while _sched_idx[] <= length(_schedule) && date >= _schedule[_sched_idx[]][1]
+                    _, members = _schedule[_sched_idx[]]
+                    _sched_idx[] += 1
+                    try
+                        # resolve String members to InstrumentInstances
+                        new_instances = InstrumentInstance[]
+                        for sym in members
+                            k = string(sym)
+                            # reuse existing universe instance if present
+                            ii = try
+                                s.universe[k].instance[1]
+                            catch
+                                nothing
+                            end
+                            if isnothing(ii)
+                                try
+                                    exc = st.exchange(s)
+                                    a = parse_instrument(AbstractInstrument, k)
+                                    ii = InstrumentInstance(a; data=SortedDict{TimeFrame, DataFrame}(), exc, margin=s.margin)
+                                    if !haskey(ii.data, s.timeframe)
+                                        ii.data[s.timeframe] = DataFrame(timestamp=DateTime[], open=DFT[], high=DFT[], low=DFT[], close=DFT[], volume=DFT[])
+                                    end
+                                catch e
+                                    @warn "sim schedule: failed to resolve $k" exception=(e, catch_backtrace())
+                                    continue
+                                end
+                                _sched_cache[k] = ii
+                            end
+                            push!(new_instances, ii)
+                        end
+                        st.replace_universe!(s, new_instances)
+                    catch e
+                        @warn "sim schedule: replace_universe! failed" exception=(e, catch_backtrace())
+                    end
+                end
+            end
             # Check OHLCV data exists for this date before calling strategy
+            # For dynamic universes, newly added assets may have empty/short history;
+            # we tolerate empty ohlcv so that warmup-skipping is delegated to strategy `iswarmed` instead of stalling the whole backtest.
             has_data = true
-            for ii in universe(s)
+            for ii in st.coll.snapshot(st.universe(s))
                 o = ohlcv(ii)
+                if isempty(o.timestamp)
+                    continue
+                end
                 # Check if date falls within the OHLCV data range
                 if date < o.timestamp[begin] || date > o.timestamp[end]
                     has_data = false
@@ -207,6 +286,7 @@ function start!(
     end
     s
 end
+
 
 @doc """
 Backtest a strategy `strat` using context `ctx` iterating according to the specified timeframe.
@@ -266,10 +346,20 @@ There is no `trim_universe`/`resetctx` — tick data has no OHLCV alignment to t
 - `fail_fast::Bool`: If true, stop on first error; if false, continue and collect errors (aborting after 10 consecutive errors to prevent infinite error loops).
 """
 function start!(
-    s::Strategy{Sim}, ctx::TickContext; doreset=true, show_progress=:off, fail_fast=true
+    s::Strategy{Sim}, ctx::TickContext; doreset=true, show_progress=:off, fail_fast=true, universe_schedule=nothing
 )
     # Check for empty universe early
     _sim_start!(s, doreset) || return s
+    if isnothing(universe_schedule)
+        universe_schedule = get(attrs(s), :universe_schedule, nothing)
+    end
+    _schedule = if isnothing(universe_schedule) || isempty(universe_schedule)
+        nothing
+    else
+        sort!(collect(universe_schedule); by=first)
+    end
+    _sched_idx = Ref(1)
+    _sched_cache = Dict{String,InstrumentInstance}()
     ts = [t.timestamp for t in ctx.trades]
     if isempty(ts)
         @warn "SimMode: no ticks to backtest"
@@ -282,6 +372,33 @@ function start!(
     try
         with_logger(_sim_logger(s)) do
             step = function (tick)
+                if !isnothing(_schedule)
+                    while _sched_idx[] <= length(_schedule) && tick.timestamp >= _schedule[_sched_idx[]][1]
+                        _, members = _schedule[_sched_idx[]]
+                        _sched_idx[] += 1
+                        try
+                            new_instances = InstrumentInstance[]
+                            for sym in members
+                                k = string(sym)
+                                ii = try s.universe[k].instance[1] catch; nothing end
+                                if isnothing(ii); ii = get(_sched_cache, k, nothing) end
+                                if isnothing(ii)
+                                    exc = st.exchange(s)
+                                    a = parse_instrument(AbstractInstrument, k)
+                                    ii = InstrumentInstance(a; data=SortedDict{TimeFrame, DataFrame}(), exc, margin=s.margin)
+                                    if !haskey(ii.data, s.timeframe)
+                                        ii.data[s.timeframe] = DataFrames.DataFrame(timestamp=DateTime[], open=DFT[], high=DFT[], low=DFT[], close=DFT[], volume=DFT[])
+                                    end
+                                    _sched_cache[k] = ii
+                                end
+                                push!(new_instances, ii)
+                            end
+                            st.replace_universe!(s, new_instances)
+                        catch e
+                            @warn "sim tick schedule: replace_universe! failed" exception=(e, catch_backtrace())
+                        end
+                    end
+                end
                 update!(s, tick, UpdateOrdersTick())
                 s.attrs[:sim_current_tick] = tick
                 ping!(s, ctx, tick)
@@ -297,7 +414,6 @@ function start!(
     end
     s
 end
-
 @doc """
 Backtest a strategy on a tick-by-tick basis from a `TradeTickRange`.
 
