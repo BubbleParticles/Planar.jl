@@ -2,7 +2,7 @@ function _sync_comm_cash!(s)
     comm = 0.0
     buys = s.buyorders
     sells = s.sellorders
-    for ii in s.universe
+    for ii in snapshot(s.universe)
         this_buys = get(buys, ii, missing)
         if !ismissing(this_buys)
             for o in this_buys
@@ -92,9 +92,9 @@ function _live_sync_universe_cash!(s::NoMarginStrategy{Live}; force=false, waitf
         return nothing
     end
     loop_kwargs = filterkws(:fallback_kwargs; kwargs)
-    all_synced = Set(ii for ii in universe(s))
+    all_synced = Set(ii for ii in snapshot(universe(s)))
     events = get_events(s)
-    for ii in s.universe
+    for ii in snapshot(s.universe)
         push!(all_synced, ii)
         ai_bal = @get bal ii BalanceSnapshot(ii)
         function func()

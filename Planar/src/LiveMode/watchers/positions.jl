@@ -138,7 +138,7 @@ function _start_stall_guard!(w, s, kwargs)
             last = _lastprocessed(w)
             if TimeTicks.now() - last > Second(60)
                 @warn "positions watcher: forcing fetch due to stall" last TimeTicks.now() s
-                for ii in s.universe
+                for ii in snapshot(s.universe)
                     try
                         _force_fetchpos(
                             s, ii, get_position_side(s, ii); fallback_kwargs=kwargs
@@ -195,7 +195,7 @@ function _w_positions_watch_mode(
         h =
             w[:positions_handler] = watch_positions_handler(
                 exc,
-                (ii for ii in s.universe);
+                (ii for ii in snapshot(s.universe));
                 f_push=push_positions_to_buf,
                 params,
                 rest...,

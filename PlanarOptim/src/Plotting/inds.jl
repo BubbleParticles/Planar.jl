@@ -38,7 +38,7 @@ function line_indicator!(fig::Figure, lines...; df=nothing, row=2)
         lines!(
             ax,
             line;
-            color=RGBf(rand(seed!(n), 3)...),
+            color=line_color(n; opacity=1.0),
             inspector_hover=make_tooltip_func(line, str_func),
         )
     end

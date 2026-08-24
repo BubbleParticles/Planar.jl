@@ -527,12 +527,12 @@ If there are any discrepancies, the function logs an error message. If the ids a
 """
 function check_orders_sync(s::LiveStrategy)
     try
-        lock.(s.universe)
+        lock.(snapshot(s.universe))
         eid = exchangeid(s)
         local_ids = Set(o.id for o in values(s))
         exc_ids = Set{String}()
         tracked_ids = Set{String}()
-        @sync for ii in s.universe
+        @sync for ii in snapshot(s.universe)
             @async try
                 for o in fetch_open_orders(s, ii)
                     push!(exc_ids, resp_order_id(o, eid, String))
@@ -559,7 +559,7 @@ function check_orders_sync(s::LiveStrategy)
         @assert all(id ∈ exc_ids for id in tracked_ids)
         @info "Currently tracking $(length(tracked_ids)) orders"
     finally
-        unlock.(s.universe)
+        unlock.(snapshot(s.universe))
     end
 end
 
@@ -666,7 +666,7 @@ This function performs an asynchronous operation for each asset in the universe 
 
 """
 function live_sync_closed_orders!(s::LiveStrategy; kwargs...)
-    @sync for ii in universe(s)
+    @sync for ii in snapshot(universe(s))
         @async try
             live_sync_closed_orders!(s, ii; kwargs...)
         catch e
@@ -690,7 +690,7 @@ This function performs an asynchronous operation for each asset in the universe 
 
 """
 function live_sync_open_orders!(s::LiveStrategy; kwargs...)
-    @sync for ii in universe(s)
+    @sync for ii in snapshot(universe(s))
         @async try
             live_sync_open_orders!(s, ii; kwargs...)
         catch e

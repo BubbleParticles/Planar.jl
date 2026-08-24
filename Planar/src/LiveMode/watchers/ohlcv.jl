@@ -43,7 +43,7 @@ Subscribes to the watcher's process Subject, propagating OHLCV data for each ass
 """
 function setup_propagate!(s::RTStrategy, w::Watcher)
     pipeline = getproperty(w.beacon, :process) |> Rocket.map(Nothing, _ -> begin
-        for ii in s.universe
+        for ii in snapshot(s.universe)
             try
                 propagate_ohlcv!(ii.data)
             catch exception
@@ -78,7 +78,7 @@ function ohlcvmethod!(s::Strategy, m=nothing)
     k = :live_ohlcv_method
     setfunc = isnothing(m) ? (d, _) -> attr!(d, k, :candles) : (d, m) -> setattr!(d, m, k)
     setfunc(s, m)
-    for ii in universe(s)
+    for ii in snapshot(s.universe)
         setfunc(ii, m)
     end
     @something m :tickers
@@ -135,7 +135,7 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
             start!(w)
             ow[ii] = w
         end
-        @sync for ii in s.universe
+        @sync for ii in snapshot(s.universe)
             @async try
                 start_watcher(ii)
             catch e
@@ -148,7 +148,7 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
         default_view = Dict{String,DataFrame}(
             raw(ii) =>
                 @lget!(ii.data, s.timeframe, cached_ohlcv!(eid, met, s.timeframe, raw(ii)))
-            for ii in s.universe
+            for ii in snapshot(s.universe)
         )
         buffer_capacity = attr(s, :live_buffer_capacity, 100)
         view_capacity = attr(
@@ -193,7 +193,7 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
             w = watcher_func(
                 exc;
                 timeframe=s.timeframe,
-                syms=(raw(ii) for ii in s.universe),
+                syms=(raw(ii) for ii in snapshot(s.universe)),
                 flush=false,
                 logfile=logpath(s; name="ohlcv_watcher_$(nameof(s))"),
                 load_path=load_path,
@@ -207,7 +207,7 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
         w[:resync_noncontig] = true
         w[:startup_task] = @start_task IdDict() try
             wv = w.view
-            @sync for ii in s.universe
+            @sync for ii in snapshot(s.universe)
                 sym = raw(ii)
                 wv[sym] = ii.data[s.timeframe]
                 @async try
@@ -391,7 +391,7 @@ end
 function cached_ohlcv!(s::Strategy)
     eid = exchangeid(s)
     met = ohlcvmethod!(s)
-    for ii in universe(s)
+    for ii in snapshot(s.universe)
         sym = raw(ii)
         for (tf, data) in ohlcv_dict(ii)
             cached_ohlcv!(eid, met, period(tf), sym; def=data)
@@ -415,7 +415,7 @@ function sourceohlcv!(s::RTStrategy, from_strat::Strategy)
     # Override this strategy ohlcv data with ohlcv data from the source strategy
     @info "ohlcv: sourcing from strategy" from_strat
     this_timeframes = s.timeframes
-    for ii in universe(s)
+    for ii in snapshot(s.universe)
         fs_ai = asset_bysym(from_strat, raw(ii))
         if isnothing(fs_ai)
             @warn "ohlcv: can't source for asset" ii from_strat
@@ -448,7 +448,7 @@ function ensure_propagate!(s::RTStrategy, from_strat::Strategy)
         if w isa Watcher
             addcallback!(w, s, stack_propagate_ohlcv_callback(s, w.callback))
         elseif w isa Dict && valtype(w) <: Watcher
-            for ii in universe(s)
+            for ii in snapshot(s.universe)
                 this_sym = raw(ii)
                 this_w = get(w, this_sym, nothing)
                 if !isnothing(this_w)

@@ -8,6 +8,7 @@ using PlanarCore.Exchanges: gettimeout, resptobool, islist, isdict
 using .st: Strategy, MarginStrategy, NoMarginStrategy, LiveStrategy, call!, RTStrategy, throttle, ExchangeInstrument, universe, WarmupPeriod
 using ..PaperMode.OrderTypes
 using ..PaperMode.Misc
+using PlanarCore.Collections: snapshot
 using PlanarCore.Misc: Lang, LittleDict
 using PlanarCore.Misc.TimeTicks
 using PlanarCore.Lang: @deassert, @caller, @ifdebug, @debug_backtrace, @lget!, withoutkws, isowned, isownable

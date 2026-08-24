@@ -183,7 +183,7 @@ function replay_from_trace!(s::LiveStrategy; check=false)
     events = [_astuple(ev, tr) for ev in eachrow(tr._arr)]
     sort!(events; by=ev -> ev.timestamp)
     replay_loop!(sim_s, events; check)
-    for (live_ai, sim_ai) in zip(s.universe, sim_s.universe)
+    for (live_ai, sim_ai) in zip(snapshot(s.universe), snapshot(sim_s.universe))
         # copy the trades history from the sim strategy to the live strategy
         this_trades = trades(live_ai)
         empty!(this_trades)

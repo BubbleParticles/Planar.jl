@@ -1,6 +1,7 @@
 using .st: IsolatedStrategy
 using .Executors: AnyMarketOrder
 using PlanarCore.SimMode: singlewaycheck
+using PlanarCore.Collections: snapshot
 using .Misc: DFT
 using .Misc.Lang: splitkws
 
@@ -63,7 +64,7 @@ function call!(
     s::MarginStrategy{<:Union{Paper,Live}}, bp::ByPos, date, ::PositionClose; kwargs...
 )
     tasks = Task[]
-    for ii in s.universe
+    for ii in snapshot(s.universe)
         alive = Ref(true)
         # Get or create the task registry under the strategy lock to avoid race with stop!
         pos_tasks = @lock s get!(attr(s), :paper_position_tasks) do

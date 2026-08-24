@@ -470,7 +470,7 @@ function _live_sync_universe_cash!(
         @debug "sync universe cash:" _module = LogUniSync ii pside isnothing(pup) overwrite force
         live_sync_cash!(s, ii, pside; pup, overwrite, waitfor, force, kwargs...)
     end
-    @sync for ii in s.universe
+    @sync for ii in snapshot(s.universe)
         @async try
             @sync begin
                 @async try
