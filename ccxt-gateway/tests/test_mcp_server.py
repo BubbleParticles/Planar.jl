@@ -330,6 +330,10 @@ def test_session_revise_applies_change(tmp_path, julia_session):
     load = mgr.eval_in_session(
         sid, f'using Revise; Revise.includet("{src}"); {mod}.f()'
     )
+    if not load.get("ok"):
+        val = str(load.get("value", "")) + str(load.get("error", ""))
+        if "Revise" in val:
+            pytest.skip("Revise not installed in this Julia environment")
     assert load["ok"] is True
     assert load["value"] == "1"
     # Edit the source on disk, then trigger Revise.
@@ -340,7 +344,6 @@ def test_session_revise_applies_change(tmp_path, julia_session):
     after = mgr.eval_in_session(sid, f"{mod}.f()")
     assert after["ok"] is True
     assert after["value"] == "2"
-
 
 def test_session_stop_removes_and_kills():
     if not HAS_JULIA:
