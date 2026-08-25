@@ -1,5 +1,5 @@
 module Ccxt
-    using FileWatching, HTTP, JSON3, MbedTLS, OrderedCollections, PrecompileTools, WebSockets
+    using FileWatching, HTTP, JSON3, MbedTLS, OrderedCollections, PrecompileTools, WebSockets, URIs, Rocket
     include("../Ccxt/module.jl")
     isdefined(@__MODULE__, :__doinit__) && __doinit__()
     # Run the precompile workload when Ccxt itself or PlanarCore (its host) is

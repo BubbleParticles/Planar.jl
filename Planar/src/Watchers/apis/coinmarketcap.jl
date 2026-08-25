@@ -1,8 +1,6 @@
 module CoinMarketCap
 using ..Watchers
-using HTTP
-using URIs
-using JSON3
+using PlanarCore.Ccxt: HTTP, URIs, JSON3
 using PlanarCore.Misc: Config, config, queryfromstruct
 using PlanarCore.Lang: Option
 

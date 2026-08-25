@@ -1,10 +1,10 @@
 module Query
 using PlanarCore.Misc.DocStringExtensions
 using Statistics: mean
-using DataFrames: DataFrame, hcat, sort!
+using PlanarCore.Data.DataFrames: DataFrame, hcat, sort!
 using ..PlanarStrategyStats
 using ..PlanarStrategyStats: find_bottomed, find_peaked
-using DataFrames
+using PlanarCore.Data.DataFrames
 const sst = PlanarStrategyStats
 include("slope.jl")
 

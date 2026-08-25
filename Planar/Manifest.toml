@@ -2,7 +2,7 @@
 
 julia_version = "1.12.7"
 manifest_format = "2.0"
-project_hash = "a95576acbf6751fcd9729afe257865a59197d445"
+project_hash = "26268856892937298088cd1b43104260685a05ef"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -727,7 +727,7 @@ weakdeps = ["REPL"]
     REPLExt = "REPL"
 
 [[deps.Planar]]
-deps = ["Dates", "DocStringExtensions", "Documenter", "HTTP", "JSON3", "LRUCache", "MacroTools", "Pkg", "PlanarCore", "PlanarStrategyStats", "PrettyTables", "REPL", "Random", "Rocket", "Statistics", "Suppressor", "Telegram", "TimeFrames", "URIs"]
+deps = ["Dates", "Documenter", "LRUCache", "MacroTools", "Pkg", "PlanarCore", "PlanarStrategyStats", "PrettyTables", "REPL", "Random", "Statistics", "Suppressor", "Telegram"]
 path = "."
 uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 version = "1.8.0"
@@ -739,7 +739,7 @@ uuid = "a475c859-e357-4be2-a5e3-43038ab4b158"
 version = "1.0.0"
 
 [[deps.PlanarStrategyStats]]
-deps = ["DataFrames", "Logging", "OnlineTechnicalIndicators", "PlanarCore", "Statistics"]
+deps = ["Logging", "OnlineTechnicalIndicators", "PlanarCore", "Statistics"]
 path = "../PlanarStrategyStats"
 uuid = "d4fe19c2-883d-48d3-92d7-80b36677371b"
 version = "0.1.0"

@@ -1,8 +1,6 @@
 module DefiLlama
 
-using HTTP
-using URIs
-using JSON3
+using PlanarCore.Ccxt: HTTP, URIs, JSON3
 using ..Watchers
 using PlanarCore.Lang: @kget!, Option
 using PlanarCore.Misc

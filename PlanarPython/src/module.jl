@@ -186,7 +186,7 @@ macro pymodule(name, modname=nothing)
 end
 
 include("functions.jl")
-using Reexport
+using PlanarCore.TimeTicks.Reexport
 # NOTE: This must be done after all the global code in this module has been execute
 @reexport using PythonCall
 export @pymodule, clearpypath!, pytryfloat

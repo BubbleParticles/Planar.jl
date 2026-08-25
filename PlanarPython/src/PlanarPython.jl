@@ -4,8 +4,8 @@ required modules and constants.
 """
 module PlanarPython
 
-using PrecompileTools: @compile_workload
-using DocStringExtensions
+using PlanarCore.Ccxt.PrecompileTools: @compile_workload
+using PlanarCore.Misc.DocStringExtensions
 
 include("consts.jl")
 include("module.jl")
