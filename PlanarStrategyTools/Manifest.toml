@@ -726,7 +726,7 @@ weakdeps = ["REPL"]
     REPLExt = "REPL"
 
 [[deps.Planar]]
-deps = ["DataFrames", "Dates", "DocStringExtensions", "Documenter", "HTTP", "JSON3", "LRUCache", "MacroTools", "Pkg", "PlanarCore", "PlanarStrategyStats", "PrettyTables", "REPL", "Random", "Rocket", "Statistics", "Suppressor", "Telegram", "TimeFrames", "URIs"]
+deps = ["Dates", "DocStringExtensions", "Documenter", "HTTP", "JSON3", "LRUCache", "MacroTools", "Pkg", "PlanarCore", "PlanarStrategyStats", "PrettyTables", "REPL", "Random", "Rocket", "Statistics", "Suppressor", "Telegram", "TimeFrames", "URIs"]
 path = "../Planar"
 uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 version = "1.8.0"
