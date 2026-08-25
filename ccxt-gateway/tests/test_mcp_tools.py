@@ -186,6 +186,10 @@ def test_revise_tool_applies_change(tmp_path):
         load = eval_in_session_tool(
             sid, f'using Revise; Revise.includet("{src}"); {mod}.f()'
         )
+        if not load.get("ok"):
+            val = str(load.get("value", "")) + str(load.get("error", ""))
+            if "Revise" in val:
+                pytest.skip("Revise not installed in this Julia environment")
         assert load["ok"] is True
         assert load["value"] == "1"
 
