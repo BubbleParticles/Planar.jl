@@ -1,8 +1,6 @@
 module BlockchainAPI
 
-using HTTP
-using JSON3
-using URIs
+using PlanarCore.Ccxt: HTTP, JSON3, URIs
 using PlanarCore.Data.DataFrames
 import Dates: DateTime, Millisecond, now, unix2datetime, datetime2unix
 using PlanarCore.Misc

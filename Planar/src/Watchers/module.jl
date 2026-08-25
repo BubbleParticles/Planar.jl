@@ -2,6 +2,7 @@ using PlanarCore.Fetch: Fetch
 using PlanarCore.Fetch.Data
 using PlanarCore.Fetch.Misc
 using PlanarCore.Ccxt
+using PlanarCore.Ccxt: Rocket
 using PlanarCore.Data: rangeafter
 using PlanarCore.Data.DataStructures: CircularBuffer
 using PlanarCore.Data.DataFrames: DataFrame

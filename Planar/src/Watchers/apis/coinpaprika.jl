@@ -1,8 +1,6 @@
 module CoinPaprika
 using ..Watchers
-using HTTP
-using URIs
-using JSON3
+using PlanarCore.Ccxt: HTTP, URIs, JSON3
 using PlanarCore.Data: Candle
 using PlanarCore.Misc: Config, config, queryfromstruct
 using PlanarCore.Lang: Option, @kget!

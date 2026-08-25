@@ -4,7 +4,7 @@ using .Instances.Exchanges: has
 using PlanarCore.SimMode: trade!
 using .Executors: AnyGTCOrder
 using PlanarCore.OrderTypes: ImmediateOrderType, OrderCanceled
-using TimeFrames: TimeFrame
+using PlanarCore.TimeTicks: TimeFrame
 
 function _asdate(d)
     if d isa AbstractString
