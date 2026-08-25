@@ -1,6 +1,7 @@
 module Glassnode
 
-using PlanarCore.Ccxt: HTTP, URIs, JSON3
+using PlanarCore.Ccxt: HTTP, JSON3
+using PlanarCore.Ccxt.URIs
 using ..Watchers
 using PlanarCore.Lang: @kget!, Option
 using PlanarCore.Misc
