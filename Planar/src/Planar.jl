@@ -1,4 +1,60 @@
 module Planar
+# Compatibility shim: PlanarCore 1.0.0 on General still uses `Asset`/`AbstractAsset`/`AssetInstance`,
+# while Planar 1.8.2+ uses `Instrument`/`AbstractInstrument`/`InstrumentInstance`.
+# Alias new→old and old→new at load time so either core works.
+let
+    # Instances: AssetInstance ↔ InstrumentInstance
+    try
+        if isdefined(PlanarCore.Instances, :AssetInstance) && !isdefined(PlanarCore.Instances, :InstrumentInstance)
+            @eval PlanarCore.Instances const InstrumentInstance = AssetInstance
+            # also alias bare `Asset`/`Instrument` if present in Instances for convenience
+            if isdefined(PlanarCore.Instances, :Asset) && !isdefined(PlanarCore.Instances, :Instrument)
+                @eval PlanarCore.Instances const Instrument = Asset
+            end
+        elseif isdefined(PlanarCore.Instances, :InstrumentInstance) && !isdefined(PlanarCore.Instances, :AssetInstance)
+            @eval PlanarCore.Instances const AssetInstance = InstrumentInstance
+            if isdefined(PlanarCore.Instances, :Instrument) && !isdefined(PlanarCore.Instances, :Asset)
+                @eval PlanarCore.Instances const Asset = Instrument
+            end
+        end
+    catch e
+        @debug "Planar compat shim (Instances) failed: $e"
+    end
+    # Instruments: AbstractAsset/Asset ↔ AbstractInstrument/Instrument
+    try
+        if isdefined(PlanarCore.Instruments, :AbstractAsset) && !isdefined(PlanarCore.Instruments, :AbstractInstrument)
+            @eval PlanarCore.Instruments const AbstractInstrument = AbstractAsset
+        elseif isdefined(PlanarCore.Instruments, :AbstractInstrument) && !isdefined(PlanarCore.Instruments, :AbstractAsset)
+            @eval PlanarCore.Instruments const AbstractAsset = AbstractInstrument
+        end
+        if isdefined(PlanarCore.Instruments, :Asset) && !isdefined(PlanarCore.Instruments, :Instrument)
+            @eval PlanarCore.Instruments const Instrument = Asset
+        elseif isdefined(PlanarCore.Instruments, :Instrument) && !isdefined(PlanarCore.Instruments, :Asset)
+            @eval PlanarCore.Instruments const Asset = Instrument
+        end
+    catch e
+        @debug "Planar compat shim (Instruments) failed: $e"
+    end
+    # Executors.Instruments is re-exported via PlanarCore.Instruments in some versions; mirror there too
+    try
+        if isdefined(PlanarCore, :Executors) && isdefined(PlanarCore.Executors, :Instruments)
+            let m = PlanarCore.Executors.Instruments
+                if isdefined(m, :AbstractAsset) && !isdefined(m, :AbstractInstrument)
+                    @eval m const AbstractInstrument = AbstractAsset
+                elseif isdefined(m, :AbstractInstrument) && !isdefined(m, :AbstractAsset)
+                    @eval m const AbstractAsset = AbstractInstrument
+                end
+                if isdefined(m, :Asset) && !isdefined(m, :Instrument)
+                    @eval m const Instrument = Asset
+                elseif isdefined(m, :Instrument) && !isdefined(m, :Asset)
+                    @eval m const Asset = Instrument
+                end
+            end
+        end
+    catch e
+        @debug "Planar compat shim (Executors.Instruments) failed: $e"
+    end
+end
     include("submodules/PaperMode.jl")
     include("submodules/Watchers.jl")
     include("submodules/LiveMode.jl")
