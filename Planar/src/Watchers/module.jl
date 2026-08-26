@@ -267,12 +267,10 @@ include("apis/newsdata.jl")
 include("apis/blockchain.jl")
 include("apis/defillama.jl")
 include("apis/glassnode.jl")
-using .DefiLlama: DefiLlama
-using .Glassnode: Glassnode
-using .BlockchainAPI: BlockchainAPI, DefiLlama, Glassnode
+using .BlockchainAPI: tvl, stablecoins, stablecoin_chart, supply_ratio, active_addresses, holders_profit, large_movements
 include("impls/impls.jl")
-using .WatchersImpls: iswatchfunc, ccxt_tickers_watcher, ccxt_ohlcv_watcher, ccxt_ohlcv_candles_watcher, ccxt_orderbook_watcher, cg_ticker_watcher, cg_derivatives_watcher, cp_markets_watcher, cp_twitter_watcher, cp_ticker_watcher, dbnomics_watcher, alpha_vantage_watcher, newsdata_watcher, defillama_tvl_watcher, defillama_stablecoins_watcher, defillama_supply_ratio_watcher, glassnode_active_addresses_watcher, glassnode_holders_profit_watcher, glassnode_large_movements_watcher
-export iswatchfunc, ccxt_tickers_watcher, ccxt_ohlcv_watcher, ccxt_ohlcv_candles_watcher, ccxt_orderbook_watcher, cg_ticker_watcher, cg_derivatives_watcher, cp_markets_watcher, cp_twitter_watcher, cp_ticker_watcher, dbnomics_watcher, alpha_vantage_watcher, newsdata_watcher, defillama_tvl_watcher, defillama_stablecoins_watcher, defillama_supply_ratio_watcher, glassnode_active_addresses_watcher, glassnode_holders_profit_watcher, glassnode_large_movements_watcher
+using .WatchersImpls: iswatchfunc, ccxt_tickers_watcher, ccxt_ohlcv_watcher, ccxt_ohlcv_candles_watcher, ccxt_orderbook_watcher, cg_ticker_watcher, cg_derivatives_watcher, cp_markets_watcher, cp_twitter_watcher, dbnomics_watcher, alpha_vantage_watcher, newsdata_watcher, defillama_tvl_watcher, defillama_stablecoins_watcher, defillama_supply_ratio_watcher, glassnode_active_addresses_watcher, glassnode_holders_profit_watcher, glassnode_large_movements_watcher
+export iswatchfunc, ccxt_tickers_watcher, ccxt_ohlcv_watcher, ccxt_ohlcv_candles_watcher, ccxt_orderbook_watcher, cg_ticker_watcher, cg_derivatives_watcher, cp_markets_watcher, cp_twitter_watcher, dbnomics_watcher, alpha_vantage_watcher, newsdata_watcher, defillama_tvl_watcher, defillama_stablecoins_watcher, defillama_supply_ratio_watcher, glassnode_active_addresses_watcher, glassnode_holders_profit_watcher, glassnode_large_movements_watcher
 export DefiLlama, Glassnode, BlockchainAPI, tvl, stablecoins, supply_ratio, stablecoin_chart, active_addresses, holders_profit, large_movements
 # Set up cleanup after all modules are loaded
 atexit(_closeall)

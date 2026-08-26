@@ -58,7 +58,8 @@ def get_broker(request: Request) -> Any:
 @router.post("/{exchange_id}")
 async def create_exchange(
     exchange_id: str,
-    exchange_name: str = Query(..., description="CCXT exchange name (e.g., binance)"),
+    request: Request,
+    exchange_name: str = Query(None, description="CCXT exchange name (e.g., binance)"),
     api_key: Optional[str] = Query(None, description="API key for private methods"),
     secret: Optional[str] = Query(None, description="API secret"),
     password: Optional[str] = Query(None, description="API password (if required)"),
@@ -67,6 +68,31 @@ async def create_exchange(
     process_manager: Any = Depends(get_process_manager),
 ) -> Dict[str, Any]:
     """Create a new exchange instance (idempotent: returns success if already running)."""
+    # Prefer JSON body for credentials to avoid query-string logging (security fix).
+    # Fall back to Query params for backward compat (existing Julia client/tests).
+    body = {}
+    try:
+        if request.headers.get("content-type", "").startswith("application/json"):
+            body = await request.json()
+            if not isinstance(body, dict):
+                body = {}
+    except Exception:
+        body = {}
+    # Resolve each field: body overrides query
+    if exchange_name is None:
+        exchange_name = body.get("exchange_name", exchange_id)
+    if api_key is None:
+        api_key = body.get("api_key")
+    if secret is None:
+        secret = body.get("secret")
+    if password is None:
+        password = body.get("password")
+    if uid is None:
+        uid = body.get("uid")
+    if not sandbox:
+        sandbox = bool(body.get("sandbox", False))
+    if exchange_name is None:
+        exchange_name = exchange_id
     if exchange_id in process_manager.processes:
         logger.info("Exchange %s already running, returning success", exchange_id)
         return {

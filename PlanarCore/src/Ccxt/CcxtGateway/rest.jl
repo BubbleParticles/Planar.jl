@@ -154,24 +154,26 @@ const _started_exchanges = Dict{String, Float64}()
 
 function start_exchange(client::GatewayClient, exchange_id::String; 
     exchange_name=exchange_id, api_key="", secret="", password="", uid="", sandbox=false)
-    query = Dict{String, String}()
-    query["exchange_name"] = exchange_name
+    body = Dict{String, Any}()
+    body["exchange_name"] = exchange_name
     if !isempty(api_key)
-        query["api_key"] = api_key
+        body["api_key"] = api_key
     end
     if !isempty(secret)
-        query["secret"] = secret
+        body["secret"] = secret
     end
     if !isempty(password)
-        query["password"] = password
+        body["password"] = password
     end
     if !isempty(uid)
-        query["uid"] = uid
+        body["uid"] = uid
     end
     if sandbox
-        query["sandbox"] = "true"
+        body["sandbox"] = true
     end
-    result = api_call(client, "POST", "/exchanges/$exchange_id"; query=query)
+    # Send credentials in JSON body, not query string, to avoid access-log leakage (security pillar)
+    # Gateway endpoint accepts both query and body for backward compat; prefer body.
+    result = api_call(client, "POST", "/exchanges/$exchange_id"; body=body)
     _started_exchanges[exchange_id] = time()
     result
 end

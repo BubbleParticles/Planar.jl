@@ -67,7 +67,6 @@ end
 export default_load_timeframe, getexchange!, ccxt_tickers_watcher, ccxt_ohlcv_watcher, ccxt_ohlcv_candles_watcher, ccxt_orderbook_watcher
 export CgTickerVal, cg_ticker_watcher, CgDerivativesVal, cg_derivatives_watcher
 export CpMarketsVal, cp_markets_watcher, CpTwitterVal, cp_twitter_watcher
-export CpTickerVal, cp_ticker_watcher
 export DbnomicsVal, dbnomics_watcher
 export AvTickerVal, alpha_vantage_watcher
 export NewsDataVal, newsdata_watcher

@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import os
 import sys
 import time
 from typing import Any, Dict, List, Optional
@@ -147,7 +148,7 @@ class ProcessManager:
             "sandbox": sandbox,
         }
 
-        # Build command
+        # Build command — avoid leaking secrets in ps-visible argv; pass via env instead
         cmd: List[str] = [
             sys.executable,
             "-m",
@@ -158,12 +159,17 @@ class ProcessManager:
             self.broker_address,
         ]
 
-        if api_key:
-            cmd.extend(["--api-key", api_key])
-        if secret:
-            cmd.extend(["--secret", secret])
         if sandbox:
             cmd.append("--sandbox")
+
+        # Credentials via environment, not argv, to avoid ps leakage
+        proc_env = dict(os.environ)
+        if api_key:
+            proc_env["CCXT_API_KEY"] = api_key
+        if secret:
+            proc_env["CCXT_SECRET"] = secret
+        if password:
+            proc_env["CCXT_PASSWORD"] = password
 
         try:
             # Start subprocess
@@ -171,6 +177,7 @@ class ProcessManager:
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                env=proc_env,
             )
 
             logger.info("Started exchange subprocess %s (PID: %d)", exchange_id, process.pid)
