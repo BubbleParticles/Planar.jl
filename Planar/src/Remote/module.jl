@@ -197,19 +197,14 @@ function tgtask(cl, s, running::Ref{Bool}, offset::Ref{Int})
                     return nothing
                 end
 
-                call_f(f, isinput) = begin
-                    ans = f(cl, s; text, chat_id, isinput)
-                    f_resp[], f_last[] = if ans isa Bool && !ans
-                        (true, f)
-                    else
-                        (false, nothing)
-                    end
-                end
-
+                # Allowlist for Telegram commands to prevent arbitrary eval (security pillar)
+                allowed = Set([:start_strategy, :stop_strategy, :status, :daily, :weekly, :monthly, :balance, :assets, :config, :logs, :set, :get, :_rolling, :_set_info, :_init])
                 if startswith(text, "/")
                     spl = split(text, "/")
                     cmd = Symbol(replace(spl[2], r"@.*" => ""))
-                    if isdefined(@__MODULE__, cmd)
+                    if cmd ∉ allowed
+                        invalid(cl, text, chat_id)
+                    elseif isdefined(@__MODULE__, cmd)
                         try
                             @debug "tg: calling command" cmd
                             call_f(eval(cmd), false)

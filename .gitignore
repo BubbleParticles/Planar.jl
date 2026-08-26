@@ -76,7 +76,9 @@ node_modules
 /.vscode
 *.cov
 
-# Ignore Python egg-info directories
+# Env files with secrets
+.env
+.env.local
 *.egg-info/
 .soulforge
 .qwen
@@ -87,3 +89,4 @@ node_modules
 .smallcode
 *~
 /PlanarRegistry/
+*.swp

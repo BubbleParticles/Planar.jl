@@ -7,7 +7,7 @@ import Dates: DateTime, Millisecond, now, unix2datetime, datetime2unix
 using PlanarCore.Misc
 using PlanarCore.Lang: Option
 using ..Watchers: jsontodict
-export DefiLlama, Glassnode, tvl, stablecoins, stablecoin_chart, supply_ratio, active_addresses, holders_profit, large_movements, set_mock_defillama_get!, set_mock_stablecoins_get!, set_mock_glassnode_get!, clear_mocks!
+export tvl, stablecoins, stablecoin_chart, supply_ratio, active_addresses, holders_profit, large_movements, set_mock_defillama_get!, set_mock_stablecoins_get!, set_mock_glassnode_get!, clear_mocks!
 
 # =============================================================================
 # DefiLlama API (no API key required)

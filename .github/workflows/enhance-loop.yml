@@ -1,0 +1,27 @@
+name: enhance-loop
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * 1' # weekly Monday 03:00 UTC
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.12'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run enhance-loop audits
+        run: |
+          julia --project=scripts/enhance-loop scripts/enhance-loop/run.jl
+          julia --project=scripts/enhance-loop scripts/enhance-loop/jet-audit.jl || true
+          python3 scripts/enhance-loop/measure.py || true
+          pip install pip-audit || true
+          pip-audit --desc || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: enhance-loop-reports
+          path: reports/enhance-loop/

@@ -552,8 +552,9 @@ async def main() -> None:
 
     # Parse additional arguments
     broker_address: str = "tcp://127.0.0.1:5555"
-    api_key: Optional[str] = None
-    secret: Optional[str] = None
+    api_key: Optional[str] = os.environ.get("CCXT_API_KEY")
+    secret: Optional[str] = os.environ.get("CCXT_SECRET")
+    password: Optional[str] = os.environ.get("CCXT_PASSWORD")
     sandbox: bool = False
 
     i: int = 3
@@ -567,6 +568,9 @@ async def main() -> None:
         elif sys.argv[i] == "--secret" and i + 1 < len(sys.argv):
             secret = sys.argv[i + 1]
             i += 2
+        elif sys.argv[i] == "--password" and i + 1 < len(sys.argv):
+            password = sys.argv[i + 1]
+            i += 2
         elif sys.argv[i] == "--sandbox":
             sandbox = True
             i += 1
@@ -579,6 +583,7 @@ async def main() -> None:
         broker_address=broker_address,
         api_key=api_key,
         secret=secret,
+        password=password,
         sandbox=sandbox,
     )
 

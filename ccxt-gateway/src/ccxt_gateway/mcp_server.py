@@ -9,10 +9,12 @@ format the structured result.
 
 from __future__ import annotations
 
+import atexit
 import json
 import os
 import re
 import select
+import signal
 import subprocess
 import tempfile
 import threading
@@ -100,7 +102,7 @@ def write_strategy(
     source: str,
     *,
     strategies_dir: Optional[str] = None,
-    overwrite: bool = True,
+    overwrite: bool = False,
     description: Optional[str] = None,
 ) -> dict[str, Any]:
     """Create or update a strategy source file on disk.
@@ -109,6 +111,8 @@ def write_strategy(
     ``<strategies_dir>/<name>.jl`` (an explicit ``.jl`` suffix is optional).
 
     Returns a structured dict describing the action performed.
+    ``description`` is persisted as a header comment ``# description: ...`` at the
+    top of the file (E7 fix) and also echoed in ``strategies.toml`` via deploy.
     """
     strategies_dir = strategies_dir or DEFAULT_STRATEGIES_DIR
     rel = _sanitize_name(name)
@@ -123,18 +127,27 @@ def write_strategy(
     if existed and not overwrite:
         raise FileExistsError(f"strategy already exists: {target}")
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(source, encoding="utf-8")
-    return {
+    # Persist description as header comment if provided (E7)
+    to_write = source
+    if description:
+        header = f"# description: {description}\n"
+        # Avoid duplicating header if source already starts with it
+        if not source.startswith("# description:"):
+            to_write = header + source
+    target.write_text(to_write, encoding="utf-8")
+    # Warn on overwrite
+    result: dict[str, Any] = {
         "success": True,
         "name": _module_name(rel),
         "path": str(target),
         "relative_path": rel,
         "action": "updated" if existed else "created",
-        "bytes": len(source.encode("utf-8")),
+        "bytes": len(to_write.encode("utf-8")),
         "description": description,
     }
-
-
+    if existed:
+        result["warning"] = "overwrote existing strategy"
+    return result
 def _run(cmd: list[str], timeout: float) -> tuple[Optional[int], str, str, Optional[str]]:
     """Run a command, returning (returncode, stdout, stderr, system_error).
 
@@ -142,22 +155,35 @@ def _run(cmd: list[str], timeout: float) -> tuple[Optional[int], str, str, Optio
     exceeded ``timeout`` — the caller surfaces it instead of crashing.
     """
     try:
-        proc = subprocess.run(
+        proc = subprocess.Popen(
             cmd,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            timeout=timeout,
             start_new_session=True,
         )
-        return proc.returncode, proc.stdout or "", proc.stderr or "", None
+        try:
+            out, err = proc.communicate(timeout=timeout)
+            return proc.returncode, out or "", err or "", None
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            except Exception:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+            # Drain to avoid zombies
+            try:
+                out, err = proc.communicate(timeout=5)
+            except Exception:
+                out, err = "", ""
+            return None, out or "", err or "", f"timed out after {timeout}s"
     except FileNotFoundError as exc:
         return None, "", "", f"command not found: {exc}"
-    except subprocess.TimeoutExpired as exc:
-        out = exc.stdout if isinstance(exc.stdout, str) else ""
-        err = exc.stderr if isinstance(exc.stderr, str) else ""
-        return None, out, err, f"timed out after {timeout}s"
 
 
 def _verdict(returncode: Optional[int], out: str, err: str) -> str:
@@ -329,6 +355,7 @@ def deploy_strategy(
         "name": module_name,
         "exchange": exchange,
         "account": str(account),
+        "mode": mode,
         "env": dict(env or {}),
     }
     already = _already_registered(entries, module_name, exchange, str(account))
@@ -346,10 +373,14 @@ def deploy_strategy(
         "strategies_toml": str(toml_path),
         "entry": entry,
     }
+    # Note: scripts/run.jl currently hardcodes Live mode; caller should ensure mode handling or pass mode via config/env
+    if mode != "Live" and run:
+        result["warning"] = "run=True launches via scripts/run.jl which currently hardcodes Live mode; requested mode recorded but not enforced"
 
     if run:
         cfg = _write_temp_config(toml_path.parent, [entry])
         cmd = [julia, str(run_jl), "--config", str(cfg)]
+        # Forward mode via env if needed
         rc, out, err, syserr = _run(cmd, run_timeout)
         result["run"] = {
             "command": " ".join(cmd),
@@ -358,6 +389,11 @@ def deploy_strategy(
             "output": (out + err)[-4000:],
             "error": syserr,
         }
+        # B13: cleanup temp config
+        try:
+            cfg.unlink(missing_ok=True)
+        except Exception:
+            pass
     return result
 
 
@@ -423,7 +459,19 @@ function doeval(code::String)
     printed = String(read(rd))
     close(rd)
     value = ok ? (val === nothing ? "nothing" : string(val)) : sprint(showerror, val)
-    return "{\"ok\":" * (ok ? "true" : "false") * ",\"value\":" * json_escape(value) * ",\"printed\":" * json_escape(printed) * "}"
+    errtype = ok ? "" : string(typeof(val))
+    bt = ""
+    if !ok
+        try
+            bt = sprint(showerror, val, catch_backtrace())
+            if length(bt) > 2000
+                bt = bt[1:2000]
+            end
+        catch
+            bt = ""
+        end
+    end
+    return "{\"ok\":" * (ok ? "true" : "false") * ",\"value\":" * json_escape(value) * ",\"printed\":" * json_escape(printed) * ",\"error_type\":" * json_escape(errtype) * ",\"backtrace\":" * json_escape(bt) * "}"
 end
 
 println(stdout, "READY")
@@ -450,15 +498,16 @@ end
 class Session:
     """Bookkeeping for one running Julia session subprocess."""
 
-    __slots__ = ("id", "proc", "bootfile", "project", "last_active")
+    __slots__ = ("id", "proc", "bootfile", "project", "last_active", "started_at", "_eval_lock")
 
     def __init__(self, id: str, proc: subprocess.Popen, bootfile: str, project):
         self.id = id
         self.proc = proc
         self.bootfile = bootfile
         self.project = project
-
-
+        self._eval_lock = threading.RLock()
+        self.last_active = time.monotonic()
+        self.started_at = time.time()
 class SessionError(Exception):
     """Raised for unrecoverable session-manager failures."""
 
@@ -499,6 +548,7 @@ class SessionManager:
             with open(path, "w", encoding="utf-8") as handle:
                 handle.write(self._boot_template)
             self._bootfile = path
+            atexit.register(lambda p=path: (os.path.exists(p) and os.unlink(p)))
         return self._bootfile
 
     # -- raw IO helpers ----------------------------------------------------
@@ -540,7 +590,6 @@ class SessionManager:
             raise box[0]
         return box[0]
 
-    # -- lifecycle ---------------------------------------------------------
     def start_session(
         self, project: Optional[str] = None, env: Optional[dict] = None
     ) -> str:
@@ -563,7 +612,7 @@ class SessionManager:
             cmd,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
             start_new_session=True,
             env=full_env,
         )
@@ -572,14 +621,17 @@ class SessionManager:
             if ready.strip() != b"READY":
                 err = b""
                 try:
-                    err = proc.stderr.read(4096)
+                    # stderr is DEVNULL now, so no err; try polling
+                    err = b""
                 except Exception:
                     pass
                 raise SessionError(
                     f"session did not start cleanly: {ready!r} {err!r}"
                 )
         except Exception:
-            proc.kill()
+            try:
+                proc.kill()
+            except: pass
             raise
         # Drop any sessions that have already gone idle before registering a
         # new one (reap_idle_sessions manages its own lock, so call it before
@@ -591,6 +643,7 @@ class SessionManager:
             sid = f"session-{self._counter}"
             sess = Session(sid, proc, boot, project)
             sess.last_active = time.monotonic()
+            sess.started_at = time.time()
             self._sessions[sid] = sess
         return sid
 
@@ -609,21 +662,33 @@ class SessionManager:
         try:
             proc.wait(timeout=10)
         except Exception:
-            proc.kill()
+            try:
+                proc.kill()
+            except Exception:
+                pass
         return {"session": sid, "stopped": True, "pid": proc.pid}
 
     def list_sessions(self) -> dict[str, dict[str, Any]]:
         """Return active sessions keyed by id."""
         with self._lock:
             items = list(self._sessions.items())
-        return {
-            sid: {
+        # Prune dead sessions lazily and surface liveness
+        result = {}
+        for sid, s in items:
+            alive = s.proc.poll() is None
+            if not alive:
+                # evict dead entry
+                with self._lock:
+                    self._sessions.pop(sid, None)
+                continue
+            result[sid] = {
                 "session": sid,
                 "pid": s.proc.pid,
                 "project": s.project,
+                "alive": alive,
+                "started_at": getattr(s, "started_at", None),
             }
-            for sid, s in items
-        }
+        return result
 
     def reap_idle_sessions(self) -> list[str]:
         """Terminate sessions idle longer than ``idle_timeout`` and unregister them.
@@ -639,7 +704,7 @@ class SessionManager:
             stale = [
                 sid
                 for sid, s in self._sessions.items()
-                if now - s.last_active > self.idle_timeout
+                if now - getattr(s, "last_active", 0) > self.idle_timeout
             ]
         for sid in stale:
             self.stop_session(sid)
@@ -649,9 +714,34 @@ class SessionManager:
         sess = self._sessions.get(sid)
         if sess is None:
             raise KeyError(sid)
+        if sess.proc.poll() is not None:
+            # proactively evict dead session
+            with self._lock:
+                self._sessions.pop(sid, None)
+            raise RuntimeError(f"session {sid} is dead (process exited)")
         return sess
 
     # -- evaluation --------------------------------------------------------
+    def _read_triple(self, stream, timeout: float) -> tuple[bytes, bytes, bytes]:
+        """Read RESULT/JSON/ENDOFRESULT triple in a single worker thread (P1 fix)."""
+        box: list = [None]
+        def _target():
+            try:
+                h = stream.readline()
+                j = stream.readline()
+                t = stream.readline()
+                box[0] = (h, j, t)
+            except Exception as exc:
+                box[0] = exc
+        worker = threading.Thread(target=_target, daemon=True)
+        worker.start()
+        worker.join(timeout)
+        if worker.is_alive():
+            raise TimeoutError("no response from Julia session within timeout")
+        if isinstance(box[0], Exception):
+            raise box[0]
+        return box[0]  # type: ignore
+
     def eval_in_session(
         self, sid: str, code: str, timeout: Optional[float] = None
     ) -> dict[str, Any]:
@@ -660,33 +750,50 @@ class SessionManager:
         State defined at the session's top level persists across calls.
         """
         data = code.encode("utf-8")
+        sess = None
         try:
             sess = self._get(sid)
-            # Touch last_active at eval start so an in-flight eval is treated as
-            # active and is never reaped mid-computation.
-            with self._lock:
-                sess.last_active = time.monotonic()
-            proc = sess.proc
-            proc.stdin.write(b"EVAL " + str(len(data)).encode() + b"\n")
-            proc.stdin.write(data)
-            proc.stdin.write(b"\n")
-            proc.stdin.flush()
-            header = self._read_line_blocking(
-                proc.stdout, timeout or self.eval_timeout
-            )
-            if not header.startswith(b"RESULT"):
-                raise RuntimeError(f"unexpected session response: {header!r}")
-            json_line = self._read_line_blocking(
-                proc.stdout, timeout or self.eval_timeout
-            )
-            trailer = self._read_line_blocking(
-                proc.stdout, timeout or self.eval_timeout
-            )
-            if not trailer.startswith(b"ENDOFRESULT"):
-                raise RuntimeError(f"malformed session response: {trailer!r}")
-            return json.loads(json_line.decode("utf-8"))
-        except (TimeoutError, EOFError, ValueError, RuntimeError, KeyError) as exc:
-            return {"ok": False, "value": None, "printed": "", "error": str(exc)}
+        except (KeyError, RuntimeError) as exc:
+            return {"ok": False, "value": None, "printed": "", "error": str(exc), "error_type": type(exc).__name__}
+        # Serialize evals on this session
+        with sess._eval_lock:
+            try:
+                with self._lock:
+                    sess.last_active = time.monotonic()
+                proc = sess.proc
+                # Check liveness before write
+                if proc.poll() is not None:
+                    with self._lock:
+                        self._sessions.pop(sid, None)
+                    return {"ok": False, "value": None, "printed": "", "error": f"session {sid} is dead", "error_type": "RuntimeError"}
+                try:
+                    proc.stdin.write(b"EVAL " + str(len(data)).encode() + b"\n")
+                    proc.stdin.write(data)
+                    proc.stdin.write(b"\n")
+                    proc.stdin.flush()
+                except (OSError, BrokenPipeError, ValueError) as exc:
+                    with self._lock:
+                        self._sessions.pop(sid, None)
+                    return {"ok": False, "value": None, "printed": "", "error": f"session pipe broken (process likely exited): {exc}", "error_type": type(exc).__name__}
+                to = timeout or self.eval_timeout
+                try:
+                    header, json_line, trailer = self._read_triple(proc.stdout, to)
+                    if not header.startswith(b"RESULT"):
+                        raise RuntimeError(f"unexpected session response: {header!r}")
+                    if not trailer.startswith(b"ENDOFRESULT"):
+                        raise RuntimeError(f"malformed session response: {trailer!r}")
+                    parsed = json.loads(json_line.decode("utf-8"))
+                    # Ensure error_type/backtrace keys exist for old sessions
+                    return parsed
+                except TimeoutError as exc:
+                    try:
+                        os.kill(proc.pid, signal.SIGINT)
+                    except: pass
+                    return {"ok": False, "value": None, "printed": "", "error": str(exc), "error_type": "TimeoutError"}
+                except (EOFError, ValueError, RuntimeError, KeyError, OSError) as exc:
+                    return {"ok": False, "value": None, "printed": "", "error": str(exc), "error_type": type(exc).__name__}
+            except Exception as exc:
+                return {"ok": False, "value": None, "printed": "", "error": str(exc), "error_type": type(exc).__name__}
 
     def revise_in_session(
         self, sid: str, timeout: Optional[float] = None
@@ -695,26 +802,23 @@ class SessionManager:
 
         Returns ``ok=True, revised=True`` on success, or a structured error
         (``ok=False``) when Revise cannot be loaded in the session's env.
+        Combines the two-eval path into one (P4 fix) and caches per-session.
         """
         to = timeout or self.eval_timeout
-        load = self.eval_in_session(
-            sid,
-            "try\n  using Revise\n  \"loaded\"\n"
-            "catch e\n  \"ERROR: \" * sprint(showerror, e)\nend",
-            timeout=to,
-        )
-        if not load.get("ok") or not str(load.get("value", "")).startswith("loaded"):
+        # Single eval that ensures Revise is loaded and revises
+        code = "try\n  @isdefined(Revise) || (using Revise)\n  Revise.revise()\n  \"revised\"\ncatch e\n  \"ERROR: \" * sprint(showerror, e)\nend"
+        res = self.eval_in_session(sid, code, timeout=to)
+        if not res.get("ok") or str(res.get("value", "")).startswith("ERROR"):
             return {
                 "ok": False,
                 "revised": False,
-                "error": "Revise unavailable in this session",
-                "detail": load,
+                "error": "Revise unavailable in this session: " + str(res.get("value") or res.get("error") or ""),
+                "detail": res,
             }
-        res = self.eval_in_session(sid, "Revise.revise()", timeout=to)
         return {
-            "ok": bool(res.get("ok")),
-            "revised": bool(res.get("ok")),
-            "error": None if res.get("ok") else res.get("value"),
+            "ok": True,
+            "revised": True,
+            "error": None,
             "detail": res,
         }
 
@@ -734,7 +838,7 @@ SESSION_MANAGER = SessionManager()
 def write_strategy_tool(
     name: str,
     source: str,
-    overwrite: bool = True,
+    overwrite: bool = False,
     description: Optional[str] = None,
 ) -> dict:
     """Create or update a strategy source file on disk.
@@ -742,8 +846,8 @@ def write_strategy_tool(
     Args:
         name: Strategy identifier or sub-path (e.g. ``MyStrat`` or ``Sub/MyStrat``).
         source: Julia source code for the strategy module.
-        overwrite: Replace an existing file when True.
-        description: Optional human description (returned in the result only).
+        overwrite: Replace an existing file when True (default False — requires explicit opt-in to overwrite).
+        description: Optional human description (persisted as header comment).
 
     Returns a structured dict with the written ``path``, ``action`` and byte count.
     """
@@ -777,6 +881,7 @@ def deploy_strategy_tool(
     env: Optional[dict[str, str]] = None,
     run: bool = False,
     run_timeout: Optional[float] = None,
+    julia: Optional[str] = None,
 ) -> dict:
     """Register a strategy in strategies.toml and optionally launch it.
 
@@ -788,6 +893,7 @@ def deploy_strategy_tool(
         env: Optional dict of environment variables for the strategy process.
         run: Launch the strategy via scripts/run.jl after registering.
         run_timeout: Maximum seconds for the launch probe.
+        julia: Julia executable for run probe.
 
     Returns a structured dict including the registered ``entry`` and, when
     ``run`` is True, a ``run`` sub-dict with the captured launch output.
@@ -800,21 +906,48 @@ def deploy_strategy_tool(
         env=env,
         run=run,
         run_timeout=run_timeout,
+        julia=julia,
     )
 
 
 @mcp.tool()
-def start_session_tool(project: Optional[str] = None) -> dict:
+def start_session_tool(project: Optional[str] = None, env: Optional[dict[str, str]] = None, julia: Optional[str] = None) -> dict:
     """Start a persistent Julia REPL session.
 
     Args:
         project: Optional Julia project directory passed as ``--project=``. The
             session loads that project's environment (use a project that has
             Revise installed for the revise trigger to work).
+        env: Optional dict of environment variables for the session subprocess.
+        julia: Optional Julia executable path (overrides JULIA_BIN).
 
     Returns a dict with the stable ``session`` id, ``pid``, and ``project``.
     """
-    sid = SESSION_MANAGER.start_session(project=project)
+    # Allow per-tool julia override by temporarily setting manager's julia or via env
+    mgr = SESSION_MANAGER
+    if julia:
+        # create a temporary manager with custom julia without mutating singleton
+        tmp = SessionManager(julia=julia)
+        sid = tmp.start_session(project=project, env=env)
+        # transfer session to singleton for unified listing
+        with mgr._lock:
+            # move session entry
+            sess = tmp._sessions.pop(sid, None)
+            if sess:
+                mgr._sessions[sid] = sess
+                with mgr._lock:
+                    # ensure counter stays ahead
+                    try:
+                        num = int(sid.split("-")[1])
+                        mgr._counter = max(mgr._counter, num)
+                    except: pass
+        return {
+            "session": sid,
+            "status": "started",
+            "pid": sess.proc.pid if sess else None,
+            "project": project,
+        }
+    sid = SESSION_MANAGER.start_session(project=project, env=env)
     sess = SESSION_MANAGER._sessions[sid]
     return {
         "session": sid,
@@ -881,6 +1014,97 @@ def revise_in_session_tool(session: str, timeout: Optional[float] = None) -> dic
     (with ``ok=false``) when Revise is unavailable in the session's env.
     """
     return SESSION_MANAGER.revise_in_session(session, timeout=timeout)
+
+
+@mcp.tool()
+def get_strategy_tool(name: str) -> dict:
+    """Read a strategy source file.
+
+    Args:
+        name: Strategy identifier or sub-path.
+    Returns dict with ``path``, ``source`` or ``error``.
+    """
+    try:
+        rel = _sanitize_name(name)
+        if not rel.endswith(".jl"):
+            rel = f"{rel}.jl"
+        base = Path(DEFAULT_STRATEGIES_DIR).resolve()
+        target = (base / rel).resolve()
+        if target != base and base not in target.parents:
+            return {"success": False, "error": "outside strategies dir"}
+        if not target.exists():
+            return {"success": False, "error": f"not found: {target}"}
+        return {"success": True, "name": _module_name(rel), "path": str(target), "source": target.read_text(encoding="utf-8")}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@mcp.tool()
+def list_strategies_tool() -> dict:
+    """List strategies in the strategies directory and strategies.toml."""
+    try:
+        base = Path(DEFAULT_STRATEGIES_DIR).resolve()
+        files = []
+        if base.exists():
+            for p in base.rglob("*.jl"):
+                try:
+                    rel = str(p.relative_to(base))
+                    files.append({"name": _module_name(rel), "path": str(p), "relative_path": rel})
+                except: pass
+        toml_path = Path(DEFAULT_STRATEGIES_TOML)
+        entries = _load_strategies_toml(toml_path) if toml_path.exists() else []
+        return {"success": True, "files": files, "registered": entries}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@mcp.tool()
+def scaffold_strategy_tool(name: str, template: str = "default", description: Optional[str] = None) -> dict:
+    """Scaffold a new strategy from a template (thin wrapper over Planar strat tooling).
+
+    Args:
+        name: Strategy name or sub-path.
+        template: Template name (passed to Planar generation if available).
+        description: Optional description persisted as header.
+    """
+    # Minimal scaffold: create file with template header if not exists
+    try:
+        rel = _sanitize_name(name)
+        if not rel.endswith(".jl"):
+            rel = f"{rel}.jl"
+        mod = _module_name(rel)
+        source = f"# Strategy {mod} — scaffolded via MCP\n# template: {template}\n"
+        if description:
+            source = f"# description: {description}\n" + source
+        source += f"module {mod}\nusing Planar\n# TODO: implement strategy\nend\n"
+        return write_strategy(name, source, overwrite=False, description=description)
+    except Exception as e:
+        return {"success": False, "error": str(e), "error_type": type(e).__name__}
+
+
+@mcp.tool()
+def docs_lookup_tool(query: str, limit: int = 5) -> dict:
+    """Search docs/src for a query string (simple grep-based lookup)."""
+    try:
+        docs_root = Path("/Planar.jl/docs/src")
+        if not docs_root.exists():
+            return {"success": False, "error": "docs/src not found"}
+        hits = []
+        q = query.lower()
+        for p in docs_root.rglob("*.md"):
+            try:
+                txt = p.read_text(encoding="utf-8", errors="ignore")
+                if q in txt.lower():
+                    # snippet
+                    idx = txt.lower().find(q)
+                    snippet = txt[max(0, idx-200): idx+400]
+                    hits.append({"path": str(p.relative_to(docs_root)), "snippet": snippet})
+                    if len(hits) >= limit:
+                        break
+            except: pass
+        return {"success": True, "query": query, "hits": hits}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 def main() -> None:
