@@ -41,21 +41,33 @@ let
     # Executors.Instruments is re-exported via PlanarCore.Instruments in some versions; mirror there too
     try
         if isdefined(PlanarCore, :Executors) && isdefined(PlanarCore.Executors, :Instruments)
-            let m = PlanarCore.Executors.Instruments
-                if isdefined(m, :AbstractAsset) && !isdefined(m, :AbstractInstrument)
-                    @eval m const AbstractInstrument = AbstractAsset
-                elseif isdefined(m, :AbstractInstrument) && !isdefined(m, :AbstractAsset)
-                    @eval m const AbstractAsset = AbstractInstrument
-                end
-                if isdefined(m, :Asset) && !isdefined(m, :Instrument)
-                    @eval m const Instrument = Asset
-                elseif isdefined(m, :Instrument) && !isdefined(m, :Asset)
-                    @eval m const Asset = Instrument
-                end
+            m = PlanarCore.Executors.Instruments
+            if isdefined(m, :AbstractAsset) && !isdefined(m, :AbstractInstrument)
+                Core.eval(m, :(const AbstractInstrument = AbstractAsset))
+            elseif isdefined(m, :AbstractInstrument) && !isdefined(m, :AbstractAsset)
+                Core.eval(m, :(const AbstractAsset = AbstractInstrument))
+            end
+            if isdefined(m, :Asset) && !isdefined(m, :Instrument)
+                Core.eval(m, :(const Instrument = Asset))
+            elseif isdefined(m, :Instrument) && !isdefined(m, :Asset)
+                Core.eval(m, :(const Asset = Instrument))
             end
         end
     catch e
         @debug "Planar compat shim (Executors.Instruments) failed: $e"
+    end
+    # Executors.Instances alias (PaperMode uses `using PlanarCore.Executors.Instances`)
+    try
+        if isdefined(PlanarCore, :Executors) && isdefined(PlanarCore.Executors, :Instances)
+            m = PlanarCore.Executors.Instances
+            if isdefined(m, :AssetInstance) && !isdefined(m, :InstrumentInstance)
+                Core.eval(m, :(const InstrumentInstance = AssetInstance))
+            elseif isdefined(m, :InstrumentInstance) && !isdefined(m, :AssetInstance)
+                Core.eval(m, :(const AssetInstance = InstrumentInstance))
+            end
+        end
+    catch e
+        @debug "Planar compat shim (Executors.Instances) failed: $e"
     end
 end
     include("submodules/PaperMode.jl")
