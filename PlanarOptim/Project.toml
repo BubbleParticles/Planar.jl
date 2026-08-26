@@ -1,7 +1,7 @@
 authors = ["zbc"]
 name = "PlanarOptim"
 uuid = "01937fd2-c099-442f-ae89-75fa208aad36"
-version = "0.1.0"
+version = "0.1.1"
 license = "Apache-2.0"
 
 [compat]

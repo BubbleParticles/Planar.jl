@@ -1,7 +1,7 @@
 authors = ["zbc"]
 name = "PlanarFeatureSelection"
 uuid = "799974c5-219d-476a-ada7-be492421c276"
-version = "0.1.0"
+version = "0.1.1"
 license = "Apache-2.0"
 
 [compat]

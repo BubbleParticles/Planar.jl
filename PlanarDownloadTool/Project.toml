@@ -1,7 +1,7 @@
 authors = ["zbc"]
 name = "PlanarDownloadTool"
 uuid = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
-version = "0.1.0"
+version = "0.1.1"
 license = "Apache-2.0"
 
 [compat]

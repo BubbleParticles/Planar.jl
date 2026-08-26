@@ -1,7 +1,7 @@
 authors = ["zbc"]
 name = "PlanarStrategyStats"
 uuid = "d4fe19c2-883d-48d3-92d7-80b36677371b"
-version = "0.1.0"
+version = "0.1.1"
 license = "Apache-2.0"
 
 [compat]
