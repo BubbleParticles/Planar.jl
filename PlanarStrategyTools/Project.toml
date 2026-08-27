@@ -1,6 +1,6 @@
 name = "PlanarStrategyTools"
 uuid = "bc793e09-ff97-408c-9766-388aa928ad5c"
-version = "0.1.1"
+version = "0.1.2"
 license = "Apache-2.0"
 authors = ["zbc"]
 
@@ -17,7 +17,7 @@ PlanarCore = {path = "../PlanarCore"}
 PlanarStrategyStats = {path = "../PlanarStrategyStats"}
 [compat]
 OnlineTechnicalIndicators = "0.1.2"
-Planar = "1.7"
+Planar = "1"
 PlanarCore = "1"
 Statistics = "1"
 PlanarStrategyStats = "0.1"
