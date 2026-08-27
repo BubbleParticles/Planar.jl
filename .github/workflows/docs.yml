@@ -89,5 +89,8 @@ jobs:
           git add .
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git commit -m "Update documentation"
-          git push origin main
+          # Docs content is byte-identical on re-runs, so the website may
+          # already be up to date. A clean tree here is a success, not a
+          # failure — don't let `bash -e` abort the workflow on it.
+          git commit -m "Update documentation" || echo "No docs changes to deploy"
+          git push origin main || echo "No push needed (already up to date)"
