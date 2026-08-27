@@ -125,7 +125,7 @@ const Exec = NamedTuple{
 @doc "The capacity parameters for the watcher"
 const Capacity = NamedTuple{(:buffer, :view),Tuple{Int,Int}}
 @doc "The flags that control which operations are notified by the watcher"
-const Beacon = NamedTuple{(:fetch, :process, :flush),NTuple{3,Rocket.Subject}}
+const Beacon = NamedTuple{(:fetch, :process, :flush),NTuple{3,Any}}
 
 @doc """ Watchers manage data, they pull from somewhere, keep a cache in memory, and optionally flush periodically to persistent storage.
 
