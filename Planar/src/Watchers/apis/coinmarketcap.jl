@@ -1,9 +1,12 @@
 module CoinMarketCap
 using ..Watchers
 using PlanarCore.Ccxt: HTTP, JSON3
-using PlanarCore.Ccxt.URIs
+try
+    using PlanarCore.Ccxt.URIs
+catch
+    using HTTP.URIs
+end
 using PlanarCore.Misc: Config, config, queryfromstruct
-using PlanarCore.Lang: Option
 
 const API_HEADER = "X-CMC_PRO_API_KEY"
 const API_URL = "https://pro-api.coinmarketcap.com"
