@@ -2,7 +2,6 @@ using PlanarCore.Fetch: Fetch
 using PlanarCore.Fetch.Data
 using PlanarCore.Fetch.Misc
 using PlanarCore.Ccxt
-using PlanarCore.Ccxt: Rocket
 # Compat: Rocket may be re-exported via PlanarCore.Ccxt in new core, or available directly
 if !isdefined(@__MODULE__, :Rocket)
     try
