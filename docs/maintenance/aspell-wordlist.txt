@@ -69,11 +69,13 @@ JuliaFormatter
 Jupyter
 Kraken
 KuCoin
+LCP
 MCP
 LMDB
 LanguageServer
 Lifecycle
 LiquidationOrder
+LiveMode
 liveness
 Lookahead
 Lookback
