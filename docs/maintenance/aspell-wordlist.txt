@@ -46,6 +46,7 @@ Documenter
 PlanarDownloadTool
 Drawdown
 EXC
+eval
 Eval
 ExchangeError
 ExchangeID
