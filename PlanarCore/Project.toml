@@ -1,7 +1,7 @@
 authors = ["zbc"]
 name = "PlanarCore"
 uuid = "a475c859-e357-4be2-a5e3-43038ab4b158"
-version = "1.0.0"
+version = "1.0.1"
 license = "Apache-2.0"
 
 [compat]
