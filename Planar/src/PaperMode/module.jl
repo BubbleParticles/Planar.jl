@@ -1,3 +1,4 @@
+using PlanarCore
 using PlanarCore.Fetch: Fetch
 using PlanarCore.SimMode
 using PlanarCore.SimMode.Executors
@@ -21,6 +22,20 @@ using PlanarCore.SimMode: AnyMarketOrder, AnyLimitOrder
 import PlanarCore.Executors: call!
 import PlanarCore.Misc: start!, stop!, isrunning, sleep_pad, LOGGING_GROUPS, kill_task
 
+# Compat: define InstrumentInstance in this module regardless of core version
+if !isdefined(@__MODULE__, :InstrumentInstance)
+    if isdefined(PlanarCore.Instances, :InstrumentInstance)
+        const InstrumentInstance = PlanarCore.Instances.InstrumentInstance
+    elseif isdefined(PlanarCore.Executors.Instances, :InstrumentInstance)
+        const InstrumentInstance = PlanarCore.Executors.Instances.InstrumentInstance
+    elseif isdefined(PlanarCore.Instances, :AssetInstance)
+        const InstrumentInstance = PlanarCore.Instances.AssetInstance
+    elseif isdefined(PlanarCore.Executors.Instances, :AssetInstance)
+        const InstrumentInstance = PlanarCore.Executors.Instances.AssetInstance
+    else
+        const InstrumentInstance = Any
+    end
+end
 @doc "A constant `TradesCache` that is a dictionary mapping `InstrumentInstance` to a circular buffer of `CcxtTrade`."
 const TradesCache = Dict{InstrumentInstance,CircularBuffer{CcxtTrade}}()
 
