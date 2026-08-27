@@ -104,8 +104,8 @@ jobs:
           done
           python3 -m pip show ccxt-gateway
           python3 -c "import ccxt_gateway; print('ccxt_gateway import ok')"
-          ccxt-gateway --help || python3 -m ccxt_gateway --help || true
-          ccxt-gateway-daemon --help || python3 -m ccxt_gateway.daemon_gateway --help || true
+          timeout 60 ccxt-gateway --help || python3 -m ccxt_gateway --help || true
+          timeout 60 ccxt-gateway-daemon --help || python3 -m ccxt_gateway.daemon_gateway --help || true
 
       - name: Smoke — pip-installed planar CLI can init a project (needs Julia)
         run: |
