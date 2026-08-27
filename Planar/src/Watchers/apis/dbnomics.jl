@@ -1,6 +1,6 @@
 module DBNomics
 using PlanarCore.Ccxt: HTTP, JSON3
-using PlanarCore.Ccxt.URIs
+const URIs = HTTP.URIs
 using ..Watchers
 using PlanarCore.Lang: Option, @kget!
 using PlanarCore.Misc: Config

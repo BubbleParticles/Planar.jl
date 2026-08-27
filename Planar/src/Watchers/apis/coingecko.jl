@@ -1,6 +1,6 @@
 module CoinGecko
 using PlanarCore.Ccxt: HTTP, JSON3
-using PlanarCore.Ccxt.URIs
+const URIs = HTTP.URIs
 using ..Watchers
 using PlanarCore.Lang: @kget!, Option
 using PlanarCore.Misc
