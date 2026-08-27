@@ -1,5 +1,7 @@
 name: docs
 
+# estimated runtime: ~15 min (Julia precompilation + Documatic build + deploy)
+
 on:
   workflow_dispatch:
     inputs:

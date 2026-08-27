@@ -3,6 +3,9 @@ name: run-tests
 # NOTE: Tests shouldn't be run at the same time as the build workflows since
 # they query the same exchange point and can make tests fail
 
+# estimated runtime: ~25-40 min (9 package test matrices run in parallel on Linux,
+# plus unit-test Linux/macOS and gateway/real-api jobs)
+
 on:
   workflow_dispatch:
     inputs:

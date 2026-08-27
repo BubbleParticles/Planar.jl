@@ -1,5 +1,7 @@
 name: docs-tests
 
+# estimated runtime: ~10-15 min (Julia docs precompilation + doctest run + link/accessibility/spell checks)
+
 on:
   workflow_dispatch:
     inputs:
