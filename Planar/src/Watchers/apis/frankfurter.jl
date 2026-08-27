@@ -35,7 +35,7 @@ function get(path, query=nothing)
     for attempt in 1:3
         ratelimit()
         resp = try
-            HTTP.get(absuri(path, API_URL); query, headers=API_HEADERS)
+            HTTP.get(URIs.absuri(path, API_URL); query, headers=API_HEADERS)
         catch e
             e
         end

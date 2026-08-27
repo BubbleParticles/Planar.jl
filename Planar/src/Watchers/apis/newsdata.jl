@@ -70,7 +70,7 @@ function get(path, query=nothing)
 end
 
 function absuri(path, base)
-    URI(base * path)
+    URIs.URI(base * path)
 end
 
 """

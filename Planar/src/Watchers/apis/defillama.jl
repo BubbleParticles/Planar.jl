@@ -49,7 +49,7 @@ end
 function _get(path, query=nothing)
     ratelimit()
     resp = try
-        _http_get[](absuri(path, API_URL); query, headers=API_HEADERS)
+        _http_get[](URIs.absuri(path, API_URL); query, headers=API_HEADERS)
     catch e
         e
     end

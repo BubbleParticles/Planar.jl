@@ -46,7 +46,7 @@ ratelimit() = sleep(max(Second(0), (last_query[] - now()) + RATE_LIMIT[]))
 function get(path, query=nothing)
     ratelimit()
     resp = try
-        HTTP.get(absuri(path, API_URL); query, headers=API_HEADERS)
+        HTTP.get(URIs.absuri(path, API_URL); query, headers=API_HEADERS)
     catch e
         e
     end

@@ -101,7 +101,7 @@ def test_write_strategy_creates(tmp_path):
 
 def test_write_strategy_updates(tmp_path):
     write_strategy("Demo", "module Demo\nend\n", strategies_dir=str(tmp_path))
-    res = write_strategy("Demo", "module Demo\n x = 1\nend\n", strategies_dir=str(tmp_path))
+    res = write_strategy("Demo", "module Demo\n x = 1\nend\n", strategies_dir=str(tmp_path), overwrite=True)
     assert res["action"] == "updated"
 
 

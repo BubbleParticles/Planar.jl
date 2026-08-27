@@ -65,7 +65,7 @@ function _get(path, query=nothing)
     query_dict["i"] = "24h"  # Default interval
     
     resp = try
-        _http_get[](absuri(path, API_URL); query=query_dict, headers=API_HEADERS)
+        _http_get[](URIs.absuri(path, API_URL); query=query_dict, headers=API_HEADERS)
     catch e
         e
     end

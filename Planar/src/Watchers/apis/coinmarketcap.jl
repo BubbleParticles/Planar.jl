@@ -46,7 +46,7 @@ check_error(json) =
     end
 
 function get(path::T where {T}, query=nothing)
-    json = JSON3.read(HTTP.get(absuri(path, API_URL); query, headers=API_HEADERS).body)
+    json = JSON3.read(HTTP.get(URIs.absuri(path, API_URL); query, headers=API_HEADERS).body)
     check_error(json)
     json
 end
