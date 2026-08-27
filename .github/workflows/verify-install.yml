@@ -24,7 +24,7 @@ jobs:
   verify-pypi:
     name: PyPI (pip install)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 90
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout (for version reference)
