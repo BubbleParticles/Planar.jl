@@ -1,3 +1,4 @@
+[![verify-install](https://github.com/bubbleparticles/Planar.jl/actions/workflows/verify-install.yml/badge.svg?branch=master)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/verify-install.yml)
 [![build-status-docs](https://github.com/bubbleparticles/Planar.jl/actions/workflows/docs.yml/badge.svg?branch=master)](https://planar.pages.dev/docs/)
 [![docs-tests](https://github.com/bubbleparticles/Planar.jl/actions/workflows/docs-tests.yml/badge.svg?branch=master)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/docs-tests.yml)
 [![build-status-docker](https://github.com/bubbleparticles/Planar.jl/actions/workflows/build.yml/badge.svg?branch=master)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/build.yml)
