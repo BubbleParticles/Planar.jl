@@ -8,7 +8,7 @@ BTCUSD
 BTCUSDT
 Backend
 Backends
-Backtest
+backtrace
 Backtesting
 Backtests
 Backtrader
@@ -69,12 +69,12 @@ JuliaFormatter
 Jupyter
 Kraken
 KuCoin
-LCP
+MCP
 LMDB
 LanguageServer
 Lifecycle
 LiquidationOrder
-LiveMode
+liveness
 Lookahead
 Lookback
 MACD
