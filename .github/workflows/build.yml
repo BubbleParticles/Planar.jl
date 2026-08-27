@@ -223,7 +223,7 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          gh extension install actions/gh-actions-cache
+          gh extension install actions/gh-actions-cache || true
 
           REPO=${{ github.repository }}
           BRANCH=${{ github.ref }}
