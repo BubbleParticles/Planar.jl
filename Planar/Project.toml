@@ -1,5 +1,5 @@
 name = "Planar"
-version = "1.8.13"
+version = "1.8.14"
 data_store = ""
 uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 license = "Apache-2.0"
