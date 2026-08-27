@@ -35,11 +35,13 @@ const DEFAULT_REPO_URL = "https://github.com/BubbleParticles/Planar.jl.git"
 const DEFAULT_REGISTRY_REPO = "https://github.com/BubbleParticles/PlanarRegistry.git"
 
 # All packages hosted in the monorepo, in registration order.
-# NOTE: PlanarCore is intentionally NOT listed — it is already registered on the
-# General registry (uuid a475c859, version 1.0.0, same monorepo subdir). Registering
-# it here too makes Pkg.add fail with "hash mismatch in registries" when both
-# registries are installed, so it must stay out of this custom registry.
+# NOTE: PlanarCore is primarily on General (uuid a475c859, version 1.0.0).
+# Since 1.0.1 it is also registered here so fresh installs from the custom
+# registry get the new Instrument-backed code without waiting for General
+# to merge. Both registries now share the same 1.0.1 git-tree-sha1, so no
+# hash mismatch occurs (1.0.0 remains only on General).
 const PACKAGES = [
+    "PlanarCore",
     "PlanarStrategyStats",
     "Planar",
     "PlanarFeatureSelection",
