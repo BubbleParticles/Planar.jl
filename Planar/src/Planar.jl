@@ -48,20 +48,19 @@ let
     # Executors.Instruments mirror
     try
         if isdefined(PlanarCore, :Executors) && isdefined(PlanarCore.Executors, :Instruments)
-            m = PlanarCore.Executors.Instruments
-            if isdefined(m, :AbstractAsset) && !isdefined(m, :AbstractInstrument)
-                Core.eval(m, :(const AbstractInstrument = AbstractAsset))
-                Core.eval(m, :(export AbstractInstrument))
-            elseif isdefined(m, :AbstractInstrument) && !isdefined(m, :AbstractAsset)
-                Core.eval(m, :(const AbstractAsset = AbstractInstrument))
-                Core.eval(m, :(export AbstractAsset))
+            if isdefined(PlanarCore.Executors.Instruments, :AbstractAsset) && !isdefined(PlanarCore.Executors.Instruments, :AbstractInstrument)
+                @eval PlanarCore.Executors.Instruments const AbstractInstrument = AbstractAsset
+                Core.eval(PlanarCore.Executors.Instruments, :(export AbstractInstrument))
+            elseif isdefined(PlanarCore.Executors.Instruments, :AbstractInstrument) && !isdefined(PlanarCore.Executors.Instruments, :AbstractAsset)
+                @eval PlanarCore.Executors.Instruments const AbstractAsset = AbstractInstrument
+                Core.eval(PlanarCore.Executors.Instruments, :(export AbstractAsset))
             end
-            if isdefined(m, :Asset) && !isdefined(m, :Instrument)
-                Core.eval(m, :(const Instrument = Asset))
-                Core.eval(m, :(export Instrument))
-            elseif isdefined(m, :Instrument) && !isdefined(m, :Asset)
-                Core.eval(m, :(const Asset = Instrument))
-                Core.eval(m, :(export Asset))
+            if isdefined(PlanarCore.Executors.Instruments, :Asset) && !isdefined(PlanarCore.Executors.Instruments, :Instrument)
+                @eval PlanarCore.Executors.Instruments const Instrument = Asset
+                Core.eval(PlanarCore.Executors.Instruments, :(export Instrument))
+            elseif isdefined(PlanarCore.Executors.Instruments, :Instrument) && !isdefined(PlanarCore.Executors.Instruments, :Asset)
+                @eval PlanarCore.Executors.Instruments const Asset = Instrument
+                Core.eval(PlanarCore.Executors.Instruments, :(export Asset))
             end
         end
     catch e
@@ -70,13 +69,12 @@ let
     # Executors.Instances alias (PaperMode uses `using PlanarCore.Executors.Instances`)
     try
         if isdefined(PlanarCore, :Executors) && isdefined(PlanarCore.Executors, :Instances)
-            m = PlanarCore.Executors.Instances
-            if isdefined(m, :AssetInstance) && !isdefined(m, :InstrumentInstance)
-                Core.eval(m, :(const InstrumentInstance = AssetInstance))
-                Core.eval(m, :(export InstrumentInstance))
-            elseif isdefined(m, :InstrumentInstance) && !isdefined(m, :AssetInstance)
-                Core.eval(m, :(const AssetInstance = InstrumentInstance))
-                Core.eval(m, :(export AssetInstance))
+            if isdefined(PlanarCore.Executors.Instances, :AssetInstance) && !isdefined(PlanarCore.Executors.Instances, :InstrumentInstance)
+                @eval PlanarCore.Executors.Instances const InstrumentInstance = AssetInstance
+                Core.eval(PlanarCore.Executors.Instances, :(export InstrumentInstance))
+            elseif isdefined(PlanarCore.Executors.Instances, :InstrumentInstance) && !isdefined(PlanarCore.Executors.Instances, :AssetInstance)
+                @eval PlanarCore.Executors.Instances const AssetInstance = InstrumentInstance
+                Core.eval(PlanarCore.Executors.Instances, :(export AssetInstance))
             end
         end
     catch e
