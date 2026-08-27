@@ -47,7 +47,7 @@ addcalls!(n=100) = query_stack[] += n
 
 function get(path::T where {T}, query=nothing)
     ratelimit()
-    resp = HTTP.get(absuri(path, API_URL); query, headers=API_HEADERS)
+    resp = HTTP.get(URIs.absuri(path, API_URL); query, headers=API_HEADERS)
     if resp.status == 429
         query_stack[] = 0
     end

@@ -1,7 +1,9 @@
 using Pkg: Pkg
 
 Pkg.activate(joinpath("user", "Load"))
+Pkg.instantiate()
 Pkg.add("PackageCompiler")
+Pkg.instantiate()
 using PackageCompiler
 
 function compile(proj_path="user/Load"; comp_dir="Dist", cpu_target="generic", app=false, update=true, kwargs...)

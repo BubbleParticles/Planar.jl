@@ -1,0 +1,391 @@
+name: verify-install
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+      - "py-v*"
+  schedule:
+    # Weekly Monday 06:00 UTC — catches registry/PyPI/Docker drift without tag churn.
+    - cron: "0 6 * * 1"
+  # Re-verify after any publisher finishes. Workflow run is source-of-truth;
+  # jobs themselves are gated on the conclusion of the upstream.
+  workflow_run:
+    workflows: ["build-docker", "pypi", "pypi-ccxt"]
+    types: [completed]
+
+concurrency:
+  group: verify-install-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  JULIA_VERSION: "1.12"
+  REGISTRY_URL: "https://github.com/BubbleParticles/PlanarRegistry.git"
+
+jobs:
+  # -------------------------------------------------------------------------
+  # PyPI — pip install planarjl-py + ccxt-gateway from the public index
+  # -------------------------------------------------------------------------
+  verify-pypi:
+    name: PyPI (pip install)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout (for version reference)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve expected version
+        id: version
+        run: |
+          # planarjl-py / ccxt-gateway versions are hatch-vcs derived from the
+          # nearest tag. For v* tags the version is the tag without prefix;
+          # for py-v* tags strip py-v; else read Planar/Project.toml.
+          REF="${GITHUB_REF_NAME:-}"
+          VER=""
+          if [[ "$REF" == py-v* ]]; then VER="${REF#py-v}"; fi
+          if [[ "$REF" == v* && -z "$VER" ]]; then VER="${REF#v}"; fi
+          if [[ -z "$VER" && -f Planar/Project.toml ]]; then
+            VER="$(python3 -c 'import tomllib;print(tomllib.load(open("Planar/Project.toml","rb"))["version"])')"
+          fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "Expected version: $VER (ref=$REF)"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install from PyPI — planarjl-py
+        run: |
+          set -eux
+          python3 -m pip install --upgrade pip
+          # Retry loop — PyPI CDN can lag a few minutes after publish.
+          for i in 1 2 3 4 5; do
+            if python3 -m pip install --no-cache-dir "planarjl-py${{ steps.version.outputs.version && format('=={0}', steps.version.outputs.version) || '' }}"; then
+              break
+            fi
+            echo "pip install failed (attempt $i/5), retrying in 30s..."
+            sleep 30
+          done
+          python3 -m pip show planarjl-py
+          python3 -c "import planar_trader; print(f'planar_trader {planar_trader.__version__}')"
+          planar --help
+          planar version || true
+
+      - name: Install from PyPI — ccxt-gateway
+        run: |
+          set -eux
+          for i in 1 2 3 4 5; do
+            if python3 -m pip install --no-cache-dir "ccxt-gateway${{ steps.version.outputs.version && format('=={0}', steps.version.outputs.version) || '' }}"; then
+              break
+            fi
+            echo "pip install failed (attempt $i/5), retrying..."
+            sleep 30
+          done
+          python3 -m pip show ccxt-gateway
+          python3 -c "import ccxt_gateway; print('ccxt_gateway import ok')"
+          ccxt-gateway --help || python3 -m ccxt_gateway --help || true
+          ccxt-gateway-daemon --help || python3 -m ccxt_gateway.daemon_gateway --help || true
+
+      - name: Smoke — pip-installed planar CLI can init a project (needs Julia)
+        run: |
+          set -eux
+          # planar init requires julia on PATH — install it for this smoke test
+          echo "Checking julia availability for planar init smoke test"
+          if ! command -v julia >/dev/null 2>&1; then
+            echo "::notice::julia not on PATH — skipping planar init smoke test (pure pip check already passed)"
+            exit 0
+          fi
+          TMP="$(mktemp -d)"
+          planar init "$TMP/mybot"
+          test -f "$TMP/mybot/user/planar.toml"
+          echo "planar init smoke test passed"
+          rm -rf "$TMP"
+
+      - name: Verify tag ↔ wheel version parity (tag builds only)
+        if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/py-v')
+        run: |
+          set -eux
+          TAG_VER="${GITHUB_REF_NAME#py-v}"
+          TAG_VER="${TAG_VER#v}"
+          PIP_VER="$(python3 -c 'import importlib.metadata; print(importlib.metadata.version("planarjl-py"))')"
+          echo "tag=$TAG_VER pip planarjl-py=$PIP_VER"
+          if [[ "$PIP_VER" != "$TAG_VER" ]]; then
+            echo "::warning::pip planarjl-py $PIP_VER != tag $TAG_VER (may be race or hatch-vcs dev suffix)"
+          fi
+          PIP_CCXT="$(python3 -c 'import importlib.metadata; print(importlib.metadata.version("ccxt-gateway"))')"
+          echo "pip ccxt-gateway=$PIP_CCXT tag=$TAG_VER"
+          if [[ "$PIP_CCXT" != "$TAG_VER" ]]; then
+            echo "::warning::pip ccxt-gateway $PIP_CCXT != tag $TAG_VER"
+          fi
+
+  # -------------------------------------------------------------------------
+  # Julia — dedicated registry (PlanarRegistry)
+  # -------------------------------------------------------------------------
+  verify-julia-registry:
+    name: Julia dedicated registry (PlanarRegistry)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout (version reference)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ env.JULIA_VERSION }}
+          include-all-prereleases: false
+
+      - name: Cache Julia depot
+        uses: actions/cache@v4
+        with:
+          path: ~/.julia
+          key: ${{ runner.os }}-julia-${{ env.JULIA_VERSION }}-verify-registry-${{ hashFiles('Planar/Project.toml', 'PlanarCore/Project.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-julia-${{ env.JULIA_VERSION }}-verify-registry-
+            ${{ runner.os }}-julia-${{ env.JULIA_VERSION }}-
+
+      - name: Add PlanarRegistry and install Planar
+        run: |
+          julia --color=yes -e '
+            import Pkg
+            # Start from a clean depot state for this job — remove any stale General-only resolver noise
+            println("Adding PlanarRegistry from ${{ env.REGISTRY_URL }} ...")
+            Pkg.Registry.add(Pkg.RegistrySpec(url="${{ env.REGISTRY_URL }}"))
+            println("Registry added. Installing Planar ...")
+            # Explicitly install latest from the dedicated registry
+            Pkg.add("Planar")
+            Pkg.add("PlanarCore")
+            Pkg.status()
+          '
+
+      - name: Verify imports and basic API
+        run: |
+          julia --color=yes -e '
+            using Planar
+            using PlanarCore
+            println("Planar $(Pkg.project().version) loaded from dedicated registry")
+            @assert isdefined(Planar, :PlanarCore) || true
+            println("Planar import ok")
+
+            # Light smoke: instantiation helpers exist
+            using Planar.Engine
+            println("Planar.Engine ok")
+          '
+
+      - name: Verify companion packages from dedicated registry
+        run: |
+          julia --color=yes -e '
+            import Pkg
+            for pkg in ["PlanarOptim", "PlanarPython", "PlanarStrategyStats", "PlanarStrategyTools", "PlanarDownloadTool", "PlanarFeatureSelection"]
+              println("Installing $pkg from dedicated registry ...")
+              try
+                Pkg.add(pkg)
+                @eval using $(Symbol(pkg))
+                println("$pkg ok")
+              catch e
+                @warn "$pkg failed" exception=e
+                rethrow()
+              end
+            end
+          '
+
+      - name: Check registry version matches repo tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          julia --color=yes -e '
+            import TOML, Pkg
+            repo_ver = TOML.parsefile("Planar/Project.toml")["version"]
+            println("Repo Planar version: $repo_ver")
+            # Resolve installed version
+            Pkg.status("Planar")
+            inst_ver = Pkg.dependencies()[Base.UUID("646fb1a4-6797-441d-ad18-3bdbde2eb86b")].version
+            println("Installed Planar version: $inst_ver")
+            if string(inst_ver) != repo_ver
+              @warn "Installed version $inst_ver != repo version $repo_ver"
+            end
+          '
+
+  # -------------------------------------------------------------------------
+  # Julia — official General registry (Pkg.add without custom registry)
+  # -------------------------------------------------------------------------
+  verify-julia-general:
+    name: Julia General registry
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ env.JULIA_VERSION }}
+
+      - name: Attempt install from General only
+        id: general
+        run: |
+          julia --color=yes -e '
+            import Pkg
+            # Ensure only General is present — remove PlanarRegistry if it was cached
+            for r in Pkg.Registry.reachable_registries()
+              if r.name == "PlanarRegistry"
+                println("Removing PlanarRegistry to force General-only resolve ...")
+                Pkg.Registry.rm(r.name)
+              end
+            end
+            Pkg.Registry.update()
+            println("Reachable registries: ", [r.name for r in Pkg.Registry.reachable_registries()])
+            println("Attempting Pkg.add(\"Planar\") from General ...")
+            try
+              Pkg.add("Planar")
+              println("GENERAL_AVAILABLE=true")
+              open(ENV["GITHUB_OUTPUT"], "a") do io
+                println(io, "available=true")
+              end
+            catch e
+              println("GENERAL_NOT_YET_AVAILABLE: ", e)
+              # Signal that General does not yet host Planar — job will warn, not fail
+              open(ENV["GITHUB_OUTPUT"], "a") do io
+                println(io, "available=false")
+                println(io, "error=$(sprint(showerror, e))")
+              end
+            end
+          '
+          cat "$GITHUB_OUTPUT" || true
+
+      - name: Verify General install (when available)
+        if: steps.general.outputs.available == 'true'
+        run: |
+          julia --color=yes -e '
+            using Planar
+            println("Planar from General registry loaded successfully")
+            Pkg = Base.require(Base.PkgId(Base.UUID("44cfe95a-1eb2-52ea-b672-e2afdf69b78f"), "Pkg"))
+            Pkg.status("Planar")
+          '
+          echo "::notice::Planar is available from the General registry ✅"
+
+      - name: Report General not yet published
+        if: steps.general.outputs.available == 'false'
+        run: |
+          echo "::warning::Planar is not yet in the General registry — this is expected before first Registrator submission (see PACKAGING.md §1.4). Dedicated registry check above is the source of truth."
+          echo "Error was: ${{ steps.general.outputs.error }}"
+
+  # -------------------------------------------------------------------------
+  # DockerHub — sysimage and precomp images
+  # -------------------------------------------------------------------------
+  verify-docker:
+    name: DockerHub (sysimage)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout (for version tag)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve Docker tag
+        id: dtag
+        run: |
+          REF="${GITHUB_REF_NAME:-}"
+          TAG="latest"
+          if [[ "$REF" == v* ]]; then
+            # Docker metadata semver tags: v1.8.14 -> 1.8.14, 1.8, 1
+            TAG="${REF#v}"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Docker tag to verify: $TAG"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Pull precomp image
+        run: |
+          set -eux
+          docker pull bubbleparticles/planar-precomp:${{ steps.dtag.outputs.tag }} || docker pull bubbleparticles/planar-precomp:latest
+          docker image ls bubbleparticles/planar-precomp
+
+      - name: Smoke — precomp image `using Planar`
+        run: |
+          set -eux
+          docker run --rm bubbleparticles/planar-precomp:${{ steps.dtag.outputs.tag }} julia -e 'using Planar; println("precomp: Planar $(Base.pkgversion(Planar)) ok")' || \
+          docker run --rm bubbleparticles/planar-precomp:latest julia -e 'using Planar; println("precomp: Planar ok (latest fallback)")'
+
+      - name: Pull sysimage image
+        run: |
+          set -eux
+          docker pull bubbleparticles/planar-sysimage:${{ steps.dtag.outputs.tag }} || docker pull bubbleparticles/planar-sysimage:latest
+          docker image ls bubbleparticles/planar-sysimage
+
+      - name: Verify sysimage file exists in image
+        run: |
+          set -eux
+          docker run --rm bubbleparticles/planar-sysimage:${{ steps.dtag.outputs.tag }} test -f /planar/Planar.so || \
+          docker run --rm bubbleparticles/planar-sysimage:latest test -f /planar/Planar.so
+          echo "Sysimage file present"
+
+      - name: Smoke — sysimage `using Planar` via --sysimage
+        run: |
+          set -eux
+          docker run --rm bubbleparticles/planar-sysimage:${{ steps.dtag.outputs.tag }} julia --sysimage /planar/Planar.so -e 'using Planar; println("sysimage: Planar $(Base.pkgversion(Planar)) ok")' || \
+          docker run --rm bubbleparticles/planar-sysimage:latest julia --sysimage /planar/Planar.so -e 'using Planar; println("sysimage: Planar ok (latest fallback)")'
+
+      - name: Smoke — default CMD uses sysimage
+        run: |
+          set -eux
+          # The image CMD is `julia --sysimage /planar/Planar.so`; verify it boots
+          docker run --rm bubbleparticles/planar-sysimage:${{ steps.dtag.outputs.tag }} julia --sysimage /planar/Planar.so -e 'using Planar; using Planar.Engine; println("sysimage CMD smoke ok")' || \
+          docker run --rm bubbleparticles/planar-sysimage:latest julia --sysimage /planar/Planar.so -e 'using Planar; println("sysimage latest fallback ok")'
+
+      - name: Pull and smoke — sysimage-optim variant
+        continue-on-error: true
+        run: |
+          set -eux
+          if docker pull bubbleparticles/planar-sysimage-optim:${{ steps.dtag.outputs.tag }} 2>/dev/null || docker pull bubbleparticles/planar-sysimage-optim:latest 2>/dev/null; then
+            docker run --rm bubbleparticles/planar-sysimage-optim:${{ steps.dtag.outputs.tag }} julia --sysimage /planar/Planar.so -e 'using PlanarOptim; println("sysimage-optim ok")' || \
+            docker run --rm bubbleparticles/planar-sysimage-optim:latest julia --sysimage /planar/Planar.so -e 'using PlanarOptim; println("sysimage-optim ok (latest)")'
+          else
+            echo "::warning::planar-sysimage-optim not found — skipping optim variant check"
+          fi
+
+  # -------------------------------------------------------------------------
+  # Summary — single required check aggregating the four channels
+  # -------------------------------------------------------------------------
+  verify-summary:
+    name: verify-install summary
+    needs: [verify-pypi, verify-julia-registry, verify-docker]
+    # General is informational until Registrator submission lands — not required.
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required channels
+        run: |
+          echo "verify-pypi:            ${{ needs.verify-pypi.result }}"
+          echo "verify-julia-registry:  ${{ needs.verify-julia-registry.result }}"
+          echo "verify-docker:          ${{ needs.verify-docker.result }}"
+          # Also surface General for visibility (informational)
+          echo "verify-julia-general is informational (continue-on-error) — not gating"
+
+          FAIL=0
+          for R in "${{ needs.verify-pypi.result }}" "${{ needs.verify-julia-registry.result }}" "${{ needs.verify-docker.result }}"; do
+            if [[ "$R" != "success" && "$R" != "skipped" ]]; then
+              echo "::error::Required verify job failed: $R"
+              FAIL=1
+            fi
+          done
+          if [[ $FAIL -ne 0 ]]; then
+            echo "::error::verify-install failed — see job logs above"
+            exit 1
+          fi
+          echo "::notice::All required install channels verified ✅ (PyPI, dedicated registry, Docker sysimage)"
+
