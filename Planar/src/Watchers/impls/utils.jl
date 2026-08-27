@@ -1,4 +1,4 @@
-using PlanarCore.Ccxt: Rocket
+using Rocket
 using PlanarCore.Data: df!, _contiguous_ts, nrow, save_ohlcv, zi, check_all_flag, snakecased, empty_ohlcv
 using PlanarCore.Data.DFUtils: firstdate, lastdate, copysubs!, addcols!
 using PlanarCore.Data.DataFramesMeta

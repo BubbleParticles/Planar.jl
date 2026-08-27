@@ -18,7 +18,7 @@ import PlanarCore.Executors: call!
 import PlanarCore.Misc: start!, stop!
 using PlanarCore.Misc.DocStringExtensions
 using Planar.Watchers: Watchers
-using PlanarCore.Ccxt: Rocket
+using Rocket
 using PlanarCore.Exchanges.Ccxt: CcxtGateway, default_client, call_exchange, _multifunc, exchange_has
 using Planar.Watchers.WatchersImpls: maybe_backoff!
 
