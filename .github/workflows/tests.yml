@@ -14,7 +14,8 @@ on:
         description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
         required: false
         default: false
-    push:
+  push:
+    branches: [main, master]
   pull_request:
     branches: [main, master]
 
