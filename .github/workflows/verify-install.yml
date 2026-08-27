@@ -14,7 +14,7 @@ on:
 
 concurrency:
   group: verify-install-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   JULIA_VERSION: "1.12"
