@@ -2,6 +2,8 @@ module Planar
 using PlanarCore
 using PlanarCore.Instances
 using PlanarCore.Instruments
+using PlanarCore.Executors
+using PlanarCore.Executors.Instances
 # Compatibility shim: PlanarCore 1.0.0 on General still uses `Asset`/`AbstractAsset`/`AssetInstance`,
 # while Planar 1.8.2+ uses `Instrument`/`AbstractInstrument`/`InstrumentInstance`.
 # Alias new→old and old→new at load time so either core works.
