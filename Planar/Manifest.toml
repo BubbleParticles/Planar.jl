@@ -2,7 +2,7 @@
 
 julia_version = "1.12.7"
 manifest_format = "2.0"
-project_hash = "d9ad345c99338e8e517267d042325fe5161fa21d"
+project_hash = "9a9206158754e7249fe34937e7dbab06b21e96db"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -730,7 +730,7 @@ weakdeps = ["REPL"]
 deps = ["Dates", "Documenter", "LRUCache", "MacroTools", "Pkg", "PlanarCore", "PlanarStrategyStats", "PrettyTables", "REPL", "Random", "Rocket", "Statistics", "Suppressor", "Telegram"]
 path = "."
 uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
-version = "1.8.12"
+version = "1.8.13"
 
 [[deps.PlanarCore]]
 deps = ["CSV", "CodecZlib", "ConcurrentCollections", "DataFrames", "DataFramesMeta", "DataStructures", "Dates", "Distributed", "DocStringExtensions", "FileWatching", "FunctionalCollections", "HTTP", "IterTools", "JSON", "JSON3", "LMDB", "Logging", "LoggingExtras", "MbedTLS", "OnlineStats", "OrderedCollections", "Pkg", "PrecompileTools", "Preferences", "Printf", "Random", "Reexport", "Rocket", "Serialization", "Statistics", "StatsBase", "TOML", "Term", "TimeFrames", "URIs", "WebSockets", "Zarr"]

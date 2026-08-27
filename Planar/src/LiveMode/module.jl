@@ -1,8 +1,33 @@
 using ..PaperMode
 using ..PaperMode.Executors
+using PlanarCore
 using PlanarCore.Executors: Strategies as st
 using PlanarCore.Executors.Instances: Instances, Exchanges, Data, MarginInstance, NoMarginInstance, HedgedInstance, _internal_lock
 using PlanarCore.Instances
+# Compat shim for Instrument→Asset rename (PlanarCore 1.0.0 uses AssetInstance)
+if !isdefined(@__MODULE__, :InstrumentInstance)
+    const InstrumentInstance = if isdefined(PlanarCore.Instances, :InstrumentInstance)
+        PlanarCore.Instances.InstrumentInstance
+    elseif isdefined(PlanarCore.Instances, :AssetInstance)
+        PlanarCore.Instances.AssetInstance
+    elseif isdefined(PlanarCore.Executors.Instances, :InstrumentInstance)
+        PlanarCore.Executors.Instances.InstrumentInstance
+    elseif isdefined(PlanarCore.Executors.Instances, :AssetInstance)
+        PlanarCore.Executors.Instances.AssetInstance
+    else
+        Any
+    end
+end
+# EIDType lives in ExchangeTypes in new core; import with fallback for old core
+if !isdefined(@__MODULE__, :EIDType)
+    const EIDType = if isdefined(PlanarCore.ExchangeTypes, :EIDType)
+        PlanarCore.ExchangeTypes.EIDType
+    elseif isdefined(PlanarCore.Exchanges, :EIDType)
+        PlanarCore.Exchanges.EIDType
+    else
+        Any
+    end
+end
 using PlanarCore.Exchanges
 using PlanarCore.Exchanges: gettimeout, resptobool, islist, isdict
 using .st: Strategy, MarginStrategy, NoMarginStrategy, LiveStrategy, call!, RTStrategy, throttle, ExchangeInstrument, universe, WarmupPeriod
