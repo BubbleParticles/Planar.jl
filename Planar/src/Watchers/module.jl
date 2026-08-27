@@ -2,18 +2,7 @@ using PlanarCore.Fetch: Fetch
 using PlanarCore.Fetch.Data
 using PlanarCore.Fetch.Misc
 using PlanarCore.Ccxt
-# Compat: Rocket may be re-exported via PlanarCore.Ccxt in new core, or available directly
-if !isdefined(@__MODULE__, :Rocket)
-    try
-        @eval const Rocket = PlanarCore.Ccxt.Rocket
-    catch
-        try
-            @eval import Rocket
-        catch e
-            @debug "Watchers Rocket fallback: $e"
-        end
-    end
-end
+using Rocket
 using PlanarCore.Data: rangeafter
 using PlanarCore.Data.DataStructures: CircularBuffer
 using PlanarCore.Data.DataFrames: DataFrame
