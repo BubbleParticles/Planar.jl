@@ -223,30 +223,27 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          gh extension install actions/gh-actions-cache || true
-
+          set +e
           REPO=${{ github.repository }}
           BRANCH=${{ github.ref }}
-
-          set +e
-          echo "Fetching list of cache key for $REPO / $BRANCH"
-          cacheKeysForPR=$(gh actions-cache list -R $REPO -B $BRANCH | grep -E 'buildx' || true)
-          echo "Got: [$cacheKeysForPR]"
-          echo ${{ steps.last_save.outcome }}
-          if [ ${{ steps.last_save.outcome }} = 'success' ]; then
-            echo "excluding this commit"
-            EXCLUDE=${{ github.sha }}
-          else
-            echo "excluding commit before"
-            EXCLUDE=${{ github.event.before }}
+          echo "Cleaning up buildx caches for $REPO / $BRANCH"
+          # Use built-in `gh cache` — the gh-actions-cache extension is
+          # optional and does not install reliably on tag refs, and its
+          # `actions-cache` subcommand is absent in current gh builds.
+          EXCLUDE_KEY=""
+          if [ "${{ steps.last_save.outcome }}" = "success" ]; then
+            EXCLUDE_KEY="${{ runner.os }}-buildx-${{ env.JULIA_VERSION }}-${{ github.sha }}"
+            echo "Excluding the cache we just saved: $EXCLUDE_KEY"
           fi
-          cacheKeysForPR=$(echo "$cacheKeysForPR" | grep -v "$EXCLUDE" | cut -f 1 )
-
-          echo "Deleting caches..."
-          for cacheKey in $cacheKeysForPR
-          do
-              gh actions-cache delete $cacheKey -R $REPO -B $BRANCH --confirm
+          CACHE_IDS=$(gh cache list -R "$REPO" -B "$BRANCH" --scope action \
+            --json id,key --jq '.[] | select(.key | startswith("buildx") and .key != env.EXCLUDE_KEY) | .id' \
+            --arg EXCLUDE_KEY "$EXCLUDE_KEY" 2>/dev/null)
+          echo "Found cache ids: [$CACHE_IDS]"
+          for cacheId in $CACHE_IDS; do
+            [ -z "$cacheId" ] && continue
+            echo "Deleting cache id $cacheId"
+            gh cache delete "$cacheId" -R "$REPO" --confirm || true
           done
-          echo "Done"
-          set +e
+          echo "Cleanup done"
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
