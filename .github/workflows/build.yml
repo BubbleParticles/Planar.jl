@@ -228,8 +228,10 @@ jobs:
           REPO=${{ github.repository }}
           BRANCH=${{ github.ref }}
 
+          set +e
           echo "Fetching list of cache key for $REPO / $BRANCH"
-          cacheKeysForPR=$(gh actions-cache list -R $REPO -B $BRANCH | grep -E 'buildx')
+          cacheKeysForPR=$(gh actions-cache list -R $REPO -B $BRANCH | grep -E 'buildx' || true)
+          echo "Got: [$cacheKeysForPR]"
           echo ${{ steps.last_save.outcome }}
           if [ ${{ steps.last_save.outcome }} = 'success' ]; then
             echo "excluding this commit"
@@ -240,13 +242,11 @@ jobs:
           fi
           cacheKeysForPR=$(echo "$cacheKeysForPR" | grep -v "$EXCLUDE" | cut -f 1 )
 
-          ## Setting this to not fail the workflow while deleting cache keys.
-          set +e
           echo "Deleting caches..."
           for cacheKey in $cacheKeysForPR
           do
               gh actions-cache delete $cacheKey -R $REPO -B $BRANCH --confirm
           done
           echo "Done"
+          set +e
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
