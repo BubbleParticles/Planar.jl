@@ -1,5 +1,8 @@
 name: build-docker
 
+# estimated runtime: ~70 min on a cold runner (Precomp ~7 min, Sysimage ~27 min,
+# Precomp Optim ~19 min, Sysimage Optim ~25 min, Cleanup ~2 min). `timeout-minutes: 300`.
+
 on:
   workflow_dispatch:
     inputs:

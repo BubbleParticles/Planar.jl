@@ -1,5 +1,7 @@
 name: pypi
 
+# estimated runtime: ~3 min (build + publish to PyPI)
+
 on:
   push:
     tags:

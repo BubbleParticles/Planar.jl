@@ -1,5 +1,7 @@
 name: CompatHelper
 
+# estimated runtime: ~5 min (registry add + CompatHelper pass over 9 packages)
+
 on:
   schedule:
     - cron: '0 0 * * *'

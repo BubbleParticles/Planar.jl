@@ -1,5 +1,9 @@
 name: verify-install
 
+# estimated runtime: ~45 min (PyPI pip-install dominates: Julia precompilation
+# on a cold ubuntu-latest runner takes ~25-40 min; dedicated registry and
+# General registry jobs are ~10-15 min each; DockerHub smoke ~5 min)
+
 on:
   workflow_dispatch:
   push:
