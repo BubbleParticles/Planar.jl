@@ -376,7 +376,7 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function strategycash!(s::IsolatedStrategy, ii, t::IncreaseTrade)
+function strategycash!(s::MarginStrategy, ii, t::IncreaseTrade)
     @deassert t.size < 0.0
     # t.amount can be negative for short sells
     margin = t.value / t.leverage
@@ -411,7 +411,7 @@ _checktrade(t::ShortBuyTrade) = @deassert t.amount > 0.0
 $(TYPEDSIGNATURES)
 
 """
-function strategycash!(s::IsolatedStrategy, ii, t::ReduceTrade)
+function strategycash!(s::MarginStrategy, ii, t::ReduceTrade)
     @deassert t.size > 0.0
     @deassert abs(cash(ii, positionside(t)())) >= abs(t.amount) (
         cash(ii), t.amount, t.order

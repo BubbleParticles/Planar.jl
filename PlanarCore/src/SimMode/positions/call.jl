@@ -1,8 +1,9 @@
 using ..Executors.Instances: leverage!, positionside, leverage
 using ..Executors: hasorders
 using ..Executors.OrderTypes: postoside
+using ..Strategies: IsolatedStrategy, MarginStrategy
+using ..Instances: ishedged
 using ..Lang: splitkws
-import ..Executors: call!
 
 const _PROTECTIONS_WARNING = """
 !!! warning "Protections"
@@ -13,6 +14,8 @@ const _PROTECTIONS_WARNING = """
 """
 
 function singlewaycheck(s, ii, t)
+    # Hedged mode allows both sides simultaneously
+    ishedged(ii) && return true
     pside = positionside(t)
     opside = opposite(pside)
     # HACK: see Instances `status!`
@@ -26,10 +29,9 @@ function singlewaycheck(s, ii, t)
     end
     return true
 end
-
 @doc "Creates a simulated limit order, updating a levarged position."
 function call!(
-    s::IsolatedStrategy{Sim},
+    s::MarginStrategy{Sim},
     ii::MarginInstance,
     t::Type{<:AnyLimitOrder};
     amount,
@@ -49,7 +51,7 @@ end
 $_PROTECTIONS_WARNING
 """
 function call!(
-    s::IsolatedStrategy{Sim},
+    s::MarginStrategy{Sim},
     ii::MarginInstance,
     t::Type{<:AnyMarketOrder};
     amount,
@@ -62,6 +64,7 @@ function call!(
     isnothing(o) && return nothing
     marketorder!(s, o, ii, amount; date, fees_kwarg...)
 end
+
 
 @doc "Closes a leveraged position."
 function call!(

@@ -1,7 +1,7 @@
-using ..Instances: ispos
+using ..Strategies: Strategy, NoMarginStrategy, IsolatedStrategy, MarginStrategy
+using ..Instances: ispos, position
 using ..OrderTypes: ByPos
 using ..Lang: @caller
-
 @doc """ Returns a generator for orders matching a given position side and order side
 
 $(TYPEDSIGNATURES)
@@ -106,10 +106,10 @@ $(TYPEDSIGNATURES)
 This function updates the position of the strategy for the asset in question at the given date to the provided position side.
 
 """
-function position!(s::IsolatedStrategy, ii, date::DateTime, p::PositionSide)
+function position!(s::MarginStrategy, ii, date::DateTime, p::PositionSide)
     position!(s, ii, date, position(ii, p))
 end
-position!(::IsolatedStrategy, ii, ::DateTime, ::Nothing) = nothing
+position!(::MarginStrategy, ii, ::DateTime, ::Nothing) = nothing
 
 position!(s::Strategy, args...) = @warn "`position!` not implemented for $(typeof(s))" @caller
 

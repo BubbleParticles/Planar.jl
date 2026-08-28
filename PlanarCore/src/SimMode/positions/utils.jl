@@ -4,10 +4,10 @@ using ..Strategies.Instruments.Derivatives: Derivative
 using ..Executors.Instances: leverage_tiers, tier, position
 import ..Executors.Instances: Position, MarginInstance
 using ..Executors: withtrade!, maintenance!, orders, isliquidatable, LIQUIDATION_FEES
-using ..Strategies: IsolatedStrategy, MarginStrategy, exchangeid
+using ..Strategies: MarginStrategy, exchangeid
 using ..Instances: PositionOpen, PositionUpdate, PositionClose
-using ..Instances: margin, maintenance, status, posside
-using ..Misc: DFT
+using ..Instances: margin, maintenance, status, posside, ishedged, isopen, iszero, isdust, cash
+using ..Misc: DFT, Long, Short
 import ..Executors: position!
 
 """
@@ -18,7 +18,7 @@ $(TYPEDSIGNATURES)
 The function opens a position in the specified strategy using the given margin instance and position trade.
 """
 function open_position!(
-    s::IsolatedStrategy, ii::MarginInstance, t::PositionTrade{P};
+    s::MarginStrategy, ii::MarginInstance, t::PositionTrade{P};
 ) where {P<:PositionSide}
     # NOTE: Order of calls is important
     po = position(ii, P)
@@ -82,8 +82,7 @@ When a date is given, this function closes pending orders and sells the remainin
 It then resets the position, deletes it from the holdings, and checks that the position is closed and no funds are committed.
 
 """
-function close_position!(s::IsolatedStrategy, ii, p::PositionSide, date=nothing; kwargs...)
-    @ifdebug @deassert !hasorders(s, ii, p)
+function close_position!(s::MarginStrategy, ii, p::PositionSide, date=nothing; kwargs...)
     # when a date is given we should close pending orders and sell remaining cash
     if !isnothing(date)
         force_exit_position(s, ii, p, date; kwargs...)
@@ -144,26 +143,28 @@ If a position is open and liquidatable, it is liquidated using the `liquidate!` 
 The liquidation is performed on the asset positions in `ii` on the specified `date`.
 
 """
-function maybe_liquidate!(s::IsolatedStrategy, ii::MarginInstance, date::DateTime)
-    pos = position(ii)
-    isnothing(pos) && return nothing
-    @ifdebug @deassert !isopen(opposite(ii, pos))
-    p = posside(pos)
-    isliquidatable(s, ii, p, date) && liquidate!(s, ii, p, date)
+function maybe_liquidate!(s::MarginStrategy, ii::MarginInstance, date::DateTime)
+    if ishedged(ii)
+        for p in (Long(), Short())
+            if isopen(ii, p) && isliquidatable(s, ii, p, date)
+                liquidate!(s, ii, p, date)
+            end
+        end
+    else
+        pos = position(ii)
+        isnothing(pos) && return nothing
+        p = posside(pos)
+        isliquidatable(s, ii, p, date) && liquidate!(s, ii, p, date)
+    end
 end
-
 @doc """Updates the position by applying a position trade.
 
 $(TYPEDSIGNATURES)
 
-Applies the position trade `t` to the isolated strategy `s` and the margin instance `ii`.
-The order of calls is important.
-Checks if the position has a notional value not equal to zero.
-Updates the cash of the position using the trade construction.
-
+Applies the position trade `t` to the margin strategy `s` and the margin instance `ii`.
 """
 function update_position!(
-    s::IsolatedStrategy, ii, t::PositionTrade{P}
+    s::MarginStrategy, ii, t::PositionTrade{P}
 ) where {P<:PositionSide}
     # NOTE: Order of calls is important
     po = position(ii, P)
@@ -184,7 +185,7 @@ After updating or opening the position, it checks if the position needs to be li
 
 """
 function position!(
-    s::IsolatedStrategy, ii::MarginInstance, t::PositionTrade{P}; check_liq=true
+    s::MarginStrategy, ii::MarginInstance, t::PositionTrade{P}; check_liq=true
 ) where {P<:PositionSide}
     @ifdebug @deassert exchangeid(s) == exchangeid(t)
     @ifdebug @deassert t.order.asset == ii.asset
@@ -206,7 +207,7 @@ function position!(
     end
 end
 
-@doc """ Updates an isolated position in `Sim` mode from a new candle.
+@doc """ Updates a margin position in `Sim` mode from a new candle.
 
 $(TYPEDSIGNATURES)
 
@@ -215,7 +216,7 @@ If the position is liquidatable, it is liquidated.
 Otherwise, the position remains open and a `PositionUpdate` is pinged.
 
 """
-function position!(s::IsolatedStrategy{Sim}, ii, date::DateTime, pos::Position=position(ii))
+function position!(s::MarginStrategy{Sim}, ii, date::DateTime, pos::Position=position(ii))
     # NOTE: Order of calls is important
     @ifdebug @deassert isopen(pos)
     p = posside(pos)
@@ -250,27 +251,48 @@ This function is used to update the state of all active asset holdings within th
 Execution updates include the maintenance of position and order records and accounting for any change of asset state to reflect liquidations or trade updates.
 
 """
-function positions!(s::IsolatedStrategy{<:Union{Paper,Sim}}, date::DateTime)
+function positions!(s::MarginStrategy{<:Union{Paper,Sim}}, date::DateTime)
     @ifdebug _checkorders(s)
     # Collect holdings first to avoid mutation during iteration (liquidate! -> close_position! -> delete!(s.holdings, ii))
-    holdings_copy = collect(keys(s.holdings))
+    holdings_copy = collect(s.holdings)
     for ii in holdings_copy
         @ifdebug @deassert isopen(ii) || hasorders(s, ii) ii
-        if isopen(ii)
-            position!(s, ii, date)
+        if ishedged(ii)
+            for p in (Long(), Short())
+                if isopen(ii, p)
+                    position!(s, ii, date, position(ii, p))
+                end
+            end
+        else
+            if isopen(ii)
+                position!(s, ii, date)
+            end
         end
     end
     @ifdebug _checkorders(s)
     for ii in universe(s)
-        @ifdebug @deassert !(isopen(ii, Short()) && isopen(ii, Long()))
-        po = position(ii)
-        if !isnothing(po)
-            @ifdebug @deassert ii ∈ s.holdings && !iszero(cash(po)) && isopen(po)
+        if !ishedged(ii)
+            @ifdebug @deassert !(isopen(ii, Short()) && isopen(ii, Long()))
+        end
+        if ishedged(ii)
+            for p in (Long(), Short())
+                po = position(ii, p)
+                if isopen(po)
+                    @ifdebug @deassert ii ∈ s.holdings && !iszero(cash(po)) && isopen(po)
+                else
+                    @ifdebug @deassert iszero(cash(ii, p))
+                end
+            end
         else
-            @ifdebug @deassert iszero(cash(ii, Long())) &&
-                iszero(cash(ii, Short())) &&
-                !isopen(ii, Long()) &&
-                !isopen(ii, Short())
+            po = position(ii)
+            if !isnothing(po)
+                @ifdebug @deassert ii ∈ s.holdings && !iszero(cash(po)) && isopen(po)
+            else
+                @ifdebug @deassert iszero(cash(ii, Long())) &&
+                    iszero(cash(ii, Short())) &&
+                    !isopen(ii, Long()) &&
+                    !isopen(ii, Short())
+            end
         end
     end
 end

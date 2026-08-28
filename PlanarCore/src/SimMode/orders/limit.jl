@@ -5,7 +5,7 @@ using ..Executors: AnyFOKOrder, AnyIOCOrder, AnyGTCOrder, AnyPostOnlyOrder
 import ..Executors: priceat, unfilled, isqueued
 import ..OrderTypes: order!, FOKOrderType, IOCOrderType
 using ..Simulations: Simulations as sml
-using ..Strategies: Strategies as st
+using ..Strategies: Strategies as st, MarginStrategy
 using ..Misc: DFT
 
 @doc """ Creates a simulated limit order.
@@ -69,9 +69,9 @@ function order!(
     limitorder_ifprice!(s, o, date, ii; kwargs...)
 end
 
-@doc "Progresses a simulated limit order for an isolated margin strategy."
+@doc "Progresses a simulated limit order for a margin strategy."
 function order!(
-    s::IsolatedStrategy{Sim}, o::Order{<:LimitOrderType}, date::DateTime, ii; kwargs...
+    s::MarginStrategy{Sim}, o::Order{<:LimitOrderType}, date::DateTime, ii; kwargs...
 )
     @deassert abs(committed(o)) > DFT(0.0) (pricetime(o), o)
     t = limitorder_ifprice!(s, o, date, ii; kwargs...)

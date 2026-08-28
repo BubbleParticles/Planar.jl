@@ -5,7 +5,7 @@ using ..Executors.Instances
 using ..Executors.Instruments
 using ..Executors.Instances: NoMarginInstance, Instances as inst, price
 using ..Strategies: lowat, highat, closeat, openat, volumeat
-using ..Strategies: IsolatedStrategy, NoMarginStrategy
+using ..Strategies: IsolatedStrategy, NoMarginStrategy, MarginStrategy
 using ..OrderTypes: BuyOrder, SellOrder, ShortBuyOrder, ShortSellOrder
 using ..OrderTypes: OrderTypes as ot, PositionSide
 import ..Strategies: call!
@@ -46,7 +46,7 @@ $(TYPEDSIGNATURES)
 This function verifies if the free cash in the strategy, combined with the committed amount, is sufficient to cover the size of the buy trade when multiplied by the leverage.
 
 """
-function iscashenough(s::IsolatedStrategy, ii, size, o::BuyOrder)
+function iscashenough(s::MarginStrategy, ii, size, o::BuyOrder)
     @deassert s.cash.value |> gtxzero
     @deassert committed(o) |> gtxzero
     (st.freecash(s) + committed(o)) * leverage(ii, Long()) >= size
@@ -61,7 +61,7 @@ This function checks if there is enough QC (Quote Currency) to cover the short s
 It does this by verifying if the free cash in the strategy, combined with the committed amount, is sufficient to cover the size of the short sell trade when multiplied by the leverage.
 
 """
-function iscashenough(s::IsolatedStrategy, ii, size, o::ShortSellOrder)
+function iscashenough(s::MarginStrategy, ii, size, o::ShortSellOrder)
     @deassert s.cash.value |> gtxzero
     @deassert committed(o) |> gtxzero
     (st.freecash(s) + committed(o)) * leverage(ii, Short()) >= size
@@ -72,7 +72,7 @@ end
 $(TYPEDSIGNATURES)
 
 """
-function iscashenough(s::IsolatedStrategy, ii, actual_amount, o::ShortBuyOrder)
+function iscashenough(s::MarginStrategy, ii, actual_amount, o::ShortBuyOrder)
     @deassert cash(ii, Short()) |> ltxzero
     @deassert committed(o) |> ltxzero
     @deassert inst.freecash(ii, Short()) |> ltxzero

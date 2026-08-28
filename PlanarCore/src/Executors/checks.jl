@@ -3,7 +3,7 @@ using ..Lang: Option, @ifdebug, @deassert, @caller
 using ..Misc: isstrictlysorted, toprecision, ltxzero
 using ..Misc.DocStringExtensions
 using ..Instances
-using ..Strategies: NoMarginStrategy, IsolatedStrategy, Strategy
+using ..Strategies: NoMarginStrategy, IsolatedStrategy, MarginStrategy, Strategy
 using ..OrderTypes
 using ..Instances.Instruments: value
 using Base: negate
@@ -50,7 +50,7 @@ $(TYPEDSIGNATURES)
 
 The price of a trade for long positions should never be below the liquidation price.
 """
-function checkprice(_::IsolatedStrategy, ii, actual_price, o::LongOrder)
+function checkprice(_::MarginStrategy, ii, actual_price, o::LongOrder)
     @assert actual_price > liqprice(ii, Long()) (o, actual_price, liqprice(ii, Long()))
 end
 
@@ -60,7 +60,7 @@ $(TYPEDSIGNATURES)
 
 The price of a trade for short positions should never be above the liquidation price.
 """
-function checkprice(_::IsolatedStrategy, ii, actual_price, o::ShortOrder)
+function checkprice(_::MarginStrategy, ii, actual_price, o::ShortOrder)
     @assert actual_price < liqprice(ii, Short()) (o, actual_price, liqprice(ii, Short()))
 end
 

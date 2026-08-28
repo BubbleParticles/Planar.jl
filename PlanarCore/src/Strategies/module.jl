@@ -152,9 +152,9 @@ const RTStrategy = Strategy{<:Union{Paper,Live}}
 const IsolatedStrategy = Strategy{X,N,<:ExchangeID,Isolated,C} where {X<:ExecMode,N,C}
 @doc "Cross margin strategy."
 const CrossStrategy = Strategy{X,N,<:ExchangeID,Cross,C} where {X<:ExecMode,N,C}
-@doc "Strategy with isolated or cross margin."
+@doc "Strategy with any margin (including hedged variants)."
 const MarginStrategy =
-    Strategy{X,N,<:ExchangeID,<:Union{Isolated,Cross},C} where {X<:ExecMode,N,C}
+    Strategy{X,N,<:ExchangeID,<:WithMargin,C} where {X<:ExecMode,N,C}
 @doc "Strategy with no margin at all."
 const NoMarginStrategy = Strategy{X,N,<:ExchangeID,NoMargin,C} where {X<:ExecMode,N,C}
 @doc "Functions that are called (with the strategy as argument) right after strategy construction."
