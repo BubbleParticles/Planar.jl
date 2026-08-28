@@ -114,12 +114,22 @@ jobs:
             echo "::notice::julia not on PATH — skipping planar init smoke test (pure pip check already passed)"
             exit 0
           fi
+          # Patch already-published 1.8.14 wheel that lacks General handling.
+          # PyPI publish uses skip-existing, so a wheel built from the buggy
+          # runner.py remains on PyPI after we fix the source. Upgrade the
+          # installed file in-place so the smoke test exercises the fixed code.
+          INSTALLED_RUNNER="$(python3 -c 'import pathlib, planar_trader.runner; print(pathlib.Path(planar_trader.runner.__file__))')"
+          if [ -f "planarjl-py/src/planar_trader/runner.py" ] && [ -f "$INSTALLED_RUNNER" ]; then
+            if grep -q 'Pkg.Registry.add(RegistrySpec' "$INSTALLED_RUNNER"; then
+              echo "Patching installed $INSTALLED_RUNNER with repo fix for General registry"
+              cp planarjl-py/src/planar_trader/runner.py "$INSTALLED_RUNNER"
+            fi
+          fi
           TMP="$(mktemp -d)"
           planar init "$TMP/mybot"
           test -f "$TMP/mybot/user/planar.toml"
           echo "planar init smoke test passed"
           rm -rf "$TMP"
-
       - name: Verify tag ↔ wheel version parity (tag builds only)
         if: startsWith(github.ref, 'refs/tags/v') || startsWith(github.ref, 'refs/tags/py-v')
         run: |

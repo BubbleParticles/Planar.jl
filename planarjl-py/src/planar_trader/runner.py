@@ -70,7 +70,15 @@ def install_planar(project_dir: Path) -> None:
     """Add the Planar registry and the `Planar` package to `project_dir`."""
     code = (
         "using Pkg; "
-        f'Pkg.Registry.add(RegistrySpec(url="{REGISTRY_URL}")); '
+        "regs = Pkg.Registry.reachable_registries(); "
+        'if !any(r.name == "General" for r in regs) '
+        '  Pkg.Registry.add(Pkg.RegistrySpec(name="General")); '
+        "end; "
+        f'if !any(r.name == "PlanarRegistry" for r in Pkg.Registry.reachable_registries()) '
+        f'  Pkg.Registry.add(Pkg.RegistrySpec(url="{REGISTRY_URL}")); '
+        "else "
+        "  Pkg.Registry.update(); "
+        "end; "
         'Pkg.add("Planar")'
     )
     subprocess.run(
