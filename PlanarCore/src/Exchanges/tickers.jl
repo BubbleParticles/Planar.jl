@@ -122,7 +122,7 @@ const activeCache1Min = safettl(String, Dict, Minute(1))
 const marketsCache1Min = safettl(String, Dict, Minute(1))
 
 @doc "Caches for tickers for 10-second and concurrently."
-const tickersCache10Sec = ConcurrentDict(Dict{Pair{String,Any},Any}())
+const tickersCache10Sec = ConcurrentDict(Dict{String,Any}())
 const tickersLockDict = ConcurrentDict(Dict{Any,ReentrantLock}())
 
 @doc "Returns the market from the exchange for a given pair."

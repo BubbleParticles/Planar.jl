@@ -15,7 +15,7 @@ export loadmarkets!, tickers, pairs
 export issandbox, ratelimit!, isratelimited, ispercentage
 export timestamp, timeout!, check_timeout
 export ticker!, lastprice
-export leverage!, marginmode!
+export leverage!, marginmode!, check_margin_support!
 export islist, isdict
 
 using Reexport

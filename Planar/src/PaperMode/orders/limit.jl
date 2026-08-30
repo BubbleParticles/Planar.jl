@@ -163,7 +163,7 @@ function _register_paper_order_task!(s, ii, o, task, alive)
 end
 
 function _remove_paper_order_task!(s, ii, o)
-    tasks = get(attr(s), :paper_order_tasks, nothing)
+    tasks = attr(s, :paper_order_tasks, nothing)
     if !isnothing(tasks)
         ai_tasks = get(tasks, ii, nothing)
         if !isnothing(ai_tasks)

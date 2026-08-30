@@ -1,4 +1,5 @@
-using .Executors: AnyLimitOrder
+using .st: NoMarginStrategy, MarginStrategy
+using .Executors: AnyLimitOrder, AnyMarketOrder
 
 @doc """ Places a limit order and synchronizes the cash balance.
 
@@ -33,6 +34,37 @@ function call!(
     end
 end
 
+@doc """ Places a limit order and synchronizes the cash balance (margin).
+
+$(TYPEDSIGNATURES)
+
+Same as `NoMarginStrategy` but for margin strategies.
+
+"""
+function call!(
+    s::MarginStrategy{Live},
+    ii,
+    t::Type{<:AnyLimitOrder};
+    amount,
+    price=lastprice(s, ii, t),
+    waitfor=Second(5),
+    synced=true,
+    skipchecks=false,
+    kwargs...,
+)::Union{<:Trade,Nothing,Missing}
+    @timeout_start
+    @lock ii begin
+        order_kwargs = withoutkws(:fees; kwargs)
+        trade = _live_limit_order(
+            s, ii, t; skipchecks, amount, price, waitfor, synced, kwargs=order_kwargs
+        )
+        if synced && trade isa Trade
+            live_sync_cash!(s, ii; since=trade.date, waitfor=@timeout_now)
+        end
+        trade
+    end
+end
+
 @doc """ Places a market order and synchronizes the cash balance.
 
 $(TYPEDSIGNATURES)
@@ -44,6 +76,37 @@ It returns the trade information once the transaction is complete.
 """
 function call!(
     s::NoMarginStrategy{Live},
+    ii,
+    t::Type{<:AnyMarketOrder};
+    amount,
+    waitfor=Second(5),
+    synced=true,
+    skipchecks=false,
+    kwargs...,
+)
+    @timeout_start
+    @lock ii begin
+        order_kwargs = withoutkws(:fees; kwargs)
+        trade = _live_market_order(
+            s, ii, t; skipchecks, amount, synced, waitfor, kwargs=order_kwargs
+        )
+        if synced && trade isa Trade
+            waitorder(s, ii, trade.order; waitfor=@timeout_now)
+            live_sync_cash!(s, ii; since=trade.date, waitfor=@timeout_now)
+        end
+        trade
+    end
+end
+
+@doc """ Places a market order and synchronizes the cash balance (margin).
+
+$(TYPEDSIGNATURES)
+
+Same as `NoMarginStrategy` but for margin strategies.
+
+"""
+function call!(
+    s::MarginStrategy{Live},
     ii,
     t::Type{<:AnyMarketOrder};
     amount,

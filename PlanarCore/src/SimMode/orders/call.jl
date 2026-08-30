@@ -19,6 +19,34 @@ function call!(s::NoMarginStrategy{Sim}, ii, t::Type{<:AnyLimitOrder}; amount, k
     limitorder_ifprice!(s, o, o.date, ii; fees_kwarg...)
 end
 
+@doc """ Creates a simulated limit order for a margin strategy.
+
+$(TYPEDSIGNATURES)
+
+Same logic as `NoMarginStrategy` but dispatches for margin strategies.
+"""
+function call!(s::MarginStrategy{Sim}, ii, t::Type{<:AnyLimitOrder}; amount, kwargs...)
+    fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
+    o = create_sim_limit_order(s, t, ii; amount, order_kwargs...)
+    isnothing(o) && return nothing
+    limitorder_ifprice!(s, o, o.date, ii; fees_kwarg...)
+end
+
+@doc """ Creates a simulated market order for a margin strategy.
+
+$(TYPEDSIGNATURES)
+
+Same logic as `NoMarginStrategy` but dispatches for margin strategies.
+"""
+function call!(
+    s::MarginStrategy{Sim}, ii, t::Type{<:AnyMarketOrder}; amount, date, kwargs...
+)
+    fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
+    o = create_sim_market_order(s, t, ii; amount, date, order_kwargs...)
+    isnothing(o) && return nothing
+    marketorder!(s, o, ii, amount; date, fees_kwarg...)
+end
+
 @doc """ Creates a simulated market order.
 
 $(TYPEDSIGNATURES)

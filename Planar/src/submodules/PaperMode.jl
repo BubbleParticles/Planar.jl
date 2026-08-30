@@ -1,3 +1,4 @@
+__precompile__(false)
 module PaperMode
     using PlanarCore.Fetch: Fetch
     using PlanarCore.SimMode

@@ -4,9 +4,8 @@ using Planar.Watchers.WatchersImpls: _tfunc!, _tfunc, _exc!, _exc, _lastpushed!,
 @watcher_interface!
 using ...PaperMode: sleep_pad
 using PlanarCore.Exchanges: check_timeout, current_account
-using .Lang: splitkws
 using .OrderTypes: Long
-
+using PlanarCore.Instances: ishedged
 const CcxtPositionsVal = Val{:ccxt_positions}
 # :read, if true, the value of :pos has already be locally synced
 # :closed, if true, the value of :pos should be considered stale, and the position should be closed (contracts == 0)
@@ -643,7 +642,7 @@ function _positions_enqueue_update_job!(ctx, lr, pup, resp)
                         mm = @something resp_position_margin_mode(
                             resp, ctx.eid, Val(:parsed)
                         ) marginmode(ctx.w[:strategy])
-                        if mm isa IsolatedMargin &&
+                        if !ishedged(mm) &&
                             prev_side != lr.side &&
                             !isnothing(lr.pup_prev)
                             @deassert LogWatchPosProcess string(resp_position_side(
