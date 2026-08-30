@@ -52,27 +52,38 @@ end
 _negative_lev_if_cross(mode) = mode == "cross" ? -1 : nothing
 
 @doc "Phemex-specific dosetmargin."
-function dosetmargin(exc::Exchange{<:ExchangeID{:phemex}}, mode_str, symbol; kwargs...)
+function dosetmargin(exc::Exchange{<:ExchangeID{:phemex}}, mode_str, symbol; hedged=false, kwargs...)
     name = string(exc.id)
     try
         lev = _negative_lev_if_cross(mode_str)
-        body_dict = merge(Dict("symbol" => symbol), Dict("hedged" => false))
-        call_exchange(default_client(), name, "setPositionMode", body=body_dict)
+        # Phemex sets hedge mode account-wide (symbol optional). Pass a real
+        # boolean via body= so the JSON bool type is preserved (Gotcha #8).
+        call_exchange(
+            default_client(), name, "setPositionMode"; body=Dict("symbol" => symbol, "hedged" => hedged)
+        )
+        # Phemex also needs the margin mode set (cross margin uses negative leverage).
+        call_exchange(
+            default_client(), name, "setMarginMode"; query=Dict("marginMode" => mode_str, "symbol" => symbol)
+        )
         if lev !== nothing
             call_exchange(default_client(), name, "setLeverage", body=Dict("symbol" => symbol, "leverage" => string(lev)))
         end
         true
     catch e
-        @warn "Failed to set margin mode on Phemex" nameof(exc) mode_str symbol exception = e
+        @warn "Failed to set margin mode on Phemex" nameof(exc) mode_str symbol hedged exception = e
         false
     end
 end
 
 @doc "Bybit-specific dosetmargin."
-function dosetmargin(exc::Exchange{<:ExchangeID{:bybit}}, mode_str, symbol; kwargs...)
+function dosetmargin(exc::Exchange{<:ExchangeID{:bybit}}, mode_str, symbol; hedged=false, kwargs...)
     name = string(exc.id)
     try
-        call_exchange(default_client(), name, "setPositionMode", body=Dict("symbol" => symbol, "hedged" => false))
+        # Bybit sets hedge mode account-wide (symbol optional). Pass a real
+        # boolean via body= so the JSON bool type is preserved (Gotcha #8).
+        call_exchange(
+            default_client(), name, "setPositionMode"; body=Dict("symbol" => symbol, "hedged" => hedged)
+        )
         sleep(0.1)
         resp = call_exchange(default_client(), name, "setMarginMode", query=Dict("marginMode" => mode_str, "symbol" => symbol))
         if resp isa AbstractDict
@@ -81,7 +92,7 @@ function dosetmargin(exc::Exchange{<:ExchangeID{:bybit}}, mode_str, symbol; kwar
         end
         resptobool(exc, resp)
     catch e
-        @warn "Failed to set margin mode on Bybit" nameof(exc) mode_str symbol exception = e
+        @warn "Failed to set margin mode on Bybit" nameof(exc) mode_str symbol hedged exception = e
         false
     end
 end

@@ -168,26 +168,56 @@ function dosetmargin(exc, mode_str, symbol; kwargs...)
         false
     end
 end
+@doc """Set position (hedge) mode for exchange.
+
+$(TYPEDSIGNATURES)
+
+Enables or disables hedge / position mode (`setPositionMode`). This is an
+account-wide setting (the `symbol` argument is optional). `hedged` MUST be a
+real boolean: it is passed via the request `body` (POST) so the JSON bool type
+is preserved — a `query=` string would send `"true"`/`"false"` which Python
+treats as truthy (Gotcha #8) and would silently force hedge mode.
+"""
+function dosetpositionmode(exc, symbol; hedged=false, kwargs...)
+    try
+        name = string(exc.id)
+        resp = call_exchange(
+            default_client(),
+            name,
+            "setPositionMode";
+            body=Dict("hedged" => hedged, "symbol" => symbol),
+        )
+        resptobool(exc, resp)
+    catch e
+        @warn "Failed to set position mode" nameof(exc) hedged symbol exception = e
+        false
+    end
+end
 
 @doc """Set margin mode for exchange.
 
 $(TYPEDSIGNATURES)
 """
-function marginmode!(exc::Exchange, mode, symbol; hedged=false, kwargs...)
+function marginmode!(exc::Exchange, mode, symbol=""; hedged=false, kwargs...)
     mode_str = string(mode)
     if mode_str in ("isolated", "cross")
         exc.options["defaultMarginMode"] = mode_str
-        if !isempty(symbol)
-            ans = dosetmargin(exc, mode_str, symbol; hedged, kwargs...)
-            if ans isa Bool
-                return ans
-            else
-                @error "failed to set margin mode" exc = nameof(exc) err = ans
+        ans = isempty(symbol) ? true : dosetmargin(exc, mode_str, symbol; hedged, kwargs...)
+        if ans isa Bool && !ans
+            @error "failed to set margin mode" exc = nameof(exc) mode = mode_str symbol
+            return false
+        end
+        # Hedge / position mode is account-wide (symbol is optional).
+        # Only hedged variants require setPositionMode; one-way is the exchange
+        # default, so non-hedged strategies don't touch it.
+        if hedged
+            pos_ok = dosetpositionmode(exc, symbol; hedged, kwargs...)
+            if pos_ok isa Bool && !pos_ok
+                @error "failed to set position (hedge) mode" exc = nameof(exc) symbol
                 return false
             end
-        else
-            return true
         end
+        return true
     elseif mode_str == "nomargin"
         return true
     else
