@@ -182,6 +182,13 @@ function live_send_order(
             supportmsg("reduce only")
             delete!(params, reduceOnly)
         end
+        # Hedge mode: ccxt requires `positionSide` to target the correct side.
+        # Without it, closing a Long sends a sell that the exchange treats as
+        # opening a Short (one-way semantics). Set it for every hedged order so
+        # both increase and reduce hit the intended position side.
+        if ishedged(ii)
+            pygetorconvert!(params, "positionSide", _ccxtposside(posside(t)))
+        end
     end
     if !isnothing(trigger_price)
         if has(exc, :createTriggerOrder)

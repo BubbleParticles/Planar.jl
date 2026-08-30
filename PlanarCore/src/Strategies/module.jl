@@ -15,7 +15,7 @@ using ..Data.DataStructures: SortedDict, Ordering
 import ..Data.DataStructures: lt
 using ..Data: closelast
 using ..Misc
-using ..Misc: DFT, IsolatedMargin, TimeTicks, Lang
+using ..Misc: DFT, IsolatedMargin, WithMargin, TimeTicks, Lang
 import ..Misc: reset!, Long, Short, attrs, call!, call!
 using ..TimeTicks
 using ..TimeTicks: @tf_str
@@ -112,6 +112,7 @@ struct Strategy{X<:ExecMode,N,E<:ExchangeID,M<:MarginMode,C} <: AbstractStrategy
         end
         _no_inv_contracts(exc, uni)
         ca_comm = CurrencyCash(exc, config.qc, 0.0)
+        name = nameof(self)
         eid = typeof(exc.id)
         if issandbox(exc) && mode isa Paper
             @warn "Exchange should not be in sandbox mode if strategy is in paper mode."
@@ -119,13 +120,18 @@ struct Strategy{X<:ExecMode,N,E<:ExchangeID,M<:MarginMode,C} <: AbstractStrategy
         holdings = Set{ExchangeInstrument{eid}}()
         buyorders = Dict{ExchangeInstrument{eid},SortedDict{PriceTime,ExchangeBuyOrder{eid}}}()
         sellorders = Dict{ExchangeInstrument{eid},SortedDict{PriceTime,ExchangeSellOrder{eid}}}()
-        name = nameof(self)
-        # set exchange
-        mm = margin isa IsolatedMargin ? "isolated" : "cross"
-        # Verify against ccxt that the exchange supports the requested margin
-        # mode (isolated/cross) and, for hedged variants, hedge/position mode.
-        check_margin_support!(exc, margin)
-        marginmode!(exc, mm, "")
+        # set exchange margin + hedge mode
+        # `check_margin_support!` fails fast when the exchange lacks setMarginMode
+        # (any WithMargin) or setPositionMode (hedged variants). Its return value
+        # MUST be honoured (the docstring promises fail-fast); previously discarded.
+        check_margin_support!(exc, margin) ||
+            error("Exchange $(nameof(exc)) does not support margin mode '$(margin)'")
+        # Pass the actual mode instance and hedged flag so the exchange gets the
+        # correct margin mode AND hedge/position mode. For NoMargin strategies
+        # `marginmode!` is a no-op, so we only configure real margin modes here.
+        if margin isa WithMargin
+            marginmode!(exc, margin, ""; hedged=ishedged(margin))
+        end
         new{typeof(mode),name,eid,typeof(margin),config.qc}(
             self,
             config,

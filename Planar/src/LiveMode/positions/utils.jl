@@ -309,8 +309,10 @@ const Pos = NamedTuple(
         "percentage",
     )
 )
+_ccxtposside(::Long) = "long"
+_ccxtposside(::Short) = "short"
+_ccxtposside(ps::PositionSide) = _ccxtposside(typeof(ps)())
 
-_ccxtposside(::ByPos{Long}) = "long"
 _ccxtposside(::ByPos{Short}) = "short"
 
 function _ccxtisshort(v, eid::EIDType)
