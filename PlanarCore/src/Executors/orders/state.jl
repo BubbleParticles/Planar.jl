@@ -1,7 +1,7 @@
 using ..Lang: @deassert, @lget!, Option, @ifdebug
 using ..OrderTypes: ExchangeID
 import ..OrderTypes: commit!, positionside, LiquidationType, ReduceOnlyOrder, trades
-using ..Strategies: Strategies as st, NoMarginStrategy, MarginStrategy, IsolatedStrategy
+using ..Strategies: Strategies as st, NoMarginStrategy, MarginStrategy
 using ..Instances: notional, pnl, Instances
 import ..Instances: committed
 using ..Misc: Short, DFT, toprecision

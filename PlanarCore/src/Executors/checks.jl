@@ -3,7 +3,7 @@ using ..Lang: Option, @ifdebug, @deassert, @caller
 using ..Misc: isstrictlysorted, toprecision, ltxzero
 using ..Misc.DocStringExtensions
 using ..Instances
-using ..Strategies: NoMarginStrategy, IsolatedStrategy, MarginStrategy, Strategy
+using ..Strategies: NoMarginStrategy, MarginStrategy, Strategy
 using ..OrderTypes
 using ..Instances.Instruments: value
 using Base: negate

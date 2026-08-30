@@ -1,4 +1,4 @@
-using .st: IsolatedStrategy
+using .st: MarginStrategy
 using .Executors: AnyMarketOrder
 using PlanarCore.SimMode: singlewaycheck
 using PlanarCore.Collections: snapshot
@@ -9,13 +9,13 @@ using .Misc.Lang: splitkws
 
 $(TYPEDSIGNATURES)
 
-The function creates a paper market order for a given strategy, asset, and order type. 
-It specifies the amount and date of the order. 
+The function creates a paper market order for a given strategy, asset, and order type.
+It specifies the amount and date of the order.
 Additional keyword arguments can be passed.
 
 """
 function call!(
-    s::IsolatedStrategy{Paper},
+    s::MarginStrategy{Paper},
     ii::MarginInstance,
     t::Type{<:AnyMarketOrder};
     amount,
@@ -34,7 +34,7 @@ function call!(
         return trade
     catch e
         e isa InterruptException && rethrow(e)
-        @error "IsolatedStrategy: market order failed" exception = (e, catch_backtrace()) raw(ii)
+        @error "MarginStrategy: market order failed" exception = (e, catch_backtrace()) raw(ii)
         return nothing
     end
 end
@@ -44,12 +44,12 @@ end
 $(TYPEDSIGNATURES)
 
 The function creates a simulated limit order for a given strategy, asset, and order type.
-It specifies the amount and date of the order. 
+It specifies the amount and date of the order.
 Additional keyword arguments can be passed.
 
 """
 function call!(
-    s::IsolatedStrategy{Paper}, ii, t::Type{<:AnyLimitOrder}; amount, date, kwargs...
+    s::MarginStrategy{Paper}, ii, t::Type{<:AnyLimitOrder}; amount, date, kwargs...
 )
     !singlewaycheck(s, ii, t) && return nothing
     create_paper_limit_order!(s, ii, t; amount, date, kwargs...)

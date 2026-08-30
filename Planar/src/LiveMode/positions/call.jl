@@ -1,10 +1,11 @@
 using ..PaperMode.SimMode: _lev_value, leverage!, leverage, position!, singlewaycheck
-using .st: IsolatedStrategy
+using .st: MarginStrategy
 using .Executors: hasorders, update_leverage!
 using .st: exchange
 using .Executors.Instances: raw
 using .OrderTypes: isimmediate
 using Planar.Watchers: fetch!
+using PlanarCore.Instances: ishedged
 import .Executors: call!
 
 @doc """ Updates leverage or places an order in a live trading strategy.
@@ -54,7 +55,6 @@ function Executors.call!(
         end
     end
 end
-
 @doc """ Checks for open positions on the opposite side in an isolated strategy.
 
 $(TYPEDSIGNATURES)
@@ -72,18 +72,20 @@ macro isolated_position_check()
                 t
             return nothing
         end
-        side_dict = get_positions(s, opposite(p))
-        pup = get(side_dict, raw(ii), nothing)
-        if !isnothing(pup)
-            if !pup.read[]
-                waitsync(ii)
-            end
-            if pup.date >= timestamp(ii, opposite(p)) &&
-                !pup.closed[] &&
-                _ccxt_isposopen(pup.resp, exchangeid(ii))
-                @warn "call: double direction order in non hedged mode (from resp)" position(ii) order_type = t
-                @debug "call: isolated check" _module = LogPos resp = pup.resp
-                return nothing
+        if !ishedged(ii)
+            side_dict = get_positions(s, opposite(p))
+            pup = get(side_dict, raw(ii), nothing)
+            if !isnothing(pup)
+                if !pup.read[]
+                    waitsync(ii)
+                end
+                if pup.date >= timestamp(ii, opposite(p)) &&
+                    !pup.closed[] &&
+                    _ccxt_isposopen(pup.resp, exchangeid(ii))
+                    @warn "call: double direction order in non hedged mode (from resp)" position(ii) order_type = t
+                    @debug "call: isolated check" _module = LogPos resp = pup.resp
+                    return nothing
+                end
             end
         end
     end
@@ -102,7 +104,7 @@ The function returns the trade or leverage update status.
 
 """
 function Executors.call!(
-    s::IsolatedStrategy{Live},
+    s::MarginStrategy{Live},
     ii::MarginInstance,
     t::Type{<:AnyLimitOrder};
     amount,
@@ -140,7 +142,7 @@ The function returns the trade or leverage update status.
 
 """
 function Executors.call!(
-    s::IsolatedStrategy{Live},
+    s::MarginStrategy{Live},
     ii::MarginInstance,
     t::Type{<:AnyMarketOrder};
     amount,

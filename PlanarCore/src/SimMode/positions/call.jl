@@ -1,7 +1,7 @@
 using ..Executors.Instances: leverage!, positionside, leverage
 using ..Executors: hasorders
 using ..Executors.OrderTypes: postoside
-using ..Strategies: IsolatedStrategy, MarginStrategy
+using ..Strategies: MarginStrategy
 using ..Instances: ishedged
 using ..Lang: splitkws
 
@@ -18,8 +18,9 @@ function singlewaycheck(s, ii, t)
     ishedged(ii) && return true
     pside = positionside(t)
     opside = opposite(pside)
+    opside_inst = opside isa Type ? opside() : opside
     # HACK: see Instances `status!`
-    if isopen(ii, opside) && !iszero(ii, opside)
+    if isopen(ii, opside) && !iszero(ii, opside_inst)
         return false
     end
     for (_, o) in orders(s, ii)

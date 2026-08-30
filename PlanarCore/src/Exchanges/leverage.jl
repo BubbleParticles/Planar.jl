@@ -1,8 +1,37 @@
 using ..Data: Cache, tobytes, todata
 using ..Data.DataStructures: SortedDict
 using ..Instruments: splitpair
-using .Misc: IsolatedMargin, CrossMargin, Long, Short
-import .Misc.marginmode
+using .Misc: IsolatedMargin, CrossMargin, Long, Short, NoMargin, MarginMode, Hedged
+import .ExchangeTypes: has
+@doc """ Checks that the exchange supports the margin mode requested by a strategy.
+
+$(TYPEDSIGNATURES)
+
+Mirrors the existing isolated-margin support check: at strategy instantiation we
+verify against ccxt (via `has`) that the exchange the strategy instance is using
+actually supports the chosen margin mode.
+
+- Any `WithMargin` mode (isolated or cross) requires `setMarginMode`.
+- Hedged variants (`IsolatedHedged`, `CrossHedged`) additionally require
+  `setPositionMode` (hedge / position-mode support).
+
+A missing capability emits a clear `@error` (and `false` is returned) so the
+strategy fails fast instead of corrupting state later. This matches the lenient
+style of `marginmode!` (which warns on `setMarginMode` failure) but makes the
+missing hedged/cross support explicit.
+"""
+function check_margin_support!(exc::Exchange, margin::MarginMode)
+    margin isa NoMargin && return true
+    ok = true
+    if !has(exc, :setMarginMode)
+        @error "Exchange $(nameof(exc)) does not support margin mode '$(string(margin))' (missing setMarginMode)"
+        ok = false
+    end
+    if margin isa MarginMode{Hedged} && !has(exc, :setPositionMode)
+        ok = false
+    end
+    ok
+end
 
 resp_code(resp, ::Type{<:ExchangeID}) = get(resp, "code", "")
 

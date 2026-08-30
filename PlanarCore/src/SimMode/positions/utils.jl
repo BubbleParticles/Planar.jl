@@ -22,8 +22,10 @@ function open_position!(
 ) where {P<:PositionSide}
     # NOTE: Order of calls is important
     po = position(ii, P)
-    @deassert cash(ii, opposite(P())) == DFT(0.0) (cash(ii, opposite(P()))),
-    status(ii, opposite(P()))
+    if !ishedged(ii)
+        @deassert cash(ii, opposite(P())) == DFT(0.0) (cash(ii, opposite(P()))),
+        status(ii, opposite(P()))
+    end
     @deassert !isopen(po)
     @deassert notional(po) == DFT(0.0)
     # Cash should already be updated from trade construction
@@ -243,11 +245,11 @@ _checkorders(s) = begin
     end
 end
 
-""" Updates all open positions in an isolated (non hedged) strategy for a specific date.
+""" Updates all open positions in a margin strategy for a specific date.
 
 $(TYPEDSIGNATURES)
 
-This function is used to update the state of all active asset holdings within the provided instance of `IsolatedStrategy` for a specified date.
+This function is used to update the state of all active asset holdings within the provided instance of `MarginStrategy` for a specified date.
 Execution updates include the maintenance of position and order records and accounting for any change of asset state to reflect liquidations or trade updates.
 
 """
@@ -296,5 +298,9 @@ function positions!(s::MarginStrategy{<:Union{Paper,Sim}}, date::DateTime)
         end
     end
 end
+
+@doc """ Warn if a `MarginStrategy` mode has no `positions!` method."""
+positions!(s::MarginStrategy, args...; kwargs...) =
+    @warn "`positions!` not implemented for $(typeof(s))"
 
 positions!(args...; kwargs...) = nothing

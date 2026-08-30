@@ -32,7 +32,7 @@ This function returns the price at a particular date for an order. It takes a st
 function priceat(s::Strategy{Sim}, ::Type{<:Order}, ii, date)
     tick = get(s.attrs, :sim_current_tick, nothing)
     tick isa TradeTick && tick.asset === ii && return tick.price
-    st.openat(ii, date)
+    openat(s, ii, date)
 end
 priceat(s::Strategy{Sim}, ::T, args...) where {T<:Order} = priceat(s, T, args...)
 function priceat(s::MarginStrategy{Sim}, ::T, args...) where {T<:Order}

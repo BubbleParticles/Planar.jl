@@ -122,8 +122,10 @@ struct Strategy{X<:ExecMode,N,E<:ExchangeID,M<:MarginMode,C} <: AbstractStrategy
         name = nameof(self)
         # set exchange
         mm = margin isa IsolatedMargin ? "isolated" : "cross"
+        # Verify against ccxt that the exchange supports the requested margin
+        # mode (isolated/cross) and, for hedged variants, hedge/position mode.
+        check_margin_support!(exc, margin)
         marginmode!(exc, mm, "")
-        setattr!(config, exc, :exc)
         new{typeof(mode),name,eid,typeof(margin),config.qc}(
             self,
             config,

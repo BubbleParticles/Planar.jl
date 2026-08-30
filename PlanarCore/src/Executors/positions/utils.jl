@@ -1,4 +1,4 @@
-using ..Strategies: Strategy, NoMarginStrategy, IsolatedStrategy, MarginStrategy
+using ..Strategies: Strategy, NoMarginStrategy, MarginStrategy
 using ..Instances: ispos, position
 using ..OrderTypes: ByPos
 using ..Lang: @caller
@@ -116,6 +116,10 @@ position!(s::Strategy, args...) = @warn "`position!` not implemented for $(typeo
 @doc "Non margin strategies don't have positions."
 position!(s::NoMarginStrategy, args...; kwargs...) = nothing
 positions!(s::NoMarginStrategy, args...; kwargs...) = nothing
+
+@doc """ Warn if a `MarginStrategy` mode has no `positions!` method."""
+positions!(s::MarginStrategy, args...; kwargs...) =
+    @warn "`positions!` not implemented for $(typeof(s))" @caller
 
 _commitside(::Long) = Sell
 _commitside(::Short) = Buy
