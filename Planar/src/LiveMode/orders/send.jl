@@ -54,12 +54,16 @@ function ensure_marginmode(s::LiveStrategy, ii::MarginInstance)
     if ismissing(last_mm) || last_mm != mm
         @debug "margin mode: updating" mm last_mm exc = nameof(exc)
         hedged = ishedged(ii)
-        remote_mode = Symbol(string(typeof(mm)))
+        # `mm` is an instance (e.g. IsolatedMargin{NotHedged}()); pass its string
+        # form ("isolated"/"cross") so `marginmode!` accepts it. Using
+        # `Symbol(string(typeof(mm)))` produced "IsolatedMargin{NotHedged}" and made
+        # `marginmode!` throw "Invalid margin mode ...".
+        remote_mode = _ccxtmarginmode(ii)
         return if marginmode!(exc, remote_mode, raw(ii); hedged)
             ii[:live_margin_mode] = mm
-            event!(exc, MarginUpdated(Symbol(:margin_mode_set_, mm), s, position(ii, Long)))
+            event!(exc, MarginUpdated(Symbol(:margin_mode_set_, remote_mode), s, position(ii, Long)))
             event!(
-                exc, MarginUpdated(Symbol(:margin_mode_set_, mm), s, position(ii, Short))
+                exc, MarginUpdated(Symbol(:margin_mode_set_, remote_mode), s, position(ii, Short))
             )
             true
         else

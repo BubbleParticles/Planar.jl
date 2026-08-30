@@ -173,11 +173,11 @@ in production. Use them with care and report issues.
 - Margin modes `Cross`, `CrossHedged`, `Isolated`, `IsolatedHedged`
   (`CrossMargin`/`IsolatedMargin` parameterized by `Hedged`/`NotHedged`) are
   supported alongside `NoMargin`.
-- **Caveat:** only `Isolated` + `NotHedged` position management is fully
-  implemented end-to-end. `Cross*` and `*Hedged` modes construct valid
-  instances and propagate through the universe machinery, but their live
-  position/order reconciliation paths are not yet complete — treat them as
-  experimental until those flows are finished.
+- All four margin modes are implemented end-to-end across `SimMode`, `PaperMode`,
+  and `LiveMode`: order creation, position open/close, leverage updates, liquidation
+  sweeps, and watcher-driven position/balance reconciliation (both one-way and
+  hedged long+short). Live margin-mode enforcement is applied per asset instance via
+  `ensure_marginmode` before each order/close.
 - Margin-mode instruments must be **derivative** symbols (e.g. `BTC/USDT:USDT`,
   parsed as a `Derivative`), not plain spot `Instrument`s; building a margined
   instance from a spot symbol fails at construction.
