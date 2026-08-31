@@ -27,12 +27,21 @@ function Instances.InstrumentInstance(
     a = parse(AbstractInstrument, s)
     tf = convert(TimeFrame, t)
     exc = getexchange!(Symbol(e), params; sandbox, account)
-    margin = if m == "isolated"
-        Isolated()
-    elseif m == "cross"
-        Cross()
-    else
-        NoMargin()
+    margin = let ml = lowercase(replace(m, "-" => "_", " " => "_"))
+        if ml == "isolated"
+            Isolated()
+        elseif ml == "isolated_hedged" || ml == "isolatedhedged" || ml == "isolated_hedge" || ml == "isolated-hedged"
+            IsolatedHedged()
+        elseif ml == "cross"
+            Cross()
+        elseif ml == "cross_hedged" || ml == "crosshedged" || ml == "cross_hedge" || ml == "cross-hedged"
+            CrossHedged()
+        elseif ml == "nomargin" || ml == "no_margin" || ml == "none" || ml == "no-margin" || ml == "" || ml == "spot"
+            NoMargin()
+        else
+            @warn "Unknown margin mode '$m', defaulting to NoMargin"
+            NoMargin()
+        end
     end
     loaded = load(zi, exc.name, a.raw, t)
     # `load` returns `nothing` on a cache miss (first run, purge, partial save).

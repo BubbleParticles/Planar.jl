@@ -69,8 +69,8 @@ function _askconfig(; kwargs...)
     println("\nQuote currency:")
     qc = _menu(["USDT", "USDC", "BTC", "ETH", "DOGE"]) |> Symbol
     println("\nMargin mode:")
-    mm = _menu(["NoMargin", "Isolated"]) |> Symbol
-    margin = eval(:($mm))()
+    mm = _menu(["NoMargin", "Isolated", "IsolatedHedged", "Cross", "CrossHedged"]) |> Symbol
+    margin = getfield(PlanarCore.Misc, mm)()
     Config(; min_timeframe, exchange, qc, margin, kwargs...)
 end
 

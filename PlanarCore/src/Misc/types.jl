@@ -43,14 +43,20 @@ const CrossHedged = CrossMargin{Hedged}
 const WithMargin = Union{Cross, Isolated, CrossHedged, IsolatedHedged}
 @doc "Returns the margin mode of the arguments."
 marginmode(args...; kwargs...) = NoMargin()
-marginmode(v::String) =
-    if v == "isolated"
+marginmode(v::String) = let ml = lowercase(replace(v, "-" => "_", " " => "_"))
+    if ml == "isolated"
         IsolatedMargin
-    elseif v == "cross"
+    elseif ml == "isolated_hedged" || ml == "isolatedhedged" || ml == "isolated_hedge"
+        IsolatedMargin
+    elseif ml == "cross"
+        CrossMargin
+    elseif ml == "cross_hedged" || ml == "crosshedged" || ml == "cross_hedge"
         CrossMargin
     else
         error("unsupported margin mode $v")
     end
+end
+marginmode(v::AbstractString) = marginmode(String(v))
 
 @doc "Position side is one of `Long`, `Short`."
 abstract type PositionSide end

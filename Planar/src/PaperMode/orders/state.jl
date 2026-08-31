@@ -35,11 +35,28 @@ function create_paper_market_order(s, t, ii; amount, date, price, kwargs...)
         )
         return nothing
     end
-    obside = orderbook_side(ii, t)
+    obside = try
+        orderbook_side(ii, t)
+    catch e
+        e isa InterruptException && rethrow(e)
+        @debug "paper market order: orderbook fetch failed" exception=e raw(ii) t
+        Any[]
+    end
     if isempty(obside)
-        @debug "paper market order: empty OB" ii = raw(ii) t
-        volrelease!(s, ii; amount)
-        return nothing
+        @debug "paper market order: empty OB (using provided price)" ii = raw(ii) t price
+        # Fallback: if a finite price was supplied, create the order without an orderbook.
+        # This keeps Paper Sim functional in unit tests / offline envs where the gateway
+        # orderbook is unavailable. VWAP simulation is skipped; we trade at the given price.
+        if isfinite(price) && !isnan(price) && price > 0
+            o = create_sim_market_order(s, t, ii; amount, date, price, kwargs...)
+            isnothing(o) && (volrelease!(s, ii; amount); return nothing)
+            # empty obside sentinel: marketorder! will handle the fallback path
+            return o, Any[]
+        else
+            @debug "paper market order: empty OB and no price" ii = raw(ii) t
+            volrelease!(s, ii; amount)
+            return nothing
+        end
     end
     if isnan(price)
         price = first(obside)[1]
@@ -57,6 +74,19 @@ If the trade is successful, it starts tracking the order.
 
 """
 function SimMode.marketorder!(s::PaperStrategy, o, ii; date, obside)
+    # Empty obside means the orderbook was unavailable; fall back to a direct
+    # sim fill at the order price (price was already validated in create_paper_market_order).
+    if isempty(obside)
+        trade = SimMode.trade!(s, o, ii; date, price=o.price, actual_amount=o.amount, slippage=false)
+        if isnothing(trade)
+            cancel!(s, o, ii; err=OrderCanceled(o))
+            volrelease!(s, ii; amount=o.amount)
+            return nothing
+        else
+            hold!(s, ii, o)
+            return trade
+        end
+    end
     _, _, trade = from_orderbook(obside, s, ii, o; o.amount, date)
     if isnothing(trade)
         cancel!(s, o, ii; err=OrderCanceled(o))

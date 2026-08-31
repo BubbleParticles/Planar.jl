@@ -120,17 +120,25 @@ struct Strategy{X<:ExecMode,N,E<:ExchangeID,M<:MarginMode,C} <: AbstractStrategy
         holdings = Set{ExchangeInstrument{eid}}()
         buyorders = Dict{ExchangeInstrument{eid},SortedDict{PriceTime,ExchangeBuyOrder{eid}}}()
         sellorders = Dict{ExchangeInstrument{eid},SortedDict{PriceTime,ExchangeSellOrder{eid}}}()
-        # set exchange margin + hedge mode
-        # `check_margin_support!` fails fast when the exchange lacks setMarginMode
-        # (any WithMargin) or setPositionMode (hedged variants). Its return value
-        # MUST be honoured (the docstring promises fail-fast); previously discarded.
-        check_margin_support!(exc, margin) ||
-            error("Exchange $(nameof(exc)) does not support margin mode '$(margin)'")
-        # Pass the actual mode instance and hedged flag so the exchange gets the
-        # correct margin mode AND hedge/position mode. For NoMargin strategies
-        # `marginmode!` is a no-op, so we only configure real margin modes here.
-        if margin isa WithMargin
-            marginmode!(exc, margin, ""; hedged=ishedged(margin))
+        # Configure the *exchange* margin + hedge mode (a gateway round-trip).
+        # Only meaningful for `Live`: the exchange actually executes orders and must be
+        # told its margin/position mode. `Sim`/`Paper` trade against a stub or sandbox
+        # exchange that never executes, so configuring it there is pointless and (worse)
+        # crashes construction when the stub doesn't advertise `setMarginMode`.
+        # The strategy's margin mode is already encoded in the type param `M`, which drives
+        # all local logic (`ishedged`, `singlewaycheck`, `positions!`, `maybe_liquidate!`)
+        # in every execution mode. Live-mode re-enforcement happens per-instance via
+        # `ensure_marginmode` before each order/close (per README).
+        if mode isa Live && margin isa WithMargin
+            # `check_margin_support!` fails fast when the exchange lacks setMarginMode
+            # (any WithMargin) or setPositionMode (hedged variants). Its return value
+            # MUST be honoured (the docstring promises fail-fast).
+            check_margin_support!(exc, margin) ||
+                error("Exchange $(nameof(exc)) does not support margin mode '$(margin)'")
+            ok = marginmode!(exc, margin, ""; hedged=ishedged(margin))
+            if ok === false
+                @warn "Exchange $(nameof(exc)) failed to set margin mode '$(margin)' (hedged=$(ishedged(margin))) — gateway setMarginMode/setPositionMode returned false. Live hedged orders may be rejected until the exchange is configured (check gateway logs, API permissions, and that the mock advertises setMarginMode+setPositionMode)."
+            end
         end
         new{typeof(mode),name,eid,typeof(margin),config.qc}(
             self,
