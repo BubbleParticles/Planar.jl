@@ -79,6 +79,9 @@ function iscashenough(s::MarginStrategy, ii, actual_amount, o::ShortBuyOrder)
     abs(inst.freecash(ii, Short())) + abs(committed(o)) >= actual_amount
 end
 
+@doc """ NoMargin strategies cannot hold short positions; short orders are never cash-enough. """
+iscashenough(::NoMarginStrategy, ::Any, ::Any, ::ShortSellOrder) = false
+iscashenough(::NoMarginStrategy, ::Any, ::Any, ::ShortBuyOrder) = false
 @doc """ Constructs a Trade object with the given parameters.
 
 $(TYPEDSIGNATURES)

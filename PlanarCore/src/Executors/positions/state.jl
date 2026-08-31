@@ -156,6 +156,14 @@ This function checks whether a position in a Paper or Live strategy should be li
 function isliquidatable(
     ::Strategy{<:Union{Paper,Live}}, ii::MarginInstance, p::PositionSide, date::DateTime
 )
-    price = lastprice(ii) # pytofloat(ticker!(ii.asset.raw, ii.exchange)["last"])
+    price = try
+        lastprice(ii)
+    catch e
+        e isa InterruptException && rethrow(e)
+        # Fallback for Paper/offline or missing ticker: use the OHLCV candle price
+        # (same logic as Sim). This keeps paper simulation functional without gateway.
+        @debug "isliquidatable: lastprice failed, falling back to candle" exception=e raw(ii) date p
+        _pricebypos(ii, date, p)
+    end
     _iscrossed(ii, price, p)
 end

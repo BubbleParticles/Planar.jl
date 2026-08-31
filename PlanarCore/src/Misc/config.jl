@@ -260,15 +260,19 @@ function _parse(k, v)
             error("unsupported exec mode $mode")
         end
     elseif k == :margin
-        m = lowercase(string(v))
+        m = lowercase(replace(string(v), "-" => "_", " " => "_"))
         if m == "isolated"
             Isolated()
+        elseif m == "isolated_hedged" || m == "isolatedhedged" || m == "isolated_hedge" || m == "isolated-hedged"
+            IsolatedHedged()
         elseif m == "cross"
             Cross()
-        elseif m == "nomargin" || m == "no_margin"
+        elseif m == "cross_hedged" || m == "crosshedged" || m == "cross_hedge" || m == "cross-hedged"
+            CrossHedged()
+        elseif m == "nomargin" || m == "no_margin" || m == "none" || m == "no-margin"
             NoMargin()
         else
-            error("unsupported margin mode $m")
+            error("unsupported margin mode $m (expected one of isolated, isolated_hedged, cross, cross_hedged, nomargin)")
         end
     else
         v
@@ -364,14 +368,18 @@ Base.copy(c::Config) = begin
     c
 end
 
-@doc "Toggle config margin flag."
+@doc "Toggle config margin flag. Cycles NoMargin -> Isolated -> IsolatedHedged -> Cross -> CrossHedged -> NoMargin."
 macro margin!()
     quote
         config.margin = let mode = config.margin
             if mode == NoMargin()
                 Isolated()
             elseif mode == Isolated()
+                IsolatedHedged()
+            elseif mode == IsolatedHedged()
                 Cross()
+            elseif mode == Cross()
+                CrossHedged()
             else
                 NoMargin()
             end
