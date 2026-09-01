@@ -290,7 +290,7 @@ function replay_loop!(s::SimStrategy, events; check=false)
             :margin_mode_set_isolated,
             :margin_mode_set_cross,
             Symbol("margin_mode_set_Isolated Margin"),
-            Symbol("margin_mode_set_Isolated Margin"),
+            Symbol("margin_mode_set_Cross Margin"),
         )
             @debug "trace replay: margin_mode_set_isolated" _module = LogTraceReplay
             trace_sync_margin!(s, ev.event)
@@ -344,7 +344,9 @@ function trace_sync_margin!(s::SimStrategy, ev::MarginUpdated)
     end
     addmargin!(pos, ev.value)
     if !isempty(ev.mode)
-        @assert string(marginmode(pos)) == ev.mode
+        # ev.mode is base string "isolated"/"cross" from _ccxtmarginmode;
+        # compare base, not hedged-aware string which would be "isolated_hedged"
+        @assert _ccxtmarginmode(marginmode(pos)) == ev.mode
     end
     timestamp!(pos, ev.timestamp)
 end

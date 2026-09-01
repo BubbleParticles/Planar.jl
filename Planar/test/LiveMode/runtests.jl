@@ -244,6 +244,34 @@ end
     @test !isnothing(mm)
     mm_parsed = LiveMode.resp_position_margin_mode(p, eid, Val(:parsed))
     @test !isnothing(mm_parsed)
+    # When the "hedged" field is absent from the response (the common case —
+    # ccxt doesn't include it in standard position responses),
+    # resp_position_hedged should return nothing.
+    p_no_hedged = Dict{String,Any}(
+        "symbol" => "BTC/USDT", "marginMode" => "isolated",
+        "timestamp" => 1705276800000, "contracts" => 1.0, "entryPrice" => 50000.0,
+    )
+    @test isnothing(LiveMode.resp_position_hedged(p_no_hedged, eid))
+    # Parsed margin mode should fall back to non-hedged when hedged field absent
+    @test LiveMode.resp_position_margin_mode(p_no_hedged, eid, Val(:parsed)) ==
+        LiveMode.PaperMode.Misc.Isolated()
+    # When hedged field is present and true, parsed mode should be hedged variant
+    p_hedged = Dict{String,Any}(
+        "symbol" => "BTC/USDT", "marginMode" => "isolated", "hedged" => true,
+        "timestamp" => 1705276800000, "contracts" => 1.0, "entryPrice" => 50000.0,
+    )
+    @test LiveMode.resp_position_hedged(p_hedged, eid) == true
+    @test LiveMode.resp_position_margin_mode(p_hedged, eid, Val(:parsed)) ==
+        LiveMode.PaperMode.Misc.IsolatedHedged()
+    # Cross hedged variant
+    p_cross_hedged = Dict{String,Any}(
+        "symbol" => "BTC/USDT", "marginMode" => "cross", "hedged" => true,
+        "timestamp" => 1705276800000, "contracts" => 1.0, "entryPrice" => 50000.0,
+    )
+    @test LiveMode.resp_position_margin_mode(p_cross_hedged, eid, Val(:parsed)) ==
+        LiveMode.PaperMode.Misc.CrossHedged()
+    @test LiveMode.resp_position_margin_mode(p_cross_hedged, eid, Val(:parsed)) !=
+        LiveMode.PaperMode.Misc.Cross()
 end
 
 @testset "resp_balance / resp_event_type" begin

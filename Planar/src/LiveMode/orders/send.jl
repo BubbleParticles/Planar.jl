@@ -29,18 +29,23 @@ The function compares the absolute value of free cash in the strategy to the abs
 function check_available_cash(s, ii, amount, price, o::Type{<:IncreaseOrder})
     lev = abs(leverage(ii, posside(o)))
     required = if iszero(lev) 0.0 else abs(amount) * price / lev end
-    @debug "check avl cash: inc" _module = LogState freecash(s) amount lev required
-    abs(freecash(s)) >= required
+    # Increase orders are always collateralized from the strategy-level QC pool
+    # (Executed commit! goes to `s.cash_committed` for all margin modes — isolated
+    # and cross alike).  Using `freecash(ii, side)` for isolated would be wrong:
+    # the position side is empty before the first trade, so `freecash(ii)` is 0
+    # and every isolated Increase order would be rejected (BUG-1).
+    avail = abs(freecash(s))
+    @debug "check avl cash: inc" _module = LogState freecash(s) amount lev required avail
+    avail >= required
 end
 
-@doc """ Checks if there is enough free cash to execute a reduce order.
-
-$(TYPEDSIGNATURES)
-
-The function compares the absolute value of free cash in the asset instance to the absolute value of the required cash for the order, which is the amount.
-"""
-function check_available_cash(_, ii, amount, _, o::Type{<:ReduceOrder})
-    abs(freecash(ii, posside(o))) >= abs(amount)
+function check_available_cash(s, ii, amount, _, o::Type{<:ReduceOrder})
+    # Reduce orders must be covered by the position's own cash — we are closing
+    # part of that position's notional.  Checking strategy cash for cross was
+    # wrong: a cross position can be empty while strategy cash remains, allowing
+    # a reduce to pass when the position has nothing to reduce (BUG-2).
+    avail = abs(freecash(ii, posside(o)))
+    avail >= abs(amount)
 end
 
 @doc """ Ensure margin mode on exchange matches asset margin mode.
@@ -54,16 +59,18 @@ function ensure_marginmode(s::LiveStrategy, ii::MarginInstance)
     if ismissing(last_mm) || last_mm != mm
         @debug "margin mode: updating" mm last_mm exc = nameof(exc)
         hedged = ishedged(ii)
-        # `mm` is an instance (e.g. IsolatedMargin{NotHedged}()); pass its string
-        # form ("isolated"/"cross") so `marginmode!` accepts it. Using
-        # `Symbol(string(typeof(mm)))` produced "IsolatedMargin{NotHedged}" and made
-        # `marginmode!` throw "Invalid margin mode ...".
-        remote_mode = _ccxtmarginmode(ii)
+        # Pass the MarginMode instance directly to `marginmode!` — it dispatches
+        # on `MarginMode` and extracts the base string internally. Previously
+        # `_ccxtmarginmode(ii)` was passed (a raw String like "isolated"),
+        # which worked by accident via `string(mode)` but bypassed the
+        # type-safe dispatch.
+        remote_mode = mm
         return if marginmode!(exc, remote_mode, raw(ii); hedged)
             ii[:live_margin_mode] = mm
-            event!(exc, MarginUpdated(Symbol(:margin_mode_set_, remote_mode), s, position(ii, Long)))
+            mode_str = _ccxtmarginmode(ii)
+            event!(exc, MarginUpdated(Symbol(:margin_mode_set_, mode_str), s, position(ii, Long)))
             event!(
-                exc, MarginUpdated(Symbol(:margin_mode_set_, remote_mode), s, position(ii, Short))
+                exc, MarginUpdated(Symbol(:margin_mode_set_, mode_str), s, position(ii, Short))
             )
             true
         else
@@ -74,6 +81,15 @@ function ensure_marginmode(s::LiveStrategy, ii::MarginInstance)
 end
 
 function ensure_marginmode(s::LiveStrategy, ii)
+    true
+end
+
+@doc """ Ensure margin mode on exchange matches asset margin mode (no margin).
+$(TYPEDSIGNATURES)
+
+NoMargin strategies have no margin mode to configure on the exchange.
+"""
+function ensure_marginmode(s::LiveStrategy, ii::NoMarginInstance)
     true
 end
 

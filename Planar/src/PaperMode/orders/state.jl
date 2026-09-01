@@ -98,6 +98,81 @@ function SimMode.marketorder!(s::PaperStrategy, o, ii; date, obside)
     end
 end
 
+@doc """ Executes a market order in PaperMode for a MarginStrategy.
+
+$(TYPEDSIGNATURES)
+
+The function executes the order by invoking the `from_orderbook` function with the given strategy, order, asset, and orderbook side.
+If the trade is not successful, it cancels the order.
+If the trade is successful, it starts tracking the order.
+
+"""
+function SimMode.marketorder!(s::MarginStrategy{Paper}, o, ii; date, obside)
+    # Empty obside means the orderbook was unavailable; fall back to a direct
+    # sim fill at the order price (price was already validated in create_paper_market_order).
+    if isempty(obside)
+        trade = SimMode.trade!(s, o, ii; date, price=o.price, actual_amount=o.amount, slippage=false)
+        if isnothing(trade)
+            cancel!(s, o, ii; err=OrderCanceled(o))
+            volrelease!(s, ii; amount=o.amount)
+            return nothing
+        else
+            hold!(s, ii, o)
+            return trade
+        end
+    end
+    _, _, trade = from_orderbook(obside, s, ii, o; o.amount, date)
+    if isnothing(trade)
+        cancel!(s, o, ii; err=OrderCanceled(o))
+        volrelease!(s, ii; amount=o.amount)
+        nothing
+    else
+        hold!(s, ii, o)
+        trade
+    end
+end
+
+
+@doc """ Creates a limit order in PaperMode for a NoMarginStrategy.
+
+$(TYPEDSIGNATURES)
+
+The function creates a simulated limit order for a given strategy, asset, and order type.
+It specifies the amount and date of the order.
+Additional keyword arguments can be passed.
+
+"""
+function create_paper_limit_order!(s::PaperStrategy, ii, t; amount, date, kwargs...)
+    fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
+    o = create_sim_limit_order(s, t, ii; amount, date, order_kwargs...)
+    isnothing(o) && return nothing
+    try
+        obside = orderbook_side(ii, t)
+        trade = nothing
+        if !isempty(obside)
+            _, _, trade = from_orderbook(obside, s, ii, o; o.amount, date)
+            @debug "paper limit order: trade from orderbook" o.asset o.price o.amount trade
+        end
+        # Queue GTC orders
+        if o isa AnyGTCOrder
+            @debug "paper limit order: queuing gtc order" o o.asset o.price o.amount
+            paper_limitorder!(s, ii, o; fees_kwarg...)
+            return @something trade missing
+        elseif !isfilled(ii, o) && ordertype(o) <: ImmediateOrderType
+            @debug "paper limit order: canceling" o.asset ordertype(o) o.price o.amount
+            cancel!(s, o, ii; err=OrderCanceled(o))
+        end
+        # return first trade (if any)
+        return trade
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "paper limit order: failed" exception = (e, catch_backtrace()) raw(ii) asset = o.asset
+        !isfilled(ii, o) && cancel!(s, o, ii; err=OrderFailed(o))
+        return missing
+    end
+end
+
+
 @doc """ Handles the actions to be taken after a trade in PaperMode.
 
 $(TYPEDSIGNATURES)

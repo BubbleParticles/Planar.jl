@@ -45,13 +45,15 @@ const WithMargin = Union{Cross, Isolated, CrossHedged, IsolatedHedged}
 marginmode(args...; kwargs...) = NoMargin()
 marginmode(v::String) = let ml = lowercase(replace(v, "-" => "_", " " => "_"))
     if ml == "isolated"
-        IsolatedMargin
-    elseif ml == "isolated_hedged" || ml == "isolatedhedged" || ml == "isolated_hedge"
-        IsolatedMargin
+        Isolated
+    elseif ml == "isolated_hedged" || ml == "isolatedhedged" || ml == "isolated_hedge" || ml == "isolated-hedged"
+        IsolatedHedged
     elseif ml == "cross"
-        CrossMargin
-    elseif ml == "cross_hedged" || ml == "crosshedged" || ml == "cross_hedge"
-        CrossMargin
+        Cross
+    elseif ml == "cross_hedged" || ml == "crosshedged" || ml == "cross_hedge" || ml == "cross-hedged"
+        CrossHedged
+    elseif ml == "nomargin" || ml == "no_margin" || ml == "none" || ml == "no-margin" || ml == ""
+        NoMargin
     else
         error("unsupported margin mode $v")
     end

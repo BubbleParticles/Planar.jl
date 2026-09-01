@@ -2,7 +2,7 @@
 
 julia_version = "1.12.7"
 manifest_format = "2.0"
-project_hash = "879dac0b191fd11ac061918fec68d34a7f421d54"
+project_hash = "dc522e269b9baf8e85086a90510299d439e0561f"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -43,6 +43,12 @@ deps = ["PtrArrays", "Random"]
 git-tree-sha1 = "9876e1e164b144ca45e9e3198d0b689cadfed9ff"
 uuid = "66dad0bd-aa9a-41b7-9441-69ab47430ed8"
 version = "1.1.3"
+
+[[deps.Aqua]]
+deps = ["Compat", "Pkg", "Test"]
+git-tree-sha1 = "4537cc8ed3fba5d88b844a18f7e9bb93f07d2742"
+uuid = "4c88cf16-eb10-579e-8560-4a9242c79595"
+version = "0.8.16"
 
 [[deps.ArgCheck]]
 git-tree-sha1 = "f9e9a66c9b7be1ad7372bbd9b062d9230c30c5ce"
@@ -765,40 +771,40 @@ weakdeps = ["REPL"]
     REPLExt = "REPL"
 
 [[deps.Planar]]
-deps = ["Dates", "DocStringExtensions", "Documenter", "HTTP", "JSON3", "LRUCache", "MacroTools", "Pkg", "PlanarCore", "PlanarStrategyStats", "PrettyTables", "REPL", "Random", "Rocket", "Statistics", "Suppressor", "Telegram", "TimeFrames", "URIs"]
+deps = ["Dates", "DocStringExtensions", "Documenter", "LRUCache", "MacroTools", "Pkg", "PlanarCore", "PlanarStrategyStats", "PrettyTables", "REPL", "Random", "Rocket", "Statistics", "Suppressor", "Telegram"]
 path = "../Planar"
 uuid = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
-version = "1.8.0"
+version = "1.8.14"
 
 [[deps.PlanarCore]]
 deps = ["CSV", "CodecZlib", "ConcurrentCollections", "DataFrames", "DataFramesMeta", "DataStructures", "Dates", "Distributed", "DocStringExtensions", "FileWatching", "FunctionalCollections", "HTTP", "IterTools", "JSON", "JSON3", "LMDB", "Logging", "LoggingExtras", "MbedTLS", "OnlineStats", "OrderedCollections", "Pkg", "PrecompileTools", "Preferences", "Printf", "Random", "Reexport", "Rocket", "Serialization", "Statistics", "StatsBase", "TOML", "Term", "TimeFrames", "URIs", "WebSockets", "Zarr"]
 path = "../PlanarCore"
 uuid = "a475c859-e357-4be2-a5e3-43038ab4b158"
-version = "1.0.0"
+version = "1.0.1"
 
 [[deps.PlanarDev]]
-deps = ["Pkg", "Planar", "PlanarCore", "PlanarDownloadTool", "PlanarStrategyTools", "Random", "Reexport"]
+deps = ["Pkg", "Planar", "PlanarCore", "PlanarDownloadTool", "PlanarStrategyTools", "Random"]
 path = "."
 uuid = "df15b565-ff7f-4c64-9bc8-38e9343ea891"
-version = "0.1.0"
+version = "0.1.1"
 
 [[deps.PlanarDownloadTool]]
 deps = ["CSV", "CodecZlib", "Comonicon", "EzXML", "HTTP", "PlanarCore", "URIs", "ZipFile"]
 path = "../PlanarDownloadTool"
 uuid = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
-version = "0.1.0"
+version = "0.1.1"
 
 [[deps.PlanarStrategyStats]]
-deps = ["DataFrames", "Logging", "OnlineTechnicalIndicators", "PlanarCore", "Statistics"]
+deps = ["Logging", "OnlineTechnicalIndicators", "PlanarCore", "Statistics"]
 path = "../PlanarStrategyStats"
 uuid = "d4fe19c2-883d-48d3-92d7-80b36677371b"
-version = "0.1.0"
+version = "0.1.1"
 
 [[deps.PlanarStrategyTools]]
 deps = ["OnlineTechnicalIndicators", "Planar", "PlanarCore", "PlanarStrategyStats", "Statistics"]
 path = "../PlanarStrategyTools"
 uuid = "bc793e09-ff97-408c-9766-388aa928ad5c"
-version = "0.1.0"
+version = "0.1.2"
 
 [[deps.PooledArrays]]
 deps = ["DataAPI", "Future"]

@@ -116,11 +116,15 @@ function _live_sync_position!(
     @debug "sync pos: vars" _module = LogPosSync cash = cash(pos) sym = raw(ii) wasopen pside skipchecks overwrite
 
     # check hedged mode
-    if !resp_position_hedged(resp, eid) == ishedged(pos)
+    # `resp_position_hedged` returns `nothing` when the exchange doesn't report
+    # a per-position hedged flag (the common case — hedge mode is account-wide
+    # in ccxt, not per-position). Only act on an explicit mismatch.
+    resp_hedged = resp_position_hedged(resp, eid)
+    if !isnothing(resp_hedged) && resp_hedged != ishedged(pos)
         @warn "sync pos: hedged mode mismatch" ii loc = ishedged(pos)
         @assert marginmode!(
             exchange(ii),
-            _ccxtmarginmode(ii),
+            marginmode(ii),
             raw(ii),
             hedged=ishedged(pos),
             lev=leverage(pos),
@@ -154,6 +158,11 @@ function _live_sync_position!(
         update.read[] = true
         reset!(ii, pside) # if not full reset at least cash/committed
         timestamp!(pos, update.date)
+        # Remove from strategy holdings only when both sides are flat (hedged:
+        # the opposite side may still be open and must keep holdings).
+        if iszero(ii)
+            delete!(s.holdings, ii)
+        end
         event!(ii, PositionUpdated(:position_updated_closed, s, pos))
         @debug "sync pos: closed flag set, reset" _module = LogPosSync ii pside pos
         return pos
@@ -167,14 +176,18 @@ function _live_sync_position!(
     end
 
     # Margin/hedged mode are immutable so just check for mismatch
+    # Compare base margin mode only (isolated vs cross); hedged is checked separately
+    # via resp_position_hedged. Using `string(mm)` vs `_ccxtmarginmode(ii)` would
+    # mismatch for hedged variants because `string(IsolatedHedged())` is
+    # "isolated_hedged" while `_ccxtmarginmode` returns base "isolated".
     let mm = resp_position_margin_mode(resp, eid)
-        if !isnothing(mm) && string(mm) != _ccxtmarginmode(pos)
+        if !isnothing(mm) && _ccxtmarginmode(mm) != _ccxtmarginmode(ii)
             @warn "sync pos: position margin mode mismatch (attempt switch..)" ii loc = marginmode(
                 pos
             ) rem = mm
             if !marginmode!(
                 exchange(ii),
-                _ccxtmarginmode(ii),
+                marginmode(ii),
                 raw(ii);
                 hedged=ishedged(pos),
                 lev=leverage(pos),
@@ -200,6 +213,9 @@ function _live_sync_position!(
     if isdust(ii, pos_price, pside)
         update.read[] = true
         reset!(ii, pside)
+        if iszero(ii)
+            delete!(s.holdings, ii)
+        end
         @debug "sync pos: amount is dust, reset" _module = LogPosSync ii pside isopen(ii, p) cash(
             ii, pside
         ) resp
@@ -366,7 +382,11 @@ function live_sync_position!(s::LiveStrategy, ii::MarginInstance, pos, update; k
     # NOTE: Orders matters to avoid deadlocks
     @inlock ii @lock update.notify begin
         _live_sync_position!(s, ii, pos, update; kwargs...)
-        if isopen(ii) || hasorders(s, ii)
+        # For hedged instances `isopen(ii)` only checks `lastpos` (last opened side),
+        # so it can be false while the other side is still open.  `iszero(ii)`
+        # checks both sides via cash, which is the correct holdings predicate
+        # for hedged mode.
+        if !iszero(ii) || hasorders(s, ii)
             push!(s.holdings, ii)
         else
             delete!(s.holdings, ii)

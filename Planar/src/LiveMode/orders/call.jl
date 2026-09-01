@@ -1,6 +1,9 @@
 using .st: NoMarginStrategy, MarginStrategy
 using .Executors: AnyLimitOrder, AnyMarketOrder
-
+using ..PaperMode.SimMode: singlewaycheck
+using PlanarCore.Instances: raw
+using PlanarCore.Misc: Short
+using PlanarCore.OrderTypes: positionside
 @doc """ Places a limit order and synchronizes the cash balance.
 
 $(TYPEDSIGNATURES)
@@ -21,6 +24,13 @@ function call!(
     skipchecks=false,
     kwargs...,
 )::Union{<:Trade,Nothing,Missing}
+    # NoMargin strategies are spot-only: short orders have no collateral and would
+    # fail at the exchange. Mirror Sim's `iscashenough(::NoMargin, ::ShortSellOrder)=false`
+    # fast path to avoid a needless gateway round-trip.
+    if positionside(t) == Short()
+        @debug "NoMargin: rejecting short limit order" ii=raw(ii) order_type=t
+        return nothing
+    end
     @timeout_start
     @lock ii begin
         order_kwargs = withoutkws(:fees; kwargs)
@@ -33,6 +43,7 @@ function call!(
         trade
     end
 end
+
 
 @doc """ Places a limit order and synchronizes the cash balance (margin).
 
@@ -54,6 +65,7 @@ function call!(
 )::Union{<:Trade,Nothing,Missing}
     @timeout_start
     @lock ii begin
+        skipchecks || !singlewaycheck(s, ii, t) && return nothing
         order_kwargs = withoutkws(:fees; kwargs)
         trade = _live_limit_order(
             s, ii, t; skipchecks, amount, price, waitfor, synced, kwargs=order_kwargs
@@ -65,33 +77,29 @@ function call!(
     end
 end
 
-@doc """ Places a market order and synchronizes the cash balance.
-
-$(TYPEDSIGNATURES)
-
-This function initiates a market order through the `_live_market_order` function.
-Once the order is placed, it synchronizes the cash balance in the live strategy to reflect the transaction.
-It returns the trade information once the transaction is complete.
-
-"""
 function call!(
     s::NoMarginStrategy{Live},
     ii,
     t::Type{<:AnyMarketOrder};
     amount,
+    date,
+    price=lastprice(s, ii, t),
     waitfor=Second(5),
     synced=true,
     skipchecks=false,
     kwargs...,
-)
+)::Union{<:Trade,Nothing,Missing}
+    if positionside(t) == Short()
+        @debug "NoMargin: rejecting short market order" ii=raw(ii) order_type=t
+        return nothing
+    end
     @timeout_start
     @lock ii begin
         order_kwargs = withoutkws(:fees; kwargs)
         trade = _live_market_order(
-            s, ii, t; skipchecks, amount, synced, waitfor, kwargs=order_kwargs
+            s, ii, t; skipchecks, amount, date, price, waitfor, synced, kwargs=order_kwargs
         )
         if synced && trade isa Trade
-            waitorder(s, ii, trade.order; waitfor=@timeout_now)
             live_sync_cash!(s, ii; since=trade.date, waitfor=@timeout_now)
         end
         trade
@@ -117,6 +125,7 @@ function call!(
 )
     @timeout_start
     @lock ii begin
+        skipchecks || !singlewaycheck(s, ii, t) && return nothing
         order_kwargs = withoutkws(:fees; kwargs)
         trade = _live_market_order(
             s, ii, t; skipchecks, amount, synced, waitfor, kwargs=order_kwargs
@@ -175,4 +184,16 @@ function call!(
             false
         end
     end
+end
+
+@doc """ Cancels all live orders for a NoMarginStrategy.
+$(TYPEDSIGNATURES)
+"""
+function call!(
+    s::NoMarginStrategy{Live},
+    ii::NoMarginInstance,
+    ::CancelOrders;
+    kwargs...,
+)::Bool
+    all(cancel!(s, o, ii; err=OrderCanceled(o)) for o in values(s, ii, BuyOrSell))
 end

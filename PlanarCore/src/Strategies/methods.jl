@@ -219,6 +219,17 @@ function removeasset!(s::Strategy, key)
         end
         if !isempty(removed)
             delete!(universe(s), key)
+            for ii in removed
+                delete!(s.holdings, ii)
+                delete!(s.buyorders, ii)
+                delete!(s.sellorders, ii)
+                try
+                    for k in (:paper_order_tasks, :paper_position_tasks)
+                        d = get(attrs(s), k, nothing)
+                        isnothing(d) || delete!(d, ii)
+                    end
+                catch; end
+            end
             try
                 sd = symsdict(s)
                 for ii in removed
@@ -251,6 +262,17 @@ function replace_universe!(s::Strategy, new::Vector{<:InstrumentInstance})
         a, r = coll.replace_universe!(universe(s), Vector{InstrumentInstance}(new))
         added = a
         removed = r
+        for ii in removed
+            delete!(s.holdings, ii)
+            delete!(s.buyorders, ii)
+            delete!(s.sellorders, ii)
+            try
+                for k in (:paper_order_tasks, :paper_position_tasks)
+                    d = get(attrs(s), k, nothing)
+                    isnothing(d) || delete!(d, ii)
+                end
+            catch; end
+        end
         # refresh symsdict
         try
             sd = symsdict(s)

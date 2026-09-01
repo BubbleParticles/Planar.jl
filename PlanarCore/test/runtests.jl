@@ -25,4 +25,5 @@ using Test
     include("Strategies/runtests.jl")
     include("Stubs/runtests.jl")
     include("TimeTicks/runtests.jl")
+    include("hedged_margin.jl")
 end

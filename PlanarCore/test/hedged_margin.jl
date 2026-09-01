@@ -7,8 +7,9 @@ using PlanarCore.Instances.Data.TimeTicks: TimeFrame
 using PlanarCore.Instances.Data.DataFrames: DataFrame
 using PlanarCore.Instances.DataStructures: SortedDict
 using PlanarCore.Instances.Instruments.Derivatives: Derivative, parse
-using PlanarCore.Misc: IsolatedHedged, CrossHedged, Isolated, Cross, IsolatedMargin, CrossMargin, Hedged, NotHedged
-using PlanarCore.Instances: Long, Short, Position, marginmode, ishedged, isopen, position
+using PlanarCore.Misc: IsolatedHedged, CrossHedged, Isolated, Cross, IsolatedMargin, CrossMargin, Hedged, NotHedged, DFT
+using PlanarCore.Instances: Long, Short, Position, marginmode, ishedged, isopen, position, PositionOpen, PositionClose
+
 # Minimal mock exchange
 function _make_exchange(name::Symbol)
     id = ExchangeID{name}()
@@ -99,5 +100,57 @@ end
         ii = _make_instance("BTC/USDT:USDT", 50000.0, Cross())
         @test marginmode(ii) isa CrossMargin{NotHedged}
         @test ishedged(ii) == false
+    end
+
+    @testset "iszero/isopen per-side in hedged mode" begin
+        ii = _make_instance("BTC/USDT:USDT", 50000.0, IsolatedHedged())
+        # Initially both sides are zero and not open
+        @test !isopen(ii, Long())
+        @test !isopen(ii, Short())
+        @test Base.iszero(ii)
+        @test Base.iszero(ii, Long())
+        @test Base.iszero(ii, Short())
+
+        # Open and fund the Long position
+        Instances.cash!(ii, DFT(1.0), Long())
+        Instances.status!(ii, Long(), PositionOpen())
+        @test isopen(ii, Long())
+        @test !isopen(ii, Short())
+        # ii is not zero because Long has cash
+        @test !Base.iszero(ii)
+        @test !Base.iszero(ii, Long())
+        @test Base.iszero(ii, Short())
+
+        # Reset Long — cash should be zeroed by reset!
+        Instances.reset!(ii, Long())
+        @test !isopen(ii, Long())
+        @test Base.iszero(ii, Long())
+        @test Base.iszero(ii)
+    end
+
+    @testset "reset! only affects the specified side in hedged mode" begin
+        ii = _make_instance("BTC/USDT:USDT", 50000.0, CrossHedged())
+        # Open and fund both sides
+        Instances.cash!(ii, DFT(1.0), Long())
+        Instances.status!(ii, Long(), PositionOpen())
+        Instances.cash!(ii, DFT(2.0), Short())
+        Instances.status!(ii, Short(), PositionOpen())
+        @test isopen(ii, Long())
+        @test isopen(ii, Short())
+        @test !Base.iszero(ii)
+
+        # Reset only Long — Short should remain open with cash
+        Instances.reset!(ii, Long())
+        @test !isopen(ii, Long())
+        @test isopen(ii, Short())
+        @test !Base.iszero(ii)         # Short still has cash
+        @test Base.iszero(ii, Long())  # Long is reset
+        @test !Base.iszero(ii, Short()) # Short still active
+
+        # Reset Short too — now both sides zero
+        Instances.reset!(ii, Short())
+        @test !isopen(ii, Long())
+        @test !isopen(ii, Short())
+        @test Base.iszero(ii)
     end
 end

@@ -1,4 +1,5 @@
-using .st: MarginStrategy
+using .st: MarginStrategy, NoMarginStrategy
+using PlanarCore.Instances: NoMarginInstance
 using .Executors: AnyMarketOrder
 using PlanarCore.SimMode: singlewaycheck
 using PlanarCore.Collections: snapshot
@@ -20,23 +21,16 @@ function call!(
     t::Type{<:AnyMarketOrder};
     amount,
     date,
-    price=NaN,
+    price=priceat(s, t, ii, nothing),
     kwargs...,
 )
     !singlewaycheck(s, ii, t) && return nothing
     fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
     # Handle NaN price from priceat
     price = isnan(price) ? zero(DFT) : convert(DFT, price)
-    try
-        o, obside = create_paper_market_order(s, t, ii; amount, date, price, order_kwargs...)
-        isnothing(o) && return nothing
-        trade = marketorder!(s, o, ii; obside, date, fees_kwarg...)
-        return trade
-    catch e
-        e isa InterruptException && rethrow(e)
-        @error "MarginStrategy: market order failed" exception = (e, catch_backtrace()) raw(ii)
-        return nothing
-    end
+    o = create_paper_market_order(s, t, ii; amount, date, order_kwargs...)
+    isnothing(o) && return nothing
+    marketorder!(s, o, ii; date, obside=orderbook_side(ii, t))
 end
 
 @doc """Creates a simulated limit order.
@@ -49,61 +43,26 @@ Additional keyword arguments can be passed.
 
 """
 function call!(
-    s::MarginStrategy{Paper}, ii, t::Type{<:AnyLimitOrder}; amount, date, kwargs...
+    s::MarginStrategy{Paper},
+    ii::MarginInstance,
+    t::Type{<:AnyLimitOrder};
+    amount,
+    date,
+    kwargs...,
 )
     !singlewaycheck(s, ii, t) && return nothing
-    create_paper_limit_order!(s, ii, t; amount, date, kwargs...)
+    fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
+    create_paper_limit_order!(s, ii, t; amount, date, order_kwargs..., fees_kwarg...)
 end
 
-@doc """ Closes positions for a live margin strategy.
-
-$(TYPEDSIGNATURES)
-
-Initiates asynchronous position closing for each asset instance in the strategy's universe. """
+@doc "Closes a leveraged position (no margin)."
 function call!(
-    s::MarginStrategy{<:Union{Paper,Live}}, bp::ByPos, date, ::PositionClose; kwargs...
-)
-    tasks = Task[]
-    for ii in snapshot(s.universe)
-        alive = Ref(true)
-        # Get or create the task registry under the strategy lock to avoid race with stop!
-        pos_tasks = @lock s get!(attr(s), :paper_position_tasks) do
-            Dict{InstrumentInstance, Tuple{Task, Ref{Bool}}}()
-        end
-        # Create task but DON'T start it yet - register first to avoid race condition
-        task = @task begin
-            try
-                while alive[]
-                    # Check if position is already closed before attempting to close
-                    if !isopen(ii)
-                        @debug "PaperMode: position already closed, skipping" ii = ii
-                        alive[] = false
-                        break
-                    end
-                    call!(s, ii, bp, date, PositionClose(); kwargs...)
-                    alive[] = false
-                    break
-                end
-            catch e
-                e isa InterruptException && rethrow(e)
-                alive[] = false
-                @error "PaperMode: position close failed" ii = ii exception = (e, catch_backtrace())
-            end
-        end
-        # Initialize task state (without scheduling)
-        Misc.init_task(task, IdDict())
-        # Register task for cleanup on stop BEFORE scheduling it
-        pos_tasks[ii] = (task, alive)
-        push!(tasks, task)
-        # Now schedule the task
-        schedule(task)
-    end
-    for task in tasks
-        try
-            wait(task, 30.0)
-        catch e
-            e isa InterruptException && rethrow(e)
-            @error "PaperMode: position close task failed" exception = (e, catch_backtrace())
-        end
-    end
+    s::NoMarginStrategy{Paper},
+    ii::NoMarginInstance,
+    side::ByPos,
+    date,
+    ::PositionClose;
+    kwargs...,
+)::Bool
+    true
 end

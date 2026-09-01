@@ -957,6 +957,8 @@ end
 function isopen(ii::MarginInstance, ::Union{Type{S},S,Position{S}}) where {S<:PositionSide}
     isopen(position(ii, S))
 end
+@doc "Check if an asset position is open."
+isopen(ii::NoMarginInstance, ::Union{Type{S},S,Position{S}}) where {S<:PositionSide} = false
 @doc "Instrument position notional value."
 function notional(ii::MarginInstance, ::ByPos{S}) where {S<:PositionSide}
     position(ii, S) |> notional
