@@ -1,0 +1,2 @@
+/goal strategy and runtime can be instantiated with combinations none/isolated/cross margin and hedged/non-hedged mode. Audit all combinations for
+   correct implementation, audit all code paths for sim/paper/live modes. Then address all the issues found

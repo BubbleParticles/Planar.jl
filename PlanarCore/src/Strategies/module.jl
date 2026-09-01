@@ -137,8 +137,16 @@ struct Strategy{X<:ExecMode,N,E<:ExchangeID,M<:MarginMode,C} <: AbstractStrategy
                 error("Exchange $(nameof(exc)) does not support margin mode '$(margin)'")
             ok = marginmode!(exc, margin, ""; hedged=ishedged(margin))
             if ok === false
-                @warn "Exchange $(nameof(exc)) failed to set margin mode '$(margin)' (hedged=$(ishedged(margin))) — gateway setMarginMode/setPositionMode returned false. Live hedged orders may be rejected until the exchange is configured (check gateway logs, API permissions, and that the mock advertises setMarginMode+setPositionMode)."
+                error("Exchange $(nameof(exc)) failed to set margin mode '$(margin)' (hedged=$(ishedged(margin))) — gateway setMarginMode/setPositionMode returned false. Check gateway logs, API permissions, and that the mock advertises setMarginMode+setPositionMode.")
             end
+        elseif mode isa Union{Sim,Paper} && margin isa Union{IsolatedHedged,CrossHedged}
+            # For Sim/Paper with hedged modes, the stub exchange may not support
+            # or enforce hedged position semantics. Validate exchange support
+            # and warn if setPositionMode is missing.
+            if !has(exc, :setPositionMode)
+                @warn "Exchange $(nameof(exc)) does not advertise setPositionMode — hedged mode '$(margin)' in $(mode) mode may not work correctly. Test on a real exchange before live deployment."
+            end
+            @warn "Running hedged mode '$(margin)' in $(mode) mode — stub exchange may not enforce hedged position semantics. Test on real exchange before live deployment."
         end
         new{typeof(mode),name,eid,typeof(margin),config.qc}(
             self,

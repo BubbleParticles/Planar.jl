@@ -1,18 +1,16 @@
 import ..Executors: call!
 using ..Executors
-using ..Executors: iscommittable, priceat, marketorder, hold!, AnyLimitOrder
+using ..Executors: iscommittable, priceat, marketorder, hold!, AnyLimitOrder, orders
 using ..OrderTypes: LimitOrderType, MarketOrderType
+using ..OrderTypes: positionside as _positionside
 using ..Lang: @lget!, Option
-
-@doc """ Creates a simulated limit order.
-
-$(TYPEDSIGNATURES)
-
-The function `call!` is responsible for creating a simulated limit order.
-It creates the order using `create_sim_limit_order`, checks if the order is not `nothing`, and then calls `limitorder_ifprice!`.
-The parameters include a strategy `s`, an asset `ii`, and a type `t`. The function also accepts an `amount` and additional arguments `kwargs...`.
-"""
+using ..Instances: ishedged, isopen, iszero, position, raw
+using ..Misc: Long, Short, opposite
 function call!(s::NoMarginStrategy{Sim}, ii, t::Type{<:AnyLimitOrder}; amount, kwargs...)
+    if _positionside(t) == Short()
+        @debug "NoMargin: rejecting short limit order" ii=raw(ii) order_type=t
+        return nothing
+    end
     fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
     o = create_sim_limit_order(s, t, ii; amount, order_kwargs...)
     isnothing(o) && return nothing
@@ -24,8 +22,10 @@ end
 $(TYPEDSIGNATURES)
 
 Same logic as `NoMarginStrategy` but dispatches for margin strategies.
+Enforces hedged gating (hedged allows both sides, non-hedged blocks opposite).
 """
 function call!(s::MarginStrategy{Sim}, ii, t::Type{<:AnyLimitOrder}; amount, kwargs...)
+    !singlewaycheck(s, ii, t) && return nothing
     fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
     o = create_sim_limit_order(s, t, ii; amount, order_kwargs...)
     isnothing(o) && return nothing
@@ -37,28 +37,25 @@ end
 $(TYPEDSIGNATURES)
 
 Same logic as `NoMarginStrategy` but dispatches for margin strategies.
+Enforces hedged gating.
 """
 function call!(
     s::MarginStrategy{Sim}, ii, t::Type{<:AnyMarketOrder}; amount, date, kwargs...
 )
+    !singlewaycheck(s, ii, t) && return nothing
     fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
     o = create_sim_market_order(s, t, ii; amount, date, order_kwargs...)
     isnothing(o) && return nothing
     marketorder!(s, o, ii, amount; date, fees_kwarg...)
 end
 
-@doc """ Creates a simulated market order.
-
-$(TYPEDSIGNATURES)
-
-The function `call!` creates a simulated market order using `create_sim_market_order`.
-It checks if the order is not `nothing`, and then calls `marketorder!`.
-Parameters include a strategy `s`, an asset `ii`, a type `t`, an `amount` and a `date`.
-Additional arguments can be passed through `kwargs...`.
-"""
 function call!(
     s::NoMarginStrategy{Sim}, ii, t::Type{<:AnyMarketOrder}; amount, date, kwargs...
 )
+    if _positionside(t) == Short()
+        @debug "NoMargin: rejecting short market order" ii=raw(ii) order_type=t
+        return nothing
+    end
     fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
     o = create_sim_market_order(s, t, ii; amount, date, order_kwargs...)
     isnothing(o) && return nothing
@@ -82,4 +79,16 @@ function call!(
     kwargs...,
 )::Bool
     all(cancel!(s, o, ii; err=OrderCanceled(o)) for o in values(s, ii, t))
+end
+
+@doc """ Cancels all orders for a NoMarginStrategy.
+$(TYPEDSIGNATURES)
+"""
+function call!(
+    s::NoMarginStrategy{Sim},
+    ii::NoMarginInstance,
+    ::CancelOrders;
+    kwargs...,
+)::Bool
+    all(cancel!(s, o, ii; err=OrderCanceled(o)) for o in values(s, ii, BuyOrSell))
 end

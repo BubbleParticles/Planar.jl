@@ -1,7 +1,10 @@
-using PlanarCore.SimMode: create_sim_limit_order, limitorder_ifprice!, hold!, AnyLimitOrder
+using PlanarCore.SimMode: create_sim_limit_order, limitorder_ifprice!, hold!, AnyLimitOrder, singlewaycheck
 using .st: NoMarginStrategy, MarginStrategy
 using PlanarCore.OrderTypes: LimitOrderType, ImmediateOrderType
-using PlanarCore.Executors: AnyMarketOrder
+using PlanarCore.OrderTypes: positionside
+using PlanarCore.Misc: Short
+using PlanarCore.Instances: raw, NoMarginInstance
+using .Executors: AnyMarketOrder
 using .Misc.Lang: splitkws
 using .Misc: DFT
 
@@ -22,6 +25,10 @@ function call!(
     price=priceat(s, t, ii, nothing),
     kwargs...,
 )
+    if positionside(t) == Short()
+        @debug "NoMargin: rejecting short market order" ii=raw(ii) order_type=t
+        return nothing
+    end
     fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
     # Handle NaN price from priceat
     price = isnan(price) ? zero(DFT) : convert(DFT, price)
@@ -52,6 +59,9 @@ function call!(
     price=priceat(s, t, ii, nothing),
     kwargs...,
 )
+    if !singlewaycheck(s, ii, t)
+        return nothing
+    end
     fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
     # Handle NaN price from priceat
     price = isnan(price) ? zero(DFT) : convert(DFT, price)
@@ -66,13 +76,9 @@ function call!(
     end
 end
 
-@doc """Creates a simulated limit order.
+@doc """Creates a simulated limit order for a NoMarginStrategy.
 
 $(TYPEDSIGNATURES)
-
-The function creates a simulated limit order for a given strategy and asset.
-It specifies the amount and date of the order.
-Additional keyword arguments can be passed.
 
 """
 function call!(
@@ -83,6 +89,7 @@ function call!(
     date,
     kwargs...,
 )
+    !singlewaycheck(s, ii, t) && return nothing
     create_paper_limit_order!(s, ii, t; amount, date, kwargs...)
 end
 
@@ -101,5 +108,20 @@ function call!(
     date,
     kwargs...,
 )
-    create_paper_limit_order!(s, ii, t; amount, date, kwargs...)
+    if !singlewaycheck(s, ii, t)
+        return nothing
+    end
+    fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
+    create_paper_limit_order!(s, ii, t; amount, date, order_kwargs..., fees_kwarg...)
+end
+@doc """ Cancels all orders for a NoMarginStrategy.
+$(TYPEDSIGNATURES)
+"""
+function call!(
+    s::NoMarginStrategy{Paper},
+    ii::NoMarginInstance,
+    ::CancelOrders;
+    kwargs...,
+)::Bool
+    all(cancel!(s, o, ii; err=OrderCanceled(o)) for o in values(s, ii, BuyOrSell))
 end

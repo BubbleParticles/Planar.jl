@@ -494,13 +494,23 @@ end
 
 # TODO: add `AddMargin` call! function
 function MarginUpdated(tag, group, pos::Position; from_value::DFT=0.0)
+    mm = marginmode(pos)
+    s = string(mm)
+    # Gateway only distinguishes base mode; map hedged variants to base
+    mode_str = if occursin("isolated", s)
+        "isolated"
+    elseif occursin("cross", s)
+        "cross"
+    else
+        s
+    end
     MarginUpdated{exchangeid(pos)}(
         Symbol(tag),
         Symbol(group),
         raw(pos.asset),
         posside(pos),
         timestamp(pos),
-        string(marginmode(pos)),
+        mode_str,
         from_value,
         margin(pos),
     )

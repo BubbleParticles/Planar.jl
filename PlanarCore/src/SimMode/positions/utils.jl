@@ -3,8 +3,7 @@ using ..OrderTypes: PositionSide, PositionTrade, LiquidationType, ReduceOnlyOrde
 using ..Strategies.Instruments.Derivatives: Derivative
 using ..Executors.Instances: leverage_tiers, tier, position
 import ..Executors.Instances: Position, MarginInstance
-using ..Executors: withtrade!, maintenance!, orders, isliquidatable, LIQUIDATION_FEES
-using ..Strategies: MarginStrategy, exchangeid
+using ..Executors: withtrade!, maintenance!, orders, isliquidatable, LIQUIDATION_FEES, hasorders
 using ..Instances: PositionOpen, PositionUpdate, PositionClose
 using ..Instances: margin, maintenance, status, posside, ishedged, isopen, iszero, isdust, cash
 using ..Misc: DFT, Long, Short
@@ -50,7 +49,7 @@ This function cancels all orders associated with the specified position and upda
 
 """
 function force_exit_position(s::Strategy, ii, p, date::DateTime; kwargs...)
-    @ifdebug @assert !hasorders(s, ii)
+    @ifdebug @assert !hasorders(s, ii, p)
     @ifdebug @deassert isempty(collect(values(s, ii, p)))
     @ifdebug @deassert iszero(committed(ii, p)) committed(ii, p)
     ot = ReduceOnlyOrder(p)
@@ -90,8 +89,9 @@ function close_position!(s::MarginStrategy, ii, p::PositionSide, date=nothing; k
         force_exit_position(s, ii, p, date; kwargs...)
     end
     reset!(ii, p)
-    delete!(s.holdings, ii)
-    @ifdebug @deassert !isopen(position(ii, p)) && iszero(ii)
+    # In hedged mode, the opposite side may still be open — only remove from holdings when both sides are closed.
+    iszero(ii) && delete!(s.holdings, ii)
+    @ifdebug @deassert !isopen(ii, p) && iszero(ii, p)
     true
 end
 

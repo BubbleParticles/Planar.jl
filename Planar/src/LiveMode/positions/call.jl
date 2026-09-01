@@ -1,11 +1,9 @@
 using ..PaperMode.SimMode: _lev_value, leverage!, leverage, position!, singlewaycheck
-using .st: MarginStrategy
+using .st: MarginStrategy, NoMarginStrategy
 using .Executors: hasorders, update_leverage!
 using .st: exchange
 using .Executors.Instances: raw
-using .OrderTypes: isimmediate
-using Planar.Watchers: fetch!
-using PlanarCore.Instances: ishedged
+using ..PaperMode.OrderTypes: postoside
 import .Executors: call!
 
 @doc """ Updates leverage or places an order in a live trading strategy.
@@ -174,7 +172,7 @@ _close_order_bypos(::Long) = MarketOrder{Sell}
 function _posclose_cancel(s, ii, t, pside, waitfor)
     @debug "call pos close: cancel orders" _module = LogPosClose ii pside
     if hasorders(s, ii, pside)
-        if !call!(s, ii, CancelOrders(); t=BuyOrSell, synced=true, waitfor)
+        if !call!(s, ii, CancelOrders(); t=ishedged(ii) ? postoside(pside) : BuyOrSell, synced=true, waitfor)
             @warn "call pos close: failed to cancel orders" ii t
         end
     end
@@ -338,6 +336,7 @@ function call!(
         amount, this_kwargs = _posclose_amount(s, ii, pside; kwargs)
         if iszero(amount)
             # Position closed after last check
+            ensure_marginmode(s, ii)
             return true
         end
         since, isclosed = _posclose_trade(
@@ -357,4 +356,17 @@ function call!(
             _posclose_lastcheck(s, ii, pside, t, since, @timeout_now)
         end
     end
+end
+
+@doc "Closes a leveraged position."
+function call!(
+    s::NoMarginStrategy{Live},
+    ii::NoMarginInstance,
+    side::ByPos,
+    date,
+    ::PositionClose;
+    kwargs...,
+)::Bool
+    @deassert !isopen(ii, side) "NoMarginStrategy should not have open positions"
+    true
 end

@@ -28,6 +28,11 @@ function check_margin_support!(exc::Exchange, margin::MarginMode)
         ok = false
     end
     if margin isa MarginMode{Hedged} && !has(exc, :setPositionMode)
+        @error "Exchange $(nameof(exc)) does not support margin mode '$(string(margin))' (missing setPositionMode for hedged mode)"
+        ok = false
+    end
+    if !has(exc, :setLeverage)
+        @error "Exchange $(nameof(exc)) does not support margin mode '$(string(margin))' (missing setLeverage)"
         ok = false
     end
     ok
@@ -153,15 +158,19 @@ function maxleverage(exc::Exchange, sym, size)
     t = tier(tiers, size)
     t === nothing ? 1.0 : t.maxLeverage
 end
-
 Base.string(::IsolatedMargin) = "isolated"
 Base.string(::CrossMargin) = "cross"
-Base.string(::NoMargin) = ""
 
 function dosetmargin(exc, mode_str, symbol; kwargs...)
     try
         name = string(exc.id)
-        resp = call_exchange(default_client(), name, "setMarginMode", query=Dict("marginMode" => mode_str, "symbol" => symbol))
+        # `setMarginMode` is a POST method in ccxt. Use `body=` (not `query=`)
+        # to send parameters as JSON, preserving type fidelity. Using `query=`
+        # sends as GET query params which many exchanges reject.
+        resp = call_exchange(
+            default_client(), name, "setMarginMode",
+            body=Dict("marginMode" => mode_str, "symbol" => symbol),
+        )
         resptobool(exc, resp)
     catch e
         @warn "Failed to set margin mode" nameof(exc) mode_str symbol exception = e
@@ -198,24 +207,34 @@ end
 
 $(TYPEDSIGNATURES)
 """
+function marginmode!(exc::Exchange, mode::MarginMode, symbol=""; hedged=false, kwargs...)
+    mode isa NoMargin && return true
+    base = mode isa IsolatedMargin ? "isolated" : "cross"
+    marginmode!(exc, base, symbol; hedged, kwargs...)
+end
 function marginmode!(exc::Exchange, mode, symbol=""; hedged=false, kwargs...)
     mode_str = string(mode)
     if mode_str in ("isolated", "cross")
         exc.options["defaultMarginMode"] = mode_str
-        ans = isempty(symbol) ? true : dosetmargin(exc, mode_str, symbol; hedged, kwargs...)
+        # Hedge / position mode is account-wide (symbol is optional).
+        # Some exchanges (e.g. Bybit, Phemex) require `setPositionMode` to be
+        # called BEFORE `setMarginMode` when switching to/from hedged mode.
+        # Set position mode first (for both hedged and non-hedged), then margin mode.
+        # For non-hedged, resetting to one-way BEFORE margin mode avoids the same
+        # race condition that motivated the hedged-first ordering above.
+        pos_ok = dosetpositionmode(exc, symbol; hedged, kwargs...)
+        if pos_ok isa Bool && !pos_ok
+            if hedged
+                @error "failed to set position (hedge) mode" exc = nameof(exc) symbol
+                return false
+            else
+                @warn "failed to reset position mode to one-way" exc = nameof(exc) symbol
+            end
+        end
+        ans = isempty(symbol) ? true : dosetmargin(exc, mode_str, symbol; kwargs...)
         if ans isa Bool && !ans
             @error "failed to set margin mode" exc = nameof(exc) mode = mode_str symbol
             return false
-        end
-        # Hedge / position mode is account-wide (symbol is optional).
-        # Only hedged variants require setPositionMode; one-way is the exchange
-        # default, so non-hedged strategies don't touch it.
-        if hedged
-            pos_ok = dosetpositionmode(exc, symbol; hedged, kwargs...)
-            if pos_ok isa Bool && !pos_ok
-                @error "failed to set position (hedge) mode" exc = nameof(exc) symbol
-                return false
-            end
         end
         return true
     elseif mode_str == "nomargin"

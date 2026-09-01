@@ -157,13 +157,16 @@ function Base.count(s::Strategy, side::Type{<:OrderSide})
     end
     n
 end
-
 _ascash((val, sym)) = Cash(val, sym)
-
 Base.print(io::IO, ::Isolated) = write(io, "isolated")
-Base.string(io::IO, ::Cross) = write(io, "cross")
-Base.string(io::IO, ::NoMargin) = write(io, "nomargin")
-
+Base.print(io::IO, ::IsolatedHedged) = write(io, "isolated_hedged")
+Base.print(io::IO, ::Cross) = write(io, "cross")
+Base.print(io::IO, ::CrossHedged) = write(io, "cross_hedged")
+Base.print(io::IO, ::NoMargin) = write(io, "nomargin")
+Base.string(::Isolated) = "isolated"
+Base.string(::IsolatedHedged) = "isolated_hedged"
+Base.string(::Cross) = "cross"
+Base.string(::CrossHedged) = "cross_hedged"
 @nospecialize
 function Base.print(out::IO, s::Strategy; price_func=lasttrade_price_func)
     exc = exchange(s)

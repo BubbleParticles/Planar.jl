@@ -105,6 +105,94 @@ function paper_limitorder!(s::PaperStrategy, ii, o::GTCOrder; kwargs...)
     schedule(task)
 end
 
+@doc """ Updates a limit order in PaperMode for a MarginStrategy.
+
+$(TYPEDSIGNATURES)
+
+The function checks if the order is filled.
+If not, it fetches the trades for the given asset and exchange.
+It then checks each trade to see if the order is triggered.
+If the order is triggered, it executes a trade for the minimum of the trade amount and the unfilled order amount.
+If the order is filled, it stops tracking the order.
+
+"""
+function paper_limitorder!(s::MarginStrategy{Paper}, ii, o::GTCOrder; kwargs...)
+    isfilled(ii, o) && return nothing
+    throttle = attr(s, :throttle)
+    exc = ii.exchange
+    pyfunc = first(exc, :watchTrades, :fetchTrades)
+    sym = ii.asset.raw
+    backoff = Second(0)
+    alive = Ref(true)
+    # Create task WITHOUT starting it to avoid race condition
+    task = @task begin
+        try
+            last_date = TimeTicks.DateTime(0)
+            while alive[] && isopen(ii, o)
+                trades = pyfunc(
+                    sym;
+                    since=ifelse(
+                        last_date == TimeTicks.DateTime(0),
+                        nothing,
+                        TimeTicks.timestamp(last_date + Millisecond(1)),
+                    ),
+                )
+                trades isa AbstractVector || continue
+                isempty(trades) && (sleep_pad_interruptible(TimeTicks.now(), throttle, alive); continue)
+                last_trade = last(trades)
+                dt = get(last_trade, "datetime", nothing)
+                this_date = _asdate(last_trade)::TimeTicks.DateTime
+                if last_date < this_date
+                    last_date = this_date
+                    for t in trades
+                        price_val = get(t, "price", nothing)
+                        amount_val = get(t, "amount", nothing)
+                        price_val === nothing && continue
+                        amount_val === nothing && continue
+                        price = Float64(price_val)
+                        if _istriggered(o, price)
+                            actual_amount = min(Float64(amount_val), abs(unfilled(o)))
+                            trade!(
+                                s,
+                                o,
+                                ii;
+                                price,
+                                date=_asdate(t),
+                                actual_amount,
+                                slippage=false,
+                                kwargs...,
+                            )
+                            isfilled(ii, o) && begin
+                                alive[] = false
+                                _remove_paper_order_task!(s, ii, o)
+                                # Release remaining reserved volume since order is filled
+                                volrelease!(s, ii; amount=abs(unfilled(o)))
+                                break
+                            end
+                        end
+                    end
+                end
+                sleep_pad_interruptible(TimeTicks.now(), throttle, alive)
+            end
+            # Order closed/cancelled - release any remaining reserved volume
+            isopen(ii, o) || volrelease!(s, ii; amount=abs(unfilled(o)))
+            return
+        catch e
+            e isa InterruptException && rethrow(e)
+            @error "paper_limitorder: error watching fills" exception = (e, catch_backtrace()) raw(ii)
+            alive[] = false
+            _remove_paper_order_task!(s, ii, o)
+            # Release remaining reserved volume on error
+            volrelease!(s, ii; amount=abs(unfilled(o)))
+        end
+    end
+    # Initialize task storage and register for cleanup BEFORE scheduling
+    init_task(task, IdDict())
+    _register_paper_order_task!(s, ii, o, task, alive)
+    schedule(task)
+end
+
+
 @doc """ Creates a limit order in PaperMode.
 
 $(TYPEDSIGNATURES)

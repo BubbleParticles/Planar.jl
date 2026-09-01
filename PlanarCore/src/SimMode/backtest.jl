@@ -232,7 +232,7 @@ function start!(
                                 try
                                     exc = st.exchange(s)
                                     a = parse_instrument(AbstractInstrument, k)
-                                    ii = InstrumentInstance(a; data=SortedDict{TimeFrame, DataFrame}(), exc, margin=s.margin)
+                                    ii = InstrumentInstance(a; data=SortedDict{TimeFrame, DataFrame}(), exc, margin=s.margin, sandbox=true)
                                     if !haskey(ii.data, s.timeframe)
                                         ii.data[s.timeframe] = DataFrame(timestamp=DateTime[], open=DFT[], high=DFT[], low=DFT[], close=DFT[], volume=DFT[])
                                     end

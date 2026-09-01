@@ -135,7 +135,7 @@ $(FIELDS)
     sandbox::Bool = true
     "The quote currency for the strategy cash."
     qc::Symbol = QUOTE_CURRENCY
-    "Configures the margin mode of the strategy (`NoMargin`, `Isolated` or `Cross`)"
+    "Configures the margin mode of the strategy (`NoMargin`, `Isolated`, `IsolatedHedged`, `Cross`, `CrossHedged`)"
     margin::Option{MarginMode} = nothing
     "The default leverage that should be used when opening position with margin mode."
     leverage::T = 0.0

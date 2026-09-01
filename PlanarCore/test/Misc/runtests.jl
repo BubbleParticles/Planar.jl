@@ -41,8 +41,15 @@ end
     @test Misc.IsolatedHedged() isa MarginMode
     @test Misc.CrossHedged() isa MarginMode
     @test marginmode() == NoMargin()
-    @test marginmode("isolated") == Misc.IsolatedMargin
-    @test marginmode("cross") == Misc.CrossMargin
+    @test marginmode("isolated") == Misc.Isolated
+    @test marginmode("isolated_hedged") == Misc.IsolatedHedged
+    @test marginmode("isolated-hedged") == Misc.IsolatedHedged
+    @test marginmode("cross") == Misc.Cross
+    @test marginmode("cross_hedged") == Misc.CrossHedged
+    @test marginmode("cross-hedged") == Misc.CrossHedged
+    @test marginmode("nomargin") == Misc.NoMargin
+    @test marginmode("none") == Misc.NoMargin
+    @test marginmode("") == Misc.NoMargin
     @test_throws ErrorException marginmode("invalid")
 end
 

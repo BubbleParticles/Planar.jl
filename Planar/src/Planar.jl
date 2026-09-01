@@ -245,6 +245,6 @@ end
     end
 
     export ExchangeID, @tf_str, @strategyenv!, @contractsenv!, @optenv!, @environment!
-    export Isolated, NoMargin, MarginMode
+    export Isolated, IsolatedHedged, Cross, CrossHedged, NoMargin, MarginMode, WithMargin, Hedged, NotHedged
     export Watchers
 end

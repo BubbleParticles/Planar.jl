@@ -26,9 +26,9 @@ function Strategies.Strategy(
     config::Config,
     params=config.params,
     account=config.account,
-    mode=config.mode,
-    margin=config.margin,
-    sandbox=config.sandbox,
+    mode=something(config.mode, Sim()),
+    margin=something(config.margin, NoMargin()),
+    sandbox=mode isa Sim ? true : config.sandbox,
     timeframe=config.min_timeframe,
 )
     setproperty!(config, :sandbox, sandbox)
@@ -42,9 +42,9 @@ function Strategies.Strategy(
         InstrumentCollection(assets; load_data, timeframe=string(timeframe), exc, margin)
     end
     s = Strategy(self, mode, margin, timeframe, exc, uni; config)
-    mode_k = if mode == Sim()
+    mode_k = if mode isa Sim
         :sim
-    elseif mode == Paper()
+    elseif mode isa Paper
         :paper
     else
         :live

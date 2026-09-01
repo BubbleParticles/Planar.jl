@@ -1,8 +1,8 @@
 using ..Executors.Instances: leverage!, positionside, leverage
 using ..Executors: hasorders
 using ..Executors.OrderTypes: postoside
-using ..Strategies: MarginStrategy
-using ..Instances: ishedged
+using ..Strategies: MarginStrategy, NoMarginStrategy
+using ..Instances: ishedged, NoMarginInstance
 using ..Lang: splitkws
 
 const _PROTECTIONS_WARNING = """
@@ -76,7 +76,8 @@ function call!(
     ::PositionClose;
     kwargs...,
 )::Bool
-    call!(s, ii, CancelOrders(); t=BuyOrSell)
+    # In hedged mode, cancel only orders on the side being closed to preserve the opposite side's active orders.
+    call!(s, ii, CancelOrders(); t=ishedged(ii) ? postoside(side) : BuyOrSell)
     v = close_position!(s, ii, side, date; kwargs...)
     if !v
         @error "close_position! returned false (failed to close position)" ii=scalar(ii) side
@@ -88,6 +89,12 @@ end
 
 @doc "Closes all strategy positions"
 function call!(s::MarginStrategy{Sim}, side::ByPos, date, ::PositionClose; kwargs...)
+    LittleDict(
+        ii => call!(s, ii, side, date, PositionClose(); kwargs...) for ii in s.universe
+    )
+end
+@doc "Closes all strategy positions (no margin)"
+function call!(s::NoMarginStrategy{Sim}, side::ByPos, date, ::PositionClose; kwargs...)
     LittleDict(
         ii => call!(s, ii, side, date, PositionClose(); kwargs...) for ii in s.universe
     )
@@ -118,4 +125,16 @@ function call!(
         )
         true
     end
+end
+
+@doc "Closes a leveraged position (no margin)."
+function call!(
+    s::NoMarginStrategy{Sim},
+    ii::NoMarginInstance,
+    side::ByPos,
+    date,
+    ::PositionClose;
+    kwargs...,
+)::Bool
+    true
 end

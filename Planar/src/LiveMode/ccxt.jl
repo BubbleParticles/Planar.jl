@@ -1,5 +1,5 @@
 using .OrderTypes
-using .Misc: IsolatedMargin, CrossMargin, NoMargin, DFT, ZERO
+using .Misc: IsolatedMargin, CrossMargin, NoMargin, IsolatedHedged, CrossHedged, DFT, ZERO
 const ot = OrderTypes
 
 _execfunc(f, args...; kwargs...) = f(args...; kwargs...)
@@ -84,11 +84,10 @@ _ccxtobside(::BySide{Buy}) = "bids"
 _ccxtobside(::BySide{Sell}) = "asks"
 _ccxtorderside(::Union{AnyBuyOrder,Type{<:AnyBuyOrder}}) = "buy"
 _ccxtorderside(::Union{AnySellOrder,Type{<:AnySellOrder}}) = "sell"
-_ccxtmarginmode(::IsolatedMargin) = "isolated"
+_ccxtmarginmode(::IsolatedMargin{<:Any}) = "isolated"
+_ccxtmarginmode(::CrossMargin{<:Any}) = "cross"
 _ccxtmarginmode(::NoMargin) = nothing
-_ccxtmarginmode(::CrossMargin) = "cross"
 _ccxtmarginmode(v) = marginmode(v) |> _ccxtmarginmode
-
 ordertype_fromccxt(resp, eid::EIDType) =
     let v = resp_order_type(resp, eid)
         if string(v) == "market"
@@ -306,16 +305,28 @@ resp_position_collateral(resp, ::EIDType)::DFT = get_float(resp, Pos.collateral)
 resp_position_notional(resp, ::EIDType)::DFT = get_float(resp, Pos.notional)
 resp_position_lastprice(resp, ::EIDType)::DFT = get_float(resp, Pos.lastPrice)
 resp_position_markprice(resp, ::EIDType)::DFT = get_float(resp, Pos.markPrice)
-resp_position_hedged(resp, ::EIDType)::Bool = get_bool(resp, Pos.hedged)
+@doc """ Get whether the position response indicates hedged mode.
+Ccxt does not include a \"hedged\" field in standard position responses — hedge
+mode is an account-level setting (set via `setPositionMode`), not a per-position field.
+Returns `nothing` when the field is absent so callers can fall back to the local
+instance margin mode as the authoritative source.
+"""
+resp_position_hedged(resp, ::EIDType)::Option{Bool} = get(resp, Pos.hedged, nothing)
 resp_position_timestamp(resp, ::EIDType)::DateTime = get_time(resp)
 resp_position_margin_mode(resp, ::EIDType) = get(resp, Pos.marginMode, nothing)
 function resp_position_margin_mode(resp, eid::EIDType, ::Val{:parsed})
     mm = get(resp, Pos.marginMode, nothing)
     isnothing(mm) && return nothing
+    hedged = resp_position_hedged(resp, eid)
+    # `hedged` may be `nothing` (ccxt doesn't always include a per-position
+    # hedged flag — it's an account-level setting). Fall back to `false` so
+    # we return the base mode; callers that care about hedged mode should
+    # use the local instance margin mode as authoritative.
+    hedged = something(hedged, false)
     if string(mm) == "isolated"
-        IsolatedMargin
+        hedged ? IsolatedHedged() : Isolated()
     elseif string(mm) == "cross"
-        CrossMargin
+        hedged ? CrossHedged() : Cross()
     else
         nothing
     end

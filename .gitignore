@@ -90,3 +90,4 @@ node_modules
 *~
 /PlanarRegistry/
 *.swp
+local/
