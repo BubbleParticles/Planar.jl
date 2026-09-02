@@ -7,7 +7,8 @@ using ConcurrentCollections: modify!, Delete, ConcurrentDict
 export TTL, safettl
 
 using Base.Iterators: peel
-using Dates: DateTime, Period, now
+using Dates: DateTime, Period
+using ..TimeTicks: now
 using ..DocStringExtensions
 
 struct Node{T}

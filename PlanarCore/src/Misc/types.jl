@@ -99,7 +99,7 @@ const MM{T<:Real} = NamedTuple{(:min, :max),Tuple{T,T}}
 
 # TODO: This should use `Scratch.jl` instead
 @doc "Returns the default local directory."
-default_local_dir(args...) = joinpath(ENV["HOME"], ".cache", "Planar", args...)
+default_local_dir(args...) = joinpath(get(ENV, "HOME", homedir()), ".cache", "Planar", args...)
 function local_dir(args...)
     xdg = get(ENV, "XDG_CACHE_DIR", nothing)
     if isnothing(xdg)

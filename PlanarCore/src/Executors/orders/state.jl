@@ -180,7 +180,7 @@ $(TYPEDSIGNATURES)
 function _check_committment(o)
     @deassert attr(o, :committed)[] |> gtxzero ||
         ordertype(o) <: MarketOrderType ||
-        o isa IncreaseLimitOrder o
+        o isa IncreaseLimitOrder
 end
 
 @doc """Checks if the unfilled amount for a limit sell order is positive.
