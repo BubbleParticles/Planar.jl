@@ -70,7 +70,7 @@ function limitorder(
 end
 
 _cashfrom(s, _, o::IncreaseOrder) = st.freecash(s) + committed(o)
-_cashfrom(_, ii, o::ReduceOrder) = st.freecash(ii, positionside(o)()) + committed(o)
+_cashfrom(_, ii, o::ReduceOrder) = Instances.freecash(ii, positionside(o)()) + committed(o)
 
 @doc """ Checks if the provided trade is the last fill for the given asset instance.
 
