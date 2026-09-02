@@ -1,16 +1,15 @@
 using ..Lang: @deassert, @lget!, Option, @ifdebug
 using ..OrderTypes: ExchangeID
 import ..OrderTypes: commit!, positionside, LiquidationType, ReduceOnlyOrder, trades
-using ..Strategies: Strategies as st, NoMarginStrategy, MarginStrategy
+using ..Strategies: Strategies as st, NoMarginStrategy, MarginStrategy, inuniverse
 using ..Instances: notional, pnl, Instances
 import ..Instances: committed
-using ..Misc: Short, DFT, toprecision
+using ..Misc: Short, Long, DFT, toprecision, gtxzero, ltxzero
 using ..Instruments
 using ..Instruments: @importcash!, AbstractInstrument
 import .Checks: cost
 @importcash!
 import ..Misc: reset!, attr
-
 ##  committed::DFT # committed is `cost + fees` for buying or `amount` for selling
 const _BasicOrderState{T} = NamedTuple{
     (:take, :stop, :committed, :unfilled, :trades),
@@ -536,6 +535,41 @@ end
 @doc """Checks if an increase order can be committed to a strategy.
 
 $(TYPEDSIGNATURES)
+"""
+function iscommittable(s::Strategy, ::Type{<:IncreaseOrder}, commit, ii)
+    inuniverse(ii, s) || return false
+    @deassert st.freecash(s) |> gtxzero
+    c = st.freecash(s)
+    comm = commit[]
+    c >= comm
+end
+@doc """Checks if a strategy can commit to a sell order.
+
+$(TYPEDSIGNATURES)
+"""
+function iscommittable(s::Strategy, ::Type{<:SellOrder}, commit, ii)
+    inuniverse(ii, s) || return false
+    @deassert Instances.freecash(ii, Long()) |> gtxzero
+    @deassert commit[] |> gtxzero
+    c = Instances.freecash(ii, Long())
+    comm = commit[]
+    c >= comm || isapprox(c, comm)
+end
+@doc """Checks if a strategy can commit to a short buy order.
+
+$(TYPEDSIGNATURES)
+"""
+function iscommittable(s::Strategy, ::Type{<:ShortBuyOrder}, commit, ii)
+    inuniverse(ii, s) || return false
+    @deassert Instances.freecash(ii, Short()) |> ltxzero
+    @deassert commit[] |> ltxzero
+    c = Instances.freecash(ii, Short())
+    comm = commit[]
+    c <= comm || isapprox(c, comm)
+end
+@doc """Checks if an increase order can be committed to a strategy.
+
+$(TYPEDSIGNATURES)
 
 """
 function iscommittable(s::Strategy, o::IncreaseOrder, ii)
@@ -544,7 +578,6 @@ function iscommittable(s::Strategy, o::IncreaseOrder, ii)
     comm = committed(o)
     c >= comm || isapprox(c, comm)
 end
-
 @doc """Checks if a sell order can be committed to an asset instance.
 
 $(TYPEDSIGNATURES)

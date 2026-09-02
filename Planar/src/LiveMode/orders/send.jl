@@ -39,8 +39,15 @@ function check_available_cash(s, ii, amount, price, o::Type{<:IncreaseOrder})
     avail >= required
 end
 
+function check_available_cash(s::NoMarginStrategy, ii, amount, price, o::Type{<:ShortSellOrder})
+    @warn "check avl cash: NoMargin short not supported" s = typeof(s) ii = raw(ii) o amount
+    false
+end
+function check_available_cash(s::NoMarginStrategy, ii, amount, _, o::Type{<:ShortBuyOrder})
+    @warn "check avl cash: NoMargin short not supported" s = typeof(s) ii = raw(ii) o amount
+    false
+end
 function check_available_cash(s, ii, amount, _, o::Type{<:ReduceOrder})
-    # Reduce orders must be covered by the position's own cash — we are closing
     # part of that position's notional.  Checking strategy cash for cross was
     # wrong: a cross position can be empty while strategy cash remains, allowing
     # a reduce to pass when the position has nothing to reduce (BUG-2).
@@ -133,6 +140,12 @@ function live_send_order(
     trailing_trigger_amount=nothing, # fallback to price if set
     kwargs...,
 )
+    # NoMargin short fast-path (BUG-4): Sim blocks instantly via iscashenough=false;
+    # Live must not take gateway round-trip. Check before any cash/margin logic.
+    if s isa NoMarginStrategy && t <: Union{ShortSellOrder, ShortBuyOrder}
+        @warn "live send order: NoMargin short not supported" s = typeof(s) ii = raw(ii) t amount
+        return nothing
+    end
     # sanitize amount (since asset cash can be negative and could be used as input)
     amount = abs(amount)
     if !isnothing(trailing_amount)
