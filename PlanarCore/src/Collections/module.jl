@@ -15,7 +15,7 @@ using ..Instruments.Derivatives
 using ..Instruments: Misc
 using ..Misc: TimeTicks, Lang
 using ..TimeTicks
-using ..Misc: Iterable, swapkeys, MarginMode
+using ..Misc: Iterable, swapkeys, MarginMode, SafeLock
 using ..Lang: @lget!, MatchString, Option
 using Base.Enums: namemap
 using ..Misc: OrderedDict, OrderedCollections
@@ -33,20 +33,20 @@ or `assettype(ac)` / `eltype(ac)` for runtime truth.
 """
 struct InstrumentCollection{T<:AbstractInstrument, I<:InstrumentInstance}
     data::DataFrame
-    lock::ReentrantLock
+    lock::SafeLock
     function InstrumentCollection(
         df=DataFrame(;
             exchange=ExchangeID[], asset=AbstractInstrument[], instance=InstrumentInstance[]
         ),
     )
-        new{AbstractInstrument, InstrumentInstance}(df, ReentrantLock())
+        new{AbstractInstrument, InstrumentInstance}(df, SafeLock())
     end
     function InstrumentCollection{T,I}() where {T<:AbstractInstrument, I<:InstrumentInstance}
         new{T,I}(
             DataFrame(;
                 exchange=ExchangeID[], asset=T[], instance=I[]
             ),
-            ReentrantLock(),
+            SafeLock(),
         )
     end
     function InstrumentCollection(instances::Iterable{<:InstrumentInstance})
@@ -54,7 +54,7 @@ struct InstrumentCollection{T<:AbstractInstrument, I<:InstrumentInstance}
         if isempty(inst_vec)
             return new{AbstractInstrument, InstrumentInstance}(
                 DataFrame(; exchange=ExchangeID[], asset=AbstractInstrument[], instance=InstrumentInstance[]),
-                ReentrantLock(),
+                SafeLock(),
             )
         end
         I = mapreduce(typeof, promote_type, inst_vec)
@@ -65,7 +65,7 @@ struct InstrumentCollection{T<:AbstractInstrument, I<:InstrumentInstance}
                 inst in inst_vec;
                 copycols=false,
             ),
-            ReentrantLock(),
+            SafeLock(),
         )
     end
 end
@@ -355,8 +355,8 @@ end
 end
 Base.first(ac::InstrumentCollection) = first(snapshot(ac))
 Base.last(ac::InstrumentCollection) = last(snapshot(ac))
-Base.length(ac::InstrumentCollection) = nrow(ac.data)
-Base.size(ac::InstrumentCollection) = size(ac.data)
+Base.length(ac::InstrumentCollection) = @lock ac.lock nrow(ac.data)
+Base.size(ac::InstrumentCollection) = @lock ac.lock size(ac.data)
 Base.similar(ac::InstrumentCollection) = begin
     InstrumentCollection{eltype(ac.data.asset), eltype(ac.data.instance)}()
 end
