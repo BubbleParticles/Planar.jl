@@ -152,10 +152,13 @@ end
         # the value is nothing, skip the convert call to avoid MethodError.
         val_expr = :(get(di, kconvfunc($ktype, $(QuoteNode(fi))), nothing))
         if ty isa Union && any(t -> t === Nothing, ty.a isa Union ? ty.a : (ty.a, ty.b))
-            # Field type is Union{Nothing, T} or Union{T, Nothing} - skip convert for nothing
+            # Field type is Union{Nothing, T} or Union{T, Nothing} - extract T for convfunc
+            # Get the non-Nothing type from the union
+            union_types = ty.a isa Union ? (ty.a.a, ty.a.b, ty.b) : (ty.a, ty.b)
+            non_nothing_ty = first(filter(t -> t !== Nothing, union_types))
             p = Expr(:kw, fi, :(
                 let v = $val_expr
-                    v === nothing ? nothing : convfunc($ty, v)
+                    v === nothing ? nothing : convfunc($non_nothing_ty, v)
                 end
             ))
         else
