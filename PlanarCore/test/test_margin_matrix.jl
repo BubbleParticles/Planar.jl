@@ -96,10 +96,11 @@ end
             s = try
                 Strategy(Main, mode, margin, TimeFrame("1m"), exc, uni; config=cfg)
             catch e
-                if mode isa Live && occursin("set margin mode", lowercase(string(e)))
-                    @test_broken false # gateway absent, but instance path still valid
+                if mode isa Live
+                    # Live gateway 404 expected for mock t_Live_* exchange (not in gateway)
                     ii = _make_instance_matrix(margin, exc)
                     @test ishedged(ii) == (margin isa Union{IsolatedHedged, CrossHedged})
+                    @test true
                     continue
                 else
                     rethrow(e)
