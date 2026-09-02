@@ -26,4 +26,5 @@ using Test
     include("Stubs/runtests.jl")
     include("TimeTicks/runtests.jl")
     include("hedged_margin.jl")
+    include("test_margin_matrix.jl")
 end

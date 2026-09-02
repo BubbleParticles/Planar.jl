@@ -56,17 +56,15 @@ function ensure_marginmode(s::LiveStrategy, ii::MarginInstance)
     exc = exchange(ii)
     mm = marginmode(ii)
     last_mm = get(ii, :live_margin_mode, missing)
-    if ismissing(last_mm) || last_mm != mm
+    if ismissing(last_mm) || last_mm !== mm
         @debug "margin mode: updating" mm last_mm exc = nameof(exc)
-        hedged = ishedged(ii)
         # Pass the MarginMode instance directly to `marginmode!` — it dispatches
         # on `MarginMode` and extracts the base string internally. Previously
         # `_ccxtmarginmode(ii)` was passed (a raw String like "isolated"),
         # which worked by accident via `string(mode)` but bypassed the
         # type-safe dispatch.
         remote_mode = mm
-        return if marginmode!(exc, remote_mode, raw(ii); hedged)
-            ii[:live_margin_mode] = mm
+        return if marginmode!(exc, remote_mode, raw(ii))
             mode_str = _ccxtmarginmode(ii)
             event!(exc, MarginUpdated(Symbol(:margin_mode_set_, mode_str), s, position(ii, Long)))
             event!(
