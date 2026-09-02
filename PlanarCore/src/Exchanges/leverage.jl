@@ -207,9 +207,10 @@ end
 
 $(TYPEDSIGNATURES)
 """
-function marginmode!(exc::Exchange, mode::MarginMode, symbol=""; hedged=false, kwargs...)
+function marginmode!(exc::Exchange, mode::MarginMode, symbol=""; kwargs...)
     mode isa NoMargin && return true
     base = mode isa IsolatedMargin ? "isolated" : "cross"
+    hedged = ishedged(mode)
     marginmode!(exc, base, symbol; hedged, kwargs...)
 end
 function marginmode!(exc::Exchange, mode, symbol=""; hedged=false, kwargs...)
