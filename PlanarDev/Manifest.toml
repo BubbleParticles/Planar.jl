@@ -2,7 +2,7 @@
 
 julia_version = "1.12.7"
 manifest_format = "2.0"
-project_hash = "dc522e269b9baf8e85086a90510299d439e0561f"
+project_hash = "e30bb82f79a73b8f6dc78bba7ee3f69ecc582031"
 
 [[deps.ANSIColoredPrinters]]
 git-tree-sha1 = "574baf8110975760d391c710b6341da1afa48d8c"
@@ -210,6 +210,12 @@ version = "1.6.0"
 git-tree-sha1 = "54b76cbb40d9a0f5368c880725b2f141da77c94f"
 uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
 version = "4.2.0"
+
+[[deps.DaemonMode]]
+deps = ["Crayons", "Sockets"]
+git-tree-sha1 = "8aee56d540665a9386b067cecc65db0982704421"
+uuid = "d749ddd5-2b29-4920-8305-6ff5a704e36e"
+version = "0.1.2"
 
 [[deps.DataAPI]]
 git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
@@ -783,7 +789,7 @@ uuid = "a475c859-e357-4be2-a5e3-43038ab4b158"
 version = "1.0.1"
 
 [[deps.PlanarDev]]
-deps = ["Pkg", "Planar", "PlanarCore", "PlanarDownloadTool", "PlanarStrategyTools", "Random"]
+deps = ["Aqua", "Pkg", "Planar", "PlanarCore", "PlanarDownloadTool", "PlanarStrategyTools", "Random"]
 path = "."
 uuid = "df15b565-ff7f-4c64-9bc8-38e9343ea891"
 version = "0.1.1"
