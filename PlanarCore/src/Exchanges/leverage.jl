@@ -187,6 +187,8 @@ real boolean: it is passed via the request `body` (POST) so the JSON bool type
 is preserved — a `query=` string would send `"true"`/`"false"` which Python
 treats as truthy (Gotcha #8) and would silently force hedge mode.
 """
+dosetpositionmode(exc::Exchange, mode::AbstractString, symbol::AbstractString; hedged=false, kwargs...) =
+    dosetpositionmode(exc, symbol; hedged, kwargs...)
 function dosetpositionmode(exc, symbol; hedged=false, kwargs...)
     try
         name = string(exc.id)

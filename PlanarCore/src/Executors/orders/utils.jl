@@ -176,45 +176,6 @@ $(TYPEDSIGNATURES)
 """
 unfillment(o::Order) = unfillment(typeof(o), o.amount)
 
-@doc """
-Checks if a strategy can commit to an increase order.
-
-$(TYPEDSIGNATURES)
-"""
-function iscommittable(s::Strategy, ::Type{<:IncreaseOrder}, commit, ii)
-    inuniverse(ii, s) || return false
-    @deassert st.freecash(s) |> gtxzero
-    c = st.freecash(s)
-    comm = commit[]
-    c >= comm
-end
-@doc """
-Checks if a strategy can commit to a sell order.
-
-$(TYPEDSIGNATURES)
-"""
-function iscommittable(s::Strategy, ::Type{<:SellOrder}, commit, ii)
-    inuniverse(ii, s) || return false
-    @deassert Instances.freecash(ii, Long()) |> gtxzero
-    @deassert commit[] |> gtxzero
-    c = Instances.freecash(ii, Long())
-    comm = commit[]
-    c >= comm || isapprox(c, comm)
-end
-
-@doc """
-Checks if a strategy can commit to a short buy order.
-
-$(TYPEDSIGNATURES)
-"""
-function iscommittable(s::Strategy, ::Type{<:ShortBuyOrder}, commit, ii)
-    inuniverse(ii, s) || return false
-    @deassert Instances.freecash(ii, Short()) |> ltxzero
-    @deassert commit[] |> ltxzero
-    c = Instances.freecash(ii, Short())
-    comm = commit[]
-    c <= comm || isapprox(c, comm)
-end
 
 @doc """
 Iterates over all the orders in a strategy.

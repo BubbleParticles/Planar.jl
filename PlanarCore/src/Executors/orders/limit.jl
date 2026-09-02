@@ -69,8 +69,8 @@ function limitorder(
     end
 end
 
-_cashfrom(s, _, o::IncreaseOrder) = st.freecash(s) + committed(o)
-_cashfrom(_, ii, o::ReduceOrder) = Instances.freecash(ii, positionside(o)()) + committed(o)
+_cashfrom(s, _, o::IncreaseOrder) = st.freecash(s) + committed(o) # Increase→freecash(s) (s.cash_committed bucket) per margin-matrix freecash rows
+_cashfrom(_, ii, o::ReduceOrder) = Instances.freecash(ii, positionside(o)()) + committed(o) # Reduce→freecash(ii, side) per margin-matrix
 
 @doc """ Checks if the provided trade is the last fill for the given asset instance.
 
