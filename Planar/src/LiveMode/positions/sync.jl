@@ -412,6 +412,7 @@ function live_sync_position!(
 end
 
 function live_sync_position!(s::LiveStrategy, ii::HedgedInstance; kwargs...)
+    @assert ishedged(ii) == (typeof(ii) <: HedgedInstance) "HedgedInstance must be hedged"
     @sync for pos in (Long, Short)
         @async try
             live_sync_position!(s, ii, $pos; kwargs...)
@@ -425,6 +426,7 @@ function live_sync_position!(s::LiveStrategy, ii::HedgedInstance; kwargs...)
 end
 
 function live_sync_position!(s::LiveStrategy, ii::MarginInstance; kwargs...)
+    @assert ishedged(ii) == (typeof(ii) <: HedgedInstance) "MarginInstance hedged flag must match HedgedInstance dispatch"
     live_sync_position!(s, ii, get_position_side(s, ii); kwargs...)
 end
 

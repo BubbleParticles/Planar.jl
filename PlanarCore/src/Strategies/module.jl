@@ -2,6 +2,7 @@ using ..Collections: InstrumentCollection, Collections as coll, Instances, Data,
 
 using ..Instances: InstrumentInstance, Position, MarginMode, PositionSide, ishedged, Instances
 using ..Instances: CurrencyCash, CCash
+import ..ExchangeTypes: has
 using ..Instances.Exchanges
 using ..Instances: OrderTypes
 using ..OrderTypes: Order, OrderType, AnyBuyOrder, AnySellOrder, Buy, Sell, OrderSide
@@ -130,12 +131,13 @@ struct Strategy{X<:ExecMode,N,E<:ExchangeID,M<:MarginMode,C} <: AbstractStrategy
         # in every execution mode. Live-mode re-enforcement happens per-instance via
         # `ensure_marginmode` before each order/close (per README).
         if mode isa Live && margin isa WithMargin
+            @assert margin isa NoMargin || has(exc, :setLeverage) "Live WithMargin requires setLeverage"
             # `check_margin_support!` fails fast when the exchange lacks setMarginMode
             # (any WithMargin) or setPositionMode (hedged variants). Its return value
             # MUST be honoured (the docstring promises fail-fast).
             check_margin_support!(exc, margin) ||
                 error("Exchange $(nameof(exc)) does not support margin mode '$(margin)'")
-            ok = marginmode!(exc, margin, ""; hedged=ishedged(margin))
+            ok = marginmode!(exc, margin, "")
             if ok === false
                 error("Exchange $(nameof(exc)) failed to set margin mode '$(margin)' (hedged=$(ishedged(margin))) — gateway setMarginMode/setPositionMode returned false. Check gateway logs, API permissions, and that the mock advertises setMarginMode+setPositionMode.")
             end
