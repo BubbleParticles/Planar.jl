@@ -1,4 +1,4 @@
-using Distributed: @everywhere, workers, addprocs, rmprocs, RemoteChannel
+using Distributed: @everywhere, workers, addprocs, rmprocs, RemoteChannel, myid
 
 const workers_setup = Ref(0)
 
@@ -11,7 +11,7 @@ This function takes a module `mod` and optionally a boolean `force` and an integ
 """
 function _instantiate_workers(mod; force=false, num=4)
     if workers_setup[] !== num || force
-        length(workers()) > 1 && rmprocs(workers())
+        length(workers()) > 1 && rmprocs(filter(!=(myid()), workers()))
 
         m = _find_module(mod)
         exeflags = "--project=$(pkgdir(m))"

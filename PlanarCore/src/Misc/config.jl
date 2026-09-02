@@ -103,8 +103,10 @@ function exchange_keys(name; sandbox, account="")::Dict{String,Any}
             cfg = JSON3.read(f)
         end
         Dict(k => get(cfg, k, "") for k in names)
-    catch
-        Dict()
+    catch e
+        e isa InterruptException && rethrow(e)
+        @debug "exchange_keys: could not load keys" name exc_name exception=(e, catch_backtrace())
+        Dict{String,Any}()
     end
     for k in names
         this_name = "PLANAR_$(uppercase(exc_name))_$(uppercase(k))"
@@ -219,7 +221,7 @@ This function sets the `path` field of the `cfg` object to the provided `path` i
 """
 _path!(cfg, path) = begin
     if !isfile(path)
-    throw(ArgumentError("Config file not found at path $(path)"))
+        throw(ArgumentError("Config file not found at path $(path)"))
     else
         cfg.path = path
     end

@@ -62,7 +62,8 @@ macro skipoffline(
         quote
             try
                 $expr
-            catch
+            catch e
+                e isa InterruptException && rethrow(e)
                 if $(isoffline)()
                     @error "skipping error since offline" maxlog = 1 _module = $this_module _file = $this_file _line = $this_line exception = (
                         first(Base.catch_stack())...,
@@ -88,9 +89,10 @@ function truncate_file(filename, nlines)
     if nlines <= 0
         error("nlines must be a positive integer")
     end
-    f = open(filename, "a+")
+    f = nothing
     lines = IOBuffer()
     try
+        f = open(filename, "a+")
         seekend(f)
         current_pos = position(f)
         count = 0
@@ -114,7 +116,7 @@ function truncate_file(filename, nlines)
         write(f, lines)
     finally
         close(lines)
-        close(f)
+        f !== nothing && close(f)
     end
 end
 
