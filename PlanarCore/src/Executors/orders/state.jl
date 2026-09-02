@@ -232,15 +232,14 @@ $(TYPEDSIGNATURES)
 function applyfill!(
     ::Strategy{<:Union{Sim,Paper}}, ii::NoMarginInstance, o::BuyOrder, t::BuyTrade
 )
-    @deassert o isa IncreaseOrder && _check_unfillment(o) unfilled(o), typeof(o)
+    @deassert o isa IncreaseOrder && _check_unfillment(o)
     @deassert committed(o) == o.attrs.committed[] && committed(o) >= 0.0
     # from neg to 0 (buy amount is pos)
     attr(o, :unfilled)[] += t.amount
-    @deassert attr(o, :unfilled)[] |> ltxzero (o, t.amount)
+    @deassert attr(o, :unfilled)[] |> ltxzero
     # from pos to 0 (buy size is neg)
     attr(o, :committed)[] -= committment(ii, t)
-    @deassert gtxzero(ii, committed(o), Val(:price)) || o isa MarketOrder o,
-    committment(ii, t)
+    @deassert gtxzero(ii, committed(o), Val(:price)) || o isa MarketOrder
 end
 
 @doc """Fills a sell order.
@@ -269,7 +268,7 @@ $(TYPEDSIGNATURES)
 function applyfill!(
     ::Strategy{<:Union{Sim,Paper}}, ii::InstrumentInstance, o::ShortBuyOrder, t::ShortBuyTrade
 )
-    @deassert o isa ShortBuyOrder && _check_unfillment(o) o
+    @deassert o isa ShortBuyOrder && _check_unfillment(o)
     @deassert committed(o) == o.attrs.committed[] && committed(o) |> ltxzero
     @deassert attr(o, :unfilled)[] < 0.0
     attr(o, :unfilled)[] += t.amount # from neg to 0 (buy amount is pos)
@@ -291,8 +290,8 @@ function applyfill!(
     o::IncreaseOrder,
     t::IncreaseTrade,
 )
-    @deassert o isa IncreaseOrder && _check_unfillment(o) o
-    @deassert committed(o) == o.attrs.committed[] && committed(o) > 0.0 t
+    @deassert o isa IncreaseOrder && _check_unfillment(o)
+    @deassert committed(o) == o.attrs.committed[] && committed(o) > 0.0
     attr(o, :unfilled)[] += t.amount
     @deassert attr(o, :unfilled)[] |> ltxzero || o isa ShortSellOrder
     @deassert t.value > 0.0
