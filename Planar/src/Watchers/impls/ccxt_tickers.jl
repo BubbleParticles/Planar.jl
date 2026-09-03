@@ -171,11 +171,11 @@ function _reset_tickers_func!(w::Watcher)
     iswatch = if haskey(attrs, :iswatch)
         attrs[:iswatch]::Bool
     else
-        false
+        has(exc, :watchTickersForSymbols) || has(exc, :watchTickers)
     end
     if iswatch
         corogen_func(_) = coro_func() = watch_func(args...)
-        init_func() = fetch_func
+        init_func() = fetch_func !== nothing ? fetch_func(; timeout=300.0) : nothing
         handler_task!(
             w;
             init_func,

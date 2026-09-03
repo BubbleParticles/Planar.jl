@@ -88,7 +88,9 @@ function define_trades_loop_funct(s::LiveStrategy, ii, exc; exc_kwargs=(;))
     buf_subject = @lget! ii :trades_buf_subject Rocket.Subject(Any)
     buf = @lget! ii :trades_buf Vector{Any}()
     sizehint!(buf, s[:live_buffer_size])
-    if !isnothing(watch_func) && s[:is_watch_mytrades]
+    has_watch_trades = !isnothing(first(exc, :watchMyTrades, :watchMyTradesForSymbols))
+    iswatch = has_watch_trades && s[:is_watch_mytrades]
+    if iswatch
         init_handler() = begin
             task_local_storage(:buf_subject, buf_subject)
             task_local_storage(:buf, buf)

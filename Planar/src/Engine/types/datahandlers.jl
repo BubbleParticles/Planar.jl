@@ -27,7 +27,9 @@ function _seedfill!(ii::InstrumentInstance, src_dict)
             try
                 empty!(data[tf])
                 append!(data[tf], new_data)
-            catch
+            catch e
+                e isa InterruptException && rethrow(e)
+                @error "_seedfill!: resample/append failed" ii asset=raw(ii) tf exception=(e, catch_backtrace())
                 data[tf] = new_data
             end
         end
@@ -71,7 +73,9 @@ function stub_universe!(ac::InstrumentCollection, src; fromfiat=true)
             try
                 empty!(data[tf])
                 append!(data[tf], new_data)
-            catch
+            catch e
+                e isa InterruptException && rethrow(e)
+                @error "stub_universe!: resample/append failed" ii asset=raw(ii) tf exception=(e, catch_backtrace())
                 data[tf] = new_data
             end
         end
@@ -112,7 +116,8 @@ function purge_data!(s::Strategy, sym; purge=true)
             cached_ohlcv!(eid, ohlcvmethod(s), period(tf), string(sym))
             # overwrite with empty DataFrame in cache layer if supported
         catch e
-            @debug "purge_data!: cache clear failed" sym exception=(e, catch_backtrace())
+            e isa InterruptException && rethrow(e)
+            @error "purge_data!: cache clear failed" sym exception=(e, catch_backtrace())
         end
     catch e
         @warn "purge_data! failed" sym exception=(e, catch_backtrace())

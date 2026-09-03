@@ -45,8 +45,17 @@ export stop!
 function stop!(s::Strategy{Sim})
     @debug "SimMode: stopping strategy" name = nameof(s)
     # Reset strategy state
-    st.reset!(s)
+    try
+        st.reset!(s)
+    catch e
+        @error "SimMode: error during st.reset!" name = nameof(s) exception=(e, catch_backtrace())
+    end
     # Call StopStrategy callback
-    call!(s, StopStrategy())
+    try
+        call!(s, StopStrategy())
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "SimMode: error during StopStrategy callback" name = nameof(s) exception=(e, catch_backtrace())
+    end
     @info "SimMode: strategy stopped" name = nameof(s)
 end
