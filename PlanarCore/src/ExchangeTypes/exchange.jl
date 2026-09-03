@@ -217,17 +217,17 @@ function Base.getproperty(e::CcxtExchange, k::Symbol)
         client = CcxtGateway.default_client()
         ex_id = string(e.id)
         m = string(k)
-        is_fetch = startswith(m, "fetch") && m != "fetchMarkets"
         # Determine timeout based on method type
         is_ws = endswith(m, "Ws") || startswith(m, "watch")
         is_ohlcv = occursin("OHLCV", m)
         timeout_val = is_ws ? 300.0 : is_ohlcv ? 120.0 : nothing
         (args...; kwargs...) -> begin
-            body = if is_fetch && !isempty(kwargs)
-                Dict{Symbol,Any}("params" => Dict{Symbol,Any}(kwargs))
-            else
-                Dict{Symbol,Any}(kwargs)
-            end
+            # The Python gateway receives the entire JSON body as `params` and
+            # calls method(*positional, **params). All kwargs must be at the
+            # top level of the body — never nested under a "params" sub-dict
+            # (that would pass a single `params` kwarg instead of individual
+            # symbol/timeframe/etc. kwargs to the ccxt method).
+            body = Dict{Symbol,Any}(kwargs)
             if !isempty(args)
                 body[:_args] = [a for a in args]
             end
