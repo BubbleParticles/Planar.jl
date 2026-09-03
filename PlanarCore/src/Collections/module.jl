@@ -285,9 +285,9 @@ function _daterange(ac::InstrumentCollection, tf=nothing; skip_empty=false)
     for ii in ac.data.instance
         df = first(values(ii.data))
         isempty(df) && continue
-        d_min = firstdate(df)
+        d_min = TimeTicks.dtstamp(firstdate(df))
         d_min > m && (m = d_min)
-        d_max = lastdate(last(ii.data).second)
+        d_max = TimeTicks.dtstamp(lastdate(last(ii.data).second))
         d_max < M && (M = d_max)
     end
     tf = @something tf first(ac.data[begin, :instance].data).first
@@ -298,7 +298,7 @@ function _daterange(ac::InstrumentCollection, tf=nothing; skip_empty=false)
     if m == typemin(Int64)
         m = M = TimeTicks.dtstamp(now())
     end
-    DateRange(dt(m), dt(M), tf)
+    DateRange(TimeTicks.dt(m), TimeTicks.dt(M), tf)
 end
 
 @doc """Makes a date range that spans the union (earliest start to latest end) of the collection.
@@ -320,12 +320,12 @@ function _daterange_full(ac::InstrumentCollection, tf=nothing; kwargs...)
         # Consider the first and last dataframes in the SortedDict for breadth
         df_first = first(values(ii.data))
         if !isempty(df_first)
-            d_min = firstdate(df_first)
+            d_min = TimeTicks.dtstamp(firstdate(df_first))
             d_min < m && (m = d_min)
         end
         df_last = last(ii.data).second
         if !isempty(df_last)
-            d_max = lastdate(df_last)
+            d_max = TimeTicks.dtstamp(lastdate(df_last))
             d_max > M && (M = d_max)
         end
     end
@@ -336,7 +336,7 @@ function _daterange_full(ac::InstrumentCollection, tf=nothing; kwargs...)
     if M == typemin(Int64)
         m = M = TimeTicks.dtstamp(now())
     end
-    DateRange(dt(m), dt(M) + tf, tf)
+    DateRange(TimeTicks.dt(m), TimeTicks.dt(M) + tf, tf)
 end
 
 function snapshot(ac::InstrumentCollection)

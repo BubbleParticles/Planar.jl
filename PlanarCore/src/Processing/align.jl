@@ -37,7 +37,8 @@ function trim_to!(df::AbstractDataFrame, to, tf, tail=false)
         f = is_right_adjacent(to, tf.period)
         rev_idx = findfirst(f, @view(df.timestamp[end:-1:1]))
         isnothing(rev_idx) && return
-        start = size(df)[1] - rev_idx + 1
+        start = size(df)[1] - rev_idx + 2
+        start > size(df)[1] && return
         idx = start:size(df)[1]
     else
         f = is_left_adjacent(to, tf.period)

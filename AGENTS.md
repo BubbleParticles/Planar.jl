@@ -881,5 +881,16 @@ using Fetch.TimeTicks: DateTime
 
 **Audit finding (2026-07-14)**: All 12 production packages with bare `now()` calls resolve to
 `TimeTicks.now()` (UTC). The only exception was `Watchers/src/impls/ccxt_average_ohlcv_watcher.jl`
-which imported unused `now` from `Fetch.Dates` — fixed. The submodule `Misc/src/ttl.jl` (`TimeToLive`)
-uses `Dates.now` locally but the containment boundary prevents leakage.
+which imported unused `now` from `Fetch.Dates` — fixed. The submodule `Misc/src/ttl.jl` (`TimeToLive`) uses `Dates.now` locally but the containment boundary prevents leakage.
+
+### 25. `trim_to!` tail off-by-one violates strict-exclusive bounds (lesson #31/#43)
+
+`Alignments.trim_to!` with `tail=true` used `is_right_adjacent(to, period)` (`x - step < to`) to find the cut point in the reversed view. The original `start = size - rev_idx + 1` deleted the **common timestamp itself** (`idx = start:size`), keeping only timestamps `< to`. With `strict=true` semantics (exclusive both sides for `rangebetween`, inclusive for trim's *keep*), the expected behavior is to keep `<= to`. The fix is `start = size - rev_idx + 2` with guard `start > size && return`, so only timestamps `> to` are removed. Head path (`x + step > to`, `1:stop-1`) was already correct (keeps `>= to`).
+
+**Checklist:** For any `findfirst` on reversed timestamp array, verify the computed `start` resolves to `index_of_target + 1` (exclusive delete), not `index_of_target`. Write a concrete 4-row test `[00:00,00:05,00:10,00:15]` with `to=00:10` expecting `[00:00..00:10]` retained.
+
+### 26. `propagate_ohlcv!` silent gap loss — always warn on non-adjacent or insufficient slice
+
+`Processing.propagate_ohlcv!` (DataFrame overload) has three early-return paths that previously were silent: (a) `nrow(src_slice) < min_rows` after `rangeafter(src.timestamp, date_dst)` (gap shrank slice), (b) `isempty(new)` after resample, (c) `!isleftadj(date_dst, firstdate(new))` (resampled block not left-adjacent → gap larger than `dst_tf`). Path (a) lacked the `@warn` that path `nrow(src) < min_rows` had; path (c) returned `dst` unchanged with no log, mirroring Watchers gap lesson #49 where gaps must be explicit not silent. The fix adds `@warn` for (a) and (c) with `date_dst` and `firstdate(new)` context. `rangeafter` already uses `strict=true` (exclusive) correctly — do not change to `strict=false` to "fix" gap width.
+
+**Checklist:** Every `return dst` / `return data` that skips an append due to contiguity must emit `@warn`/`@error` with both timestamps and timeframes, and respect `strict=true` exclusive bounds (`rangeafter(..., strict=true)`).

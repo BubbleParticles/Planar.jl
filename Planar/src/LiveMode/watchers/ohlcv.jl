@@ -136,12 +136,12 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
             ow[ii] = w
         end
         @sync for ii in snapshot(s.universe)
-            @async try
+            errormonitor(@async try
                 start_watcher(ii)
             catch e
                 e isa InterruptException && rethrow(e)
                 @error "ohlcv: start watcher failed" ii = raw(ii) exception = (e, catch_backtrace())
-            end
+            end)
         end
     else
         eid = exchangeid(s)
@@ -210,12 +210,12 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
             @sync for ii in snapshot(s.universe)
                 sym = raw(ii)
                 wv[sym] = ii.data[s.timeframe]
-                @async try
+                errormonitor(@async try
                     Watchers.load!(w, sym)
                 catch e
                     e isa InterruptException && rethrow(e)
                     @error "ohlcv startup: load failed" sym exception = (e, catch_backtrace())
-                end
+                end)
             end
         catch e
             e isa InterruptException && rethrow(e)
@@ -229,7 +229,7 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
                         sym = string(raw(ii))
                         if met == :trades
                             # trades path: start per-asset watcher via local closure
-                            @async try
+                            errormonitor(@async try
                                 local w2
                                 eid2 = exchangeid(exc)
                                 default_view2 = @lget! ii.data s.timeframe cached_ohlcv!(eid2, met, s.timeframe, sym)
@@ -240,7 +240,7 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
                                 ow[ii] = w2
                             catch e
                                 @warn "dynamic universe ohlcv add failed" sym exception=(e, catch_backtrace())
-                            end
+                            end)
                         else
                             # aggregated watcher (candles/tickers/average): update ids/symstates/view and trigger backfill
                             # aggregated watcher (candles/tickers/average): update ids/symstates/view and trigger backfill

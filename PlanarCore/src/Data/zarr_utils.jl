@@ -203,19 +203,22 @@ default_value(t::T) where {T<:Type} = begin
 end
 
 default_value(f::Function) = begin
+    # Lesson #26: `mean`/`median`/`std`/`var` have no zero-arg method (Union{}), `sum` returns 0.
+    # Must not call `f()` unguarded and must not let `Base.return_types` pick an arbitrary
+    # concrete type (e.g. Float64→0.0 for mean) which would hide the statistical NaN default.
+    fname = string(nameof(f))
+    if fname == "sum"
+        return 0.0
+    elseif fname in ("mean", "median", "std", "var", "minimum", "maximum")
+        return NaN
+    elseif fname == "extrema"
+        return (NaN, NaN)
+    end
     for t in Base.return_types(f)
         t === Union{} && continue
         if t ∉ (UnionAll, Any)
             return default_value(t)
         end
-    end
-    # Fallback for functions with no concrete return types (e.g., mean, median, std)
-    # Check if it's a known statistical function and return appropriate default
-    fname = string(nameof(f))
-    if fname in ("mean", "median", "std", "var", "sum", "minimum", "maximum")
-        return NaN
-    elseif fname == "extrema"
-        return (NaN, NaN)
     end
     nothing
 end
