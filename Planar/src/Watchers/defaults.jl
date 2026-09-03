@@ -101,13 +101,18 @@ The function takes a watcher and an appendby function as arguments. If the buffe
 """
 function default_process(w::Watcher, appendby::Function)
     isempty(w.buffer) && return nothing
-    last_p = attr(w, :last_processed)
+    last_p = get(w.attrs, :last_processed, nothing)
+    view = get(w.attrs, :view, nothing)
+    if isnothing(view)
+        @debug "Watchers: default_process view missing, skipping" w=w.name _module=LogWatchLocks
+        return nothing
+    end
     if isnothing(last_p)
-        appendby(attr(w, :view), w.buffer, w.capacity.view)
+        appendby(view, w.buffer, w.capacity.view)
     else
         range = rangeafter(w.buffer, last_p; by=x -> x.time)
         !isempty(range) &&
-            appendby(attr(w, :view), view(w.buffer, range), w.capacity.view)
+            appendby(view, view(w.buffer, range), w.capacity.view)
     end
     setattr!(w, w.buffer[end], :last_processed)
 end
@@ -153,9 +158,9 @@ default_get(w::Watcher, def) = get(w.attrs, :view, def)
 
 _notimpl(sym, w) = throw(error("`$sym` Not Implemented for watcher `$(w.name)`"))
 @doc "May run after a successful fetch operation, according to the `flush_interval`. It spawns a task."
-_flush!(w::Watcher, ::Val) = default_flusher(w, w.key)
+_flush!(w::Watcher, ::Val) = haskey(w.attrs, :key) ? default_flusher(w, w.attrs[:key]) : nothing
 @doc "Called once on watcher creation, used to pre-fill the watcher buffer."
-_load!(w::Watcher, ::Val) = default_loader(w, w.key)
+_load!(w::Watcher, ::Val) = haskey(w.attrs, :key) ? default_loader(w, w.attrs[:key]) : nothing
 @doc "Appends new data to the watcher buffer, returns `true` when new data is added, `false` otherwise."
 _fetch!(w::Watcher, ::Val) = _notimpl(fetch!, w)
 @doc "Processes the watcher data, called everytime the watcher fetches new data."

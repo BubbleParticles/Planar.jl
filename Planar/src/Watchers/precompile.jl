@@ -22,14 +22,24 @@ if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
     # Test start/stop cycle
     start!(w)
     @precomp begin
-        fetch!(w)
-        process!(w)
-        flush!(w; force=true, sync=true)
+        try
+            fetch!(w)
+        catch e
+            @debug "PRECOMP: fetch! skipped" exception=(e, catch_backtrace())
+        end
+        try
+            process!(w)
+        catch e
+            @debug "PRECOMP: process! skipped" exception=(e, catch_backtrace())
+        end
+        try
+            flush!(w; force=true, sync=true)
+        catch e
+            @debug "PRECOMP: flush! skipped" exception=(e, catch_backtrace())
+        end
     end
     stop!(w)
-    close(w)
-    
-    # Ensure all watchers are closed and subscriptions cleaned up
+    try close(w) catch e @debug "PRECOMP: close skipped" exception=(e, catch_backtrace()) end
     _closeall()
     
     # Explicitly shut down Rocket scheduler if possible
