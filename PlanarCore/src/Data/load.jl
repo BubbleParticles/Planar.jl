@@ -448,13 +448,13 @@ end
 function _contiguous_ts(
     series::AbstractVector{T}, td; raise=true, return_date=false
 ) where {T}
-    pv = dtfloat(series[1])
     conv = T isa AbstractFloat ? identity : dtfloat
+    pv = conv(series[1])
     for i in 2:length(series)
         nv = conv(series[i])
         nv - pv !== td && (
             if raise
-                throw("Time series is not contiguous at index $i. ($(dt(pv)) != $(dt(nv)))")
+                throw("Time series is not contiguous at index $i. (prev=$(pv) next=$(nv))")
             else
                 return ifelse(return_date, (false, i, pv), false)
             end

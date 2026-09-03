@@ -20,12 +20,26 @@ const OHLCV_FILE_PATH = joinpath(PROJECT_PATH, "test", "stubs", "ohlcv.csv")
 
 include("stub_strategy.jl")
 
-read_ohlcv() = CSV.read(OHLCV_FILE_PATH, DataFrame)
+function read_ohlcv()
+    try
+        CSV.read(OHLCV_FILE_PATH, DataFrame)
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "stubs: read_ohlcv failed" exception=(e, catch_backtrace())
+        rethrow(e)
+    end
+end
 
 function stubscache_path()
-    proj = Pkg.project()
-    @something get(ENV, "PLANAR_STUBS_PATH", nothing) joinpath(dirname(proj.path), "test", "stubs")
-
+    try
+        proj = Pkg.project()
+        @something get(ENV, "PLANAR_STUBS_PATH", nothing) joinpath(dirname(something(proj.path, PROJECT_PATH)), "test", "stubs")
+    catch e
+        e isa InterruptException && rethrow(e)
+        @debug "stubs: stubscache_path fallback" exception=(e, catch_backtrace())
+        env = get(ENV, "PLANAR_STUBS_PATH", nothing)
+        isnothing(env) ? joinpath(PROJECT_PATH, "test", "stubs") : env
+    end
 end
 
 function save_stubtrades(ii)
@@ -43,43 +57,96 @@ end
 # end
 
 function load_stubtrades(ii)
-   ca.load_cache("trades_stub_$(ii.asset.bc).jls"; cache_path=stubscache_path(), raise=false)
+    try
+        ca.load_cache("trades_stub_$(ii.asset.bc).jls"; cache_path=stubscache_path(), raise=false)
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "stubs: load_stubtrades failed for $(ii.asset.bc)" exception=(e, catch_backtrace())
+        nothing
+    end
 end
 
 function load_stubtrades!(ii)
-    trades = load_stubtrades(ii)
-    isnothing(trades) || append!(ii.history, trades)
+    try
+        trades = load_stubtrades(ii)
+        isnothing(trades) || append!(ii.history, trades)
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "stubs: load_stubtrades! failed for $(ii.asset.bc)" exception=(e, catch_backtrace())
+    end
 end
 
 @doc "Generates trades and saves them to the stubs shed."
 function gensave_trades(n=10_000; s, dosave=true)
-        sml.synth_stub!(ii, n)
-    SimMode.start!(s; doreset=true)
+    try
+        for ii in s.universe
+            sml.synth_stub!(ii, n)
+        end
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "stubs: synth_stub! failed" exception=(e, catch_backtrace())
+        rethrow(e)
+    end
+    try
+        SimMode.start!(s; doreset=true)
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "stubs: SimMode.start! in gensave_trades failed" exception=(e, catch_backtrace())
+        rethrow(e)
+    end
     if dosave
         for ii in s.universe
-            save_stubtrades(ii)
+            try
+                save_stubtrades(ii)
+            catch e
+                e isa InterruptException && rethrow(e)
+                @error "stubs: save_stubtrades failed for $(ii.asset.bc)" exception=(e, catch_backtrace())
+            end
         end
     end
 end
 
 function do_stub!(s::Strategy, n=10_000; trades=true)
-    for ii in s.universe
-        sml.synth_stub!(ii, n)
+    try
+        for ii in s.universe
+            sml.synth_stub!(ii, n)
+        end
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "stubs: synth_stub! in do_stub! failed" exception=(e, catch_backtrace())
+        rethrow(e)
     end
     if trades
         for ii in s.universe
-            load_stubtrades!(ii)
+            try
+                load_stubtrades!(ii)
+            catch e
+                e isa InterruptException && rethrow(e)
+                @error "stubs: load_stubtrades! failed for $(ii.asset.bc)" exception=(e, catch_backtrace())
+            end
         end
     end
     s
 end
 
-seeddata!(s::Strategy, n=10_000; trades=true) = do_stub!(s, n; trades)
-
 function stub_strategy(mod=StubStrategy, args...; dostub=true, cfg=Config(), kwargs...)
-    s = Strategies.strategy(mod, cfg; kwargs...)
+    s = try
+        Strategies.strategy(mod, cfg; kwargs...)
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "stubs: strategy construction failed" exception=(e, catch_backtrace())
+        rethrow(e)
+    end
     @assert s isa Strategy
-    dostub && Stubs.do_stub!(s)
+    if dostub
+        try
+            Stubs.do_stub!(s)
+        catch e
+            e isa InterruptException && rethrow(e)
+            @error "stubs: do_stub! in stub_strategy failed" exception=(e, catch_backtrace())
+            rethrow(e)
+        end
+    end
     s
 end
 
@@ -91,7 +158,9 @@ if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
             try
                 s = stub_strategy(; cfg)
                 gensave_trades(; s, dosave=true)
-            catch
+            catch e
+                e isa InterruptException && rethrow(e)
+                @debug "stubs: gensave_trades failed, retrying dostub=false" exception=(e, catch_backtrace())
                 s = stub_strategy(; cfg, dostub=false)
                 while any(isempty(ii.history) for ii in s.universe)
                     gensave_trades(; s, dosave=true)
@@ -101,18 +170,20 @@ if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
                 end
                 try
                     stub_strategy(; cfg, dostub=true)
-                catch e
-                    if e isa UndefVarError
+                catch e2
+                    e2 isa InterruptException && rethrow(e2)
+                    if e2 isa UndefVarError
                         stub_strategy(; dostub=false)
-                        @debug "stubs: " exception = (first(Base.catch_stack())...,)
+                        @debug "stubs: " exception=(e2, catch_backtrace())
                     else
-                        rethrow(e)
+                        rethrow(e2)
                     end
                 end
             end
         end
     catch e
-        @debug "Stubs precompile workload skipped: $e"
+        e isa InterruptException && rethrow(e)
+        @debug "Stubs precompile workload skipped" exception=(e, catch_backtrace())
     end
 end
 end

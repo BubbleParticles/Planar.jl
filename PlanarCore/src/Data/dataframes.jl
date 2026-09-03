@@ -235,8 +235,8 @@ function _make_room(df, capacity, n)
     if n < 0
         throw(ArgumentError("n must be non-negative"))
     end
-    if capacity < 0
-        throw(ArgumentError("capacity must be non-negative"))
+    if capacity < 1
+        throw(ArgumentError("capacity must be at least 1"))
     end
     current_rows = nrow(df)
     # Ensure we only delete rows if appending `n` more rows would exceed `capacity`
