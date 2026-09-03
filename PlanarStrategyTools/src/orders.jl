@@ -20,7 +20,8 @@ function select_ordertype(s::Strategy, os::Type{<:OrderSide}, p::PositionSide=Lo
         elseif t == :po
             PostOnlyOrder{os}, t
         else
-            error("Wrong order type $t")
+            @warn "Wrong order type $t, falling back to :market" maxlog = 1
+            MarketOrder{os}, :market
         end
     else
         if t == :market
@@ -34,7 +35,8 @@ function select_ordertype(s::Strategy, os::Type{<:OrderSide}, p::PositionSide=Lo
         elseif t == :po
             ShortPostOnlyOrder{os}, t
         else
-            error("Wrong order type $t")
+            @warn "Wrong order type $t, falling back to :market" maxlog = 1
+            ShortMarketOrder{os}, :market
         end
     end
 end

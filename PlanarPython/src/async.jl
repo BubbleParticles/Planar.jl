@@ -77,7 +77,8 @@ function py_start_loop(pa::PythonAsync=gpa)
         pa.task_running[] = false
         try
             wait(pa.task[])
-        catch
+        catch e
+            @error "python: error waiting for task during start_loop" exception = e
         end
     end
 
@@ -137,7 +138,8 @@ function py_stop_loop(pa::PythonAsync=gpa)
     pa.task_running[] = false
     try
         wait(pa.task[])
-    catch
+    catch e
+        @error "python: error waiting for task during stop_loop" exception = e
     end
     GC_RUNNING[] = false
 end
@@ -225,12 +227,16 @@ function pytask(coro::Py)
     fut = pyschedule(coro)
     task = errormonitor(@async pywait_fut(fut))
     fut.add_done_callback((_) -> begin
-        sto = task.storage
-        if !isnothing(sto)
-            cond = get(sto, :notify, missing)
-            if !ismissing(cond)
-                safenotify(cond)
+        try
+            sto = task.storage
+            if !isnothing(sto)
+                cond = get(sto, :notify, missing)
+                if !ismissing(cond)
+                    safenotify(cond)
+                end
             end
+        catch e
+            @error "python: error in pytask done_callback" exception = e
         end
     end)
     task
@@ -301,7 +307,7 @@ function __pyfetch(f::Py, ::Val{:try}, args...; kwargs...)
 end
 
 function __pyfetch(f::Function, args...; kwargs...)
-    fetch(@async(f(args...; kwargs...)))
+    fetch(errormonitor(@async(f(args...; kwargs...))))
 end
 # NOTE: wrap the function here to quickly overlay methods
 function _pyfetch(args...; kwargs...)
@@ -313,7 +319,7 @@ end
 $(TYPEDSIGNATURES)
 """
 function _pyfetch(f::Function, args...; kwargs...)
-    fetch(@async(f(args...; kwargs...)))
+    fetch(errormonitor(@async(f(args...; kwargs...))))
 end
 # NOTE: wrap the function here to quickly overlay methods
 pyfetch(args...; kwargs...) = _pyfetch(args...; kwargs...)

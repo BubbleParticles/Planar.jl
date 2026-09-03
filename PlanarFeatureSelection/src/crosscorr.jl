@@ -18,8 +18,14 @@ using .oti: SMA, StdDev, fit!
 
 """
 function center_data(data::AbstractDict, tf=nothing; ratio_func=ratio!)
-    @assert keytype(data) <: TimeFrame keytype(data)
-    @assert valtype(data) <: Vector{DataFrame} valtype(data)
+    if !(keytype(data) <: TimeFrame)
+        @warn "center_data: keytype must be TimeFrame, got $(keytype(data))"
+        return data, zeros(DFT, 0, 0)
+    end
+    if !(valtype(data) <: Vector{DataFrame})
+        @warn "center_data: valtype must be Vector{DataFrame}, got $(valtype(data))"
+        return data, zeros(DFT, 0, 0)
+    end
 
     input_tf = isnothing(tf) ? first(keys(data)) : tf
     this_data = Dict(

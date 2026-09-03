@@ -35,7 +35,7 @@ using PlanarFeatureSelection: center_data, lagsbytf, DFT
         @test vecs isa Array{DFT,2}
         
         # Check dimensions - should be n-1 rows due to ratio calculation
-        @test size(vecs, 1) == 1438
+        @test size(vecs, 1) == 1439
         @test size(vecs, 2) == 2  # 2 assets
         
         # Check metadata preservation

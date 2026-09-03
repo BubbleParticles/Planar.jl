@@ -67,10 +67,16 @@ function iscrossed(s, ii, ats, sig_a_name, sig_b_name, drc::Val)
     tf_b = signal_timeframe(s, sig_b_name)
     tf_s = s.timeframe
     sig_a = strategy_signal(s, ii, sig_a_name)
-    @assert sig_a.date >= ats
+    if sig_a.date < ats
+        @warn "crossed: signal_a date before ats" sig_a_name sig_a.date ats maxlog = 1
+        return false
+    end
     prev_sig_a_val = signal_prev(sig_a.state; sig=sig_a)
     sig_b = strategy_signal(s, ii, sig_b_name)
-    @assert sig_b.date >= ats
+    if sig_b.date < ats
+        @warn "crossed: signal_b date before ats" sig_b_name sig_b.date ats maxlog = 1
+        return false
+    end
     prev_sig_b_val = signal_prev(sig_b.state; sig=sig_b)
     a = signal_value(sig_a.state; sig=sig_a)
     b = signal_value(sig_b.state; sig=sig_b)

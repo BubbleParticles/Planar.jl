@@ -665,9 +665,6 @@ function _multi_opt_func(sess, splits, backtest_func, median_func, obj_type)
     end
 end
 
-@doc """ Single-threaded optimization function.
-
-$(TYPEDSIGNATURES)
 function _single_opt_func(sess, splits, backtest_func, median_func, args...)
     function single_backtest_func(params, n=0)
         scores = Vector{Any}(undef, splits)
@@ -684,14 +681,6 @@ function _single_opt_func(sess, splits, backtest_func, median_func, args...)
     end
 end
 
-@doc """ Defines the median function for multi-objective mode.
-
-$(TYPEDSIGNATURES)
-
-The function takes a boolean argument `ismulti` which indicates if the optimization is multi-objective.
-If `ismulti` is `true`, the function returns a function that calculates the median over all the repeated iterations.
-Otherwise, it returns a function that calculates the median of a given array.
-"""
 function define_median_func(splits)
     if splits > 1
         median_tuple(x) = tuple(median(x; dims=1)...)
@@ -700,14 +689,6 @@ function define_median_func(splits)
     end
 end
 
-@doc """ Defines the optimization function for a given strategy.
-
-$(TYPEDSIGNATURES)
-
-The function takes several arguments: `s`, `backtest_func`, `ismulti`, `splits`, `obj_type`, and `isthreaded`.
-`s` is the strategy, `backtest_func` is the backtest function, `ismulti` indicates if the optimization is multi-objective, `splits` is the number of splits for the optimization process, `obj_type` is the type of the objective, and `isthreaded` indicates if the optimization is threaded.
-The function returns the appropriate optimization function based on these parameters.
-"""
 function define_opt_func(
     s::Strategy;
     backtest_func,

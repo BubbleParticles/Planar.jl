@@ -69,7 +69,8 @@ The function returns the decoded file content.
 
 """
 function fetchfile(url; dec=gzipdecode)
-    resp = HTTP.get(url)
+    # Using HTTP_PARAMS for consistent timeout/retry configuration
+    resp = @except HTTP.get(url; HTTP_PARAMS...) "fetchfile failed for $url"
     dec(resp.body)
 end
 
@@ -197,13 +198,18 @@ function dofetchfiles(sym, files; func, kwargs...)
         quit = Ref(false)
         @acquire SEM begin
             # NOTE: func must accept a kw arg `out`
-            dofetch(file) =
+            function dofetch(file)
                 if !quit[]
-                    @except begin
+                    # Use errormonitor to ensure async errors are not swallowed
+                    errormonitor(@async try
                         func(sym, file; out, kwargs...)
                         @pbupdate!
-                    end "chunk error for $file" (quit[] = true)
+                    catch e
+                        @error "chunk error for $file" exception=(e, catch_backtrace())
+                        quit[] = true
+                    end)
                 end
+            end
             asyncmap(dofetch, files; ntasks=WORKERS[])
         end
     end
