@@ -31,6 +31,7 @@ macro choosepairs()
                 $pairs = [e => pl for e in $ev]
             end
         catch e
+            e isa InterruptException && rethrow()
             @error "Failed to select pairs" exception=(e, catch_backtrace())
             exit(1)
         end
@@ -44,7 +45,6 @@ end
 #         Planar.setexchange!(Symbol($exchange))
 #     end
 # end
-
 macro splitexchanges!(keep=false)
     exchanges = esc(:exchanges)
     ev = esc(:exchanges_vec)
@@ -54,12 +54,14 @@ macro splitexchanges!(keep=false)
                 try
                     $keep ? Symbol(ex) : getexchange!(Symbol(ex))
                 catch e
+                    e isa InterruptException && rethrow()
                     @error "Failed to initialize exchange '$ex'" exception=(e, catch_backtrace())
                     rethrow(e)
                 end
             end
             @info "Executing command on $(length($ev)) exchanges..."
         catch e
+            e isa InterruptException && rethrow()
             @error "Failed to initialize exchanges" exception=(e, catch_backtrace())
             exit(1)
         end
@@ -104,10 +106,8 @@ Fetch pairs from exchanges.
     reset::Bool=false,
 )
     try
-        @debug "Activating python env..."
-
         # NOTE: don't create exchange classes since multiple exchanges uses @distributed
-        # and the (python) class is create on the worker process
+        # and the exchange class is created on the worker process
         @splitexchanges!
 
         @choosepairs
@@ -124,6 +124,7 @@ Fetch pairs from exchanges.
             reset,
         )
     catch e
+        e isa InterruptException && rethrow()
         @error "Fetch command failed" exception=(e, catch_backtrace())
         exit(1)
     end
@@ -169,6 +170,7 @@ Downsamples ohlcv data from a timeframe to another.
         end
         @info "Resampling successful."
     catch e
+        e isa InterruptException && rethrow()
         @error "Resample command failed" exception=(e, catch_backtrace())
         exit(1)
     end
@@ -178,3 +180,4 @@ end
 Planar CLI
 """
 @main
+

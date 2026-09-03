@@ -62,7 +62,7 @@ function flush!(w::Watcher; force=true, sync=false)
                 _flush!(w, _val(w))
                 Rocket.next!(w.beacon.flush, now())
             end
-            ifelse(result isa Exception, logerror(w, result), result)
+            ifelse(result isa Exception, logerror(w, result, catch_backtrace()), result)
         end)
     end
     sync && wait(t)

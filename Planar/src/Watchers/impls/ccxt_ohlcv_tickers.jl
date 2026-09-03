@@ -176,7 +176,17 @@ _isvwap(w) = w[k"price_source"] == k"vwap"
 
 function _maybe_resolve(w, df, sym, this_ts, tf)
     if isempty(df)
-        @acquire w[k"sem"] _ensure_ohlcv!(w, sym)
+        state = get(w.attrs, k"symstates", nothing)
+        if state !== nothing
+            s = get(state, sym, nothing)
+            if s !== nothing
+                @lock s.lock @acquire w[k"sem"] _ensure_ohlcv!(w, sym)
+            else
+                @acquire w[k"sem"] _ensure_ohlcv!(w, sym)
+            end
+        else
+            @acquire w[k"sem"] _ensure_ohlcv!(w, sym)
+        end
         if isempty(df)
             return k"stale_df"
         end
@@ -193,8 +203,17 @@ function _maybe_resolve(w, df, sym, this_ts, tf)
         @debug "ohlcv tickers: resolving stale df" _module = LogOHLCVTickers sym _lastdate(
             df
         ) this_ts
-        @acquire w[k"sem"] _ensure_ohlcv!(w, sym)
-        # If the fetch brought data past this_ts, the exchange data already
+        state2 = get(w.attrs, k"symstates", nothing)
+        if state2 !== nothing
+            s2 = get(state2, sym, nothing)
+            if s2 !== nothing
+                @lock s2.lock @acquire w[k"sem"] _ensure_ohlcv!(w, sym)
+            else
+                @acquire w[k"sem"] _ensure_ohlcv!(w, sym)
+            end
+        else
+            @acquire w[k"sem"] _ensure_ohlcv!(w, sym)
+        end
         # covers this candle — temp_candle is redundant/outdated.
         if _lastdate(df) >= this_ts
             return k"stale_candle"
@@ -328,7 +347,7 @@ function diff_volume!(w, df, state, latest_timestamp)
     # Init guard — trigger baseline fetch when no prev_base exists.
     if iszero(prev_base) && !iszero(curr_max) && !state.loaded
         @warn "ohlcv tickers watcher: zero prev max base volume" latest_timestamp sym curr_max
-        @acquire w[k"sem"] _ensure_ohlcv!(w, sym)
+        @lock state.lock @acquire w[k"sem"] _ensure_ohlcv!(w, sym)
         temp_candle.volume = 0.0
         return false
     end
