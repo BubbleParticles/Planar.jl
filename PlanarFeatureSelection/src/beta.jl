@@ -31,18 +31,21 @@ Beta = Covariance(stock returns, market returns) / Variance(market returns)
 """
 function calculate_beta_covariance(stock_returns::Vector{DFT}, market_returns::Vector{DFT})::DFT
     if length(stock_returns) != length(market_returns)
-        error("Input return series must have the same length")
+        @warn "Input return series must have the same length" stock_returns_length=length(stock_returns) market_returns_length=length(market_returns)
+        return DFT(NaN)
     end
 
     if length(stock_returns) < 2 # Need at least 2 data points for covariance/variance
-         error("Not enough data points to calculate beta")
+        @warn "Not enough data points to calculate beta" data_points=length(stock_returns) minimum_required=2
+        return DFT(NaN)
     end
 
     cov_returns = cov(stock_returns, market_returns)
     var_market = var(market_returns)
 
     if abs(var_market) < eps(DFT) # Check if variance is close to zero
-        error("Cannot calculate beta: Market variance is zero or near zero")
+        @warn "Cannot calculate beta: Market variance is zero or near zero" var_market=var_market
+        return DFT(NaN)
     end
 
     beta = cov_returns / var_market
@@ -64,18 +67,17 @@ stock_returns = α + β * market_returns + ε
 
 # Returns
 - `DFT`: The calculated Beta value (the slope coefficient).
-
-# Throws
-- `Error`: If the input vectors have different lengths or insufficient data.
 """
 function calculate_beta_regression(stock_returns::Vector{DFT}, market_returns::Vector{DFT})::DFT
     if length(stock_returns) != length(market_returns)
-        error("Input return series must have the same length")
+        @warn "Input return series must have the same length" stock_returns_length=length(stock_returns) market_returns_length=length(market_returns)
+        return DFT(NaN)
     end
 
-     if length(stock_returns) < 2 # Need at least 2 data points for regression
-          error("Not enough data points to calculate beta")
-     end
+    if length(stock_returns) < 2 # Need at least 2 data points for regression
+        @warn "Not enough data points to calculate beta" data_points=length(stock_returns) minimum_required=2
+        return DFT(NaN)
+    end
 
     # Create a DataFrame for GLM
     data = DataFrame(stock_returns=stock_returns, market_returns=market_returns)
@@ -125,7 +127,8 @@ function beta_indicator(s::st.Strategy, tf=s.timeframe; benchmark::Union{Symbol,
     if typeof(benchmark) <: DataFrame
         external_benchmark_df = copy(benchmark) # necessary to ensure metadata uniqueness
         if size(external_benchmark_df, 2) < 2
-            error("External benchmark DataFrame must have at least two columns.")
+            @warn "External benchmark DataFrame must have at least two columns." columns=size(external_benchmark_df, 2)
+            return DataFrame()
         end
         # Ensure the external benchmark DataFrame has the correct timeframe metadata
         da.timeframe!(external_benchmark_df, tf)
@@ -274,12 +277,14 @@ function beta_indicator(s::st.Strategy, tf=s.timeframe; benchmark::Union{Symbol,
                     @debug "Using aggregate of top $(length(valid_benchmark_assets)) assets as benchmark: $(valid_benchmark_assets)"
                 end
             else
-                error("Invalid benchmark symbol: $(benchmark). Must be :top_asset or :top_5_percent.")
+                @error "Invalid benchmark symbol: $(benchmark). Must be :top_asset or :top_5_percent." benchmark=benchmark
+                return DataFrame()
             end
         else
             # This case should not be reached due to the initial type check,
             # but included for completeness.
-             error("Invalid benchmark type after initial check: $(typeof(benchmark)).")
+            @error "Invalid benchmark type after initial check: $(typeof(benchmark))." benchmark_type=typeof(benchmark)
+            return DataFrame()
         end
     end # end of if/else block handling benchmark types
 
@@ -332,10 +337,9 @@ function beta_indicator(s::st.Strategy, tf=s.timeframe; benchmark::Union{Symbol,
         result_cols = [:Instrument, :Beta_Covariance]
     elseif method == :regression
         result_cols = [:Instrument, :Beta_Regression]
-    elseif method == :both
-        result_cols = [:Instrument, :Beta_Covariance, :Beta_Regression]
     else
-        error("Invalid method: $(method). Must be :covariance, :regression, or :both.")
+        @error "Invalid method: $(method). Must be :covariance, :regression, or :both." method=method
+        return DataFrame()
     end
 
     # Prepare to collect results

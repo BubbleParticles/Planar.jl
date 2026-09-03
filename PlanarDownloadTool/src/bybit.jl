@@ -153,7 +153,7 @@ It then parses the HTML response and extracts the list of links present in the d
 
 """
 symlinkslist(sym; path=PATHS.trading) = begin
-    resp = HTTP.get(symurl(sym; path))
+    resp = HTTP.get(symurl(sym; path); HTTP_PARAMS...)
     doc = EzXML.parsehtml(resp.body)
     links_list(doc)
 end

@@ -96,7 +96,10 @@ function pairs_trading_signals(
     tail=nothing,
 )
     p1, p2 = prices
-    length(p1) != length(p2) && error("Price series must have the same length")
+    if length(p1) != length(p2)
+        @warn "Price series must have the same length" length_p1=length(p1) length_p2=length(p2)
+        return DataFrame()
+    end
     if tail !== nothing
         p1 = @view p1[(end - tail + 1):end]
         p2 = @view p2[(end - tail + 1):end]
@@ -156,11 +159,9 @@ function pairs_trading_signals(
     tail=lagsbytf(tf),
 )
     # Get asset instances from strategy
-    ii1 = asset_bysym(s, asset1_sym)
-    ii2 = asset_bysym(s, asset2_sym)
-    # Check if assets exist in strategy
-    isnothing(ii1) && error("Instrument $asset1_sym not found in strategy")
-    isnothing(ii2) && error("Instrument $asset2_sym not found in strategy")
+    isnothing(ii1) && @warn "Instrument $asset1_sym not found in strategy"
+    isnothing(ii2) && @warn "Instrument $asset2_sym not found in strategy"
+    isnothing(ii1) || isnothing(ii2) && return DataFrame()
     # Get price data from asset instances at specified timeframe
     df1 = ii1.data[tf]
     df2 = ii2.data[tf]
@@ -171,12 +172,18 @@ function pairs_trading_signals(
     end
     # Find common dates between both assets
     common_dates = intersect(df1.timestamp, df2.timestamp)
-    isempty(common_dates) && error("No common dates found between assets")
+    if isempty(common_dates)
+        @warn "No common dates found between assets"
+        return DataFrame()
+    end
     # Align the price series
     p1 = @view df1[df1.timestamp .∈ (common_dates,), :close]
     p2 = @view df2[df2.timestamp .∈ (common_dates,), :close]
     # Verify alignment
-    length(p1) == length(p2) || error("Price series have different lengths after alignment")
+    if length(p1) != length(p2)
+        @warn "Price series have different lengths after alignment" length_p1=length(p1) length_p2=length(p2)
+        return DataFrame()
+    end
     # Call the base function with the aligned price data
     df = pairs_trading_signals((p1, p2), lookback; zscore_threshold)
     df.timestamp = common_dates
