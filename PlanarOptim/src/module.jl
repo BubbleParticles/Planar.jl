@@ -422,12 +422,17 @@ It calculates the objective score, the current total cash, the profit and loss r
 The function returns these metrics as a named tuple.
 """
 metrics_func(s; initial_cash) = begin
-    obj = call!(s, OptScore())
-    # record run
-    cash = value(st.current_total(s))
-    pnl = cash / initial_cash - 1.0
-    trades = st.trades_count(s)
-    (; obj, cash, pnl, trades)
+    try
+        obj = call!(s, OptScore())
+        # record run
+        cash = value(st.current_total(s))
+        pnl = cash / initial_cash - 1.0
+        trades = st.trades_count(s)
+        (; obj, cash, pnl, trades)
+    catch e
+        @error "metrics_func: OptScore call failed" exception = (e, catch_backtrace())
+        (; obj=DEFAULT_OBJ, cash=0.0, pnl=0.0, trades=0)
+    end
 end
 
 function ms_mult(ms, mult::DFT)
@@ -524,6 +529,8 @@ function define_backtest_func(sess, small_step, big_step; verbose=false)
             end
         catch e
             @error "backtest run" exception = (e, catch_backtrace())
+            # Return sentinel
+            DEFAULT_OBJ
         end
     end
 end
@@ -627,7 +634,12 @@ function _multi_opt_func(sess, splits, backtest_func, median_func, obj_type)
         metrics_collected = Vector{Any}(undef, splits)
         Threads.@threads for i in 1:splits
             if isrunning()
-                scores[i] = @something backtest_func(params, n) default_value(obj_type)
+                try
+                    scores[i] = @something backtest_func(params, n) default_value(obj_type)
+                catch e
+                    @error "parallel backtest job $i failed" exception = (e, catch_backtrace())
+                    scores[i] = default_value(obj_type)
+                end
                 @debug "parallel backtest job finished" i n
                 # Collect metrics instead of printing immediately
                 if "print" ∈ metadatakeys(sess.results)
@@ -656,16 +668,16 @@ end
 @doc """ Single-threaded optimization function.
 
 $(TYPEDSIGNATURES)
-
-The function takes four arguments: `splits`, `backtest_func`, `median_func`, and `obj_type`.
-`splits` is the number of splits for the optimization process, `backtest_func` is the backtest function, `median_func` is the function to calculate the median, and `obj_type` is the type of the objective.
-The function returns a function that performs a single-threaded optimization for a given set of parameters.
-"""
 function _single_opt_func(sess, splits, backtest_func, median_func, args...)
     function single_backtest_func(params, n=0)
         scores = Vector{Any}(undef, splits)
         for i in 1:splits
-            scores[i] = backtest_func(params, n)
+            try
+                scores[i] = backtest_func(params, n)
+            catch e
+                @error "single backtest job $i failed" exception = (e, catch_backtrace())
+                scores[i] = DEFAULT_OBJ
+            end
             _print_metrics(sess, n)
         end
         mapreduce(permutedims, vcat, scores) |> median_func
@@ -720,8 +732,14 @@ The function takes a strategy `s` as an argument.
 It returns a tuple containing the type of the objective and the number of objectives.
 """
 function objectives(s)
-    let test_obj = call!(s, OptScore())
-        typeof(test_obj), length(test_obj)
+    try
+        let test_obj = call!(s, OptScore())
+            typeof(test_obj), length(test_obj)
+        end
+    catch e
+        @error "objectives: failed to get objective type from strategy" exception = (e, catch_backtrace())
+        # Return default: single Float64 objective
+        Vector{Float64}, 1
     end
 end
 

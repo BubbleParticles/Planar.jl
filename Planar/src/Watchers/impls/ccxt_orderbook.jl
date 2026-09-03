@@ -196,9 +196,7 @@ function _start!(w::Watcher, ::CcxtOrderBookVal)
     else
         (:fetchOrderBook,)
     end
-    fetch_func = first(exc, ws_methods...)
-
-    iswatch = get(attrs, :iswatch, false)
+    iswatch = get(attrs, :iswatch, has(exc, :watchOrderBookForSymbols) || has(exc, :watchOrderBook))
     if iswatch
         watch_func = first(exc, :watchOrderBookForSymbols, :watchOrderBook)
         sym = _sym(w)
@@ -206,12 +204,10 @@ function _start!(w::Watcher, ::CcxtOrderBookVal)
         # Initial REST fetch for handler_task! init
         init_fetch = function ()
             if fetch_func !== nothing
-                return fetch_func(; symbol=sym)
+                return fetch_func(; symbol=sym, timeout=300.0)
             end
             return nothing
         end
-
-        corogen_func(_) = coro_func() = watch_func(sym)
         init_func() = init_fetch()
         wrapper_func(v) = _ob_to_df(v)
         handler_task!(w; init_func, corogen_func, wrapper_func, if_func=!isempty)

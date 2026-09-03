@@ -245,10 +245,15 @@ function strategy!(src::Symbol, cfg::Config)
         parent = get(cfg.attrs, :parent_module, Strategies)
         @assert parent isa Module
         mod = if !isdefined(parent, src)
-            @eval parent begin
-                include($(path))
-                using .$(src)
-                $(src)
+            try
+                @eval parent begin
+                    include($(path))
+                    using .$(src)
+                    $(src)
+                end
+            catch e
+                @error "strategy loading: failed to load BareStrat" exception=(e, catch_backtrace())
+                return nothing
             end
         else
             @eval parent $(src)
@@ -505,7 +510,13 @@ strategy(; kwargs...) = strategy(:BareStrat; parent_module=Strategies, kwargs...
 @doc """ Returns a strategy by name, defaulting to parent_module=Planar for non-BareStrat strategies. """
 function strategy(name::Symbol; parent_module=nothing, kwargs...)
     if parent_module === nothing
-        parent_module = name === :BareStrat ? Strategies : getproperty(Main, :Planar)
+        parent_module = if name === :BareStrat
+            Strategies
+        elseif isdefined(Main, :Planar)
+            getproperty(Main, :Planar)
+        else
+            error("Planar is not defined in Main. Please `using Planar` first.")
+        end
     end
     return strategy(name, config_path(); parent_module=parent_module, kwargs...)
 end
