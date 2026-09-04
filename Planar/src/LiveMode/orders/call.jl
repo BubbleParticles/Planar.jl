@@ -1,7 +1,8 @@
-using .st: NoMarginStrategy, MarginStrategy
-using .Executors: AnyLimitOrder, AnyMarketOrder
+using .st: NoMarginStrategy, MarginStrategy, Strategy
+using .Executors: AnyLimitOrder, AnyMarketOrder, CancelOrders, hasorders
+using ..PaperMode.OrderTypes: BuyOrSell, OrderSide
 using ..PaperMode.SimMode: singlewaycheck
-using PlanarCore.Instances: raw
+using PlanarCore.Instances: raw, InstrumentInstance, NoMarginInstance
 using PlanarCore.Misc: Short
 using PlanarCore.OrderTypes: positionside
 @doc """ Places a limit order and synchronizes the cash balance.
@@ -188,6 +189,11 @@ end
 
 @doc """ Cancels all live orders for a NoMarginStrategy.
 $(TYPEDSIGNATURES)
+
+Cancels through the exchange (`live_cancel`, which handles the gateway
+round-trip) instead of only dropping local state, so exchange-side orders do
+not leak after a cancel call. Falls back to local cancel when there is
+nothing to send.
 """
 function call!(
     s::NoMarginStrategy{Live},
@@ -195,5 +201,15 @@ function call!(
     ::CancelOrders;
     kwargs...,
 )::Bool
-    all(cancel!(s, o, ii; err=OrderCanceled(o)) for o in values(s, ii, BuyOrSell))
+    if !hasorders(s, ii, BuyOrSell)
+        return true
+    end
+    invoke(
+        call!,
+        Tuple{Strategy{Live},InstrumentInstance,CancelOrders},
+        s,
+        ii,
+        CancelOrders();
+        kwargs...,
+    )
 end

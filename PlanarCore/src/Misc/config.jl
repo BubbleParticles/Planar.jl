@@ -265,11 +265,11 @@ function _parse(k, v)
         m = lowercase(replace(string(v), "-" => "_", " " => "_"))
         if m == "isolated"
             Isolated()
-        elseif m == "isolated_hedged" || m == "isolatedhedged" || m == "isolated_hedge" || m == "isolated-hedged"
+        elseif m in ("isolated_hedged", "isolatedhedged", "isolated_hedge", "isolatedhedge")
             IsolatedHedged()
         elseif m == "cross"
             Cross()
-        elseif m == "cross_hedged" || m == "crosshedged" || m == "cross_hedge" || m == "cross-hedged"
+        elseif m in ("cross_hedged", "crosshedged", "cross_hedge", "crosshedge")
             CrossHedged()
         elseif m == "nomargin" || m == "no_margin" || m == "none" || m == "no-margin"
             NoMargin()

@@ -103,7 +103,7 @@ macro maketrade()
             fees=fees_quote,
             fees_base,
             size,
-            lev=leverage(ii, o),
+            lev=leverage(ii, ot.positionside(o)()),
             entryprice=price(ii, actual_price, o),
         )
     end

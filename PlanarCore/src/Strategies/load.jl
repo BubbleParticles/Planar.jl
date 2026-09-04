@@ -191,8 +191,14 @@ function default_load(mod::Module, t::Type, config::Config)
         call!
     end
     assets = @something _universe_members(config) invokelatest(call_func, t, StrategyMarkets())
-    if config.mode == Paper()
-        config.sandbox = true
+    # Sandbox must stay an explicit user choice (keys, exchange selection and
+    # margin-mode support checks all depend on it). Forcing it here silently
+    # swaps the exchange object under strategies that set `sandbox=false`
+    # (e.g. ExampleMargin via `SANDBOX[] = config.sandbox`), breaking live
+    # margin-mode validation. Warn on a suspicious Paper+sandbox=false combo
+    # (the inner constructor already warns the inverse) instead of mutating.
+    if config.mode == Paper() && !config.sandbox
+        @warn "Paper mode usually runs against a sandbox exchange; config.sandbox=false keeps live keys and endpoints."
     end
     s = Strategy(mod, assets; config)
     _strat_load_checks(s, config)
@@ -388,7 +394,14 @@ function strategy!(mod::Module, cfg::Config)
     if isnothing(cfg.margin)
         cfg.margin = def_mm
     elseif def_mm != cfg.margin
-        @warn "Mismatching margin mode" config = cfg.margin strategy = def_mm
+        # The strategy object's margin type param `M` is authoritative for all
+        # local dispatch (`singlewaycheck`, `positions!`, `isopen`, ...), and
+        # `_strat_load_checks` asserts `marginmode(s) == config.margin`. A
+        # mismatch would only fail at load time, so reconcile here: adopt the
+        # strategy-defined mode and warn loudly instead of proceeding into a
+        # guaranteed assertion failure.
+        @warn "Mismatching margin mode — adopting strategy-defined mode" config = cfg.margin strategy = def_mm
+        cfg.margin = def_mm
     end
     s_type = _strategy_type(mod, cfg)
     strat_exc = Symbol(exchangeid(s_type))
