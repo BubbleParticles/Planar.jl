@@ -46,11 +46,11 @@ marginmode(args...; kwargs...) = NoMargin()
 marginmode(v::String) = let ml = lowercase(replace(v, "-" => "_", " " => "_"))
     if ml == "isolated"
         Isolated
-    elseif ml == "isolated_hedged" || ml == "isolatedhedged" || ml == "isolated_hedge" || ml == "isolated-hedged"
+    elseif ml in ("isolated_hedged", "isolatedhedged", "isolated_hedge", "isolatedhedge")
         IsolatedHedged
     elseif ml == "cross"
         Cross
-    elseif ml == "cross_hedged" || ml == "crosshedged" || ml == "cross_hedge" || ml == "cross-hedged"
+    elseif ml in ("cross_hedged", "crosshedged", "cross_hedge", "crosshedge")
         CrossHedged
     elseif ml == "nomargin" || ml == "no_margin" || ml == "none" || ml == "no-margin" || ml == ""
         NoMargin
