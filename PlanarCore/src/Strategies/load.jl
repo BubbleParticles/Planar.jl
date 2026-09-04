@@ -222,7 +222,7 @@ function bare_load(mod::Module, t::Type, config::Config)
         call!
     end
     syms = @something _universe_members(config) invokelatest(call_func, t, StrategyMarkets())
-    exc = Exchanges.getexchange!(config.exchange; sandbox=true, config.account)
+    exc = Exchanges.getexchange!(config.exchange; sandbox=config.sandbox, config.account)
     TF = invokelatest(getfield, mod, :TF)
     uni = InstrumentCollection(syms; load_data=false, timeframe=TF, exc, config.margin)
     s = Strategy(mod, config.mode, config.margin, TF, exc, uni; config)

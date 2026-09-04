@@ -44,9 +44,13 @@ end
     @test marginmode("isolated") == Misc.Isolated
     @test marginmode("isolated_hedged") == Misc.IsolatedHedged
     @test marginmode("isolated-hedged") == Misc.IsolatedHedged
+    @test marginmode("isolatedhedge") == Misc.IsolatedHedged
+    @test marginmode("isolated_hedge") == Misc.IsolatedHedged
     @test marginmode("cross") == Misc.Cross
     @test marginmode("cross_hedged") == Misc.CrossHedged
     @test marginmode("cross-hedged") == Misc.CrossHedged
+    @test marginmode("crosshedge") == Misc.CrossHedged
+    @test marginmode("cross_hedge") == Misc.CrossHedged
     @test marginmode("nomargin") == Misc.NoMargin
     @test marginmode("none") == Misc.NoMargin
     @test marginmode("") == Misc.NoMargin

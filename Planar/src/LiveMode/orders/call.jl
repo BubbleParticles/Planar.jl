@@ -189,11 +189,6 @@ end
 
 @doc """ Cancels all live orders for a NoMarginStrategy.
 $(TYPEDSIGNATURES)
-
-Cancels through the exchange (`live_cancel`, which handles the gateway
-round-trip) instead of only dropping local state, so exchange-side orders do
-not leak after a cancel call. Falls back to local cancel when there is
-nothing to send.
 """
 function call!(
     s::NoMarginStrategy{Live},

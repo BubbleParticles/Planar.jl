@@ -18,11 +18,6 @@ The function creates a paper market order for a given strategy, asset, and order
 It specifies the amount and date of the order.
 Additional keyword arguments can be passed.
 
-NOTE: `orders/call.jl` defines the same `MarginStrategy{Paper}` market-order
-method (without the `MarginInstance` annotation); that definition wins
-dispatch and is the maintained one. This duplicate is kept only to avoid
-breaking external callers that import this file path, and must stay
-behavior-identical to it.
 """
 function call!(
     s::MarginStrategy{Paper},
@@ -50,11 +45,6 @@ The function creates a simulated limit order for a given strategy, asset, and or
 It specifies the amount and date of the order.
 Additional keyword arguments can be passed.
 
-NOTE: `orders/call.jl` defines the same `MarginStrategy{Paper}` limit-order
-method (without the `MarginInstance` annotation); that definition wins
-dispatch and is the maintained one. This duplicate is kept only to avoid
-breaking external callers that import this file path, and must stay
-behavior-identical to it.
 """
 function call!(
     s::MarginStrategy{Paper},
