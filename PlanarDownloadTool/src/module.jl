@@ -30,9 +30,17 @@ When downloading archives from scratch use more [`WORKERS`](@ref) and smaller `s
 const SEM = Base.Semaphore(3)
 
 @doc "Default HTTP parameters used by the PlanarDownloadTool module."
-const DEFAULT_HTTP_PARAMS = (; connect_timeout=30)
+const DEFAULT_HTTP_PARAMS = (;
+    connect_timeout = 30,
+    read_timeout = 60,
+    retry = false,  # we handle retries manually with backoff
+)
 @doc "Active HTTP parameters used by the PlanarDownloadTool module."
-const HTTP_PARAMS = LittleDict{Symbol, Any}(:connect_timeout => 30)
+const HTTP_PARAMS = LittleDict{Symbol, Any}(
+    :connect_timeout => 30,
+    :read_timeout => 60,
+    :retry => false,
+)
 
 function _doinit()
     zi[] = zinstance()

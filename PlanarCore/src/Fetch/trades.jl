@@ -1,5 +1,5 @@
+using ..Exchanges.Ccxt: CcxtGateway
 using ..Exchanges: Exchange
-using ..TimeTicks: dt
 
 @doc """Returns the trades-fetching gateway function for an exchange.
 
@@ -40,7 +40,17 @@ function fetch_trades(
         error("No trades fetch method available for exchange $(exc.name)")
     rows = Any[]
     for _ in 1:pages
-        data = fetch_func(pair, since, limit)
+        data = try
+            fetch_func(pair, since, limit)
+        catch e
+            e isa InterruptException && rethrow(e)
+            if CcxtGateway.isccxterror(e)
+                @error "fetch_trades: gateway call failed" pair exception=(e, catch_backtrace())
+                break
+            else
+                rethrow(e)
+            end
+        end
         (isnothing(data) || isempty(data)) && break
         append!(rows, data)
         since = Int(minimum(t -> to_float(t[:timestamp]), data)) - 1

@@ -42,11 +42,10 @@ mutable struct RollingVariance{T<:Number,W<:EqualWeight} <: OnlineStat{T}
     nobs::Int
     window::Int
     weight::W
-
     function RollingVariance{T}(
         window::Int, weight::W=EqualWeight()
     ) where {T,W<:EqualWeight}
-        window > 0 || error("Window size must be positive.")
+        window > 0 || throw(ArgumentError("Window size must be positive, got $window"))
         new{T,W}(CircBuff(T, window), zero(T), zero(T), 0, window, weight)
     end
 end
@@ -108,9 +107,8 @@ mutable struct RollingCovMatrix{T<:Number} <: OnlineStat{Tuple{T,T}} # CovMatrix
     nobs::Int
     window::Int
     weight::EqualWeight # Assuming EqualWeight for rolling window
-
     function RollingCovMatrix{T}(window::Int) where {T}
-        window > 0 || error("Window size must be positive.")
+        window > 0 || throw(ArgumentError("Window size must be positive, got $window"))
         new{T}(
             CircBuff(Tuple{T,T}, window),
             zero(T),
@@ -211,7 +209,7 @@ mutable struct RollingLinReg{T<:Number} <: OnlineStat{Tuple{T,T}} # Takes (y, x)
     weight::EqualWeight # Assuming EqualWeight for rolling window
 
     function RollingLinReg{T}(window::Int) where {T}
-        window > 0 || error("Window size must be positive.")
+        window > 0 || throw(ArgumentError("Window size must be positive, got $window"))
         # Initialize sums and sum of squares to zero
         new{T}(
             CircBuff(Tuple{T,T}, window),
@@ -646,12 +644,11 @@ function _validate_and_init_params(method::Symbol)::Tuple{Vector{Symbol},String}
     elseif method == :both
         result_cols = [:Instrument, :Beta_Covariance, :Beta_Regression]
     else
-        error("Invalid method: $(method). Must be :covariance, :regression, or :both.")
+        @error "Invalid method: $(method). Must be :covariance, :regression, or :both." method=method
+        return [:Instrument], ""
     end
     return result_cols, "" # Benchmark name string is determined later
 end
-
-# New helper function for preparing asset and benchmark dataframes
 function _prepare_asset_data(
     s::st.Strategy,
     tf,

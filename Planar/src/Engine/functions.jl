@@ -30,7 +30,7 @@ end
 function fetch_ohlcv!(s::Strategy)
     snap = snapshot(s.universe)
     @sync for ii in snap
-        @async try
+        errormonitor(@async try
             exc = exchange(ii)
             sym = raw(ii)
             v = fetch_ohlcv(exc, s.timeframe, sym, from=-2000)
@@ -51,14 +51,14 @@ function fetch_ohlcv!(s::Strategy)
             @error "fetch_ohlcv!: failed to fetch data" ii asset=try raw(ii) catch; "unknown" end exception = (
                 e, catch_backtrace()
             )
-        end
+        end)
     end
 end
 function update_ohlcv!(s::Strategy; kwargs...)
     tf = s.timeframe
     snap = snapshot(s.universe)
     @sync for ii in snap
-        @async try
+        errormonitor(@async try
             exc = exchange(ii)
             sym = raw(ii)
             update_ohlcv!(ohlcv(ii, tf), sym, exc, tf; kwargs...)
@@ -72,7 +72,7 @@ function update_ohlcv!(s::Strategy; kwargs...)
             @error "update_ohlcv!: failed to update data" ii asset=try raw(ii) catch; "unknown" end exception = (
                 e, catch_backtrace()
             )
-        end
+        end)
     end
 end
 

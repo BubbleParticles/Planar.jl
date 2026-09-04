@@ -119,6 +119,7 @@ function propagate_ohlcv!(
         src_slice = @view src[rangeafter(src.timestamp, date_dst), :]
         # Same check as before but over the slice
         if strict && nrow(src_slice) < min_rows
+            @warn "Source slice ($(src_tf)->$(dst_tf)) after $(date_dst) doesn't have enough rows $(nrow(src_slice)) < $min_rows — gap may have caused data loss"
             return dst
         end
         new = resample(src_slice, src_tf, dst_tf)
@@ -127,6 +128,7 @@ function propagate_ohlcv!(
             addcols!(new, dst)
             append!(dst, new)
         else
+            @warn "propagate_ohlcv! gap detected: dst ends $(date_dst) not left-adjacent to resampled $(firstdate(new)) for $(dst_tf); skipping append to avoid silent data loss"
             dst
         end
     end

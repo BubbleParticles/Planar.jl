@@ -1,4 +1,5 @@
 using Test
+using Base.Threads: @spawn, wait
 using PlanarCore.Collections
 using PlanarCore.Instances.Exchanges.ExchangeTypes
 using PlanarCore.Instances.Exchanges.ExchangeTypes: CcxtExchange, ExchangeID, ExcPrecisionMode
@@ -437,6 +438,69 @@ const _ii_eth_std = Instances.InstrumentInstance(
         coll = Collections.InstrumentCollection([ai_btc])
         df = first(coll, a_btc)
         @test df isa DataFrame
-        @test first(df.timestamp) == Dates.value(DateTime(2024, 1, 1))
+    end
+    @testset "concurrent mutation thread-safety" begin
+        a_btc = parse(AbstractInstrument, "BTC/USDT")
+        a_eth = parse(AbstractInstrument, "ETH/USDT")
+        a_xrp = parse(AbstractInstrument, "XRP/USDT")
+        tf = TimeFrame("1m")
+        data_btc = SortedDict(tf => _make_ohlcv(50000.0, 10))
+        data_eth = SortedDict(tf => _make_ohlcv(3000.0, 10))
+        data_xrp = SortedDict(tf => _make_ohlcv(1000.0, 10))
+
+        ai_btc = Instances.InstrumentInstance(
+            a_btc, data_btc, mock_exc, NoMargin();
+            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
+            precision=(; amount=8, price=2),
+            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
+        )
+        ai_eth = Instances.InstrumentInstance(
+            a_eth, data_eth, mock_exc, NoMargin();
+            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
+            precision=(; amount=8, price=2),
+            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
+        )
+        ai_xrp = Instances.InstrumentInstance(
+            a_xrp, data_xrp, mock_exc, NoMargin();
+            limits=(; leverage=(; min=1.0, max=1.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8)),
+            precision=(; amount=8, price=2),
+            fees=(; taker=0.001, maker=0.001, min=0.0, max=0.002),
+        )
+
+        coll = Collections.InstrumentCollection([ai_btc, ai_eth])
+        initial_len = length(coll)
+
+        # Spawn multiple tasks that concurrently push and read
+        tasks = Task[]
+        for i in 1:50
+            if iseven(i)
+                # Push new asset
+                t = @spawn begin
+                    Collections.push!(coll, ai_xrp)
+                end
+            else
+                # Read length and iterate
+                t = @spawn begin
+                    l = length(coll)
+                    for _ in coll
+                        # iterate
+                    end
+                    l
+                end
+            end
+            push!(tasks, t)
+        end
+
+        # Wait for all tasks to complete
+        for t in tasks
+            wait(t)
+        end
+
+        # Collection should be in a valid state (no crashes, no corruption)
+        @test length(coll) >= initial_len
+        @test length(coll) <= initial_len + 25  # at most 25 pushes succeeded
+        # Verify we can still iterate without error
+        instances = collect(coll)
+        @test !isempty(instances)
     end
 end

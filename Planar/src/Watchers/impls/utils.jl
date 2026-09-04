@@ -149,7 +149,13 @@ macro collect_buffer_data(buf_var, key_type, val_type, push=nothing)
     push_func = isnothing(push) ? :(push!(@kget!(data, key, $(val_type)[]), tick)) : push
     quote
         let data = Dict{$key_type,Vector{$val_type}}(), dopush((key, tick)) = $push_func
-            docollect((_, value)) = foreach(dopush, pairs(value))
+            docollect(entry) = begin
+                # entry is BufferEntry NamedTuple(:time,:value); skip null/invalid timestamps (lesson #35)
+                t = entry.time
+                if !isnothing(t) && t != DateTime(0)
+                    foreach(dopush, pairs(entry.value))
+                end
+            end
             foreach(docollect, $buf)
             data
         end
@@ -183,7 +189,7 @@ Base.convert(::Type{DateTime}, s::JSON3.String) = _parsedatez(s)
 Base.convert(::Type{DateTime}, s::JSON3.Number) = unix2datetime(s)
 Base.convert(::Type{String}, s::Symbol) = string(s)
 Base.convert(::Type{Symbol}, s::AbstractString) = Symbol(s)
-_checks(w) = attr(w, :checks)
+_checks(w) = get(attrs(w), :checks, nothing)
 _checksoff!(w) = setattr!(w, Val(:off), :checks)
 _checkson!(w) = setattr!(w, Val(:on), :checks)
 function _do_check_contig(w, df, ::Val{:on})
@@ -208,11 +214,6 @@ _exc!(w::Watcher, exc) = _exc!(attrs(w), exc)
     _connect_ws_subscribe!(w, eid, method, params) -> Bool
 
 Connect to the gateway WebSocket and subscribe to `method` with `params`.
-Wires incoming data into the watcher's Rocket handler subject.
-Stores the WS client and subscription ID in `attrs[:ws_client]` and `attrs[:ws_sub_id]`.
-
-On reconnection, cleans up the old subscription callback from `client.subscriptions`
-to prevent unbounded growth of stale callback entries.
 """
 function _connect_ws_subscribe!(w::Watcher, eid::String, method::String, params::Dict{String,Any})::Bool
     attrs = w.attrs
@@ -301,11 +302,11 @@ end
 
 _tfunc!(attrs, suffix) = attrs[:tfunc] = _multifunc(string(_exc(attrs).id), suffix, true)[1]
 _tfunc!(attrs, f::Function) = attrs[:tfunc] = f
-_tfunc(w::Watcher) = attr(w, :tfunc)
-_sym(w::Watcher) = attr(w, :sym)
+_tfunc(w::Watcher) = get(attrs(w), :tfunc, nothing)
+_sym(w::Watcher) = get(attrs(w), :sym, nothing)
 _sym!(attrs, v) = attrs[:sym] = v
 _sym!(w::Watcher, v) = _sym!(attrs(w), v)
-_tfr(attrs) = attrs[:timeframe]
+_tfr(attrs) = get(attrs, :timeframe, nothing)
 _tfr(w::Watcher) = _tfr(attrs(w))
 _tfr!(attrs, tf) = attrs[:timeframe] = tf
 _tfr!(w::Watcher, tf) = setattr!(w, tf, :timeframe)
@@ -316,15 +317,15 @@ _lasttrade(w::Watcher) = last(_trades(w))
 _lastdate(df::DataFrame) = df[end, :timestamp]
 _nextdate(df::DataFrame, tf) = df[end, :timestamp] + period(tf)
 _lastdate(z::ZArray) = z[end, 1] # the first col is a to
-_curdate(tf) = apply(tf, now())
-_nextdate(tf) = _curdate(tf) + tf
-_dateidx(tf, from, to) = max(1, (to - from) ÷ period(tf))
+_curdate(tf) = isnothing(tf) ? now() : apply(tf, now())
+_nextdate(tf) = isnothing(tf) ? now() : _curdate(tf) + tf
+_dateidx(tf, from, to) = isnothing(tf) ? 1 : max(1, (to - from) ÷ period(tf))
 _lastflushed!(w::Watcher, v) = setattr!(w, v, :last_flushed)
-_lastflushed(w::Watcher) = attr(w, :last_flushed)
+_lastflushed(w::Watcher) = get(attrs(w), :last_flushed, nothing)
 _lastprocessed!(w::Watcher, v) = setattr!(w, v, :last_processed)
-_lastprocessed(w::Watcher) = attr(w, :last_processed)
+_lastprocessed(w::Watcher) = get(attrs(w), :last_processed, nothing)
 _lastcount!(w::Watcher, v, f=length) = setattr!(w, f(v), :last_count)
-_lastcount(w::Watcher) = attr(w, :last_count)
+_lastcount(w::Watcher) = get(attrs(w), :last_count, nothing)
 
 struct Warmed end
 struct Pending end
@@ -344,14 +345,17 @@ _warmed!(_, ::Warmed) = nothing
 _warmed!(w, ::Pending) = setattr!(w, Warmed(), :status)
 _pending!(attrs) = attrs[:status] = Pending()
 _pending!(w::Watcher) = _pending!(attrs(w))
-_status(w::Watcher) = w[:status]
+_status(w::Watcher) = get(attrs(w), :status, Pending())
 @doc "`_chill!` sets the warmup target attribute of the window to the current time applied with the time frame rate."
-_chill!(w) = setattr!(w, apply(_tfr(w), now()), :warmup_target)
+_chill!(w) = let tf=_tfr(w); isnothing(tf) ? nothing : setattr!(w, apply(tf, now()), :warmup_target) end
 _warmup!(_, ::Warmed) = nothing
 @doc "Checks if we can start processing data, after we are past the initial incomplete timeframe."
 function _warmup!(w, ::Pending)
-    ats = apply(_tfr(w), now())
-    target = w[:warmup_target]
+    tf=_tfr(w)
+    isnothing(tf) && return nothing
+    ats = apply(tf, now())
+    target = get(w.attrs, :warmup_target, nothing)
+    isnothing(target) && return nothing
     if ats > target
         @debug "watchers: warmed!" w
         _warmed!(w, _status(w))
@@ -363,9 +367,9 @@ macro warmup!(w)
 end
 
 _key!(w::Watcher, v) = setattr!(w, v, :key)
-_key(w::Watcher) = attr(w, :key)
+_key(w::Watcher) = get(attrs(w), :key, nothing)
 _view!(w, v) = setattr!(w, v, :view)
-_view(w) = attr(w, :view)
+_view(w) = get(attrs(w), :view, nothing)
 
 function _dopush!(w, v; if_func=!isnothing)
     try
@@ -841,7 +845,7 @@ function new_handler_task(w; init_func, corogen_func, wrapper_func=identity, if_
     end)
     wh.subscription = Rocket.subscribe!(pipeline, Rocket.lambda(
         on_next = _ -> nothing,
-        on_error = err -> logerror(w, err),
+        on_error = err -> logerror(w, err, catch_backtrace()),
     ))
     init_watch_func(w)
     return wh

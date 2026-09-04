@@ -557,8 +557,13 @@ function build_safe_optimization_function(
             counter[] += 1
         end
 
-        result = backtest_func(u_rounded, this_n)
-        return n_obj == 1 ? result[1] : result
+        try
+            result = backtest_func(u_rounded, this_n)
+            return n_obj == 1 ? result[1] : result
+        catch e
+            @error "safe_opt_function: backtest failed" exception = (e, catch_backtrace())
+            return n_obj == 1 ? DEFAULT_OBJ : [DEFAULT_OBJ]
+        end
     end
 
     opt_func_args = isnothing(opt_method_instance) ? () : (opt_method_instance,)
@@ -619,16 +624,22 @@ function _run_multi_start(
     tasks = Vector{Task}(undef, n_jobs)
     for j in 1:n_jobs
         tasks[j] = Threads.@spawn begin
-            prob = _setup_problem_and_bounds(
-                s,
-                nothing,
-                safe_optf;
-                initial_guess_override=initial_guesses[j, solve_method_instance],
-            )
-            if isnothing(callback)
-                solve(prob, solve_method_instance; solve_kwargs...)
-            else
-                solve(prob, solve_method_instance; callback=callback, solve_kwargs...)
+            try
+                prob = _setup_problem_and_bounds(
+                    s,
+                    nothing,
+                    safe_optf;
+                    initial_guess_override=initial_guesses[j, solve_method_instance],
+                )
+                if isnothing(callback)
+                    solve(prob, solve_method_instance; solve_kwargs...)
+                else
+                    solve(prob, solve_method_instance; callback=callback, solve_kwargs...)
+                end
+            catch e
+                @error "multi-start solve task $j failed" exception = (e, catch_backtrace())
+                # Return sentinel solution with bad objective so optimizer skips it
+                (; u=initial_guesses[j], objective=DEFAULT_OBJ)
             end
         end
     end

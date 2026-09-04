@@ -158,7 +158,7 @@ function _start!(w::Watcher, ::CcxtOHLCVVal)
     watch_func = first(exc, :watchTrades)
     sym = _sym(w)
     @assert sym isa AbstractString
-    iswatch = get(attrs, :iswatch, false)
+    iswatch = get(attrs, :iswatch, has(exc, :watchTrades) || has(exc, :watchTradesForSymbols))
 
     # Use _first for WS-capable REST polling — tries fetchTradesWs with
     # automatic fallback to fetchTrades on gateway failure.
@@ -191,7 +191,7 @@ function _start!(w::Watcher, ::CcxtOHLCVVal)
     if iswatch
         corogen_func(_) = coro_func() = watch_func(_sym(w))
         init_func() = begin
-            r = fetch_func(; symbol=sym)
+            r = fetch_func(; symbol=sym, timeout=300.0)
             r !== nothing ? Dict(sym => r) : nothing
         end
         wrapper_func(v) = _parse_trades(w, v)

@@ -21,8 +21,10 @@ function funding_data(exc::Exchange, sym::AbstractString)
         f = first(exc, :fetchFundingRate)
         f === nothing && return nothing
         f(; symbol=sym)
-    catch
-        @debug_backtrace
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "funding_data: gateway call failed" sym exception=(e, catch_backtrace())
+        return nothing
     end
 end
 funding_data(exc, a::Derivative, args...) = funding_data(exc, a.raw)
@@ -116,17 +118,24 @@ function funding_history(
             try
                 q = Dict{Symbol,Any}(:symbol => pair, :since => since, :limit => limit)
                 if !isempty(params)
-                    merge!(q, params)
+                    q[:params] = params
                 end
                 ff_func(; q...)
             catch err
+                err isa InterruptException && rethrow(err)
                 if occursin("Time Is Invalid", string(err))
                     delta = -Int(timefloat(now() - dt(since)))
                     q2 = Dict{Symbol,Any}(:symbol => pair, :since => delta, :limit => limit)
                     if !isempty(params)
-                        merge!(q2, params)
+                        q2[:params] = params
                     end
-                    ff_func(; q2...)
+                    try
+                        ff_func(; q2...)
+                    catch e2
+                        e2 isa InterruptException && rethrow(e2)
+                        @error "funding_history: retry after Time Is Invalid failed" pair exception=(e2, catch_backtrace())
+                        throw(e2)
+                    end
                 else
                     throw(err)
                 end

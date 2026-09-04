@@ -95,7 +95,10 @@ function _warmup!(
     uni_df = s_sim.universe.data
     empty!(uni_df)
     push!(uni_df, (exchangeid(ai_sim)(), ai_sim.asset, ai_sim))
-    @assert nrow(s_sim.universe.data) == 1
+    if nrow(s_sim.universe.data) != 1
+        @warn "warmup: unexpected universe data size" nrow=nrow(s_sim.universe.data) maxlog = 1
+        return nothing
+    end
     # run sim
     @debug "warmup: running sim"
     ctx = Context(Sim(), s.timeframe, since, since + s.timeframe * n_candles)

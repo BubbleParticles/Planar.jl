@@ -546,54 +546,63 @@ end
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
-# get_data
 function get_data(
     x::String, userl::Bool = false, frun::Int64 = 0,
     headers::Union{Nothing, Array{Pair{String,String},1}} = nothing,
     body::Union{Nothing, String} = nothing;
     curl_conf...
 )
-    if (frun > 0)
-        sys_sleep::Int64 = DBnomics.sleep_run
+    if frun > 0
+        # Use exponential backoff: sleep_run * 2^(frun-1)
+        sys_sleep::Int64 = DBnomics.sleep_run * (2^(frun - 1))
         sleep(sys_sleep)
     end
-  
+
     try
         if userl
             # Only readLines
             try
                 response = readurl(x)
                 return JSON.parse(response; dicttype=Dict{String,Any})
-            catch
-                error("BAD REQUEST")
+            catch e
+                @error "readurl failed for $x" exception=(e, catch_backtrace())
+                rethrow(e)
             end
         else
             try
                 if !DBnomics.secure
                     x = replace(x, Regex("^https") => "http")
                 end
-                if !isa(headers, Nothing) && !isa(body, Nothing)
-                    response = HTTP.post(x, headers, body; curl_conf...)
+                # Add default timeouts if not already set in curl_conf
+                http_params = if haskey(curl_conf, :connect_timeout)
+                    curl_conf
                 else
-                    response = HTTP.get(x; curl_conf...)    
+                    merge((; connect_timeout=30, read_timeout=60), curl_conf)
+                end
+                if !isa(headers, Nothing) && !isa(body, Nothing)
+                    response = HTTP.post(x, headers, body; http_params...)
+                else
+                    response = HTTP.get(x; http_params...)
                 end
                 if !response_ok(response)
                     error("The response is not <200 OK>.")
                 end
                 return JSON.parse(String(response.body); dicttype=Dict{String,Any})
             catch e
+                @error "HTTP request failed for $x" exception=(e, catch_backtrace())
                 rethrow(e)
             end
         end
     catch e
         try_run = DBnomics.try_run
-        
+
         if userl
-            if e == ErrorException("BAD REQUEST")
+            if e isa ErrorException && e.msg == "BAD REQUEST"
                 try_run = -1
             end
         else
-            if !response_ok(e)
+            # Only retry on HTTP errors, not on JSON parse errors
+            if e isa ErrorException && occursin("not <200 OK>", e.msg)
                 try_run = -1
             end
         end

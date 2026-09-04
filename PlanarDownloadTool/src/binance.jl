@@ -116,7 +116,7 @@ This function first calls `make_sym_url` with the provided keyword arguments to 
 """
 function symlinkslist(s; kwargs...)
     url = make_sym_url(s; kwargs...)
-    html = ez.parsexml(HTTP.get(url).body)
+    html = ez.parsexml(HTTP.get(url; HTTP_PARAMS...).body)
     links = ez.Node[]
     function chunk_url(el)
         e = ez.elements(el)[1]

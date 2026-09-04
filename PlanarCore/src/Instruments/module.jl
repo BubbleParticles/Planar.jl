@@ -67,7 +67,7 @@ struct Instrument <: AbstractInstrument
 end
 
 _check_parse(pair, s) = begin
-    if length(pair) > 2 || has_punct(pair[1]) || has_punct(pair[2])
+    if length(pair) != 2 || has_punct(pair[1]) || has_punct(pair[2])
         throw(InexactError(:Instrument, Instrument, s))
     end
 end

@@ -317,7 +317,7 @@ macro tickers!(type=nothing, force=false, cache=TICKERS_CACHE100)
             elseif $force || !haskey($cache, k)
                 @assert hastickers($exc) "Exchange doesn't provide tickers list."
                 name = string($(exc).id)
-                raw = call_exchange(default_client(), name, "fetchTickers"; query=Dict("type" => string(tp)))
+                raw = call_exchange(default_client(), name, "fetchTickers"; query=Dict("params" => Dict("type" => string(tp))))
                 $cache[k] = $tickers = raw isa Dict ? Dict{String,Dict{String,Any}}(pairs(raw)) : Dict{String,Dict{String,Any}}()
             end
         end
@@ -409,7 +409,7 @@ function exckeys!(exc, key, secret, pass, wa, pk)
     if !isempty(key) || !isempty(secret) || !isempty(pass)
         try
             name = string(exc.id)
-            call_exchange(default_client(), name, "set_api_key", query=Dict(
+            call_exchange(default_client(), name, "set_api_key", body=Dict(
                 "apiKey" => key, "secret" => secret,
                 "password" => pass, "walletAddress" => wa, "privateKey" => pk,
             ))
@@ -445,13 +445,14 @@ $(TYPEDSIGNATURES)
 function sandbox!(exc::Exchange; flag=!issandbox(exc), remove_keys=true)
     Base.generating_output() && return exckeys!(exc)
     name = string(exc.id)
-    # ccxt parameter name for set_sandbox_mode varies: binance/okx/bybit use "enable", others use "enabled"
+    # ccxt parameter name for set_sandbox_mode varies: base class uses "enabled",
+    # some exchanges (binance/okx/bybit) use "enable" in their overrides.
+    # The gateway normalizes "enabled" -> actual param name automatically.
     # Invalidate sandbox cache so the next issandbox call fetches fresh data
     delete!(sandboxCache, exc.id)
 
-    param_name = name in ("binance", "okx", "bybit", "mexc") ? "enable" : "enabled"
     success = try
-        call_exchange(default_client(), name, "setSandboxMode", body=Dict(param_name => flag))
+        call_exchange(default_client(), name, "setSandboxMode", body=Dict("enabled" => flag))
         true
     catch e
         msg = string(e)

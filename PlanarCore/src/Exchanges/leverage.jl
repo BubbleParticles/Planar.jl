@@ -131,7 +131,7 @@ function leverage_tiers(exc::Exchange, sym; cache=true)
         if !issupported(name, "fetchMarketLeverageTiers")
             return LeverageTier[]
         end
-        result = call_exchange(default_client(), name, "fetchMarketLeverageTiers", query=Dict("params" => Dict("symbol" => sym)))
+        result = call_exchange(default_client(), name, "fetchMarketLeverageTiers", query=Dict("symbol" => sym))
         tiers = if result isa AbstractVector
             [LeverageTier(t) for t in result]
         else

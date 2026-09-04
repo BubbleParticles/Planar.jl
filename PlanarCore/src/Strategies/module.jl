@@ -185,34 +185,34 @@ const MarginStrategy =
 const NoMarginStrategy = Strategy{X,N,<:ExchangeID,NoMargin,C} where {X<:ExecMode,N,C}
 @doc "Functions that are called (with the strategy as argument) right after strategy construction."
 const STRATEGY_LOAD_CALLBACKS = (; (m => Function[] for m in (:sim, :paper, :live))...)
-# Convenience constructors for type aliases
-# These allow creating strategies with just a name and margin mode for testing
-function SimStrategy(name::String, margin::MarginMode)
+# Convenience constructors for type aliases.
+# These allow creating strategies with just a name and margin mode for testing.
+# The inner constructor requires (mode, margin, timeframe, exchange, universe);
+# build those explicitly (plus a default timeframe) instead of dispatching to
+# the asset-list constructor, which has no matching method.
+function _empty_test_strategy(name::String, mode::ExecMode, margin::MarginMode)
     cfg = Config()
-    cfg.mode = Sim()
+    cfg.mode = mode
     cfg.margin = margin
-    return Strategy(@__MODULE__, String[]; config=cfg)
+    exc = getexchange!(Symbol(); sandbox=true)
+    uni = InstrumentCollection()
+    Strategy(@__MODULE__, mode, margin, tf"1m", exc, uni; config=cfg)
+end
+
+function SimStrategy(name::String, margin::MarginMode)
+    _empty_test_strategy(name, Sim(), margin)
 end
 
 function PaperStrategy(name::String, margin::MarginMode)
-    cfg = Config()
-    cfg.mode = Paper()
-    cfg.margin = margin
-    return Strategy(@__MODULE__, String[]; config=cfg)
+    _empty_test_strategy(name, Paper(), margin)
 end
 
 function LiveStrategy(name::String, margin::MarginMode)
-    cfg = Config()
-    cfg.mode = Live()
-    cfg.margin = margin
-    return Strategy(@__MODULE__, String[]; config=cfg)
+    _empty_test_strategy(name, Live(), margin)
 end
 
 function RTStrategy(name::String, margin::MarginMode)
-    cfg = Config()
-    cfg.mode = Paper()
-    cfg.margin = margin
-    return Strategy(@__MODULE__, String[]; config=cfg)
+    _empty_test_strategy(name, Paper(), margin)
 end
 
 

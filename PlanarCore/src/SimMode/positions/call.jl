@@ -1,4 +1,4 @@
-using ..Executors.Instances: leverage!, positionside, leverage
+using ..Executors.Instances: leverage!, positionside, leverage, MarginInstance
 using ..Executors: hasorders
 using ..Executors.OrderTypes: postoside
 using ..Strategies: MarginStrategy, NoMarginStrategy

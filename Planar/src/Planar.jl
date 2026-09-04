@@ -160,7 +160,6 @@ end
     @doc """ Binds modules, types, functions commonly used inside a strategy module. """
     macro strategyenv!()
         expr = quote
-            __revise_mode__ = :eval
             using Planar: Planar as pln
             using .pln.Engine
             using .pln.Engine: Strategies as st
