@@ -118,9 +118,7 @@ function _fetch_ohlcv_from_to(
         isnothing(limit) || (kwargs[:limit] = limit)
         usetimeframe && (kwargs[:timeframe] = timeframe)
         if !isempty(params)
-            for (k, v) in params
-                kwargs[Symbol(k)] = v
-            end
+            kwargs[:params] = params
         end
         gateway_func(; kwargs...)
     end
@@ -317,7 +315,7 @@ function __handle_error(e, fetch_func, pair, since, df, sleep_t, limit, converte
             usetimeframe=limit > 500,
         )
     elseif CcxtGateway.isccxterror(e)
-        @error "fetch: failed fetch ohlcv" pair exception = e
+        @error "fetch: failed fetch ohlcv" pair exception=(e, catch_backtrace())
         @return_empty()
     else
         rethrow(e)
@@ -448,9 +446,7 @@ function _fetch_ohlcv_with_delay(exc::Exchange, args...; ohlcv_kind=:default, kw
         isnothing(limit) || (_kwargs[:limit] = limit)
         usetimeframe && (_kwargs[:timeframe] = timeframe)
         if !isempty(params)
-            for (k, v) in params
-                _kwargs[Symbol(k)] = v
-            end
+            _kwargs[:params] = params
         end
         gateway_func(; _kwargs...)
     end

@@ -58,8 +58,7 @@ function Base.parse(::Type{AbstractInstrument}, s::AbstractString)
     if isnothing(m) || isnothing(m.captures)
         return parse(Instrument, s)
     end
-    if length(m) > 2 && !isempty(m[3])
-        isnothing(m[3]) && throw(ArgumentError(_derivative_error(s)))
+    if length(m) > 2 && !isnothing(m[3]) && !isempty(m[3])
         Derivative(s, m.captures)
     else
         Instrument(SubString(s), m[1], m[2])

@@ -24,7 +24,9 @@ function define_loop_funct(s::LiveStrategy, ii; exc_kwargs=(;))
     watch_func = first(exchange(ii), :watchOrders)
     _, func_kwargs = splitkws(:since; kwargs=exc_kwargs)
     sym = raw(ii)
-    if !isnothing(watch_func) && s[:is_watch_orders]
+    has_watch_orders = !isnothing(first(exchange(ii), :watchOrders, :watchOrdersForSymbols))
+    iswatch = has_watch_orders && s[:is_watch_orders]
+    if iswatch
         init_handler() = begin
             buf = Vector{Any}()
             buf_subject = Rocket.Subject(Any)

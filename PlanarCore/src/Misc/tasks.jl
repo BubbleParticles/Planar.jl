@@ -35,9 +35,9 @@ stop_task(t::Task) = begin
                 end
             end
             istaskdone(t)
-        catch
-            @error "Running flag not set on task $t" istaskdone(t) istaskstarted(t)
-            @debug_backtrace
+        catch e
+            e isa InterruptException && rethrow(e)
+            @error "stop_task failed on task $t" istaskdone(t) istaskstarted(t) exception=(e, catch_backtrace())
             false
         end
     else
@@ -52,8 +52,9 @@ function kill_task(t)
       sleep(0)
       Base.throwto(interrupt_task, InterruptException())
     end
-  catch
-    @debug_backtrace
+  catch e
+    e isa InterruptException && rethrow(e)
+    @error "kill_task failed" exception=(e, catch_backtrace())
   end
   istaskdone(t)
 end
@@ -105,7 +106,7 @@ This function checks if the current task is running by accessing the task's loca
     Use the homonymous macro `@istaskrunning()` instead.
 
 """
-istaskrunning() = task_local_storage(:running)
+istaskrunning() = get(task_local_storage(), :running, false)
 @doc """ Checks if the current task is running (Macro).
 
 Equivalent to `istaskrunning()` but should be used within other macros.
@@ -114,7 +115,8 @@ macro istaskrunning()
     quote
         try
             task_local_storage(:running)
-        catch
+        catch e
+            e isa InterruptException && rethrow(e)
         end
     end
 end
@@ -133,7 +135,7 @@ Uses the task local storage to communicate if the task is still running.
 """
 TaskFlag() =
     let sto = task_local_storage()
-        TaskFlag(() -> sto[:running])
+        TaskFlag(() -> get(sto, :running, false))
     end
 Base.getindex(t::TaskFlag) = t.f()
 
@@ -153,8 +155,9 @@ function waitforcond(cond::Function, time)
             sleep(0.1)
             slept[] += 100
         end
-    catch
-        @debug_backtrace
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "waitforcond failed" exception=(e, catch_backtrace())
         slept[] = timeout
     finally
         waiting[] = false
@@ -188,8 +191,9 @@ function waitforcond(cond, time)
             end
         end)
         safewait(cond)
-    catch
-        @debug_backtrace
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "waitforcond outer failed" exception=(e, catch_backtrace())
         slept[] = timeout
     finally
         waiting[] = false

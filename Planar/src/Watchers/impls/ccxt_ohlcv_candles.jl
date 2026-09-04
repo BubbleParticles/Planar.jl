@@ -131,6 +131,15 @@ _stop!(w::Watcher, ::CcxtOHLCVCandlesVal) = begin
     elseif haskey(w.attrs, :handler)
         stop_handler_task!(w)
     end
+    sub_id = get(w.attrs, :ws_sub_id, nothing)
+    if sub_id !== nothing
+        ws_client = get(w.attrs, :ws_client, nothing)
+        if ws_client !== nothing
+            _WS = Fetch.Exchanges.Ccxt.CcxtGateway
+            try _WS.send_unsubscribe(ws_client, sub_id) catch end
+        end
+        delete!(w.attrs, :ws_sub_id)
+    end
 end
 
 function _perform_locked_resync(w::Watcher, sym::String)

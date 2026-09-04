@@ -2,7 +2,7 @@ using ..PaperMode.SimMode: _lev_value, leverage!, leverage, position!, singleway
 using .st: MarginStrategy, NoMarginStrategy
 using .Executors: hasorders, update_leverage!
 using .st: exchange
-using .Executors.Instances: raw
+using .Executors.Instances: raw, MarginInstance
 using ..PaperMode.OrderTypes: postoside
 import .Executors: call!
 

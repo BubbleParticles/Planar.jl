@@ -283,8 +283,7 @@ function _load_data(
         firstindex(za, z_col)
     end
     ts_stop = if with_to
-        rev = @view(za[lastindex(za, 1):-1:firstindex(za, 1), z_col])
-        searchsortedfirst(rev, to; by=timefloat)
+        searchsortedlast(@view(za[:, z_col]), to; by=timefloat)
     else
         lastindex(za, z_col)
     end

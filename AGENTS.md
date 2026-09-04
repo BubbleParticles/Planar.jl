@@ -422,6 +422,7 @@ The method selection priority: `fetchSuffixsWs` > `fetchSuffixs` > `fetchSuffixW
 71. **Pass function-valued parameters to hot-loop-boundary functions as POSITIONAL args, never kwargs — Julia specializes only on positional arguments**: A kwarg reaches the method body through the `Base.kwcall`/kwarg-sorter layer, so its concrete type (e.g. a capturing closure passed as `step`) is only guaranteed to land in the signature when the call site builds the kwarg `Pairs` with statically-known types; any runtime/`kwargs...` splatting path degrades the parameter to `Any` → dynamic dispatch on every per-item call. Positional args always participate in dispatch, so the closure type is baked into the method signature and `step(item)` compiles to a static call. Example: `_sim_loop!(s, items, step, dateof; show_progress, ...)` — `step`/`dateof` are positional, the config flags stay as kwargs. Verify with `@code_warntype` that the loop variable and the `step`/`dateof` parameters are concrete and the per-item call is `Core.Const`-dispatched.
 72. **Do not declare user-space strategy projects (`user/strategies/*`) as `PlanarDev` (or core package) dependencies**: Projects under `user/strategies/` (e.g. `StrategyFramework`) are external user code, not Planar packages. Listing them in `[deps]`/`[sources]` couples the dev environment to a user's local directory and breaks portable checkouts. Such strategies are meant to be loaded only at runtime via a user's own `planar.toml` `[sources]`, never as a hard dependency of the framework.
 
+73. **Trailing stray tokens in `@deassert`/`@assert` conditions silently break precompilation**: A multi-clause `@deassert cond1 || cond2 || cond3` with a stray trailing token (e.g. `o isa IncreaseLimitOrder o`) parses as `cond3 o` — a function-call syntax error that crashes the module at precompilation time with a `SyntaxError` or `MethodError` in the macro expansion, not at runtime. The bug is invisible in a normal `using Pkg` load because precompilation is skipped when cached `.ji` files are present; it only surfaces when the cache is invalidated or `--compiled-modules=no` is used. Always visually scan multi-clause `@deassert`/`@assert`/`||` chains for stray tokens after the last operand. Verify by forcing a fresh precompile (`rm -rf ~/.julia/compiled/*/<Pkg>` then `julia --project=<Pkg> -e 'using <Pkg>'`) — do not rely on cached loads.
 ---
 
 ## CCXT Migration Review Checklist
@@ -880,5 +881,16 @@ using Fetch.TimeTicks: DateTime
 
 **Audit finding (2026-07-14)**: All 12 production packages with bare `now()` calls resolve to
 `TimeTicks.now()` (UTC). The only exception was `Watchers/src/impls/ccxt_average_ohlcv_watcher.jl`
-which imported unused `now` from `Fetch.Dates` — fixed. The submodule `Misc/src/ttl.jl` (`TimeToLive`)
-uses `Dates.now` locally but the containment boundary prevents leakage.
+which imported unused `now` from `Fetch.Dates` — fixed. The submodule `Misc/src/ttl.jl` (`TimeToLive`) uses `Dates.now` locally but the containment boundary prevents leakage.
+
+### 25. `trim_to!` tail off-by-one violates strict-exclusive bounds (lesson #31/#43)
+
+`Alignments.trim_to!` with `tail=true` used `is_right_adjacent(to, period)` (`x - step < to`) to find the cut point in the reversed view. The original `start = size - rev_idx + 1` deleted the **common timestamp itself** (`idx = start:size`), keeping only timestamps `< to`. With `strict=true` semantics (exclusive both sides for `rangebetween`, inclusive for trim's *keep*), the expected behavior is to keep `<= to`. The fix is `start = size - rev_idx + 2` with guard `start > size && return`, so only timestamps `> to` are removed. Head path (`x + step > to`, `1:stop-1`) was already correct (keeps `>= to`).
+
+**Checklist:** For any `findfirst` on reversed timestamp array, verify the computed `start` resolves to `index_of_target + 1` (exclusive delete), not `index_of_target`. Write a concrete 4-row test `[00:00,00:05,00:10,00:15]` with `to=00:10` expecting `[00:00..00:10]` retained.
+
+### 26. `propagate_ohlcv!` silent gap loss — always warn on non-adjacent or insufficient slice
+
+`Processing.propagate_ohlcv!` (DataFrame overload) has three early-return paths that previously were silent: (a) `nrow(src_slice) < min_rows` after `rangeafter(src.timestamp, date_dst)` (gap shrank slice), (b) `isempty(new)` after resample, (c) `!isleftadj(date_dst, firstdate(new))` (resampled block not left-adjacent → gap larger than `dst_tf`). Path (a) lacked the `@warn` that path `nrow(src) < min_rows` had; path (c) returned `dst` unchanged with no log, mirroring Watchers gap lesson #49 where gaps must be explicit not silent. The fix adds `@warn` for (a) and (c) with `date_dst` and `firstdate(new)` context. `rangeafter` already uses `strict=true` (exclusive) correctly — do not change to `strict=false` to "fix" gap width.
+
+**Checklist:** Every `return dst` / `return data` that skips an append due to contiguity must emit `@warn`/`@error` with both timestamps and timeframes, and respect `strict=true` exclusive bounds (`rangeafter(..., strict=true)`).

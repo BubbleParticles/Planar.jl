@@ -20,7 +20,7 @@ using PlanarCore.Instances.Exchanges: CcxtTrade
 using PlanarCore.Instances.Data.DataStructures: CircularBuffer
 using PlanarCore.SimMode: AnyMarketOrder, AnyLimitOrder
 import PlanarCore.Executors: call!
-import PlanarCore.Misc: start!, stop!, isrunning, sleep_pad, LOGGING_GROUPS, kill_task
+import PlanarCore.Misc: start!, stop!, isrunning, sleep_pad, LOGGING_GROUPS, kill_task, start_task
 
 # Compat: define InstrumentInstance in this module regardless of core version
 if !isdefined(@__MODULE__, :InstrumentInstance)
@@ -226,9 +226,7 @@ function start!(
                     # Do NOT rethrow - log and exit gracefully to prevent silent task death
                 end
             end
-            init_task(task, IdDict())
-            s[:run_task] = task
-            schedule(task)
+            s[:run_task] = start_task(task, IdDict())
             @debug "start: unlocked (background)"
         end
     end

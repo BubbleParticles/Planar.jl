@@ -37,7 +37,22 @@ function call!(::Type{<:S}, ::StrategyMarkets)
     ["ETH/USDT:USDT", "BTC/USDT:USDT", "SOL/USDT:USDT"]
 end
 
+# Generic markets for any margin/exchange (covers Isolated/Cross tests via SC)
+function call!(::Type{<:SC{E,M,R}}, ::StrategyMarkets) where {E,M,R}
+    call!(S, StrategyMarkets())
+end
 function call!(t::Type{<:S}, config, ::LoadStrategy)
+    syms = call!(S, StrategyMarkets())
+    exc = st.Exchanges.getexchange!(config.exchange; sandbox=true)
+    uni = st.InstrumentCollection(syms; load_data=false, timeframe=TF, exc, config.margin)
+    s = Strategy(@__MODULE__, config.mode, config.margin, TF, exc, uni; config)
+    s.attrs[:buydiff] = 1.01
+    s.attrs[:selldiff] = 1.005
+    s
+end
+
+# Generic LoadStrategy for SC (any margin) — delegates to S
+function call!(t::Type{<:SC{E,M,R}}, config, ::LoadStrategy) where {E,M,R}
     syms = call!(S, StrategyMarkets())
     exc = st.Exchanges.getexchange!(config.exchange; sandbox=true)
     uni = st.InstrumentCollection(syms; load_data=false, timeframe=TF, exc, config.margin)
@@ -50,6 +65,16 @@ end
 call!(_::S, ::WarmupPeriod) = begin
     Day(1)
 end
+# Generic warmup for any margin
+call!(_::SC{E,M,R}, ::WarmupPeriod) where {E,M,R} = Day(1)
+
+# Explicit lifecycle no-ops for completeness (avoid @warn fallback in Paper/Live)
+call!(_::S, ::Strategies.StartStrategy) = nothing
+call!(_::SC{E,M,R}, ::Strategies.StartStrategy) where {E,M,R} = nothing
+call!(_::S, ::Strategies.StopStrategy) = nothing
+call!(_::SC{E,M,R}, ::Strategies.StopStrategy) where {E,M,R} = nothing
+call!(_::S, ::Strategies.ResetStrategy) = nothing
+call!(_::SC{E,M,R}, ::Strategies.ResetStrategy) where {E,M,R} = nothing
 
 function call!(s::S, ts::DateTime, ctx)
     date = ts
@@ -67,6 +92,33 @@ function call!(s::S, ts::DateTime, ctx)
                 date,
             )
         end
+    end
+end
+
+# Generic execution for any margin (Isolated/Cross); delegates to NoMargin logic
+# Uses try/catch to never throw out of strategy main loop
+function call!(s::SC{E,M,R}, ts::DateTime, ctx) where {E,M,R}
+    try
+        # Reuse S logic with safe guards
+        date = ts
+        foreach(s.universe) do ii
+            try
+                if isopen(ii)
+                    if rand(RNG, Bool)
+                        call!(s, ii, MarketOrder{Sell}; amount=cash(ii), date)
+                    end
+                elseif cash(s) > ii.limits.cost.min && rand(RNG, Bool)
+                    amt = max(ii.limits.amount.min, ii.limits.cost.min / closeat(ii, ts))
+                    call!(s, ii, MarketOrder{Buy}; amount=amt, date)
+                end
+            catch e
+                e isa InterruptException && rethrow(e)
+                @error "StubStrategy: per-asset call! failed for $(ii.asset.bc)" exception=(e, catch_backtrace())
+            end
+        end
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "StubStrategy: call! failed at $ts" exception=(e, catch_backtrace())
     end
 end
 

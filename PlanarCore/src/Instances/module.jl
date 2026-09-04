@@ -686,7 +686,7 @@ function _load_rest!(
         if to_tf ∉ ai_tfs || force # current tfs
             from_sto = load(zi, exc_name, ii.asset.raw, string(to_tf); from, to=dr.stop)
             ii.data[to_tf] =
-                if size(from_sto)[1] > 0 && let dr_sto = daterange(from_sto)
+                if !isnothing(from_sto) && size(from_sto)[1] > 0 && let dr_sto = daterange(from_sto)
                     dr_sto.start >= apply(to_tf, from) &&
                         dr_sto.stop <= apply(to_tf, dr.stop)
                 end

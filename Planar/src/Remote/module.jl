@@ -5,7 +5,7 @@ using ..LiveMode.Misc
 using Telegram, Telegram.API, Telegram.JSON3, Telegram.HTTP
 const lm = LiveMode
 const ect = lm.Executors
-using PlanarCore.Misc.Lang: @lget!, @debug_backtrace, Option, @ifdebug
+using PlanarCore.Misc.Lang: @lget!, @debug_backtrace, Option, @ifdebug, @_coalesce
 using PlanarCore.Misc: LittleDict, kill_task
 using PlanarCore.Executors: cnum
 
@@ -48,7 +48,7 @@ _envvar(k) = begin
 end
 
 function _getoption(s, k)
-    @something attr(s, Symbol(k), nothing) attr(s, string(k), nothing) get(
+    @_coalesce attr(s, Symbol(k), nothing) attr(s, string(k), nothing) get(
         ENV, _envvar(k), nothing
     ) missing
 end
@@ -187,7 +187,7 @@ function tgtask(cl, s, running::Ref{Bool}, offset::Ref{Int})
                 chat_id = get(chat, :id, nothing)
                 isnothing(chat_id) && return nothing
                 from = get(message, :from, (;))
-                msg_user = @coalesce get(from, :username, "") ""
+                msg_user = @_coalesce get(from, :username, "") ""
                 if ismissing(user) || msg_user != user
                     sendMessage(
                         cl;
@@ -196,6 +196,15 @@ function tgtask(cl, s, running::Ref{Bool}, offset::Ref{Int})
                     )
                     return nothing
                 end
+                call_f(f, isinput) = begin
+                    ans = f(cl, s; text, chat_id, isinput)
+                    f_resp[], f_last[] = if ans isa Bool && !ans
+                        (true, f)
+                    else
+                        (false, nothing)
+                    end
+                end
+
 
                 # Allowlist for Telegram commands to prevent arbitrary eval (security pillar)
                 allowed = Set([:start_strategy, :stop_strategy, :status, :daily, :weekly, :monthly, :balance, :assets, :config, :logs, :set, :get, :_rolling, :_set_info, :_init])

@@ -32,7 +32,7 @@ function _tryfetch(w)::Bool
             isstopped(w) || stop!(w)
             flush!(w)
         catch e
-            logerror(w, e)
+            logerror(w, e, catch_backtrace())
         end
         prev_w = pop!(WATCHERS, w.name, missing)
         if !ismissing(prev_w) && isstarted(prev_w)
@@ -40,12 +40,12 @@ function _tryfetch(w)::Bool
         end
     end
     if result isa Exception
-        logerror(w, result)
+        logerror(w, result, catch_backtrace())
         false
     elseif result isa Bool
         result
     else
-        logerror(w, ErrorException("Fetch result is not a bool ($(w.name))"))
+        logerror(w, ErrorException("Fetch result is not a bool ($(w.name))"), catch_backtrace())
         false
     end
 end
@@ -60,7 +60,7 @@ function _handle_fetch_result(w, result)
             w.attempts += 1
         end
     catch err
-        logerror(w, err)
+        logerror(w, err, catch_backtrace())
     end
 end
 
@@ -71,7 +71,7 @@ function _setup_fetch_pipeline!(w)
     pipeline = obs |> Rocket.map(Bool, _ -> _tryfetch(w))
     subscription = Rocket.subscribe!(pipeline, Rocket.lambda(
         on_next = result -> _handle_fetch_result(w, result),
-        on_error = err -> logerror(w, err),
+        on_error = err -> logerror(w, err, catch_backtrace()),
     ))
     w[:fetch_subscription] = subscription
 end
@@ -184,6 +184,7 @@ function _watcher(
     attrs=Dict{Symbol,Any}(),
 )
     flush && _check_flush_interval(flush_interval, fetch_interval, buffer_capacity)
+    haskey(attrs, :last_processed) || (attrs[:last_processed] = nothing)
     @debug "new watcher: $name"
     w = Watcher{T}(;
         buffer=CircularBuffer{BufferEntry(T)}(buffer_capacity),

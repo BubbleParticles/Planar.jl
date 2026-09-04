@@ -1,7 +1,8 @@
-using .st: NoMarginStrategy, MarginStrategy
-using .Executors: AnyLimitOrder, AnyMarketOrder
+using .st: NoMarginStrategy, MarginStrategy, Strategy
+using .Executors: AnyLimitOrder, AnyMarketOrder, CancelOrders, hasorders
+using ..PaperMode.OrderTypes: BuyOrSell, OrderSide
 using ..PaperMode.SimMode: singlewaycheck
-using PlanarCore.Instances: raw
+using PlanarCore.Instances: raw, InstrumentInstance, NoMarginInstance
 using PlanarCore.Misc: Short
 using PlanarCore.OrderTypes: positionside
 @doc """ Places a limit order and synchronizes the cash balance.
@@ -195,5 +196,15 @@ function call!(
     ::CancelOrders;
     kwargs...,
 )::Bool
-    all(cancel!(s, o, ii; err=OrderCanceled(o)) for o in values(s, ii, BuyOrSell))
+    if !hasorders(s, ii, BuyOrSell)
+        return true
+    end
+    invoke(
+        call!,
+        Tuple{Strategy{Live},InstrumentInstance,CancelOrders},
+        s,
+        ii,
+        CancelOrders();
+        kwargs...,
+    )
 end

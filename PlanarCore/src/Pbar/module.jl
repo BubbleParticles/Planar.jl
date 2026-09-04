@@ -37,12 +37,27 @@ It uses a lock to ensure thread safety during these operations.
 """
 function clearpbar(pb=pbar[])
     isnothing(pb) && return
-    @lock pbar_lock begin
-        for j in pb.jobs
-            stop!(j)
+    try
+        @lock pbar_lock begin
+            for j in pb.jobs
+                try
+                    stop!(j)
+                catch e
+                    e isa InterruptException && rethrow(e)
+                    @error "pbar: stop! job failed" exception=(e, catch_backtrace())
+                end
+            end
+            empty!(pb.jobs)
+            try
+                stop!(pb)
+            catch e
+                e isa InterruptException && rethrow(e)
+                @error "pbar: stop! pbar failed" exception=(e, catch_backtrace())
+            end
         end
-        empty!(pb.jobs)
-        stop!(pb)
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "pbar: clearpbar failed" exception=(e, catch_backtrace())
     end
 end
 
@@ -53,9 +68,16 @@ The `pbar!` function first clears any existing progress bar, then creates a new 
 The `transient` argument defaults to `true`, and `columns` defaults to `:default`.
 """
 function pbar!(; transient=true, columns=:default, kwargs...)
-    clearpbar()
-    pbar[] = ProgressBar(; transient, columns, kwargs...)
-    pbar_initialized[] = true
+    try
+        clearpbar()
+        pbar[] = ProgressBar(; transient, columns, kwargs...)
+        pbar_initialized[] = true
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "pbar: pbar! failed" exception=(e, catch_backtrace())
+        pbar[] = nothing
+        pbar_initialized[] = false
+    end
 end
 
 function _doinit()
@@ -89,32 +111,70 @@ end
 @doc "Renders the progress bar if enough time has passed since the last render."
 function dorender(pb, t=now())
     isnothing(pb) && return false
-    @lock pbar_lock begin
-        # Handle epoch-zero last_render (first render)
-        last_t = last_render[]
-        if last_t == DateTime(0) || t - last_t > min_delta[]
-            render(pb)
-            last_render[] = t
-            yield()
-            return true
+    try
+        @lock pbar_lock begin
+            # Handle epoch-zero last_render (first render)
+            last_t = last_render[]
+            if last_t == DateTime(0) || t - last_t > min_delta[]
+                try
+                    render(pb)
+                catch e
+                    e isa InterruptException && rethrow(e)
+                    @error "pbar: render failed" exception=(e, catch_backtrace())
+                    return false
+                end
+                last_render[] = t
+                try
+                    yield()
+                catch e
+                    e isa InterruptException && rethrow(e)
+                    @error "pbar: yield failed" exception=(e, catch_backtrace())
+                end
+                return true
+            end
+            return false
         end
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "pbar: dorender failed" exception=(e, catch_backtrace())
         return false
     end
 end
 
-@doc "Starts a new job in the progress bar."
 function startjob!(pb, desc="", N=nothing)
     isnothing(pb) && return nothing
-    @lock pbar_lock begin
-        job = let j = addjob!(pb; description=desc, N, transient=true)
-            RunningJob(; job=j)
+    try
+        @lock pbar_lock begin
+            job = try
+                let j = addjob!(pb; description=desc, N, transient=true)
+                    RunningJob(; job=j)
+                end
+            catch e
+                e isa InterruptException && rethrow(e)
+                @error "pbar: addjob! failed" exception=(e, catch_backtrace())
+                return nothing
+            end
+            try
+                if !pb.running
+                    start!(pb)
+                    dorender(pb)
+                end
+            catch e
+                e isa InterruptException && rethrow(e)
+                @error "pbar: start! pbar failed" exception=(e, catch_backtrace())
+            end
+            try
+                yield()
+            catch e
+                e isa InterruptException && rethrow(e)
+                @error "pbar: yield failed in startjob!" exception=(e, catch_backtrace())
+            end
+            job
         end
-        pb.running || begin
-            start!(pb)
-            dorender(pb)
-        end
-        yield()
-        job
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "pbar: startjob! failed" exception=(e, catch_backtrace())
+        return nothing
     end
 end
 
@@ -141,16 +201,37 @@ end
 @doc "Complete a job."
 function complete!(pb, j, force=true)
     isnothing(pb) && return nothing
+    isnothing(j) && return nothing
     isnothing(j.N) && return nothing
-    # Avoid division by zero: only update if N > 0 and not already finished
-    if !j.finished && j.N > 0 && j.N != j.i
-        update!(j; i=j.N - j.i)
-        dorender(pb)
-    end
-    if force || !j.transient
-        @lock pbar_lock if j in pb.jobs
-            removejob!(pb, j)
+    try
+        # Avoid division by zero: only update if N > 0 and not already finished
+        if !j.finished && j.N > 0 && j.N != j.i
+            try
+                update!(j; i=j.N - j.i)
+            catch e
+                e isa InterruptException && rethrow(e)
+                @error "pbar: update! in complete! failed" exception=(e, catch_backtrace())
+            end
+            try
+                dorender(pb)
+            catch e
+                e isa InterruptException && rethrow(e)
+                @error "pbar: dorender in complete! failed" exception=(e, catch_backtrace())
+            end
         end
+        if force || !j.transient
+            try
+                @lock pbar_lock if j in pb.jobs
+                    removejob!(pb, j)
+                end
+            catch e
+                e isa InterruptException && rethrow(e)
+                @error "pbar: removejob! failed" exception=(e, catch_backtrace())
+            end
+        end
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "pbar: complete! failed" exception=(e, catch_backtrace())
     end
     nothing
 end
@@ -194,64 +275,124 @@ macro withpbar!(data, args...)
     quote
         pb = $pbar[]
         isnothing(pb) && return nothing
-        local $pbj = startjob!(pb, $desc, length($data))
-        local iserror = false
-        try
-            $code
+        local $pbj = try
+            startjob!(pb, $desc, length($data))
         catch e
-            if e isa InterruptException
+            e isa InterruptException && rethrow(e)
+            @error "pbar: startjob! in withpbar! failed" exception=(e, catch_backtrace())
+            nothing
+        end
+        # If progress bar failed to start, run code without progress tracking
+        if isnothing($pbj)
+            try
+                $code
+            catch e
+                e isa InterruptException && rethrow(e)
+                @error "pbar: withpbar! body failed (no pbar)" exception=(e, catch_backtrace())
                 rethrow(e)
-            else
-                iserror = true
             end
-        finally
-            pb = $pbar[]
-            isnothing(pb) || pbclose!($pbj.job, pb)
+        else
+            local iserror = false
+            try
+                $code
+            catch e
+                if e isa InterruptException
+                    rethrow(e)
+                else
+                    iserror = true
+                    @error "pbar: withpbar! body failed" exception=(e, catch_backtrace())
+                    rethrow(e)
+                end
+            finally
+                try
+                    pb = $pbar[]
+                    if !isnothing(pb) && !isnothing($pbj) && !isnothing($pbj.job)
+                        pbclose!($pbj.job, pb)
+                    end
+                catch e
+                    e isa InterruptException && rethrow(e)
+                    @error "pbar: pbclose! in withpbar! failed" exception=(e, catch_backtrace())
+                end
+            end
         end
     end
 end
 
-@doc "Single update to the progressbar with the new value."
 macro pbupdate!(n=1, args...)
     n = esc(n)
     quote
         pb = $pbar[]
         isnothing(pb) && return nothing
         !pb.running && return nothing
-        let t = $now()
-            $pbj.counter += $n
-            # Use lock for checking and rendering to avoid race with dorender
-            @lock $pbar_lock begin
-                pb = $pbar[]
-                isnothing(pb) && return nothing
-                last_t = $last_render[]
-                if last_t == DateTime(0) || t - last_t > $min_delta[]
-                    update!($pbj.job; i=$pbj.counter)
-                    dorender(pb, t)
+        try
+            let t = $now()
+                try
+                    $pbj.counter += $n
+                catch e
+                    e isa InterruptException && rethrow(e)
+                    @error "pbar: counter increment failed" exception=(e, catch_backtrace())
+                end
+                # Use lock for checking and rendering to avoid race with dorender
+                try
+                    @lock $pbar_lock begin
+                        pb = $pbar[]
+                        isnothing(pb) && return nothing
+                        last_t = $last_render[]
+                        if last_t == DateTime(0) || t - last_t > $min_delta[]
+                            try
+                                update!($pbj.job; i=$pbj.counter)
+                            catch e
+                                e isa InterruptException && rethrow(e)
+                                @error "pbar: update! failed" exception=(e, catch_backtrace())
+                            end
+                            try
+                                dorender(pb, t)
+                            catch e
+                                e isa InterruptException && rethrow(e)
+                                @error "pbar: dorender in pbupdate! failed" exception=(e, catch_backtrace())
+                            end
+                        end
+                    end
+                catch e
+                    e isa InterruptException && rethrow(e)
+                    @error "pbar: pbupdate! lock failed" exception=(e, catch_backtrace())
                 end
             end
+        catch e
+            e isa InterruptException && rethrow(e)
+            @error "pbar: pbupdate! failed" exception=(e, catch_backtrace())
         end
         nothing
     end
 end
 
-@doc """
-Terminates the progress bar.
-$(TYPEDSIGNATURES)
-The `pbclose!` function completes all jobs in the progress bar and then stops the progress bar itself.
-"""
 function pbclose!(pb::ProgressBar=pbar[], all=true)
     isnothing(pb) && return nothing
-    all && foreach(j -> complete!(pb, j), pb.jobs)
-    stop!(pb)
+    try
+        all && foreach(j -> complete!(pb, j), pb.jobs)
+        try
+            stop!(pb)
+        catch e
+            e isa InterruptException && rethrow(e)
+            @error "pbar: stop! in pbclose! failed" exception=(e, catch_backtrace())
+        end
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "pbar: pbclose! failed" exception=(e, catch_backtrace())
+    end
     nothing
 end
 
-@doc "Stops the progress bar after completing the job."
 function pbclose!(job, pb=pbar[])
     isnothing(pb) && return nothing
-    complete!(pb, job)
-    @pbstop!
+    isnothing(job) && return nothing
+    try
+        complete!(pb, job)
+        @pbstop!
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "pbar: pbclose! job failed" exception=(e, catch_backtrace())
+    end
     nothing
 end
 

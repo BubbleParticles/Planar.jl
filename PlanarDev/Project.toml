@@ -6,6 +6,7 @@ authors = ["zbc"]
 
 [deps]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+DaemonMode = "d749ddd5-2b29-4920-8305-6ff5a704e36e"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Planar = "646fb1a4-6797-441d-ad18-3bdbde2eb86b"
 PlanarCore = "a475c859-e357-4be2-a5e3-43038ab4b158"
@@ -24,6 +25,7 @@ PlanarStrategyTools = {path = "../PlanarStrategyTools"}
 [compat]
 Aqua = "0.8.16"
 CSV = "0.10.16"
+DaemonMode = "0.1.2"
 DataFrames = "1.8.2"
 JSON = "1.6.1"
 Mocking = "0.8.1"

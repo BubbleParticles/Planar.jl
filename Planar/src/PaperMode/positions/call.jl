@@ -1,8 +1,12 @@
 using .st: MarginStrategy, NoMarginStrategy
-using PlanarCore.Instances: NoMarginInstance
+using PlanarCore.Instances: NoMarginInstance, HedgedInstance, MarginInstance
 using .Executors: AnyMarketOrder
 using PlanarCore.SimMode: singlewaycheck
 using PlanarCore.Collections: snapshot
+using PlanarCore.Instances.Exchanges: lastprice
+using PlanarCore.Instances: position, isopen, posside
+using PlanarCore.Instances: PositionClose
+using PlanarCore.SimMode.OrderTypes: MarketOrder, ShortMarketOrder
 using .Misc: DFT
 using .Misc.Lang: splitkws
 
@@ -54,6 +58,7 @@ function call!(
     fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
     create_paper_limit_order!(s, ii, t; amount, date, order_kwargs..., fees_kwarg...)
 end
+
 
 @doc "Closes a leveraged position (no margin)."
 function call!(
