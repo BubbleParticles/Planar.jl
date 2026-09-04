@@ -1,5 +1,5 @@
 using .st: MarginStrategy, NoMarginStrategy
-using PlanarCore.Instances: NoMarginInstance, HedgedInstance
+using PlanarCore.Instances: NoMarginInstance, HedgedInstance, MarginInstance
 using .Executors: AnyMarketOrder
 using PlanarCore.SimMode: singlewaycheck
 using PlanarCore.Collections: snapshot
