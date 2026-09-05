@@ -1,11 +1,14 @@
 using .st: MarginStrategy, NoMarginStrategy
-using PlanarCore.Instances: NoMarginInstance, HedgedInstance, MarginInstance
+using PlanarCore.Executors: CancelOrders
+using PlanarCore.OrderTypes: BuyOrSell
+using PlanarCore.Instances: NoMarginInstance, HedgedInstance, MarginInstance, ishedged
 using .Executors: AnyMarketOrder
-using PlanarCore.SimMode: singlewaycheck
+using PlanarCore.SimMode: singlewaycheck, close_position!
 using PlanarCore.Collections: snapshot
 using PlanarCore.Instances.Exchanges: lastprice
 using PlanarCore.Instances: position, isopen, posside
 using PlanarCore.Instances: PositionClose
+using PlanarCore.OrderTypes: postoside
 using PlanarCore.SimMode.OrderTypes: MarketOrder, ShortMarketOrder
 using .Misc: DFT
 using .Misc.Lang: splitkws
@@ -70,4 +73,24 @@ function call!(
     kwargs...,
 )::Bool
     true
+end
+
+@doc "Closes a leveraged position (margin)."
+function call!(
+    s::MarginStrategy{Paper},
+    ii::MarginInstance,
+    side::ByPos,
+    date,
+    ::PositionClose;
+    kwargs...,
+)::Bool
+    # In hedged mode, cancel only orders on the side being closed to preserve the opposite side's active orders.
+    call!(s, ii, CancelOrders(); t=ishedged(ii) ? postoside(side) : BuyOrSell)
+    v = close_position!(s, ii, side, date; kwargs...)
+    if !v
+        @error "close_position! returned false (failed to close position)" ii=raw(ii) side
+        throw(ArgumentError("Failed to close position for $ii on side $side"))
+    end
+    @deassert !isopen(ii, side)
+    v
 end

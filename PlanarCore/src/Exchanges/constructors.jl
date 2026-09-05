@@ -12,6 +12,8 @@ using ..ExchangeTypes.Ccxt: Ccxt, choosefunc
 import ..Ccxt: issupported
 import ..ExchangeTypes.CcxtGateway: default_client, call_exchange
 const HTTP = ExchangeTypes.CcxtGateway.HTTP
+using ..Misc: WithMargin
+using ..Misc: WithMargin
 using JSON
 using ..Instruments
 using ..Instruments: Misc
@@ -267,19 +269,19 @@ end
 @doc "Any of $MARKET_TYPES"
 function markettype(exc, margin=Misc.config.margin)
     types = exc.types
-    if margin == NoMargin()
-        if :spot ∈ types
-            :spot
-        else
-            _lasttype(types)
-        end
-    else
+    if margin isa WithMargin
         if :linear ∈ types
             :linear
         elseif :swap ∈ types
             :swap
         elseif :future ∈ types
             :future
+        else
+            _lasttype(types)
+        end
+    else
+        if :spot ∈ types
+            :spot
         else
             _lasttype(types)
         end

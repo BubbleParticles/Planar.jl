@@ -76,7 +76,7 @@ $(TYPEDSIGNATURES)
 function tickers(
     exc::Exchange=getexchange(), quot=config.qc;
     min_vol=0, skip_fiat=true,
-    with_margin=config.margin != NoMargin(),
+    with_margin=config.margin isa WithMargin,
     with_leverage=:no, as_vec=false, verbose=true,
     type=markettype(exc),
     cross_match::Tuple{Vararg{Symbol}}=(),
