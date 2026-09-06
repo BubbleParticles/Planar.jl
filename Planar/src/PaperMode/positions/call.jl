@@ -35,9 +35,10 @@ function call!(
     fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
     # Handle NaN price from priceat
     price = isnan(price) ? zero(DFT) : convert(DFT, price)
-    o = create_paper_market_order(s, t, ii; amount, date, order_kwargs...)
-    isnothing(o) && return nothing
-    marketorder!(s, o, ii; date, obside=orderbook_side(ii, t))
+    result = create_paper_market_order(s, t, ii; amount, date, price, order_kwargs...)
+    isnothing(result) && return nothing
+    o, obside = result
+    marketorder!(s, o, ii; date, obside)
 end
 
 @doc """Creates a simulated limit order.
