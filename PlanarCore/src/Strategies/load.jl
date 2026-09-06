@@ -200,6 +200,9 @@ function default_load(mod::Module, t::Type, config::Config)
     if config.mode == Paper() && !config.sandbox
         @warn "Paper mode usually runs against a sandbox exchange; config.sandbox=false keeps live keys and endpoints."
     end
+    if config.margin === nothing
+        config.margin = _defined_marginmode(mod)
+    end
     s = Strategy(mod, assets; config)
     _strat_load_checks(s, config)
 end
@@ -224,6 +227,9 @@ function bare_load(mod::Module, t::Type, config::Config)
     syms = @something _universe_members(config) invokelatest(call_func, t, StrategyMarkets())
     exc = Exchanges.getexchange!(config.exchange; sandbox=config.sandbox, config.account)
     TF = invokelatest(getfield, mod, :TF)
+    if config.margin === nothing
+        config.margin = _defined_marginmode(mod)
+    end
     uni = InstrumentCollection(syms; load_data=false, timeframe=TF, exc, config.margin)
     s = Strategy(mod, config.mode, config.margin, TF, exc, uni; config)
     _strat_load_checks(s, config)

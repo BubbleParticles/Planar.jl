@@ -159,13 +159,14 @@ function positions(M::Type{<:MarginMode}, a::AbstractInstrument, limits::Limits,
         let tiers = leverage_tiers(e, a.raw)
             default_tier = Exchanges.LeverageTier(0, 0.0, Inf, Inf, 0.0, 0.0, 0.0)
             function pos_kwargs()
-                (;
+                (
                     asset=a,
                     min_size=limits.amount.min,
                     tiers=[tiers],
                     this_tier=[isempty(tiers) ? default_tier : first(values(tiers))],
                     cash=CurrencyCash(e, a.bc, 0.0),
                     cash_committed=CurrencyCash(e, a.bc, 0.0),
+                    hedged=ishedged(M()),
                 )
             end
 

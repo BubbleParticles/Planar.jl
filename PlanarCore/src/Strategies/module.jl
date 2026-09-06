@@ -131,7 +131,7 @@ struct Strategy{X<:ExecMode,N,E<:ExchangeID,M<:MarginMode,C} <: AbstractStrategy
         # in every execution mode. Live-mode re-enforcement happens per-instance via
         # `ensure_marginmode` before each order/close (per README).
         if mode isa Live && margin isa WithMargin
-            @assert margin isa NoMargin || has(exc, :setLeverage) "Live WithMargin requires setLeverage"
+            @assert has(exc, :setLeverage) "Live WithMargin requires setLeverage"
             # `check_margin_support!` fails fast when the exchange lacks setMarginMode
             # (any WithMargin) or setPositionMode (hedged variants). Its return value
             # MUST be honoured (the docstring promises fail-fast).
@@ -141,14 +141,16 @@ struct Strategy{X<:ExecMode,N,E<:ExchangeID,M<:MarginMode,C} <: AbstractStrategy
             if ok === false
                 error("Exchange $(nameof(exc)) failed to set margin mode '$(margin)' (hedged=$(ishedged(margin))) — gateway setMarginMode/setPositionMode returned false. Check gateway logs, API permissions, and that the mock advertises setMarginMode+setPositionMode.")
             end
-        elseif mode isa Union{Sim,Paper} && margin isa Union{IsolatedHedged,CrossHedged}
-            # For Sim/Paper with hedged modes, the stub exchange may not support
-            # or enforce hedged position semantics. Validate exchange support
-            # and warn if setPositionMode is missing.
-            if !has(exc, :setPositionMode)
+        elseif mode isa Union{Sim,Paper} && margin isa WithMargin
+            # For Sim/Paper, warn about margin mode support since the stub
+            # exchange may not enforce margin/hedge semantics correctly.
+            if margin isa MarginMode{Hedged} && !has(exc, :setPositionMode)
                 @warn "Exchange $(nameof(exc)) does not advertise setPositionMode — hedged mode '$(margin)' in $(mode) mode may not work correctly. Test on a real exchange before live deployment."
             end
-            @warn "Running hedged mode '$(margin)' in $(mode) mode — stub exchange may not enforce hedged position semantics. Test on real exchange before live deployment."
+            if !has(exc, :setMarginMode)
+                @warn "Exchange $(nameof(exc)) does not advertise setMarginMode — $(mode) mode with $(margin) may not work correctly."
+            end
+            @warn "Running $(margin) mode in $(mode) mode — stub exchange may not enforce margin/hedged semantics. Test on real exchange before live deployment."
         end
         new{typeof(mode),name,eid,typeof(margin),config.qc}(
             self,

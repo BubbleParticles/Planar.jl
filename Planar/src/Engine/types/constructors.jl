@@ -27,7 +27,7 @@ function Strategies.Strategy(
     params=config.params,
     account=config.account,
     mode=something(config.mode, Sim()),
-    margin=something(config.margin, NoMargin()),
+    margin=config.margin !== nothing ? config.margin : NoMargin(),
     sandbox=mode isa Sim ? true : config.sandbox,
     timeframe=config.min_timeframe,
 )
