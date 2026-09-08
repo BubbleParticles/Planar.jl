@@ -32,7 +32,9 @@ This function returns the price at a particular date for an order. It takes a st
 function priceat(s::Strategy{Sim}, ::Type{<:Order}, ii, date)
     tick = get(s.attrs, :sim_current_tick, nothing)
     tick isa TradeTick && tick.asset === ii && return tick.price
-    openat(s, ii, date)
+    # Tick-mode strategies use a zero-period timeframe with no ohlcv entry;
+    # fall back to the instance (smallest-tf) open instead of KeyError.
+    haskey(ii.data, s.timeframe) ? openat(s, ii, date) : openat(ii, date)
 end
 priceat(s::Strategy{Sim}, ::T, args...) where {T<:Order} = priceat(s, T, args...)
 function priceat(s::MarginStrategy{Sim}, ::T, args...) where {T<:Order}
@@ -43,7 +45,8 @@ end
 function priceat(s::Strategy{Paper}, ::Type{<:Order}, ii, date)
     tick = get(s.attrs, :sim_current_tick, nothing)
     tick isa TradeTick && tick.asset === ii && return tick.price
-    openat(s, ii, date)
+    # Same tick-mode fallback as Sim (see above).
+    haskey(ii.data, s.timeframe) ? openat(s, ii, date) : openat(ii, date)
 end
 priceat(s::Strategy{Paper}, ::T, args...) where {T<:Order} = priceat(s, T, args...)
 function priceat(s::MarginStrategy{Paper}, ::T, args...) where {T<:Order}
