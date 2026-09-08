@@ -52,7 +52,9 @@ function test_fred()
         @eval Main const fred = FRED
     end
 
-    @testset "FRED API Tests" begin
+    # Run in latest world: test_* bodies reference TimeTicks/Dates globals
+    # imported above at runtime (same @eval pattern as test_time.jl)
+    @eval @testset "FRED API Tests" begin
         @info "TEST: API Key Setup and Configuration"
         @test test_api_key_setup()
         @test test_rate_limit()

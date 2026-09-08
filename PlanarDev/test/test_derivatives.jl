@@ -13,5 +13,5 @@ end
 
 test_derivatives() = @testset "derivative" begin
     @eval using .Planar.Engine.Collections.Instruments.Derivatives
-    _test_derivatives_1()
+    @eval _test_derivatives_1()
 end
