@@ -152,6 +152,10 @@ struct Strategy{X<:ExecMode,N,E<:ExchangeID,M<:MarginMode,C} <: AbstractStrategy
             end
             @warn "Running $(margin) mode in $(mode) mode — stub exchange may not enforce margin/hedged semantics. Test on real exchange before live deployment."
         end
+        # Record the construction-time exchange so `s.exc` / `haskey(attrs(s), :exc)`
+        # work without a gateway round-trip (universe-derived `exchange(s)` stays
+        # authoritative for trading paths).
+        config.attrs[:exc] = exc
         new{typeof(mode),name,eid,typeof(margin),config.qc}(
             self,
             config,
