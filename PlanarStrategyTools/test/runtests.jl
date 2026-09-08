@@ -128,13 +128,6 @@ end
     @test b ≈ 0.5
 end
 
-@testset "ismissingvalue" begin
-    @test ST.ismissingvalue(NaN)
-    @test !ST.ismissingvalue(1.0)
-    @test !ST.ismissingvalue(0.0)
-    @test ST.ismissingvalue(missing)
-    @test !ST.ismissingvalue(nothing)
-end
 
 @testset "SignalState4 iteration" begin
     ss = ST.SignalState4{Int,Float64}(

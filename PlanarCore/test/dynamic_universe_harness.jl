@@ -20,10 +20,6 @@ if !@isdefined(_make_exchange)
 end
 
 @testset "Dynamic universe harness" begin
-    @testset "unit planes" begin
-        # already covered in dynamic_universe.jl
-        @test true
-    end
     @testset "invariants under random sequences" begin
         btc = _make_instance("BTC/USDT", 50000.0)
         eth = _make_instance("ETH/USDT", 3000.0)

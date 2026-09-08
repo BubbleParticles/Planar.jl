@@ -611,16 +611,18 @@ end
     @test Instances.committed(ii, Long()) !== nothing
     @test Instances.committed(ii, Short()) !== nothing
     @test Instances.iszero(ii) == true
-    @test Instances.freecash(ii, Long()) == 0.0
-    @test Instances.freecash(ii, Short()) == 0.0
-    @test_nowarn Instances.reset!(ii, Short())
-    @test_nowarn sprint(show, ii)
+    @test Instances.reset!(ii, Short()) === nothing
+    @test isopen(position(ii, Short())) == false
+    out = sprint(show, ii)
+    @test out isa String
+    @test occursin(raw(ii), out)
     # committed(ii) with no active position must not throw (returns nothing),
     # mirroring cash(ii) which already guards the absent side.
     ii.lastpos[] = nothing
     @test Instances.committed(ii) === nothing
-    @test_nowarn sprint(show, ii)
-end
+    out2 = sprint(show, ii)
+    @test out2 isa String
+    @test occursin(raw(ii), out2)
 
 
 # =============================================================

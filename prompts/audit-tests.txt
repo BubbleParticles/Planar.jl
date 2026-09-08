@@ -1,0 +1,9 @@
+Ensure total testing integrity across all unit and integration tests.
+
+    No Hardcoding/Cheating: Tests must execute genuine logic and fail when application logic is flawed.
+
+    No Monkey Patching or Runtime Hacks: Never modify module state, global variables, or internals at runtime to force test passes.
+
+    Strict Mocking Policy: Do not mock local domain logic or internal code paths. Restrict mocks strictly to external dependencies (e.g., network, filesystem) with accurate schema validation.
+
+    High-Value Coverage: Do not write trivial assertions or fluff tests solely to inflate code coverage metrics. Focus on critical paths, boundary conditions, and error state handling.

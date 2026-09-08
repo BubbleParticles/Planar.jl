@@ -188,13 +188,8 @@ function test_error_handling()
     # Instead, test with a very old date that should not have data
     very_old_date = DateTime(1900, 1, 1)
     # This might not throw an error either, so we'll just test that it doesn't crash
-    try
-        frank.historical(very_old_date)
-        # If it doesn't throw an error, that's also acceptable
-    catch e
-        # If it does throw an error, that's also acceptable
-        @test e isa Exception
-    end
+    # Test error handling for very old date - may or may not throw
+    @test_throws Exception frank.historical(very_old_date)
     
     return true
 end

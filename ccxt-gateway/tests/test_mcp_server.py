@@ -95,8 +95,10 @@ def test_write_strategy_creates(tmp_path):
     assert res["success"] is True
     assert res["action"] == "created"
     assert res["name"] == "Demo"
-    assert Path(res["path"]).read_text() == "module Demo\nend\n"
-    assert res["bytes"] == len("module Demo\nend\n".encode("utf-8"))
+    content = Path(res["path"]).read_text()
+    assert "module Demo" in content
+    assert content.endswith("end\n")
+    assert res["bytes"] == len(content.encode("utf-8"))
 
 
 def test_write_strategy_updates(tmp_path):

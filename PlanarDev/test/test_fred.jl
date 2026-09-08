@@ -494,24 +494,10 @@ function test_error_handling()
     end
     
     # Test with invalid series ID
-    try
-        fred.series_info("INVALID_SERIES_ID")
-        # If it doesn't throw an error, that's also acceptable
-    catch e
-        # If it does throw an error, that's also acceptable
-        @test e isa Exception
-    end
+    @test_throws Exception fred.series_info("INVALID_SERIES_ID")
     
     # Test with invalid date range (end before start)
-    try
-        end_date = now() - Year(2)
-        start_date = now() - Year(1)
-        fred.observations("GDPC1"; start_date=start_date, end_date=end_date)
-        # If it doesn't throw an error, that's also acceptable
-    catch e
-        # If it does throw an error, that's also acceptable
-        @test e isa Exception
-    end
+    @test_throws Exception fred.observations("GDPC1"; start_date=now() - Year(1), end_date=now() - Year(2))
     
     return true
 end

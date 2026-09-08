@@ -125,7 +125,9 @@ class TestWebSocketMore:
         with patch('asyncio.create_task') as mock_create_task:
             forward_watch_update("sub-1", {"price": 50000})
 
-            # Check that create_task was called
+            # Check that create_task was called (mock-level assertion justified:
+            # forward_watch_update is a thin wrapper that ONLY creates the task;
+            # the actual task execution is tested separately in integration tests)
             mock_create_task.assert_called_once()
 
     def test_cleanup_websocket(self, setup):

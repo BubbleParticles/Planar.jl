@@ -80,10 +80,7 @@ end
         mock_calls = []
         mock_del(url; kwargs...) = (push!(mock_calls, url); HTTP.Response(200, JSON3.write(Dict("result" => "ok"))))
         Rest.set_http_delete!(mock_del)
-        try
-            stop_exchange(client, "binance")
-        catch
-        end
+        stop_exchange(client, "binance")
         @test !haskey(Rest._started_exchanges, "binance")
     end
 
@@ -259,13 +256,12 @@ end
     
     @testset "server_info calls /admin/info" begin
         client = GatewayClient()
-        mock_calls = String[]
         mock_get(url; kwargs...) = begin
             push!(mock_calls, url)
             HTTP.Response(200, JSON3.write(Dict("result" => Dict("status" => "running", "version" => "0.1.0"), "error" => nothing)))
         end
         Rest.set_http_get!(mock_get)
-        try server_info(client) catch end
+        server_info(client)
         @test length(mock_calls) == 1
         @test occursin("/admin/info", mock_calls[1])
     end
@@ -278,11 +274,10 @@ end
             HTTP.Response(200, JSON3.write(Dict("result" => Dict("total_memory_mb" => 150.0), "error" => nothing)))
         end
         Rest.set_http_get!(mock_get)
-        try memory_usage(client) catch end
+        memory_usage(client)
         @test length(mock_calls) == 1
         @test occursin("/admin/memory", mock_calls[1])
     end
-
     @testset "server_info returns dict on success" begin
         client = GatewayClient()
         mock_get(url; kwargs...) = HTTP.Response(200, JSON3.write(Dict("result" => Dict("status" => "running", "version" => "1.0.0", "uptime_seconds" => 123.0), "error" => nothing)))

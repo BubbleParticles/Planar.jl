@@ -11,10 +11,9 @@ let planar_loaded = false
     catch e
         @warn "Planar module could not be loaded (pre-existing Engine→LiveMode issue). Skipping tests." exception=(e, catch_backtrace())
     end
-
     if !planar_loaded
         @testset "Planar (skipped - pre-existing Engine loading issue)" begin
-            @test true
+            @test_skip "Planar module could not be loaded (pre-existing Engine→LiveMode dependency issue). Skipping tests."
         end
     else
         # Eval the real test suite only when Planar is available

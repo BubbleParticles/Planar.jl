@@ -5,7 +5,7 @@ using PlanarCore.Instances.Exchanges.ExchangeTypes
 using PlanarCore.Instances.Exchanges.ExchangeTypes: CcxtExchange, ExchangeID, ExcPrecisionMode
 using PlanarCore.Instances.Exchanges.ExchangeTypes.OrderedCollections: OrderedSet
 using PlanarCore.Instances.Data.TimeTicks: TimeFrame, DateTime, now, Dates
-using PlanarCore.Instances.Data.DataFrames: DataFrame
+using PlanarCore.Instances.Data.DataFrames: DataFrame, nrow, ncol, names
 using PlanarCore.Instances.Data.TimeTicks.Lang: Option
 using PlanarCore.Instances
 using PlanarCore.Instances: NoMarginInstance
@@ -124,12 +124,13 @@ const _ii_eth_std = Instances.InstrumentInstance(
                 syms; timeframe="1m", exc=mock_exc, margin=NoMargin(), load_data=false
             )
             @test Set(string.(raw.(coll.data.asset))) == Set(syms)
+            # prettydf must return a DataFrame with expected structure
+            df = Collections.prettydf(coll)
+            @test df isa DataFrame
+            @test nrow(df) > 0
+            @test ncol(df) >= 3
+            @test all(col -> col in names(df), ["name", "exchange"])
         end
-        # prettydf must not crash when printing the collection
-        coll = Collections.InstrumentCollection(
-            syms; timeframe="1m", exc=mock_exc, margin=NoMargin(), load_data=false
-        )
-        @test_nowarn Collections.prettydf(coll)
     end
 
 

@@ -101,7 +101,6 @@ end
                     # Live gateway 404 expected for mock t_Live_* exchange (not in gateway)
                     ii = _make_instance_matrix(margin, exc)
                     @test ishedged(ii) == (margin isa Union{IsolatedHedged, CrossHedged})
-                    @test true
                     continue
                 else
                     rethrow(e)

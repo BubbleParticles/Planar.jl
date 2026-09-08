@@ -4,8 +4,7 @@ from unittest.mock import MagicMock, AsyncMock
 
 import pytest
 
-
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def _mock_zmq():
     """Mock zmq.asyncio.Context so ZMQBroker doesn't bind real ports."""
     import zmq.asyncio
@@ -26,6 +25,7 @@ def _mock_zmq():
     yield
     zmq.asyncio.Context = original
 
+
 @pytest.fixture(autouse=True)
 def event_loop():
     """Create an event loop for each test."""
@@ -35,3 +35,4 @@ def event_loop():
     yield loop
     loop.close()
     asyncio.set_event_loop(None)
+
