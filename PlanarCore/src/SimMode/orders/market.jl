@@ -27,7 +27,7 @@ It takes a strategy `s`, an order `o`, an asset `ii`, and an `actual_amount`.
 Optional parameters include a `date` and a `price` which defaults to `openat(ii, date)`.
 """
 function marketorder!(
-    s::Strategy{Sim},
+    s::Strategy{<:Union{Sim,Paper}},
     o::Order{<:MarketOrderType},
     ii,
     actual_amount;

@@ -39,6 +39,17 @@ function priceat(s::MarginStrategy{Sim}, ::T, args...) where {T<:Order}
     priceat(s, T, args...)
 end
 
+# Paper mode uses the same priceat logic as Sim
+function priceat(s::Strategy{Paper}, ::Type{<:Order}, ii, date)
+    tick = get(s.attrs, :sim_current_tick, nothing)
+    tick isa TradeTick && tick.asset === ii && return tick.price
+    openat(s, ii, date)
+end
+priceat(s::Strategy{Paper}, ::T, args...) where {T<:Order} = priceat(s, T, args...)
+function priceat(s::MarginStrategy{Paper}, ::T, args...) where {T<:Order}
+    priceat(s, T, args...)
+end
+
 @doc """ Determines if a buy limit order is triggered.
 
 $(TYPEDSIGNATURES)
