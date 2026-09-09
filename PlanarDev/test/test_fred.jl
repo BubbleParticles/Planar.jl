@@ -17,14 +17,18 @@ end
 
 function test_fred()
     if fred === nothing
-        @warn "FRED API tests skipped: Watchers.FRED not available"
-        return true
+        @testset "FRED API Tests (skipped)" begin
+            @test_skip "Watchers.FRED not available"
+        end
+        return nothing
     end
 
     config_path = joinpath(dirname(dirname(dirname(pathof(Planar)))), "user", "secrets.toml")
     if !isfile(config_path) && Base.get(ENV, "PLANAR_FRED_APIKEY", "") == ""
-        @warn "FRED API tests skipped: no user/secrets.toml and PLANAR_FRED_APIKEY not set"
-        return true
+        @testset "FRED API Tests (skipped)" begin
+            @test_skip "no user/secrets.toml and PLANAR_FRED_APIKEY not set"
+        end
+        return nothing
     end
 
     @eval begin
@@ -159,9 +163,9 @@ function test_series_info()
     fred.setapikey!(false, config_path)
     
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping series info test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping series info test"
+     return true
+     end
     
     # Test series info for GDP
     data = fred.series_info("GDPC1")
@@ -185,9 +189,9 @@ function test_observations()
     fred.setapikey!(false, config_path)
     
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping observations test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping observations test"
+     return true
+     end
     
     # Test observations for GDP with date range
     end_date = now()
@@ -215,9 +219,9 @@ function test_latest_observation()
     fred.setapikey!(false, config_path)
     
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping latest observation test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping latest observation test"
+     return true
+     end
     
     data = fred.latest_observation("GDPC1")
     @test data isa Dict{String,Any}
@@ -237,9 +241,9 @@ function test_search_series()
     fred.setapikey!(false, config_path)
     
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping search series test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping search series test"
+     return true
+     end
     
     # Test search for GDP-related series (use a more specific search)
     data = fred.search_series("GDPC1"; limit=5)
@@ -267,9 +271,9 @@ function test_categories()
     fred.setapikey!(false, config_path)
     
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping categories test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping categories test"
+     return true
+     end
     
     # Test root categories
     data = fred.categories()
@@ -298,9 +302,9 @@ function test_releases()
     fred.setapikey!(false, config_path)
     
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping releases test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping releases test"
+     return true
+     end
     
     data = fred.releases(; limit=5)
     @test data isa Dict{String,Any}
@@ -322,9 +326,9 @@ function test_sources()
     fred.setapikey!(false, config_path)
     
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping sources test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping sources test"
+     return true
+     end
     
     data = fred.sources(; limit=5)
     @test data isa Dict{String,Any}
@@ -346,9 +350,9 @@ function test_tags()
     fred.setapikey!(false, config_path)
     
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping tags test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping tags test"
+     return true
+     end
     
     data = fred.tags(; limit=5)
     @test data isa Dict{String,Any}
@@ -375,9 +379,9 @@ function test_vintage_dates()
     fred.setapikey!(false, config_path)
     
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping vintage dates test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping vintage dates test"
+     return true
+     end
     
     data = fred.vintage_dates("GDPC1"; limit=5)
     @test data isa Dict{String,Any}
@@ -400,9 +404,9 @@ function test_timeseries_data()
     fred.setapikey!(false, config_path)
     
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping timeseries data test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping timeseries data test"
+     return true
+     end
     
     end_date = now()
     start_date = end_date - Year(1)
@@ -431,9 +435,9 @@ function test_convenience_functions()
     fred.setapikey!(false, config_path)
     
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping convenience functions test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping convenience functions test"
+     return true
+     end
     
     # Test latest value
     latest_value = fred.get_latest_value("GDPC1")
@@ -456,9 +460,9 @@ function test_caching()
     fred.setapikey!(false, config_path)
     
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping caching test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping caching test"
+     return true
+     end
     
     # Test cached series info
     data1 = fred.cached_series_info("GDPC1")
@@ -475,9 +479,9 @@ end
 
 function test_error_handling()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping error handling test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping error handling test"
+     return true
+     end
     
     # Test with invalid series ID
     @test_throws Exception fred.series_info("INVALID_SERIES_ID")
@@ -524,9 +528,9 @@ end
 
 function test_series_categories()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping series_categories test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping series_categories test"
+     return true
+     end
     data = fred.series_categories("GDPC1")
     @test data isa Dict{String,Any}
     @test "categories" in keys(data)
@@ -538,9 +542,9 @@ end
 
 function test_series_release()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping series_release test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping series_release test"
+     return true
+     end
     data = fred.series_release("GDPC1")
     @test data isa Dict{String,Any}
     @test "releases" in keys(data)
@@ -549,9 +553,9 @@ end
 
 function test_series_vintagedates()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping series_vintagedates test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping series_vintagedates test"
+     return true
+     end
     data = fred.vintage_dates("GDPC1"; limit=5)
     @test data isa Dict{String,Any}
     @test "vintage_dates" in keys(data)
@@ -561,9 +565,9 @@ end
 
 function test_series_tags()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping series_tags test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping series_tags test"
+     return true
+     end
     data = fred.series_tags("GDPC1")
     @test data isa Dict{String,Any}
     @test "tags" in keys(data)
@@ -572,9 +576,9 @@ end
 
 function test_category()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping category test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping category test"
+     return true
+     end
     data = fred.category(125)
     @test data isa Dict{String,Any}
     @test "categories" in keys(data)
@@ -583,9 +587,9 @@ end
 
 function test_category_children()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping category_children test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping category_children test"
+     return true
+     end
     data = fred.category_children(125; limit=5)
     @test data isa Dict{String,Any}
     @test "categories" in keys(data)
@@ -594,9 +598,9 @@ end
 
 function test_category_related()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping category_related test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping category_related test"
+     return true
+     end
     data = fred.category_related(125; limit=5)
     @test data isa Dict{String,Any}
     @test "categories" in keys(data)
@@ -605,9 +609,9 @@ end
 
 function test_category_series()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping category_series test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping category_series test"
+     return true
+     end
     data = fred.category_series(125; limit=5)
     @test data isa Dict{String,Any}
     @test "seriess" in keys(data)
@@ -618,9 +622,9 @@ end
 
 function test_releases_dates()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping releases_dates test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping releases_dates test"
+     return true
+     end
     data = fred.releases_dates(; limit=5)
     @test data isa Dict{String,Any}
     @test "release_dates" in keys(data)
@@ -629,9 +633,9 @@ end
 
 function test_release()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping release test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping release test"
+     return true
+     end
     data = fred.release(53)
     @test data isa Dict{String,Any}
     @test "releases" in keys(data)
@@ -640,9 +644,9 @@ end
 
 function test_release_dates()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping release_dates test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping release_dates test"
+     return true
+     end
     data = fred.release_dates(53; limit=5)
     @test data isa Dict{String,Any}
     @test "release_dates" in keys(data)
@@ -651,9 +655,9 @@ end
 
 function test_release_series()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping release_series test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping release_series test"
+     return true
+     end
     data = fred.release_series(53; limit=5)
     @test data isa Dict{String,Any}
     @test "seriess" in keys(data)
@@ -662,9 +666,9 @@ end
 
 function test_release_sources()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping release_sources test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping release_sources test"
+     return true
+     end
     data = fred.release_sources(53; limit=5)
     @test data isa Dict{String,Any}
     @test "sources" in keys(data)
@@ -673,9 +677,9 @@ end
 
 function test_source()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping source test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping source test"
+     return true
+     end
     data = fred.source(1)
     @test data isa Dict{String,Any}
     @test "sources" in keys(data)
@@ -684,9 +688,9 @@ end
 
 function test_source_releases()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping source_releases test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping source_releases test"
+     return true
+     end
     data = fred.source_releases(1; limit=5)
     @test data isa Dict{String,Any}
     @test "releases" in keys(data)
@@ -695,9 +699,9 @@ end
 
 function test_related_tags()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping related_tags test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping related_tags test"
+     return true
+     end
     data = fred.related_tags("usa"; limit=5)
     @test data isa Dict{String,Any}
     @test "tags" in keys(data)
@@ -708,9 +712,9 @@ end
 
 function test_tags_series()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping tags_series test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping tags_series test"
+     return true
+     end
     data = fred.tags_series("usa"; limit=5)
     @test data isa Dict{String,Any}
     @test "seriess" in keys(data)
@@ -727,9 +731,9 @@ end
 
 function test_units_parameters()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping units parameters test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping units parameters test"
+     return true
+     end
     valid_units = ["lin", "chg", "ch1", "pch", "pca", "cch", "cca", "log"]
     for unit in valid_units
         try
@@ -744,9 +748,9 @@ end
 
 function test_frequency_parameters()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping frequency parameters test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping frequency parameters test"
+     return true
+     end
     valid_frequencies = ["d", "w", "m", "q", "sa", "a", "wef", "weth", "ww", "bw", "ba"]
     for freq in valid_frequencies
         try
@@ -761,9 +765,9 @@ end
 
 function test_aggregation_parameters()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping aggregation parameters test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping aggregation parameters test"
+     return true
+     end
     valid_aggregations = ["avg", "sum", "eop"]
     for agg in valid_aggregations
         try
@@ -778,9 +782,9 @@ end
 
 function test_output_type_parameters()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping output type parameters test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping output type parameters test"
+     return true
+     end
     valid_output_types = [1, 2, 3, 4]
     for output_type in valid_output_types
         try
@@ -795,9 +799,9 @@ end
 
 function test_sort_order_parameters()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping sort order parameters test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping sort order parameters test"
+     return true
+     end
     valid_sort_orders = ["asc", "desc"]
     for sort_order in valid_sort_orders
         try
@@ -812,9 +816,9 @@ end
 
 function test_rate_limiting_performance()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping rate limiting performance test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping rate limiting performance test"
+     return true
+     end
     start_time = now()
     for i in 1:3
         fred.series_info("GDPC1")
@@ -826,9 +830,9 @@ end
 
 function test_caching_performance()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping caching performance test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping caching performance test"
+     return true
+     end
     start_time = now()
     data1 = fred.cached_series_info("GDPC1")
     first_call_time = now() - start_time
@@ -842,9 +846,9 @@ end
 
 function test_large_dataset_performance()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping large dataset performance test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping large dataset performance test"
+     return true
+     end
     end_date = now()
     start_date = end_date - Year(5)
     start_time = now()
@@ -858,9 +862,9 @@ end
 
 function test_concurrent_requests()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping concurrent requests test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping concurrent requests test"
+     return true
+     end
     series_ids = ["GDPC1", "UNRATE", "CPIAUCSL", "FEDFUNDS", "PAYEMS"]
     results = []
     start_time = now()
@@ -880,9 +884,9 @@ end
 
 function test_memory_usage()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping memory usage test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping memory usage test"
+     return true
+     end
     for i in 1:5
         data = fred.observations("GDPC1"; limit=1000, frequency="q")
         @test data isa Dict{String,Any}
@@ -893,9 +897,9 @@ end
 
 function test_error_recovery_performance()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping error recovery performance test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping error recovery performance test"
+     return true
+     end
     start_time = now()
     try
         fred.series_info("INVALID_SERIES_ID")
@@ -949,9 +953,9 @@ end
 
 function test_data_format_integration()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping data format integration test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping data format integration test"
+     return true
+     end
     data = fred.series_info("GDPC1")
     @test data isa Dict{String,Any}
     @test "seriess" in keys(data)
@@ -985,9 +989,9 @@ end
 
 function test_caching_integration()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping caching integration test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping caching integration test"
+     return true
+     end
     data1 = fred.cached_series_info("GDPC1")
     data2 = fred.cached_series_info("GDPC1")
     @test data1 == data2
@@ -997,9 +1001,9 @@ end
 
 function test_timeticks_integration()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping timeticks integration test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping timeticks integration test"
+     return true
+     end
     end_date = now()
     start_date = end_date - Year(1)
     data = fred.observations("GDPC1"; start_date=start_date, end_date=end_date, limit=5, frequency="q")
@@ -1015,9 +1019,9 @@ end
 
 function test_streaming_integration()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping streaming integration test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping streaming integration test"
+     return true
+     end
     end_date = now()
     start_date = end_date - Month(6)
     data1 = fred.observations("GDPC1"; start_date=start_date, end_date=start_date + Month(3), limit=100, frequency="q")
@@ -1033,9 +1037,9 @@ end
 
 function test_edge_cases()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping edge_cases test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping edge_cases test"
+     return true
+     end
     very_old_date = DateTime(1900, 1, 1)
     try
         fred.observations("GDPC1"; start_date=very_old_date, end_date=very_old_date + Day(1), frequency="q")
@@ -1053,9 +1057,9 @@ end
 
 function test_invalid_parameters()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping invalid_parameters test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping invalid_parameters test"
+     return true
+     end
     try
         fred.observations("GDPC1"; units="invalid_unit", limit=1, frequency="q")
     catch e

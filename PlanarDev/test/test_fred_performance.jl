@@ -36,9 +36,9 @@ end
 
 function test_rate_limiting_performance()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping rate limiting performance test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping rate limiting performance test"
+     return true
+     end
     
     # Test that rate limiting works correctly
     start_time = now()
@@ -58,9 +58,9 @@ end
 
 function test_caching_performance()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping caching performance test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping caching performance test"
+     return true
+     end
     
     # Test that cached calls are faster
     start_time = now()
@@ -80,9 +80,9 @@ end
 
 function test_large_dataset_performance()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping large dataset performance test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping large dataset performance test"
+     return true
+     end
     
     # Test with large date range
     end_date = now()
@@ -106,9 +106,9 @@ end
 
 function test_concurrent_requests()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping concurrent requests test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping concurrent requests test"
+     return true
+     end
     
     # Test that the API handles concurrent requests properly
     # (This will be limited by rate limiting, but should not crash)
@@ -139,9 +139,9 @@ end
 
 function test_memory_usage()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping memory usage test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping memory usage test"
+     return true
+     end
     
     # Test that large responses don't cause memory issues
     # Make several requests with large limits
@@ -159,9 +159,9 @@ end
 
 function test_error_recovery_performance()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping error recovery performance test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping error recovery performance test"
+     return true
+     end
     
     # Test that the API recovers quickly from errors
     start_time = now()

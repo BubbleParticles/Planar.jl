@@ -48,9 +48,9 @@ end
 
 function test_units_parameters()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping units parameters test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping units parameters test"
+     return true
+     end
 
     # Test that the API wrapper correctly passes units to FRED
     # These are valid FRED units values; series may not support all of them
@@ -62,7 +62,7 @@ function test_units_parameters()
             @test data isa Dict{String,Any}
         catch e
             # Series may not support all units; 400 errors are expected for incompatible combos
-            @test occursin("400", string(e)) || @test data isa Dict{String,Any}
+            @test occursin("400", string(e))
         end
     end
 
@@ -71,9 +71,9 @@ end
 
 function test_frequency_parameters()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping frequency parameters test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping frequency parameters test"
+     return true
+     end
 
     # Test that the API wrapper correctly passes frequency to FRED
     # These are valid FRED frequency values
@@ -94,9 +94,9 @@ end
 
 function test_aggregation_parameters()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping aggregation parameters test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping aggregation parameters test"
+     return true
+     end
 
     # Test that the API wrapper correctly passes aggregation_method to FRED
     valid_aggregations = ["avg", "sum", "eop"]
@@ -116,9 +116,9 @@ end
 
 function test_output_type_parameters()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping output type parameters test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping output type parameters test"
+     return true
+     end
 
     # Test that the API wrapper correctly passes output_type to FRED
     valid_output_types = [1, 2, 3, 4]
@@ -138,9 +138,9 @@ end
 
 function test_sort_order_parameters()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping sort order parameters test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping sort order parameters test"
+     return true
+     end
 
     # Test that the API wrapper correctly passes sort_order to FRED
     valid_sort_orders = ["asc", "desc"]
@@ -150,7 +150,7 @@ function test_sort_order_parameters()
             data = fred.observations("GDPC1"; sort_order=sort_order, limit=1)
             @test data isa Dict{String,Any}
         catch e
-            @warn "Sort order parameter '$sort_order' failed: $e"
+            @test_skip "Sort order parameter '$sort_order' failed: $e"
         end
     end
 
@@ -159,9 +159,9 @@ end
 
 function test_date_parameters()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping date parameters test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping date parameters test"
+     return true
+     end
     
     # Test DateTime objects
     start_date = now() - Year(1)
@@ -191,9 +191,9 @@ end
 
 function test_pagination_parameters()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping pagination parameters test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping pagination parameters test"
+     return true
+     end
     
     # Test limit parameter
     data_limit = fred.observations("GDPC1"; limit=5)
@@ -212,9 +212,9 @@ end
 
 function test_filter_parameters()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping filter parameters test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping filter parameters test"
+     return true
+     end
     
     # Test filter_variable and filter_value
     data_filtered = fred.search_series("GDP"; 
@@ -242,7 +242,7 @@ function test_filter_parameters()
             )
             @test data isa Dict{String,Any}
         catch e
-            @warn "Filter combination '$filter_var=$filter_val' failed: $e"
+            @test_skip "Filter combination '$filter_var=$filter_val' failed: $e"
         end
     end
     
@@ -251,9 +251,9 @@ end
 
 function test_tag_parameters()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping tag parameters test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping tag parameters test"
+     return true
+     end
     
     # Test single tag
     data_single = fred.search_series("GDP"; tag_names="usa", limit=5)
@@ -276,9 +276,9 @@ end
 
 function test_realtime_parameters()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping realtime parameters test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping realtime parameters test"
+     return true
+     end
     
     # Test realtime parameters with different endpoints
     yesterday = now() - Day(1)

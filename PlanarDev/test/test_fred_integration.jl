@@ -69,27 +69,27 @@ end
 function test_configuration_integration()
     # Test that configuration is properly integrated with Planar
     config_path = joinpath(dirname(dirname(dirname(pathof(Planar)))), "user", "secrets.toml")
-    
+
     if isfile(config_path)
         # Test that API key can be loaded from Planar config
         try
             fred.setapikey!(false, config_path)
             @test fred.has_apikey()
         catch e
-            @warn "Configuration integration test failed: $e"
+            @test_skip "Configuration integration test failed: $e"
         end
     else
-        @warn "Configuration file not found, skipping configuration integration test"
+        @test_skip "Configuration file not found, skipping configuration integration test"
     end
-    
+
     return true
 end
 
 function test_data_format_integration()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping data format integration test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping data format integration test"
+     return true
+     end
     
     # Test that data formats are compatible with Planar
     data = fred.series_info("GDPC1")
@@ -116,11 +116,12 @@ end
 function test_error_handling_integration()
     # Test that error handling is consistent with Planar patterns
     try
-        fred.series_info("INVALID_SERIES_ID")
+        res = fred.series_info("INVALID_SERIES_ID")
+        # An invalid id must either throw or return structured data, never silent garbage
+        @test res isa Dict{String,Any}
     catch e
         @test e isa Exception
     end
-    
     # Test that rate limiting errors are handled gracefully
     try
         # Make multiple rapid requests
@@ -136,9 +137,9 @@ end
 
 function test_caching_integration()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping caching integration test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping caching integration test"
+     return true
+     end
     
     # Test that caching works with Planar's caching system
     data1 = fred.cached_series_info("GDPC1")
@@ -156,9 +157,9 @@ end
 
 function test_timeticks_integration()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping timeticks integration test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping timeticks integration test"
+     return true
+     end
     
     # Test that TimeTicks integration works properly
     end_date = now()
@@ -181,9 +182,9 @@ end
 
 function test_streaming_integration()
     if !fred.has_apikey()
-        @warn "TEST: FRED API key not set, skipping streaming integration test"
-        return true
-    end
+     @test_skip "TEST: FRED API key not set, skipping streaming integration test"
+     return true
+     end
     
     # Test that the API supports streaming data patterns
     # This is important for LiveMode integration
