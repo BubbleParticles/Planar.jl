@@ -12,8 +12,9 @@ function test_frankfurter()
     invokelatest(() -> @testset "frankfurter" begin
         @info "TEST: frankfurter rate limit"
         @test frank.RATE_LIMIT[] isa Period
+        prev_limit = frank.RATE_LIMIT[]
         frank.RATE_LIMIT[] = Millisecond(100)  # Reduce rate limit for testing
-        
+        try
         @info "TEST: frankfurter currencies"
         @test test_currencies()
         
@@ -40,9 +41,11 @@ function test_frankfurter()
         
         @info "TEST: frankfurter from/to parameters"
         @test test_from_to_parameters()
-        
         @info "TEST: frankfurter configuration"
         @test test_configuration()
+        finally
+            frank.RATE_LIMIT[] = prev_limit
+        end
     end)
 end
 

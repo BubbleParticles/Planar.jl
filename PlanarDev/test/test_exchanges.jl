@@ -1,38 +1,7 @@
 using Test
-
-# Preload Planar.Exchanges bindings into Main to avoid world-age binding issues
-@eval begin
-    try
-        using Planar.Exchanges
-        # Bind commonly used functions/modules into Main
-        if !isdefined(Main, :marketsid)
-            @eval Main const marketsid = Planar.Exchanges.marketsid
-        end
-        if !isdefined(Main, :sandbox!)
-            @eval Main const sandbox! = Planar.Exchanges.sandbox!
-        end
-        if !isdefined(Main, :ratelimit!)
-            @eval Main const ratelimit! = Planar.Exchanges.ratelimit!
-        end
-        if !isdefined(Main, :setexchange!)
-            @eval Main const setexchange! = Planar.Exchanges.setexchange!
-        end
-        if !isdefined(Main, :getexchange!)
-            @eval Main const getexchange! = Planar.Exchanges.getexchange!
-        end
-        if !isdefined(Main, :issandbox)
-            @eval Main const issandbox = Planar.Exchanges.issandbox
-        end
-        if !isdefined(Main, :Exchanges)
-            @eval Main const Exchanges = Planar.Exchanges.Exchanges
-        end
-        if !isdefined(Main, :ExchangeTypes)
-            @eval Main const ExchangeTypes = Planar.Exchanges.ExchangeTypes
-        end
-    catch e
-        @warn "Preloading Planar.Exchanges bindings failed" exception=(e,catch_backtrace())
-    end
-end
+using Planar.Exchanges
+using Planar.Exchanges: Exchanges, ExchangeTypes
+using Planar.Exchanges: marketsid, sandbox!, ratelimit!, setexchange!, getexchange!, issandbox
 
 test_exch() = begin
     try
@@ -52,7 +21,7 @@ _exchange() = begin
         empty!(Exchanges.sb_exchanges)
         e = getexchange!(EXCHANGE, markets=:yes, cache=false, sandbox=false)
         @test nameof(e) == EXCHANGE
-        @test (EXCHANGE, "") ∈ keys(ExchangeTypes.exchanges) || (exc_sym, "") ∈ keys(ExchangeTypes.sb_exchanges)
+        @test (EXCHANGE, "") ∈ keys(ExchangeTypes.exchanges) || (EXCHANGE, "") ∈ keys(ExchangeTypes.sb_exchanges)
         e
     catch e
         if occursin("connection refused", sprint(showerror, e))
@@ -79,11 +48,10 @@ _exchange_sbox(exc) = begin
 end
 
 _exchanges_test_env() = begin
-    @eval begin
-        using .Planar.Exchanges: Exchanges, marketsid, sandbox!, ratelimit!, setexchange!, getexchange!, issandbox
-        using .Planar.Exchanges: ExchangeTypes
-        using PlanarDev.Stubs
-    end
+    # Bindings are established by the top-level `using` statements in this
+    # file (executed in Main when the runner includes it). Kept as a no-op so
+    # existing call sites are unaffected.
+    nothing
 end
 
 _do_test_exchanges() = begin

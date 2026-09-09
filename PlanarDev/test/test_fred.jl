@@ -1,32 +1,18 @@
 using Test
 
-# Ensure Planar and TimeTicks are available and set global `fred` alias to Watchers.FRED if possible.
+# Test-only alias: helpers in this file resolve bare `fred` via Main (runtests.jl
+# includes every test file into Main). Guarded non-const assignment, so including
+# any of the five test_fred*.jl files is idempotent and can never throw a const
+# redefinition error. Only ever the FRED module or `nothing` (which makes every
+# helper skip gracefully with @warn).
 try
-    if isdefined(Main, :fred)
-        # keep existing fred
-    else
-        if isdefined(Watchers, :FRED)
-            @eval Main const fred = Watchers.FRED
-        else
-            try
-                basepath = dirname(pathof(Watchers))
-                fred_file = joinpath(basepath, "apis", "fred.jl")
-                if isfile(fred_file)
-                    Base.include(Watchers, fred_file)
-                end
-            catch
-            end
-            if isdefined(Watchers, :FRED)
-                @eval Main const fred = Watchers.FRED
-            else
-                @eval Main const fred = nothing
-            end
-        end
+    if !isdefined(Main, :fred)
+        @eval Main fred = isdefined(Watchers, :FRED) ? Watchers.FRED : nothing
+    elseif Main.fred === nothing && isdefined(Watchers, :FRED)
+        @eval Main fred = Watchers.FRED
     end
 catch
-    if !isdefined(Main, :fred)
-        @eval Main const fred = nothing
-    end
+    isdefined(Main, :fred) || @eval Main fred = nothing
 end
 
 function test_fred()
@@ -48,8 +34,8 @@ function test_fred()
         using .TimeTicks
         using .TimeTicks.Dates: format, @dateformat_str
     end
-    if !isdefined(Main, :fred)
-        @eval Main const fred = FRED
+    if !isdefined(Main, :fred) || Main.fred === nothing
+        @eval Main fred = FRED
     end
 
     # Run in latest world: test_* bodies reference TimeTicks/Dates globals

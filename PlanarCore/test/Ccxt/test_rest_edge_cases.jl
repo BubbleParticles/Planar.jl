@@ -15,17 +15,16 @@ using .Rest
     end
     
     @testset "isccxterror keyword matching logic" begin
-        # Test the keyword matching logic directly
-        ccxt_keywords = ["ccxt", "exchange", "symbol", "invalid", "not supported", "authentication"]
-        
-        err1_str = "ccxt error: invalid symbol"
-        @test any(kw -> occursin(kw, lowercase(err1_str)), ccxt_keywords) == true
-        
-        err2_str = "some other error"
-        @test any(kw -> occursin(kw, lowercase(err2_str)), ccxt_keywords) == false
-        
-        err3_str = "Exchange not available"
-        @test any(kw -> occursin(kw, lowercase(err3_str)), ccxt_keywords) == true
+        # Seed the error list so isccxterror skips its gateway fetch; restore after.
+        prev = copy(Rest._ccxt_errors[])
+        try
+            Rest._ccxt_errors[] = ["ccxt"]
+            @test Rest.isccxterror(ErrorException("ccxt error: invalid symbol"))
+            @test !Rest.isccxterror(ErrorException("some other error"))
+            @test Rest.isccxterror(ErrorException("Exchange not available"))
+        finally
+            Rest._ccxt_errors[] = prev
+        end
     end
 end
 
@@ -58,14 +57,28 @@ end
         delete!(Rest._started_exchanges, "binance")
         @test !haskey(Rest._started_exchanges, "binance")
     end
-
-    @testset "already_started dict response" begin
+    @testset "start_exchange is idempotent under mock HTTP" begin
+        client = GatewayClient()
         empty!(Rest._started_exchanges)
-        Rest._started_exchanges["binance"] = 12345.0
-        result = Dict("status" => "already_started", "exchange_id" => "binance", "started_at" => Rest._started_exchanges["binance"])
-        @test result["status"] == "already_started"
-        @test result["exchange_id"] == "binance"
-        @test result["started_at"] == 12345.0
+        prev_init = Rest._gateway_initialized[]
+        prev_post = Rest._http_post[]
+        ok = HTTP.Response(200, JSON3.write(Dict("result" => Dict("status" => "started"), "error" => nothing, "error_code" => nothing)))
+        try
+            Rest._gateway_initialized[] = true
+            Rest.set_http_post!((url; kwargs...) -> ok)
+            r1 = start_exchange(client, "binance")
+            t1 = Rest._started_exchanges["binance"]
+            @test haskey(Rest._started_exchanges, "binance")
+            r2 = start_exchange(client, "binance")
+            @test haskey(Rest._started_exchanges, "binance")
+            @test Rest._started_exchanges["binance"] >= t1
+            @test r1["status"] == "started"
+            @test r2["status"] == "started"
+        finally
+            Rest._gateway_initialized[] = prev_init
+            Rest.set_http_post!(prev_post)
+            empty!(Rest._started_exchanges)
+        end
     end
 end
 
@@ -251,20 +264,22 @@ end
 end
 
 @testset "Admin endpoint tests" begin
-    # Pre-initialize gateway to skip /ping call in _check_gateway_up
+    # Pre-initialize gateway to skip /ping call in _check_gateway_up; restore after.
+    prev_admin_init = Rest._gateway_initialized[]
     Rest._gateway_initialized[] = true
-    
-    @testset "server_info calls /admin/info" begin
-        client = GatewayClient()
-        mock_get(url; kwargs...) = begin
-            push!(mock_calls, url)
-            HTTP.Response(200, JSON3.write(Dict("result" => Dict("status" => "running", "version" => "0.1.0"), "error" => nothing)))
+    try
+        @testset "server_info calls /admin/info" begin
+            client = GatewayClient()
+            mock_calls = String[]
+            mock_get(url; kwargs...) = begin
+                push!(mock_calls, url)
+                HTTP.Response(200, JSON3.write(Dict("result" => Dict("status" => "running", "version" => "0.1.0"), "error" => nothing)))
+            end
+            Rest.set_http_get!(mock_get)
+            server_info(client)
+            @test length(mock_calls) == 1
+            @test occursin("/admin/info", mock_calls[1])
         end
-        Rest.set_http_get!(mock_get)
-        server_info(client)
-        @test length(mock_calls) == 1
-        @test occursin("/admin/info", mock_calls[1])
-    end
 
     @testset "memory_usage calls /admin/memory" begin
         client = GatewayClient()
@@ -294,6 +309,9 @@ end
         result = memory_usage(client)
         @test result isa Union{Dict, JSON3.Object}
         @test result["total_memory_mb"] == 250.0
+    end
+    finally
+        Rest._gateway_initialized[] = prev_admin_init
     end
 end
 

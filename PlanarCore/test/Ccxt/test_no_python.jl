@@ -1,50 +1,24 @@
-"""Test CcxtGateway types directly without loading Python"""
+# Test CcxtGateway types via the real source (no shadow structs).
+using Test
 using JSON3
+using PlanarCore.Ccxt.CcxtGateway.Types: GatewayResponse, parse_response, has_error, get_result
+using HTTP
 
-# Define the types directly (copy from types.jl)
-struct GatewayResponse
-    result
-    error
-    error_code
+@testset "GatewayResponse constructors" begin
+    @test GatewayResponse("test", nothing, nothing).result == "test"
+    @test GatewayResponse(nothing, "err", "E001").error == "err"
+    r = GatewayResponse(Dict{String,Any}("result" => "x", "error" => nothing, "error_code" => nothing))
+    @test get_result(r) == "x"
+    e = GatewayResponse(Dict{String,Any}("result" => nothing, "error" => "boom", "error_code" => "E1"))
+    @test has_error(e)
+    @test_throws ErrorException get_result(e)
 end
 
-struct Market
-    id::String
-    symbol::String
-    base::String
-    quote::String
-    type::String
-    spot::Bool
-    future::Bool
+@testset "JSON3 parsing through real parse_response" begin
+    body = JSON3.write(Dict("result" => Dict("symbol" => "BTC/USDT", "last" => 50000.0),
+        "error" => nothing, "error_code" => nothing))
+    resp = parse_response(HTTP.Response(200, body))
+    @test resp.result["symbol"] == "BTC/USDT"
+    @test resp.result["last"] == 50000.0
+    @test !has_error(resp)
 end
-
-struct Ticker
-    symbol::String
-    last::Float64
-    bid::Float64
-    ask::Float64
-    high::Float64
-    low::Float64
-    volume::Float64
-    timestamp::Int
-end
-
-# Test types
-@assert GatewayResponse("test", nothing, nothing).result == "test"
-@assert GatewayResponse(nothing, "err", "E001").error == "err"
-
-println("Types test passed without Python!")
-println("Now testing JSON3 parsing...")
-
-json_str = """{
-    "result": {"symbol": "BTC/USDT", "last": 50000.0},
-    "error": null,
-    "error_code": null
-}"""
-resp = JSON3.read(json_str, GatewayResponse)
-@assert resp.result["symbol"] == "BTC/USDT"
-@assert resp.result["last"] == 50000.0
-
-println("JSON3 parsing test passed!")
-println("\nTo test Rest module, need to mock HTTP calls.")
-println("The Rest module doesn't need Python - just HTTP.jl and JSON3.")

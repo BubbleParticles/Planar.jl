@@ -82,8 +82,8 @@ function test_dbnomics()
                 df2 = DBnomics.rdb(ids = ids2)
                 @test df2 isa DataFrames.DataFrame
                 @test DataFrames.nrow(df2) >= DataFrames.nrow(df)
-            catch
-                @warn "DBnomics API call failed"
+            catch e
+                @test_skip "DBnomics live fetch failed: $e"
             end
         end
     end

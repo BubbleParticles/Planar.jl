@@ -14,7 +14,9 @@ function test_coingecko()
     Planar.Engine.LiveMode.Watchers._closeall()
     invokelatest(() -> @testset failfast = FAILFAST "coingecko" begin
         @test cg.RATE_LIMIT[] isa Period
+        prev_limit = cg.RATE_LIMIT[]
         cg.RATE_LIMIT[] = Millisecond(1 * 1000)
+        try
         @info "TEST: cg ping"
         ping_ok = try
             cg.ping()
@@ -36,6 +38,9 @@ function test_coingecko()
         @test coingecko_price()
         @info "TEST: cg load"
         @test length(cg.loadcoins!()) > 0
+        finally
+            cg.RATE_LIMIT[] = prev_limit
+        end
     end)
 end
 

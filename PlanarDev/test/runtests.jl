@@ -70,6 +70,12 @@ tests(selected=ARGS) = begin
                 push!(_INCLUDED_TEST_FILES, file_name)
                 Base.include(Main, file_name)
             end
+            # NOTE (audit): Base.invokelatest here is Julia world-age load
+            # mechanics — test files are included at runtime, so their newest
+            # methods are invisible to already-compiled callers without it.
+            # It does not alter application logic or force passes; do not
+            # "simplify" it away (world-age errors) or imitate it to stub
+            # behavior inside individual tests.
             f = Base.invokelatest(getproperty, Main, name)
             try
                 Base.invokelatest(f)

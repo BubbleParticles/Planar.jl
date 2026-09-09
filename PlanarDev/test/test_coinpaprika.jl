@@ -12,22 +12,21 @@ end
 
 function test_coinpaprika()
     invokelatest(() -> @testset "coinpaprika" begin
-        _ = test_ratelimit()
-        _ = test_twitter()
-        _ = test_cp_exchanges()
-        # The API may occasionally return data that misses expected markets; make assertion non-fatal
+        @test test_ratelimit()
+        @test test_twitter()
+        @test test_cp_exchanges()
+        # Live API: network failures skip instead of passing silently.
         try
             @test (unix2datetime(cpr.glob()["last_updated"]) > now() - Day(1))
             @test "btc-bitcoin" ∈ keys(cpr.loadcoins!())
-            # This pair may not always be present; assert that coin_markets returns a Dict and skip strict membership test
         markets = cpr.coin_markets("eth-ethereum")
         @test markets isa Dict
         @test cpr.coin_ohlcv("xmr-monero") isa Candle
         catch e
-            @info "CoinPaprika transient API failure in tests: $e"
+            @test_skip "CoinPaprika live fetch failed: $e"
         end
-        _ = test_cp_markets()
-        _ = test_tickers()
+        @test test_cp_markets()
+        @test test_tickers()
         @test cpr.ticker("btc-bitcoin") isa Dict{String,Float64}
         betas = cpr.betas()
         @test betas isa NamedTuple
@@ -42,13 +41,18 @@ function test_twitter()
 end
 
 function test_ratelimit()
-    cpr.coin_ohlcv("btc-bitcoin")
-    cpr.query_stack[] = 1
-    start = now()
-    cpr.coin_ohlcv("btc-bitcoin")
-    cpr.query_stack[] == 0 &&
-        now() - start < Second(1) &&
-        (cpr.addcalls!(100); cpr.query_stack[] == 100)
+    prev = cpr.query_stack[]
+    try
+        cpr.coin_ohlcv("btc-bitcoin")
+        cpr.query_stack[] = 1
+        start = now()
+        cpr.coin_ohlcv("btc-bitcoin")
+        return cpr.query_stack[] == 0 &&
+            now() - start < Second(1) &&
+            (cpr.addcalls!(100); cpr.query_stack[] == 100)
+    finally
+        cpr.query_stack[] = prev
+    end
 end
 
 function test_cp_exchanges()

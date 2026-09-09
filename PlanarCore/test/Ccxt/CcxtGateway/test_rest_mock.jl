@@ -1,5 +1,6 @@
-"""Tests for CcxtGateway.Rest with proper HTTP mocking"""
+# Tests for CcxtGateway.Rest with proper HTTP mocking
 using Test
+using HTTP
 using PlanarCore.Ccxt.CcxtGateway.Rest
 using PlanarCore.Ccxt.CcxtGateway.Types
 using JSON3
@@ -66,8 +67,9 @@ function mock_HTTP_delete(url::String; kwargs...)
 end
 
 function setup_mock_http()
-    # This won't work easily in Julia - can't just replace module functions
-    # Need to use a different approach
+    set_http_get!(mock_HTTP_get)
+    set_http_post!(mock_HTTP_post)
+    set_http_delete!(mock_HTTP_delete)
 end
 
 @testset "Rest with Mocking" begin
@@ -75,44 +77,47 @@ end
         client = GatewayClient()
         @test client isa GatewayClient
         @test client.host == "localhost"
-        @test client.port == 8000
+        @test client.port == 8999
     end
-    
+
     @testset "build_url" begin
         client = GatewayClient()
-        @test build_url(client, "ping") == "https://localhost:8000/ping"
-        @test build_url(client, "binance/fetch_balance") == "https://localhost:8000/binance/fetch_balance"
+        @test build_url(client, "ping") == "https://localhost:8999/ping"
+        @test build_url(client, "binance/fetch_balance") == "https://localhost:8999/binance/fetch_balance"
+        custom = GatewayClient(; port=8000)
+        @test build_url(custom, "ping") == "https://localhost:8000/ping"
     end
-    
-    @testset "path construction in call_exchange" begin
-        # Test that call_exchange constructs correct paths
-        # The function constructs path as "/$exchange_id/$ccxt_method"
-        exchange_id = "binance"
-        method = "fetch_balance"
-        expected_path = "/$exchange_id/$method"
-        @test expected_path == "/binance/fetch_balance"
-        
-        # Test with various methods
-        for m in ["fetch_ticker", "fetch_tickers", "fetch_order_book", "create_order"]
-            path = "/$exchange_id/$m"
-            @test startswith(path, "/$exchange_id/")
-            @test endswith(path, m)
+    @testset "call_exchange through mocked HTTP" begin
+        prev_init = Rest._gateway_initialized[]
+        prev_get = Rest._http_get[]
+        prev_post = Rest._http_post[]
+        try
+            Rest._gateway_initialized[] = true
+            setup_mock_http()
+            client = GatewayClient()
+            @test ping(client)
+            bal = call_exchange(client, "binance", "fetch_balance")
+            @test bal["USDT"]["total"] == 1500.0
+        finally
+            Rest._gateway_initialized[] = prev_init
+            set_http_get!(prev_get)
+            set_http_post!(prev_post)
         end
     end
     
     @testset "Response parsing" begin
         using HTTP
-        
+
         # Test successful response
         resp = HTTP.Response(200, JSON3.write(Dict(
             "result" => "test",
             "error" => nothing,
             "error_code" => nothing
         )))
-        parsed = check_response(resp)
+        parsed = Rest.check_response(resp)
         @test parsed.result == "test"
         @test parsed.error === nothing
-        
+
         # Test error response
         resp_err = HTTP.Response(200, JSON3.write(Dict(
             "result" => nothing,
@@ -123,12 +128,12 @@ end
         @test has_error(parsed_err)
         @test parsed_err.error == "Some error"
     end
-    
+
     @testset "Type construction in responses" begin
-        # Test that we can construct types from response data
+        # Round-trip a ticker-like payload through the real parse path.
         ticker_data = Dict("symbol" => "BTC/USDT", "last" => 50000.0)
-        ticker = Ticker(; ticker_data...)
-        @test ticker.symbol == "BTC/USDT"
-        @test ticker.last == 50000.0
+        resp = HTTP.Response(200, JSON3.write(Dict(
+            "result" => ticker_data, "error" => nothing, "error_code" => nothing)))
+        @test get_result(Rest.check_response(resp))["last"] == 50000.0
     end
 end

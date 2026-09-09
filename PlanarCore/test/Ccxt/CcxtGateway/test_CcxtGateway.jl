@@ -1,4 +1,4 @@
-"""Tests for CcxtGateway main module"""
+# Tests for CcxtGateway main module
 using Test
 using PlanarCore.Ccxt.CcxtGateway
 using PlanarCore.Ccxt.CcxtGateway.Rest
@@ -7,33 +7,33 @@ using PlanarCore.Ccxt.CcxtGateway.Types
 @testset "CcxtGateway" begin
     @testset "Module exports" begin
         # Test that key exports are available
-        @test isdefined(Ccxt.CcxtGateway, :GatewayClient)
-        @test isdefined(Ccxt.CcxtGateway, :WebSocketClient)
-        @test isdefined(Ccxt.CcxtGateway, :call_exchange)
-        @test isdefined(Ccxt.CcxtGateway, :start_exchange)
-        @test isdefined(Ccxt.CcxtGateway, :stop_exchange)
-        @test isdefined(Ccxt.CcxtGateway, :exchange_has)
-        @test isdefined(Ccxt.CcxtGateway, :list_exchanges)
-        @test isdefined(Ccxt.CcxtGateway, :ping)
-        @test isdefined(Ccxt.CcxtGateway, :spawn_gateway)
-        @test isdefined(Ccxt.CcxtGateway, :stop_gateway)
-        @test isdefined(Ccxt.CcxtGateway, :restart_gateway)
+        @test isdefined(CcxtGateway, :GatewayClient)
+        @test isdefined(CcxtGateway, :GatewayWSClient)
+        @test isdefined(CcxtGateway, :call_exchange)
+        @test isdefined(CcxtGateway, :start_exchange)
+        @test isdefined(CcxtGateway, :stop_exchange)
+        @test isdefined(CcxtGateway, :fetch_exchange_has)
+        @test isdefined(CcxtGateway, :list_exchanges)
+        @test isdefined(CcxtGateway, :ping)
+        @test isdefined(CcxtGateway, :spawn_gateway)
+        @test isdefined(CcxtGateway, :stop_gateway)
+        @test isdefined(CcxtGateway, :restart_gateway)
     end
     
     @testset "GatewayClient" begin
         client = GatewayClient()
         @test client isa GatewayClient
         @test client.host == "localhost"
-        @test client.port == 8000
+        @test client.port == 8999
         @test occursin("https://", client.base_url)
     end
-    
-    @testset "WebSocketClient" begin
-        ws_client = WebSocketClient()
-        @test ws_client isa WebSocketClient
+
+    @testset "GatewayWSClient" begin
+        ws_client = CcxtGateway.WSClient.GatewayWSClient()
+        @test ws_client isa CcxtGateway.WSClient.GatewayWSClient
         @test ws_client.host == "localhost"
-        @test ws_client.port == 8000
-        @test occursin("wss://", ws_client.base_url)
+        @test ws_client.port == 8999
+        @test occursin("wss://", ws_client.url)
     end
     
     @testset "Default client" begin
@@ -42,24 +42,35 @@ using PlanarCore.Ccxt.CcxtGateway.Types
         @test client isa GatewayClient
     end
     
-    @testset "call_exchange path construction" begin
-        client = GatewayClient()
-        # Test that the path is correctly constructed
-        # The actual HTTP call is mocked in integration tests
-        exchange_id = "binance"
-        method = "fetch_balance"
-        expected_path = "/$exchange_id/$method"
-        @test expected_path == "/binance/fetch_balance"
+    @testset "call_exchange routes through mocked HTTP" begin
+        using HTTP, JSON3
+        prev_init = Rest._gateway_initialized[]
+        prev_get = Rest._http_get[]
+        got = Ref("")
+        try
+            Rest._gateway_initialized[] = true
+            Rest.set_http_get!((url; kwargs...) -> begin
+                got[] = url
+                HTTP.Response(200, JSON3.write(Dict("result" => Dict("ok" => true), "error" => nothing, "error_code" => nothing)))
+            end)
+            out = Rest.call_exchange(GatewayClient(), "binance", "fetch_balance")
+            @test endswith(got[], "/exchanges/binance/fetch_balance")
+            @test out["ok"] == true
+        finally
+            Rest._gateway_initialized[] = prev_init
+            Rest.set_http_get!(prev_get)
+        end
     end
-    
+
     @testset "Type construction" begin
         # Test that types can be constructed
-        resp = GatewayResponse(result="test", error=nothing, error_code=nothing)
+        resp = GatewayResponse("test", nothing, nothing)
         @test resp.result == "test"
-        
-        ticker = Ticker(symbol="BTC/USDT", last=50000.0)
-        @test ticker.symbol == "BTC/USDT"
-        @test ticker.last == 50000.0
+
+        ticker_payload = Dict{String,Any}("symbol" => "BTC/USDT", "last" => 50000.0)
+        r = GatewayResponse(ticker_payload, nothing, nothing)
+        @test get_result(r)["symbol"] == "BTC/USDT"
+        @test get_result(r)["last"] == 50000.0
     end
     
     @testset "spawn_gateway" begin

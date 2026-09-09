@@ -1,9 +1,11 @@
 using Test
 
-# Try to load vendored DBnomics at top-level
+# Try to load vendored DBnomics via a repo-relative path (never an absolute
+# developer-machine path, which breaks portable checkouts).
 const HAS_DBNOMICS = let
     try
-        push!(LOAD_PATH, "/home/fra/dev/Planar.jl/vendor/DBnomics.jl")
+        vendor = joinpath(dirname(dirname(@__DIR__)), "vendor", "DBnomics.jl")
+        isdir(vendor) && push!(LOAD_PATH, vendor)
         @eval using DBnomics
         true
     catch
@@ -22,7 +24,7 @@ end
 function test_dbnomics_api()
     @testset "DBnomics.jl API" begin
         if !HAS_DBNOMICS
-            @test_broken false
+            @test_skip "DBnomics.jl unavailable (vendored dep missing)"
             return
         end
         try
@@ -40,8 +42,8 @@ function test_dbnomics_api()
             df2 = DBnomics.rdb(ids = ids2)
             @test df2 isa DataFrames.DataFrame
             @test DataFrames.nrow(df2) >= DataFrames.nrow(df)
-        catch
-            @test_broken false
+        catch e
+            @test_skip "DBnomics live fetch failed: $e"
         end
     end
 end

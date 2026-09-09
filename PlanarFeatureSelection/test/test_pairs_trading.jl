@@ -87,12 +87,14 @@ using PlanarFeatureSelection
     end
     
     @testset "detect_correlation_regime function" begin
+        # Seed: kmedoids init is RNG-dependent; without this the regime
+        # separation below is nondeterministic.
+        Random.seed!(123)
         # Create test data with two correlation regimes
         n_assets = 3  # Number of assets
         n_matrices = 50  # Total number of correlation matrices
         window_size = 5  # Window size for regime detection
         n_regimes = 2   # Number of regimes to detect
-        
         # First regime: high correlation (first half)
         corr_high = 0.8  # High correlation
         Σ_high = fill(corr_high, n_assets, n_assets)
@@ -160,15 +162,12 @@ using PlanarFeatureSelection
         println("First half regime distribution: ", countmap(first_half))
         println("Second half regime distribution: ", countmap(second_half))
         
-        # If the modes are the same, the test should fail
-        if mode1 == mode2
-            @warn "Modes are the same: both halves were assigned to the same regime"
-            @test true
-        else
-            # At least 70% of each half should be in the dominant regime
-            # (reduced from 80% to account for noise in the data)
-            @test count(==(mode1), first_half) / length(first_half) >= 0.7
-            @test count(==(mode2), second_half) / length(second_half) >= 0.7
-        end
+        # The dominant regime in each half must differ; a collapsed assignment
+        # (same mode both halves) is a failure, not a pass.
+        @test mode1 != mode2
+        # At least 70% of each half should be in the dominant regime
+        # (reduced from 80% to account for noise in the data)
+        @test count(==(mode1), first_half) / length(first_half) >= 0.7
+        @test count(==(mode2), second_half) / length(second_half) >= 0.7
     end
 end

@@ -1,67 +1,39 @@
-# Test Rest module with injectable HTTP functions
+# Test Rest/Ccxt gateway logic against the real source (no local copies).
 using Test
+using HTTP
 using JSON3
-
-# Test _suffix_to_methods logic
-function _suffix_to_methods(suffix::String)
-    if suffix == "Ticker"
-        return ("fetchTickers", "fetchTicker", "fetchTickersWs", "fetchTickerWs")
-    elseif suffix == "OrderBook"
-        return ("fetchOrderBooks", "fetchOrderBook", "fetchOrderBooksWs", "fetchOrderBookWs")
-    elseif suffix == "Trade"
-        return ("fetchTrades", "fetchTrade", "fetchTradesWs", "fetchTradeWs")
-    elseif suffix == "OHLCV"
-        return ("fetchOHLCVs", "fetchOHLCV", "fetchOHLCVsWs", "fetchOHLCVWs")
-    elseif suffix == "Order"
-        return ("fetchOrders", "fetchOrder", "fetchOrdersWs", "fetchOrderWs")
-    elseif suffix == "Balance"
-        return ("fetchBalances", "fetchBalance", "fetchBalancesWs", "fetchBalanceWs")
-    else
-        error("Unsupported suffix: $suffix")
-    end
-end
-
-function _out_as_input(inputs, data; elkey=nothing)
-    if data isa Vector
-        if length(data) == length(inputs)
-            return Dict(i => v for (v, i) in zip(data, inputs))
-        else
-            @assert elkey !== nothing "Functions returned a list, but element key not provided."
-            return Dict(v[elkey] => v for v in data)
-        end
-    elseif data isa Dict
-        return Dict(i => data[i] for i in inputs if haskey(data, i))
-    else
-        return Dict(i => data for i in inputs)
-    end
-end
-
+using PlanarCore.Ccxt: _suffix_to_methods, _out_as_input
+using PlanarCore.Ccxt.CcxtGateway.Rest: GatewayClient, build_url
 
 @testset "build_url" begin
-    base_url = "https://localhost:8000"
-    path = "ping"
-    @test "$base_url/$path" == "https://localhost:8000/ping"
-    
-    path2 = "binance/fetch_balance"
-    @test "$base_url/$path2" == "https://localhost:8000/binance/fetch_balance"
+    client = GatewayClient(; port=8000)
+    @test build_url(client, "ping") == "https://localhost:8000/ping"
+    @test build_url(client, "binance/fetch_balance") == "https://localhost:8000/binance/fetch_balance"
+    @test build_url(client, "/binance/fetch_balance") == "https://localhost:8000/binance/fetch_balance"
 end
 
-@testset "call_exchange path" begin
-    exchange_id = "binance"
-    method = "fetch_balance"
-    path = "/$exchange_id/$method"
-    @test path == "/binance/fetch_balance"
-    
-    for m in ["fetch_ticker", "fetch_tickers", "create_order"]
-        p = "/$exchange_id/$m"
-        @test startswith(p, "/$exchange_id/")
+@testset "call_exchange path and method" begin
+    using PlanarCore.Ccxt.CcxtGateway.Rest: call_exchange, set_http_get!, set_http_post!
+    using PlanarCore.Ccxt.CcxtGateway.Rest: _gateway_initialized
+    client = GatewayClient(; port=8000)
+    prev_init = _gateway_initialized[]
+    prev_get = PlanarCore.Ccxt.CcxtGateway.Rest._http_get[]
+    prev_post = PlanarCore.Ccxt.CcxtGateway.Rest._http_post[]
+    got = Dict{String,String}()
+    ok_body = JSON3.write(Dict("result" => Dict("ok" => true), "error" => nothing, "error_code" => nothing))
+    try
+        _gateway_initialized[] = true
+        set_http_get!((url; kwargs...) -> (got["GET"] = url; HTTP.Response(200, ok_body)))
+        set_http_post!((url; kwargs...) -> (got["POST"] = url; HTTP.Response(200, ok_body)))
+        call_exchange(client, "binance", "fetch_balance")
+        @test endswith(got["GET"], "/exchanges/binance/fetch_balance")
+        call_exchange(client, "binance", "createOrder"; body=Dict{String,Any}("symbol" => "BTC/USDT"))
+        @test endswith(got["POST"], "/exchanges/binance/createOrder")
+    finally
+        _gateway_initialized[] = prev_init
+        set_http_get!(prev_get)
+        set_http_post!(prev_post)
     end
-end
-
-@testset "HTTP method selection" begin
-    @test "createOrder" ∈ ("createOrder", "cancelOrder", "withdraw")
-    @test "cancelOrder" ∈ ("createOrder", "cancelOrder", "withdraw")
-    @test !("fetch_balance" ∈ ("createOrder", "cancelOrder", "withdraw"))
 end
 
 @testset "_suffix_to_methods" begin

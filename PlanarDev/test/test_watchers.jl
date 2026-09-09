@@ -41,6 +41,7 @@ function _test_watchers_1()
         _test_save(k, w)
     else
         @warn "TEST: coingecko error" wi.cg.STATUS[]
+        @test_skip "coingecko unreachable; fetch assertions skipped"
     end
 end
 
@@ -54,6 +55,9 @@ function _test_watchers_2()
         k = "cg_binance_futures_derivatives"
         delete!(Data.zi[].store, k)
         _test_save(k, w)
+    else
+        @warn "TEST: coingecko error" wi.cg.STATUS[]
+        @test_skip "coingecko unreachable; fetch assertions skipped"
     end
 end
 

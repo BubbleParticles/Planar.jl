@@ -8,8 +8,8 @@ function test_fred_comprehensive()
         using .TimeTicks
         using .TimeTicks.Dates: format, @dateformat_str
     end
-    if !isdefined(Main, :fred)
-        @eval Main const fred = FRED
+    if !isdefined(Main, :fred) || Main.fred === nothing
+        @eval Main fred = FRED
     end
     
     @testset "FRED API Comprehensive Tests" begin

@@ -149,6 +149,10 @@ end
         @test c.low == 49000.0
         @test c.close == 50500.0
         @test c.volume == 100.0
+        # Structural invariants: hold for ANY valid candle, not just this row.
+        @test c.high >= max(c.open, c.close)
+        @test c.low <= min(c.open, c.close)
+        @test c.volume >= 0
     end
 
     @testset "_to_candle with nothing volume" begin

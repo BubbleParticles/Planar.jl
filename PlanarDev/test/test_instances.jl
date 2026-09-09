@@ -578,7 +578,7 @@ function test_instances()
             Base.invokelatest(test_position_field_accessors)
             Base.invokelatest(test_bankruptcy_function)
             Base.invokelatest(test_asset_instance_functions1)
-            @test_skip true && Base.invokelatest(test_asset_instance_functions2)  # Skipped due to TimeTicks isless bug
+            @test_skip "test_asset_instance_functions2 (TimeTicks isless: Millisecond vs Month, Julia 1.12)"
             Base.invokelatest(test_attr_functions)
         finally
             ENV["JULIA_TEST_FAILFAST"] = prev

@@ -15,57 +15,16 @@ struct MockExchange
 
     MockExchange(id; name=id) = new(id, name)
 end
-# Minimal Exchanges.Exchange interface
-# Export minimal helper functions to the Exchanges module that the test harness expects.
-# Use functions that read fields directly from the MockExchange defined in this module.
-@eval begin
-    function __mock_id(m)
-        return m.id_
-    end
-    function __mock_name(m)
-        return m.name_
-    end
-    function __mock_issandbox(m)
-        return false
-    end
-    function __mock_params(m)
-        return Dict{Symbol, Any}()
-    end
-    function __mock_account(m)
-        return ""
-    end
-end
-# Define helper functions into the Exchanges module so test code can call Exchanges.id(name)
-@eval Exchanges begin
-    function id(x)
-        # fallback to a simple field access for our MockExchange
-        try
-            return getproperty(x, :id_)
-        catch
-            throw(ErrorException("Exchanges.id not available for type: $(typeof(x))"))
-        end
-    end
-    function name(x)
-        try
-            return getproperty(x, :name_)
-        catch
-            throw(ErrorException("Exchanges.name not available for type: $(typeof(x))"))
-        end
-    end
-    function issandbox(x)
-        try
-            return false
-        catch
-            return false
-        end
-    end
-    function params(x)
-        return Dict{Symbol,Any}()
-    end
-    function account(x)
-        return ""
-    end
-end
+# Minimal Exchanges interface for MockExchange only.
+# These are method extensions scoped to the test-local MockExchange type, so
+# production dispatch for real Exchange types is unaffected. (Previously this
+# file installed untyped catch-all methods like `id(x)` into Exchanges, which
+# mutated global dispatch tables for every other test in the session.)
+Exchanges.id(m::MockExchange) = m.id_
+Exchanges.name(m::MockExchange) = m.name_
+Exchanges.issandbox(::MockExchange) = false
+Exchanges.params(::MockExchange) = Dict{Symbol,Any}()
+Exchanges.account(::MockExchange) = ""
 
 
 # Helper to create OHLCV DataFrame for tests

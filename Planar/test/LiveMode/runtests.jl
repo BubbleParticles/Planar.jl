@@ -136,17 +136,21 @@ end
     @test LiveMode._pystrsym(:btc) == "BTC"
 end
 
-@testset "ccxt type helpers" begin
-    @test hasmethod(LiveMode._ccxtordertype, Tuple{LiveMode.ot.LimitOrderType})
-    @test hasmethod(LiveMode._ccxtordertype, Tuple{LiveMode.ot.MarketOrderType})
+struct _AuditLimitOrder <: LiveMode.ot.LimitOrderType{LiveMode.ot.Buy} end
+struct _AuditMarketOrder <: LiveMode.ot.MarketOrderType{LiveMode.ot.Sell} end
+
+@testset "_ccxtordertype maps order types to ccxt strings" begin
+    # Value assertions: fail if the mapping regresses (a hasmethod check
+    # would still pass with swapped/wrong strings).
+    @test LiveMode._ccxtordertype(_AuditLimitOrder()) == "limit"
+    @test LiveMode._ccxtordertype(_AuditMarketOrder()) == "market"
 end
 
-@testset "_ccxtmarginmode" begin
-    using .LiveMode.PaperMode.Misc: IsolatedMargin, CrossMargin, NoMargin
-    @test hasmethod(LiveMode._ccxtmarginmode, Tuple{IsolatedMargin{<:Any}})
-    @test hasmethod(LiveMode._ccxtmarginmode, Tuple{CrossMargin{<:Any}})
-    @test hasmethod(LiveMode._ccxtmarginmode, Tuple{NoMargin})
-    @test hasmethod(LiveMode._ccxtmarginmode, Tuple{Any})  # fallback
+@testset "_ccxtmarginmode maps margin modes to ccxt strings" begin
+    using .LiveMode.PaperMode.Misc: IsolatedMargin, CrossMargin, NoMargin, Isolated, Cross
+    @test LiveMode._ccxtmarginmode(NoMargin()) === nothing
+    @test LiveMode._ccxtmarginmode(Isolated()) == "isolated"
+    @test LiveMode._ccxtmarginmode(Cross()) == "cross"
 end
 
 @testset "_ccxtisstatus / _ccxtisopen / _ccxtisclosed" begin
@@ -388,45 +392,31 @@ end
         @test length(vec2) == 1
     end
 
-    @testset "issupported" begin
-        # issupported checks whether first(exc, syms...) returns non-nothing
-        # Without a real exchange, this is hard to test. Just verify it exists.
-        @test hasmethod(LiveMode.issupported, Tuple{Any,Vararg{Symbol}})
-    end
+    # NOTE (audit): issupported needs a live exchange object; the old
+    # hasmethod check passed with a broken implementation, so it was removed.
 end
 
 # ══════════════════════════════════════════════════════════════
 # Unit tests for orders/utils.jl
 # ══════════════════════════════════════════════════════════════
 
-@testset "pending counters — signature check" begin
-    @test hasmethod(LiveMode.pending_orders, Tuple{LiveMode.InstrumentInstance})
-    @test hasmethod(LiveMode.inc_pending_orders!, Tuple{LiveMode.InstrumentInstance})
-    @test hasmethod(LiveMode.dec_pending_orders!, Tuple{LiveMode.InstrumentInstance})
-    @test hasmethod(LiveMode.pending_trades, Tuple{LiveMode.InstrumentInstance})
-    @test hasmethod(LiveMode.inc_pending_trades!, Tuple{LiveMode.InstrumentInstance})
-    @test hasmethod(LiveMode.dec_pending_trades!, Tuple{LiveMode.InstrumentInstance})
-end
+# NOTE (audit): pending-order/trade counters are exercised through the order
+# lifecycle suites; pure-signature hasmethod checks were removed.
 
 # ══════════════════════════════════════════════════════════════
 # Unit tests for handler.jl
 # ══════════════════════════════════════════════════════════════
 
-@testset "handler utilities — method exists" begin
-    @test hasmethod(LiveMode.condition, Tuple{LiveMode.InstrumentInstance})
-    @test hasmethod(LiveMode.get_events, Tuple{LiveMode.InstrumentInstance})
-    @test hasmethod(LiveMode.lasteventrun!, Tuple{LiveMode.InstrumentInstance, DateTime})
-    @test hasmethod(LiveMode.lasteventrun!, Tuple{LiveMode.InstrumentInstance})
-    @test hasmethod(LiveMode.sendrequest!, Tuple{LiveMode.InstrumentInstance, DateTime, Function})
-end
+# NOTE (audit): handler utilities are exercised through event/watcher suites;
+# pure-signature hasmethod checks were removed.
 
 # ══════════════════════════════════════════════════════════════
 # Unit tests for _ccxtordertype and trigger_dict
 # ══════════════════════════════════════════════════════════════
 
-@testset "_ccxtordertype" begin
-    @test hasmethod(LiveMode._ccxtordertype, Tuple{Any, Type})
-end
+# NOTE (audit): the two-arg _ccxtordertype(exc, type) path is covered by the
+# mapping testset above and the order-send suites; the hasmethod check was
+# removed.
 
 # ══════════════════════════════════════════════════════════════
 # Edge cases for ccxt.jl functions
@@ -494,17 +484,15 @@ end
 # Unit tests for orders/send.jl check_available_cash
 # ══════════════════════════════════════════════════════════════
 
-@testset "check_available_cash — method exists" begin
-    @test LiveMode.check_available_cash isa Function
-end
+# NOTE (audit): check_available_cash is exercised through the order-send path
+# (send.jl); the `isa Function` check passed with a broken implementation.
 
 # ══════════════════════════════════════════════════════════════
 # Unit tests for _ccxt_balance_args
 # ══════════════════════════════════════════════════════════════
 
-@testset "_ccxt_balance_args — signature check" begin
-    @test hasmethod(LiveMode._ccxt_balance_args, Tuple{Any, Any})
-end
+# NOTE (audit): _ccxt_balance_args is exercised through balance-fetch suites;
+# the pure-signature hasmethod check was removed.
 
 # ══════════════════════════════════════════════════════════════
 # Mock-HTTP integration tests for CcxtGateway

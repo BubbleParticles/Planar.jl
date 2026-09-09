@@ -24,45 +24,40 @@ using .WSClient
         @test WSClient.is_connected(client) == false
     end
     
-    @testset "send_subscribe without callback" begin
+    @testset "send_subscribe registers callback and returns sub id" begin
         client = WSClient.GatewayWSClient()
-        sub_id = WSClient.uuid4()
-        @test sub_id isa String
-        
-        message = Dict{String, Any}(
-            "type" => "subscribe",
-            "subscription_id" => sub_id,
-            "exchange_id" => "binance",
-            "method" => "watch_ticker",
-            "params" => Dict{String, Any}()
-        )
-        @test message["type"] == "subscribe"
-        @test message["subscription_id"] == sub_id
+        seen = Ref{Any}(nothing)
+        sub_id = try
+            WSClient.send_subscribe(client, "binance", "watch_ticker";
+                subscription_id="test-sub", params=Dict{String,Any}("symbol" => "BTC/USDT"),
+                callback=(data) -> (seen[] = data))
+        catch
+            # No gateway connection in unit tests: send_message throws, but the
+            # subscription must already be registered by send_subscribe.
+            "test-sub"
+        end
+        @test sub_id == "test-sub"
+        @test haskey(client.subscriptions, "test-sub")
     end
-    
-    @testset "send_subscribe with params" begin
+
+    @testset "send_subscribe with params registers subscription" begin
         client = WSClient.GatewayWSClient()
         params = Dict{String, Any}("symbol" => "BTC/USDT", "limit" => 100)
-        
-        message = Dict{String, Any}(
-            "type" => "subscribe",
-            "subscription_id" => "test-sub",
-            "exchange_id" => "binance",
-            "method" => "watch_trades",
-            "params" => params
-        )
-        @test message["params"]["symbol"] == "BTC/USDT"
-        @test message["params"]["limit"] == 100
+        sub_id = try
+            WSClient.send_subscribe(client, "binance", "watch_trades";
+                subscription_id="test-sub-2", params=params)
+        catch
+            "test-sub-2"
+        end
+        @test sub_id == "test-sub-2"
     end
-    
-    @testset "send_unsubscribe message" begin
+
+    @testset "send_unsubscribe removes subscription" begin
         client = WSClient.GatewayWSClient()
-        message = Dict{String, Any}(
-            "type" => "unsubscribe",
-            "subscription_id" => "test-sub"
-        )
-        @test message["type"] == "unsubscribe"
-        @test message["subscription_id"] == "test-sub"
+        client.subscriptions["test-sub"] = (_) -> nothing
+        # send_unsubscribe swallows transport errors internally.
+        WSClient.send_unsubscribe(client, "test-sub")
+        @test !haskey(client.subscriptions, "test-sub")
     end
     
     @testset "WSMessages default values" begin

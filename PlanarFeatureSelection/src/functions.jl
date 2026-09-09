@@ -95,7 +95,10 @@ function detect_correlation_regime(corr_matrices::AbstractArray, window::Int=20;
     end
     
     # Use k-medoids for regime detection
-    dist = pairwise(Euclidean(), features; dims=2)
+    # features rows are time points, so distances go between rows (dims=1);
+    # dims=2 would return a 9x9 matrix over flattened positions and leave
+    # smoothed_regimes[10:end] at their `ones` init (all regime 1).
+    dist = pairwise(Euclidean(), features; dims=1)
     clusters = kmedoids(dist, n_regimes)
 
     # Smooth the regime labels with a rolling window

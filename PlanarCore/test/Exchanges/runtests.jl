@@ -595,9 +595,8 @@ end
         Exchanges.timeout!(e, 10000)
     end
 
-    @testset "check_timeout exists and callable" begin
+    @testset "check_timeout runs against a live exchange object" begin
         e = Exchange(:test_ct)
-        @test hasmethod(Exchanges.check_timeout, Tuple{Exchange, _Dates.Period})
         Exchanges.check_timeout(e, _Dates.Second(5))
     end
 
@@ -663,46 +662,10 @@ end
     end
 end
 
-@testset "leverage! and marginmode! arg combinations" begin
-    @testset "leverage! exists and callable" begin
-        e = Exchange(:test_lv)
-        @test hasmethod(Exchanges.leverage!, Tuple{Exchange, Any, Any})
-    end
-
-    @testset "marginmode! exists and callable" begin
-        e = Exchange(:test_mm)
-        @test hasmethod(Exchanges.marginmode!, Tuple{Exchange, Any, Any})
-    end
-
-    @testset "marginmode! hedged keyword compiles" begin
-        # Verify the signature accepts hedged kwarg
-        e = Exchange(:test_mmh)
-        sigs = methods(Exchanges.marginmode!, (Exchange, Any, Any))
-        @test length(sigs) > 0
-    end
-
-    @testset "leverage! side and timeout keywords compile" begin
-        e = Exchange(:test_lvt)
-        sigs = methods(Exchanges.leverage!, (Exchange, Any, Any))
-        @test length(sigs) > 0
-    end
-end
-
-@testset "ticker! arg combinations" begin
-    @testset "ticker! exists and callable" begin
-        e = Exchange(:test_tk)
-        @test hasmethod(Exchanges.ticker!, Tuple{Any, Exchange})
-    end
-
-    @testset "ticker! with timeout kwarg signature" begin
-        # ticker! accepts timeout, func, delay — just verify it compiles
-        @test hasmethod(Exchanges.ticker!, Tuple{Any, Exchange})
-    end
-
-    @testset "ticker! shortcut for AbstractInstrument" begin
-        @test hasmethod(Exchanges.ticker!, Tuple{Any, Exchange})
-    end
-end
+# NOTE (audit): leverage!, marginmode!, and ticker! are gateway-backed and
+# covered behaviorally by the "Mock gateway exchange creation" suite below.
+# Pure-signature hasmethod/methods checks were removed: they pass even when
+# the implementations are broken.
 
 @testset "Mock gateway exchange creation" begin
     # Helper: setup mock for a given exchange name
@@ -886,11 +849,9 @@ end
 end
 
 @testset "Quote helpers" begin
-    @testset "hasvolume" begin
-        # hasvolume requires a running gateway to fetch tickers — just verify the function compiles
-        @test hasmethod(Exchanges.hasvolume, Tuple{String, Any})
-    end
-
+    # NOTE (audit): hasvolume needs a live gateway; a hasmethod check would
+    # pass with a broken implementation, so it was removed rather than kept
+    # as coverage fluff. Gateway-backed coverage lives in Fetch suites.
     @testset "market_precision" begin
         e = Exchange(:test_mp)
         push!(e.markets, "BTC/USDT" => Dict("precision" => Dict("amount" => 8, "price" => 2)))

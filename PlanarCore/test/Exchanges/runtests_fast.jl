@@ -7,13 +7,13 @@ using PlanarCore.Exchanges
 using PlanarCore.ExchangeTypes
 using HTTP
 using JSON3
-using PlanarCore.TimeTicks.Dates: DateTime, now
+using PlanarCore.TimeTicks.Dates
 
 # ── Default mock HTTP ──────────────────────────
 # All gateway-dependent calls return valid responses.
 # Track sandbox mode per exchange for realistic /urls responses.
 const _mock_sandbox = Dict{String,Bool}()
-ExchangeTypes.CcxtGateway.Rest.set_http_get!((url; kwargs...) -> begin
+function _default_mock_get(url; kwargs...)
     if occursin("/admin/exchange_names", url)
         HTTP.Response(200, JSON3.write(Dict("result" => ["test"])))
     elseif occursin("/has", url)
@@ -40,11 +40,17 @@ ExchangeTypes.CcxtGateway.Rest.set_http_get!((url; kwargs...) -> begin
         else
             HTTP.Response(200, JSON3.write(Dict("result" => Dict("api" => "https://api.example.com"))))
         end
+    elseif occursin("/ping", url)
+        # Gateway health-check hit by the Exchange constructor and
+        # _check_gateway_up. Must return 200 or every Exchange(:name)
+        # construction falls through to spawn_gateway (Gotcha #70).
+        HTTP.Response(200, JSON3.write(Dict("result" => "pong")))
     else
         error("Unexpected GET: $url")
     end
-end)
-ExchangeTypes.CcxtGateway.Rest.set_http_post!((url; kwargs...) -> begin
+end
+ExchangeTypes.CcxtGateway.Rest.set_http_get!(_default_mock_get)
+function _default_mock_post(url; kwargs...)
     if occursin("/setSandboxMode", url)
         # Extract exchange name from URL: /exchanges/{name}/setSandboxMode
         m = match(r"/exchanges/([^/]+)/setSandboxMode", url)
@@ -59,7 +65,8 @@ ExchangeTypes.CcxtGateway.Rest.set_http_post!((url; kwargs...) -> begin
     else
         error("Unexpected POST: $url")
     end
-end)
+end
+ExchangeTypes.CcxtGateway.Rest.set_http_post!(_default_mock_post)
 
 # =====================================================================
 # MODULE STRUCTURE
@@ -259,10 +266,9 @@ end
         @test Exchanges.gettimeout(e) isa Dates.Millisecond
     end
 
-    @testset "check_timeout exists" begin
+    @testset "check_timeout runs against a live exchange object" begin
         e = Exchange(:test_ct)
         Exchanges.check_timeout(e, Dates.Second(5))
-        @test hasmethod(Exchanges.check_timeout, Tuple{Exchange, Dates.Period})
     end
 
     @testset "timestamp stubs" begin
@@ -351,11 +357,10 @@ end
         @test Exchanges.str_to_float("3.14") ≈ 3.14
         @test Exchanges.str_to_float("invalid") == 0.0
     end
-
-    @testset "ticker! hasmethod checks" begin
-        @test hasmethod(Exchanges.ticker!, Tuple{Any, Exchange})
-    end
 end
+
+# NOTE (audit): ticker! is gateway-backed and covered behaviorally by the mock
+# getexchange! suite below. The pure-signature hasmethod check was removed.
 
 # =====================================================================
 # LEVERAGE (no gateway needed for unit tests)
@@ -391,15 +396,9 @@ end
         @test Exchanges._handle_leverage(Exchange(), ErrorException("some error")) == false
     end
 
-    @testset "leverage! hasmethod" begin
-        @test hasmethod(Exchanges.leverage!, Tuple{Exchange, Any, Any})
-    end
-
-    @testset "marginmode! hasmethod" begin
-        @test hasmethod(Exchanges.marginmode!, Tuple{Exchange, Any, Any})
-    end
+    # NOTE (audit): leverage!/marginmode! are gateway-backed; pure-signature
+    # hasmethod checks were removed (behavioral coverage via mock suites).
 end
-
 # =====================================================================
 # CURRENCY
 # =====================================================================
@@ -543,6 +542,8 @@ end
                 HTTP.Response(200, JSON3.write(Dict("result" => Dict("success" => true))))
             elseif occursin("/exchanges/$name/urls", url)
                 HTTP.Response(200, JSON3.write(Dict("result" => Dict("apiBackup" => "https://testnet.example.com"))))
+            elseif occursin("/ping", url)
+                HTTP.Response(200, JSON3.write(Dict("result" => "pong")))
             else
                 error("Unexpected GET: $url")
             end
@@ -555,10 +556,11 @@ end
             end
         end)
     end
-
     function restore()
-        ExchangeTypes.CcxtGateway.Rest.set_http_get!(HTTP.get)
-        ExchangeTypes.CcxtGateway.Rest.set_http_post!(HTTP.post)
+        # Reinstall the file-level default mocks (not real HTTP): this suite
+        # is offline by design ("no gateway dependency needed").
+        ExchangeTypes.CcxtGateway.Rest.set_http_get!(_default_mock_get)
+        ExchangeTypes.CcxtGateway.Rest.set_http_post!(_default_mock_post)
     end
 
     @testset "markets=:no → empty markets" begin

@@ -80,5 +80,8 @@ end
 Rest.set_http_get!(HTTP.get)
 Rest.set_http_post!(HTTP.post)
 Rest.set_http_delete!(HTTP.delete)
+# Restore the init flag so later suites in the same process perform the real
+# gateway health-check instead of inheriting the mock bypass.
+Rest._gateway_initialized[] = false
 
 println("Rest module tests with mocked HTTP passed!")
