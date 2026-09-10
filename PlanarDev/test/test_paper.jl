@@ -129,15 +129,19 @@ function test_paper_margin(s)
         price=this_p + this_p / 100.0,
         date,
     )
-    @test cash(ii) == prev_cash || t isa ot.Trade
-    @test if t isa ot.Trade
-        length(ot.trades(t.order)) > 0
+    if t isa ot.Trade
+        # Immediate fill: cash moved and the trade carries fills
+        @test cash(ii) != prev_cash
+        @test length(ot.trades(t.order)) > 0
+        @test ect.isfilled(ii, t.order) || ect.orderscount(s, ii) == prev_count
     else
+        # Resting order: cash untouched, order registered and tracked
         @test ismissing(t)
+        @test cash(ii) == prev_cash
         _, o = first(ect.orders(s, ii, Buy))
-        !ect.isfilled(ii, o)
+        @test !ect.isfilled(ii, o)
+        @test ect.orderscount(s, ii) == prev_count + 1
     end
-    @test ect.orderscount(s, ii) - 1 == prev_count || ect.isfilled(ii, o)
     @test ect.orderscount(s, ii) == length(s[:paper_order_tasks])
     @test !ect.call!(s, ii, 1.0, ect.UpdateLeverage(); pos=Long())
     ect.call!(s, ii, ect.CancelOrders())
@@ -204,7 +208,8 @@ function test_paper_nomargin_gtc(s)
     prev_cash = s.cash.value
     @info "TEST: paper call buy (last price)"
     ect.call!(s, ii, ot.GTCOrder{ot.Buy}; amount=0.02, date)
-    @test length(collect(ect.orders(s, ii))) == 1 || length(ii.history) > 0
+    # The placed order must be accounted for: still open, or already in history.
+    @test length(collect(ect.orders(s, ii))) + length(ii.history) >= 1
     o = if length(ii.history) > 0
         last(ii.history).order
     else

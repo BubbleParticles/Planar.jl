@@ -590,9 +590,6 @@ end
 
         result = CcxtGateway.ping(LiveMode.default_client())
         @test pinged[] == true
-
-        # test_gateway_client_methods
-        @test hasmethod(CcxtGateway.GatewayClient, Tuple{})
     finally
         Rest.set_http_get!(old_get)
         Rest.set_http_post!(old_post)
@@ -792,7 +789,9 @@ end
 
 @testset "get_float with ii kwarg" begin
     d = Dict{String,Any}("price" => 50000.0)
-    @test hasmethod(LiveMode.get_float, Tuple{Any,Any,Any})
+    @test LiveMode.get_float(d, "price", 0.0; ii=nothing) == 50000.0
+    @test LiveMode.get_float(d, "missing", -1.0; ii=nothing) == -1.0
+    @test LiveMode.get_float(Dict{String,Any}("price" => nothing), "price", -1.0; ii=nothing) == -1.0
 end
 
 end # module LiveModeTests

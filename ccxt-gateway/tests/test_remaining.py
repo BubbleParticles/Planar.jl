@@ -14,19 +14,12 @@ class TestMainRemaining:
     """Tests for remaining lines in main.py."""
 
     def test_main_uvloop_not_available(self):
-        """Test main() when uvloop is not available."""
-        # Simple test: just verify main() runs without error when uvloop is available
-        # Testing the ImportError path is complex, so we'll skip it for now
-        # and focus on other coverage
-
-        # For now, just test that main() works when uvloop IS available
+        """Test main() runs without error when uvloop import fails."""
         with patch('ccxt_gateway.main.uvicorn.run') as mock_run, \
-             patch('ccxt_gateway.main.asyncio.set_event_loop_policy'):
+             patch('ccxt_gateway.main.asyncio.set_event_loop_policy'), \
+             patch.dict('sys.modules', {'uvloop': None}):
 
-            try:
-                main()
-            except Exception:
-                pass
+            main()
 
             mock_run.assert_called_once()
 
@@ -38,10 +31,7 @@ class TestMainRemaining:
             # Mock uvloop to be available
             mock_uvloop = MagicMock()
             with patch.dict('sys.modules', {'uvloop': mock_uvloop}):
-                try:
-                    main()
-                except Exception:
-                    pass
+                main()
 
             mock_run.assert_called_once()
 

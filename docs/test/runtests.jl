@@ -120,10 +120,23 @@ function main()
         return
     end
     
-    if options[:verbose]
-        ENV["JULIA_DEBUG"] = "LinkValidator,ContentConsistency"
+    all_tests_passed, _ = if options[:verbose]
+        withenv("JULIA_DEBUG" => "LinkValidator,ContentConsistency") do
+            run_suites(options)
+        end
+    else
+        run_suites(options)
     end
+    if all_tests_passed
+        @info "All documentation tests passed! ✅"
+        exit(0)
+    else
+        @error "Some documentation tests failed! ❌"
+        exit(1)
+    end
+end
     
+function run_suites(options)
     # Load and validate configuration
     config = validate_config_or_default(options[:config_path])
     
@@ -222,14 +235,7 @@ function main()
         end
         @info "Test results saved to $(options[:output_file])"
     end
-    
-    if all_tests_passed
-        @info "All documentation tests passed! ✅"
-        exit(0)
-    else
-        @error "Some documentation tests failed! ❌"
-        exit(1)
-    end
+    return all_tests_passed, test_results
 end
 
 # Run main function if script is executed directly

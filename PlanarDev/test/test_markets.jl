@@ -8,12 +8,18 @@ function _test_markets(name=EXCHANGE, pair="BTC/USDT")
     loadmarkets!(exc; cache=false)
     @test length(exc.markets) > 0
     @test haskey(exc.markets, "BTC/USDT")
-    empty!(exchanges)
-    exc = getexchange!(name)
-    # with cache
-    loadmarkets!(exc; cache=true)
-    @test length(exc.markets) > 0
-    @test haskey(exc.markets, "BTC/USDT")
+    saved = copy(exchanges)
+    try
+        empty!(exchanges)
+        exc = getexchange!(name)
+        # with cache
+        loadmarkets!(exc; cache=true)
+        @test length(exc.markets) > 0
+        @test haskey(exc.markets, "BTC/USDT")
+    finally
+        merge!(exchanges, saved)
+    end
+end
 
 test_markets() = begin
     try
@@ -21,11 +27,12 @@ test_markets() = begin
         _test_markets()
         try
             ExchangeTypes._closeall()
-        catch
+        catch err
+            @warn "teardown _closeall failed" exception = (err, catch_backtrace())
         end
     catch e
         if occursin("connection refused", sprint(showerror, e))
-            @warn "Skipping markets test: gateway unavailable"
+            @test_skip "gateway unavailable — markets suite skipped"
         else
             rethrow(e)
         end

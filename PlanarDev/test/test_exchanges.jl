@@ -3,19 +3,16 @@ using Planar.Exchanges
 using Planar.Exchanges: Exchanges, ExchangeTypes
 using Planar.Exchanges: marketsid, sandbox!, ratelimit!, setexchange!, getexchange!, issandbox
 
+_is_gateway_down(e) = occursin("connection refused", sprint(showerror, e))
+
 test_exch() = begin
-    try
-        exc = getexchange!(EXCHANGE, sandbox=false)
-        Symbol(lowercase(exc.name)) == EXCHANGE
-    catch e
-        if occursin("connection refused", sprint(showerror, e))
-            @warn "Skipping test_exch: gateway unavailable"
-            return true
-        end
-        rethrow(e)
-    end
+    exc = getexchange!(EXCHANGE, sandbox=false)
+    @test Symbol(lowercase(exc.name)) == EXCHANGE
+    true
 end
 _exchange() = begin
+    saved_exchanges = copy(Exchanges.exchanges)
+    saved_sb = copy(Exchanges.sb_exchanges)
     try
         empty!(Exchanges.exchanges)
         empty!(Exchanges.sb_exchanges)
@@ -23,12 +20,9 @@ _exchange() = begin
         @test nameof(e) == EXCHANGE
         @test (EXCHANGE, "") ∈ keys(ExchangeTypes.exchanges) || (EXCHANGE, "") ∈ keys(ExchangeTypes.sb_exchanges)
         e
-    catch e
-        if occursin("connection refused", sprint(showerror, e))
-            @warn "Skipping _exchange: gateway unavailable"
-            return nothing
-        end
-        rethrow(e)
+    finally
+        merge!(Exchanges.exchanges, saved_exchanges)
+        merge!(Exchanges.sb_exchanges, saved_sb)
     end
 end
 _exchange_pairs(exc) = begin
@@ -38,13 +32,15 @@ _exchange_pairs(exc) = begin
 end
 
 _exchange_sbox(exc) = begin
-    is_sb = Planar.Exchanges.issandbox(exc)
-    @test (is_sb === true) || (is_sb === false)
+    # _exchange() requests sandbox=false, so the initial state is pinned here.
+    @test Planar.Exchanges.issandbox(exc) === false
     Planar.Exchanges.sandbox!(exc, flag=false)
     @test Planar.Exchanges.issandbox(exc) === false
     Planar.Exchanges.sandbox!(exc)
     @test Planar.Exchanges.issandbox(exc) === true
     Planar.Exchanges.ratelimit!(exc)
+    # ratelimit! must not corrupt sandbox state
+    @test Planar.Exchanges.issandbox(exc) === true
 end
 
 _exchanges_test_env() = begin
@@ -55,17 +51,23 @@ _exchanges_test_env() = begin
 end
 
 _do_test_exchanges() = begin
-    @test test_exch()
-    e = _exchange()
+    local e
+    try
+        @test test_exch()
+        e = _exchange()
+    catch err
+        if _is_gateway_down(err)
+            @test_skip "gateway unavailable — exchanges suite skipped"
+            return nothing
+        end
+        rethrow(err)
+    end
     _exchange_pairs(e)
-    @test _exchange_sbox(e)
+    _exchange_sbox(e)
+    @test e isa Exchanges.CcxtExchange
     try
         ExchangeTypes._closeall()
-    catch
+    catch err
+        @warn "teardown _closeall failed" exception = (err, catch_backtrace())
     end
-end
-
-test_exchanges() = begin
-    _exchanges_test_env()
-    @testset "exchanges" failfast = FAILFAST _do_test_exchanges()
 end

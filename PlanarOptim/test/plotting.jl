@@ -49,8 +49,8 @@ Makie.inline!(false)
         fig = plot_results(s)
         @test fig isa Makie.Figure
         
-        # Verify figure has content (axes)
-        @test length(fig.content) > 0
+        # Figure must contain a real price axis, not just any content
+        @test any(c -> c isa Makie.Axis, fig.content)
         
         # Should have price axis
         @test haskey(fig.attributes, :price_ax)
@@ -64,7 +64,7 @@ Makie.inline!(false)
         
         fig = plot_results(ii)
         @test fig isa Makie.Figure
-        @test length(fig.content) > 0
+        @test any(c -> c isa Makie.Axis, fig.content)
         @test haskey(fig.attributes, :price_ax)
     end
 
