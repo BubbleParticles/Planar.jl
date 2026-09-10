@@ -365,7 +365,7 @@ end
     @test endswith(Rest.REST_GATEWAY_LOCKFILE, "ccxt_gateway.lock")
 
     # Verify spawn_gateway is accessible without UndefVarError
-    @test spawn_gateway isa Function
+    @test Rest.spawn_gateway isa Function
 end
 
 @testset "stop_gateway clears _started_exchanges" begin

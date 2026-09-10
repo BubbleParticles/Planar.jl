@@ -762,7 +762,7 @@ end
 # 24. Typed attrs and pushtrade! (2nd-round Task 1)
 # =============================================================
 @testset "Typed attrs and pushtrade!" begin
-    using PlanarCore.Instances.OrderTypes: Trade, Order, MarketOrder, Buy, Long
+    using PlanarCore.Instances.OrderTypes: Trade, Order, MarketOrder, Buy
 
     limits = (leverage=(min=1.0, max=10.0), amount=(min=1e-8, max=1e8),
               price=(min=1e-8, max=1e8), cost=(min=1e-8, max=1e8))
@@ -795,5 +795,5 @@ end
     @test isempty(Instances.trades(ii))
     Instances.pushtrade!(ii, t)
     @test length(Instances.trades(ii)) == 1
-    @test Instances.trades(ii)[end] === t
+    @test last(Instances.trades(ii)) === t
 end
