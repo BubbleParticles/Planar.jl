@@ -68,13 +68,10 @@ class TestMainModule:
         with patch('ccxt_gateway.main.uvicorn.run') as mock_run, \
              patch('ccxt_gateway.main.asyncio.set_event_loop_policy'):
 
-            # Mock uvloop import to avoid actual import
             with patch.dict('sys.modules', {'uvloop': MagicMock()}):
-                # Call main (it will try to run uvicorn, but we mocked it)
-                try:
-                    main()
-                except Exception:
-                    pass  # Expected since we're not actually running the server
+                # Call main (uvicorn.run is mocked so no server starts);
+                # failures propagate — never swallowed.
+                main()
 
                 # Check that uvicorn.run was called
                 mock_run.assert_called_once()

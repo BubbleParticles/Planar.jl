@@ -119,13 +119,7 @@ class TestWebSocketFinal:
 
         client = TestClient(app)
         with client.websocket_connect("/ws") as websocket:
-            # Send a message that causes an exception in processing
-            # We'll mock receive_text to raise an exception
-            with patch.object(websocket, 'receive_text', side_effect=Exception("Test error")):
-                try:
-                    websocket.receive_text()
-                except:
-                    pass
-
-            # Connection should still be alive
-            assert True
+            # A processing failure must surface to the caller, not be swallowed.
+            with patch.object(websocket, 'receive_text', side_effect=Exception("Test error")), \
+                 pytest.raises(Exception, match="Test error"):
+                websocket.receive_text()

@@ -101,15 +101,10 @@ class TestUpdateCheckerRemaining:
 
         # The _check_once function doesn't catch exceptions
         # The _check_loop catches them, but we're calling _check_once directly
-        # We'll just verify it raises the exception
+        # The failure must propagate to the caller — assert it raises.
         with patch('ccxt_gateway.utils.updates.check_update', side_effect=Exception("Test error")):
-            try:
+            with pytest.raises(Exception, match="Test error"):
                 await checker._check_once()
-            except Exception:
-                pass  # Expected
-
-        # Test passes if we get here
-        assert True
 
     @pytest.mark.asyncio
     async def test_start_check_interval_zero(self):

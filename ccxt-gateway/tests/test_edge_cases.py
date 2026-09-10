@@ -67,12 +67,14 @@ class TestZMQBrokerEdgeCases:
     @pytest.mark.asyncio
     async def test_send_no_identity(self):
         from ccxt_gateway.core.zmq_broker import ZMQBroker
+        from ccxt_gateway.core.protocol import parse_message
         broker = ZMQBroker()
         await broker.start()
-        
-        try:
-            await broker.send_request("nonexistent", b"{}")
-        except:
-            pass
-        
+
+        # Unknown exchanges never raise: the broker answers with an
+        # EXCHANGE_NOT_FOUND error response — assert that contract.
+        response = await broker.send_request("nonexistent", b"{}")
+        assert response is not None
+        assert parse_message(response).get("error_code") == "EXCHANGE_NOT_FOUND"
+
         await broker.stop()

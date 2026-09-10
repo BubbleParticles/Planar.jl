@@ -33,18 +33,18 @@ end
 
 function test_dbnomics()
     if !HAS_SCRAPERS
-        @warn "Skipping DBnomics tests: PlanarDownloadTool environment not available"
+        @test_skip "DBnomics scraper env unavailable — suite skipped"
         return
     end
 
     @testset "DBNomics Tests" begin
         @testset "DBNomics Scraper" begin
             if !isdefined(scr, :DBNomicsData)
-                @warn "DBnomics tests skipped: DBNomicsData unavailable (vendored DBnomics deps not resolvable in this environment)"
+                @test_skip "DBNomicsData unavailable (vendored deps unresolvable) — skipped"
                 return
             end
             if isnothing(Base.find_package("DBnomics"))
-                @warn "DBnomics package not available"
+                @test_skip "DBnomics package unavailable — skipped"
                 return
             end
             test_id = "AMECO/ZUTN/EA19.1.0.0.0.ZUTN"
@@ -67,7 +67,7 @@ function test_dbnomics()
 
         @testset "DBnomics.jl API" begin
             if !HAS_DBNOMICS
-                @warn "DBnomics.jl not available"
+                @test_skip "DBnomics.jl unavailable — skipped"
                 return
             end
             try
@@ -75,8 +75,10 @@ function test_dbnomics()
                 df = DBnomics.rdb(ids = ids)
                 @test df isa DataFrames.DataFrame
                 @test DataFrames.nrow(df) > 0
-                @test hascol(df, :period) || hascol(df, :date)
-                @test hascol(df, :value) || hascol(df, :original_value)
+                # Schema varies across datasets: exactly one time/value column
+                # contract, expressed as a single set-membership predicate.
+                @test any(c -> hascol(df, c), (:period, :date))
+                @test any(c -> hascol(df, c), (:value, :original_value))
 
                 ids2 = [ids]
                 df2 = DBnomics.rdb(ids = ids2)

@@ -54,11 +54,10 @@ class TestRestAPIRemaining:
         mock_request = MagicMock(spec=Request)
         mock_request.app.state = app.state
 
-        try:
+        with pytest.raises(HTTPException) as exc_info:
             get_process_manager(mock_request)
-        except HTTPException as e:
-            assert e.status_code == 503
-            assert "not initialized" in e.detail.lower()
+        assert exc_info.value.status_code == 503
+        assert "not initialized" in exc_info.value.detail.lower()
 
     def test_get_broker_none(self):
         """Test get_broker when None."""
@@ -75,11 +74,10 @@ class TestRestAPIRemaining:
         mock_request = MagicMock(spec=Request)
         mock_request.app.state = app.state
 
-        try:
+        with pytest.raises(HTTPException) as exc_info:
             get_broker(mock_request)
-        except HTTPException as e:
-            assert e.status_code == 503
-            assert "not initialized" in e.detail.lower()
+        assert exc_info.value.status_code == 503
+        assert "not initialized" in exc_info.value.detail.lower()
 
 
 class TestAdminAPIRemaining:
@@ -100,11 +98,10 @@ class TestAdminAPIRemaining:
         mock_request = MagicMock(spec=Request)
         mock_request.app.state = app.state
 
-        try:
+        with pytest.raises(HTTPException) as exc_info:
             get_process_manager(mock_request)
-        except HTTPException as e:
-            assert e.status_code == 503
-            assert "not initialized" in e.detail.lower()
+        assert exc_info.value.status_code == 503
+        assert "not initialized" in exc_info.value.detail.lower()
 
     def test_get_broker_none(self):
         """Test get_broker when None."""
@@ -121,11 +118,10 @@ class TestAdminAPIRemaining:
         mock_request = MagicMock(spec=Request)
         mock_request.app.state = app.state
 
-        try:
+        with pytest.raises(HTTPException) as exc_info:
             get_broker(mock_request)
-        except HTTPException as e:
-            assert e.status_code == 503
-            assert "not initialized" in e.detail.lower()
+        assert exc_info.value.status_code == 503
+        assert "not initialized" in exc_info.value.detail.lower()
 
     def test_update_ccxt_endpoint_no_update(self):
         """Test /admin/update/ccxt when no update available."""

@@ -90,25 +90,30 @@ tests(selected=ARGS) = begin
                 if isdefined(Main, :ExchangeTypes)
                     try
                         ExchangeTypes._closeall()
-                    catch
+                    catch err
+                        @warn "teardown: ExchangeTypes._closeall failed" exception=(err, catch_backtrace())
                     end
                     try
                         ExchangeTypes._drain_finalizer_queue()
-                    catch
+                    catch err
+                        @warn "teardown: ExchangeTypes._drain_finalizer_queue failed" exception=(err, catch_backtrace())
                     end
                 end
                 if isdefined(Main, :Watchers)
                     try
                         Watchers._closeall()
-                    catch
+                    catch err
+                        @warn "teardown: Watchers._closeall failed" exception=(err, catch_backtrace())
                     end
                 end
                 try
                     GC.gc()
                     sleep(0.05)
-                catch
+                catch err
+                    @warn "teardown: GC.gc failed" exception=(err, catch_backtrace())
                 end
-            catch
+            catch err
+                @warn "teardown failed for test $(testname)" exception=(err, catch_backtrace())
             end
         end
     end

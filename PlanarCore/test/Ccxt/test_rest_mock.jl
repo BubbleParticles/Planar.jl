@@ -1,14 +1,9 @@
-# Test Rest module with mocked HTTP
-# Run with: julia --project=Ccxt -e 'include("test/test_rest_mock.jl")'
-
+# Test Rest module with mocked HTTP (uses real PlanarCore modules so mocks
+# land on the shared Rest singleton; a local include() copy diverged types).
 using Test
 using HTTP
 using JSON3
-
-include("../../src/Ccxt/CcxtGateway/types.jl")
-using .Types
-include("../../src/Ccxt/CcxtGateway/rest.jl")
-using .Rest
+using PlanarCore.Ccxt.CcxtGateway.Rest
 
 
 mock_get_calls = []

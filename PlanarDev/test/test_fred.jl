@@ -145,14 +145,18 @@ function test_rate_limit()
     @test fred.RATE_LIMIT[] isa Period
     @test fred.RATE_LIMIT[] == Millisecond(1000)
     
+    if !fred.has_apikey()
+     @test_skip "TEST: FRED API key not set, skipping rate limit timing test"
+     return true
+     end
     # Test rate limiting by measuring time between calls
     start_time = now()
-    fred.series_info("GDPC1")  # This will fail if no API key, but that's ok for rate limit test
+    fred.series_info("GDPC1")
     fred.series_info("GDPC1")  # Second call should be rate limited
     elapsed = now() - start_time
-    
-    # Should take at least the rate limit time (or fail due to no API key)
-    @test elapsed >= fred.RATE_LIMIT[] || !fred.has_apikey()
+
+    # Timing is only meaningful with a live key — the guard above pins that.
+    @test elapsed >= fred.RATE_LIMIT[]
     
     return true
 end
@@ -508,11 +512,16 @@ function test_configuration()
 end
 
 function test_ratelimit()
+    if !fred.has_apikey()
+     @test_skip "TEST: FRED API key not set, skipping rate limit timing test"
+     return true
+     end
     start_time = now()
     fred.series_info("GDPC1")
     fred.series_info("GDPC1")
     elapsed = now() - start_time
-    @test elapsed >= fred.RATE_LIMIT[] || !fred.has_apikey()
+    # Timing is only meaningful with a live key — the guard above pins that.
+    @test elapsed >= fred.RATE_LIMIT[]
     return true
 end
 
@@ -740,7 +749,8 @@ function test_units_parameters()
             data = fred.observations("GDPC1"; units=unit, limit=1)
             @test data isa Dict{String,Any}
         catch e
-            @test occursin("400", string(e)) || @test data isa Dict{String,Any}
+            # `data` is unassigned when the call throws — assert only on the error.
+            @test occursin("400", string(e))
         end
     end
     return true
@@ -901,10 +911,9 @@ function test_error_recovery_performance()
      return true
      end
     start_time = now()
-    try
-        fred.series_info("INVALID_SERIES_ID")
-    catch e
-    end
+    # Poison the connection with an invalid ID — the throw is the point;
+    # @test_throws fails if invalid IDs ever stop erroring.
+    @test_throws Exception fred.series_info("INVALID_SERIES_ID")
     data = fred.series_info("GDPC1")
     elapsed = now() - start_time
     @test data isa Dict{String,Any}
@@ -1041,17 +1050,13 @@ function test_edge_cases()
      return true
      end
     very_old_date = DateTime(1900, 1, 1)
-    try
-        fred.observations("GDPC1"; start_date=very_old_date, end_date=very_old_date + Day(1), frequency="q")
-    catch e
-        @test e isa Exception
-    end
+    # An out-of-range window must surface an error — @test_throws fails if it
+    # silently returns, unlike the old try/catch which recorded nothing.
+    @test_throws Exception fred.observations("GDPC1"; start_date=very_old_date, end_date=very_old_date + Day(1), frequency="q")
     future_date = now() + Year(1)
-    try
-        fred.observations("GDPC1"; start_date=future_date, end_date=future_date + Day(1), frequency="q")
-    catch e
-        @test e isa Exception
-    end
+    # A future-only window must surface an error — @test_throws fails if it
+    # silently returns, unlike the old try/catch which recorded nothing.
+    @test_throws Exception fred.observations("GDPC1"; start_date=future_date, end_date=future_date + Day(1), frequency="q")
     return true
 end
 
@@ -1060,24 +1065,23 @@ function test_invalid_parameters()
      @test_skip "TEST: FRED API key not set, skipping invalid_parameters test"
      return true
      end
-    try
-        fred.observations("GDPC1"; units="invalid_unit", limit=1, frequency="q")
-    catch e
-        @test e isa Exception
-    end
-    try
-        fred.observations("GDPC1"; frequency="invalid_freq", limit=1)
-    catch e
-        @test e isa Exception
-    end
+    # Invalid parameters must surface an error — @test_throws fails if the
+    # call silently succeeds, unlike the old try/catch which recorded nothing.
+    @test_throws Exception fred.observations("GDPC1"; units="invalid_unit", limit=1, frequency="q")
+    @test_throws Exception fred.observations("GDPC1"; frequency="invalid_freq", limit=1)
     return true
 end
 
 function test_network_errors()
+    if !fred.has_apikey()
+     @test_skip "TEST: FRED API key not set, skipping rate limit timing test"
+     return true
+     end
     start_time = now()
     fred.series_info("GDPC1")
     fred.series_info("GDPC1")
     elapsed = now() - start_time
-    @test elapsed >= fred.RATE_LIMIT[] || !fred.has_apikey()
+    # Timing is only meaningful with a live key — the guard above pins that.
+    @test elapsed >= fred.RATE_LIMIT[]
     return true
 end

@@ -33,9 +33,10 @@ function test_dbnomics_api()
             df = DBnomics.rdb(ids = ids)
             @test df isa DataFrames.DataFrame
             @test DataFrames.nrow(df) > 0
-            # loose column checks (schema varies across datasets)
-            @test hascol(df, :period) || hascol(df, :date)
-            @test hascol(df, :value) || hascol(df, :original_value)
+            # loose column checks (schema varies across datasets), expressed
+            # as single set-membership predicates over the accepted variants.
+            @test any(c -> hascol(df, c), (:period, :date))
+            @test any(c -> hascol(df, c), (:value, :original_value))
 
             # multiple series fetch (vector)
             ids2 = [ids]

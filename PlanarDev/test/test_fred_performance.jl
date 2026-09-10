@@ -166,12 +166,9 @@ function test_error_recovery_performance()
     # Test that the API recovers quickly from errors
     start_time = now()
     
-    # Make a request that might fail
-    try
-        fred.series_info("INVALID_SERIES_ID")
-    catch e
-        # Expected to fail
-    end
+    # Make a request that must fail — the throw is the point; @test_throws
+    # fails if invalid IDs ever stop erroring.
+    @test_throws Exception fred.series_info("INVALID_SERIES_ID")
     
     # Make a valid request immediately after
     data = fred.series_info("GDPC1")

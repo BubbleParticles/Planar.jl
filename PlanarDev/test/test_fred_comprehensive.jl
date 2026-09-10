@@ -790,35 +790,28 @@ function test_invalid_parameters()
      return true
      end
     
-    # Test with invalid units
-    try
-        fred.observations("GDPC1"; units="invalid_unit", limit=1, frequency="q")
-        # If it doesn't throw an error, that's also acceptable
-    catch e
-        @test e isa Exception
-    end
-    
-    # Test with invalid frequency
-    try
-        fred.observations("GDPC1"; frequency="invalid_freq", limit=1)
-        # If it doesn't throw an error, that's also acceptable
-    catch e
-        @test e isa Exception
-    end
+    # Invalid parameters must surface an error — @test_throws fails if the
+    # call silently succeeds, unlike the old try/catch which recorded nothing.
+    @test_throws Exception fred.observations("GDPC1"; units="invalid_unit", limit=1, frequency="q")
+    @test_throws Exception fred.observations("GDPC1"; frequency="invalid_freq", limit=1)
     
     return true
 end
 
 function test_network_errors()
+    if !fred.has_apikey()
+     @test_skip "TEST: FRED API key not set, skipping rate limit timing test"
+     return true
+     end
     # Test rate limiting
     start_time = now()
     fred.series_info("GDPC1")
     fred.series_info("GDPC1")  # Second call should be rate limited
     elapsed = now() - start_time
-    
-    # Should take at least the rate limit time (or fail due to no API key)
-    @test elapsed >= fred.RATE_LIMIT[] || !fred.has_apikey()
-    
+
+    # Timing is only meaningful with a live key — the guard above pins that.
+    @test elapsed >= fred.RATE_LIMIT[]
+
     return true
 end
 

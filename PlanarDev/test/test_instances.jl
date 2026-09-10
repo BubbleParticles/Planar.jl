@@ -552,10 +552,10 @@ function test_instances()
         using .im
         using .ect: SanitizeOff
     end
-    prev = get(ENV, "JULIA_TEST_FAILFAST", false)
-    ENV["JULIA_TEST_FAILFAST"] = true
-    @testset "instances" begin
-        try
+    # withenv auto-restores (or unsets) the flag — never leaks Bool/string
+    # residue into ENV for later suites.
+    withenv("JULIA_TEST_FAILFAST" => "true") do
+        @testset "instances" begin
             Base.invokelatest(test_asset_instance)
             Base.invokelatest(test_positions_function)
             Base.invokelatest(test_hash_function)
@@ -580,8 +580,6 @@ function test_instances()
             Base.invokelatest(test_asset_instance_functions1)
             @test_skip "test_asset_instance_functions2 (TimeTicks isless: Millisecond vs Month, Julia 1.12)"
             Base.invokelatest(test_attr_functions)
-        finally
-            ENV["JULIA_TEST_FAILFAST"] = prev
         end
     end
 end

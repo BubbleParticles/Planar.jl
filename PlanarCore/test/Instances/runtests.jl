@@ -244,8 +244,7 @@ end
 # 7. Events
 # =============================================================
 @testset "Position events" begin
-    using .Instances.OrderTypes: PositionUpdated, MarginUpdated, LeverageUpdated
-
+    using PlanarCore.Instances.OrderTypes: PositionUpdated, MarginUpdated, LeverageUpdated
     pe = PositionUpdated{:mocktest}(
         :liq_event, :default, "BTC/USDT", (Long(), true),
         date, 45000.0, 48000.0, 1000.0, 2000.0, 10.0, 50000.0
@@ -763,7 +762,7 @@ end
 # 24. Typed attrs and pushtrade! (2nd-round Task 1)
 # =============================================================
 @testset "Typed attrs and pushtrade!" begin
-    using .Instances.OrderTypes: Trade, Order, MarketOrder, Buy, Long
+    using PlanarCore.Instances.OrderTypes: Trade, Order, MarketOrder, Buy, Long
 
     limits = (leverage=(min=1.0, max=10.0), amount=(min=1e-8, max=1e8),
               price=(min=1e-8, max=1e8), cost=(min=1e-8, max=1e8))

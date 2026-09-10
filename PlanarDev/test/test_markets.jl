@@ -17,6 +17,8 @@ function _test_markets(name=EXCHANGE, pair="BTC/USDT")
         @test length(exc.markets) > 0
         @test haskey(exc.markets, "BTC/USDT")
     finally
+        # Exact restore: drop keys added during the test, then re-merge.
+        empty!(exchanges)
         merge!(exchanges, saved)
     end
 end

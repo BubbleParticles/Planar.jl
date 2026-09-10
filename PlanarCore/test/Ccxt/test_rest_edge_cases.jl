@@ -1,13 +1,10 @@
-# Test edge cases for CcxtGateway REST module
+# Test edge cases for CcxtGateway REST module (uses real PlanarCore modules
+# so GatewayClient types and HTTP mocks are shared with the rest of the suite;
+# a local include() copy created a duplicate Main.Rest with mismatched types).
 using Test
 using HTTP
 using JSON3
-
-# Load the REST module directly
-include("../../src/Ccxt/CcxtGateway/types.jl")
-using .Types
-include("../../src/Ccxt/CcxtGateway/rest.jl")
-using .Rest
+using PlanarCore.Ccxt.CcxtGateway.Rest
 
 @testset "Error handling functions" begin
     @testset "_ccxt_errors Ref" begin
@@ -418,49 +415,60 @@ end
 @testset "call_exchange body key type regression" begin
     # Regression: body["_timeout"] failed with TypeError when body had Symbol keys
     # body[:_timeout] works for both Dict{Symbol,Any} and Dict{String,Any}
+    prev_call_init = Rest._gateway_initialized[]
+    prev_call_get = Rest._http_get[]
+    prev_call_post = Rest._http_post[]
     Rest._gateway_initialized[] = true
     client = GatewayClient()
 
-    # Mock HTTP POST to capture the request body
+    # Mock HTTP POST/GET to capture the request body (GET for body=nothing path)
     mock_bodies = Dict{Symbol,Any}[]  # store captured call info
     function mock_post(url; kwargs...)
         push!(mock_bodies, Dict{Symbol,Any}(:url => url, :kwargs => Dict(kwargs)))
         HTTP.Response(200, JSON3.write(Dict("result" => Dict("status" => "ok"), "error" => nothing)))
     end
+    function mock_get(url; kwargs...)
+        push!(mock_bodies, Dict{Symbol,Any}(:url => url, :kwargs => Dict(kwargs)))
+        HTTP.Response(200, JSON3.write(Dict("result" => Dict("status" => "ok"), "error" => nothing)))
+    end
     Rest.set_http_post!(mock_post)
+    Rest.set_http_get!(mock_get)
+    try
+        @testset "Dict{Symbol,Any} body with timeout" begin
+            empty!(mock_bodies)
+            body = Dict{Symbol,Any}(:symbol => "BTC/USDT")
+            result = call_exchange(client, "binance", "fetchTicker"; body=body, timeout=120.0)
+            @test length(mock_bodies) == 1
+        end
 
-    @testset "Dict{Symbol,Any} body with timeout" begin
-        empty!(mock_bodies)
-        body = Dict{Symbol,Any}(:symbol => "BTC/USDT")
-        result = call_exchange(client, "binance", "fetchTicker"; body=body, timeout=120.0)
-        @test length(mock_bodies) == 1
+        @testset "Dict{String,Any} body with timeout" begin
+            empty!(mock_bodies)
+            body = Dict{String,Any}("symbol" => "BTC/USDT")
+            result = call_exchange(client, "binance", "fetchTicker"; body=body, timeout=120.0)
+            @test length(mock_bodies) == 1
+        end
+
+        @testset "body=nothing with timeout does not inject _timeout" begin
+            empty!(mock_bodies)
+            # When body is nothing and timeout is set, _timeout should NOT be injected
+            # because the condition is: timeout !== nothing && body !== nothing
+            # This test just verifies no error
+            result = call_exchange(client, "binance", "fetchTicker"; timeout=120.0)
+        end
+        @testset "Dict{Symbol,Any} body with timeout via keyword pass-through" begin
+            empty!(mock_bodies)
+            # Simulate the pattern used by choosefunc / exchange_funcs.jl:
+            # CcxtGateway.call_exchange(client, exchange_id, method; body=Dict{Symbol,Any}(), timeout=60.0)
+            body = Dict{Symbol,Any}(:params => Dict{String,Any}("type" => "swap"))
+            result = call_exchange(client, "binance", "fetchTickers"; body=body, timeout=60.0)
+            @test length(mock_bodies) == 1
+        end
+    finally
+        # Restore original HTTP functions and gateway flag (no global leak)
+        Rest.set_http_post!(prev_call_post)
+        Rest.set_http_get!(prev_call_get)
+        Rest._gateway_initialized[] = prev_call_init
     end
-
-    @testset "Dict{String,Any} body with timeout" begin
-        empty!(mock_bodies)
-        body = Dict{String,Any}("symbol" => "BTC/USDT")
-        result = call_exchange(client, "binance", "fetchTicker"; body=body, timeout=120.0)
-        @test length(mock_bodies) == 1
-end
-
-    @testset "body=nothing with timeout does not inject _timeout" begin
-        empty!(mock_bodies)
-        # When body is nothing and timeout is set, _timeout should NOT be injected
-        # because the condition is: timeout !== nothing && body !== nothing
-        # This test just verifies no error
-        result = call_exchange(client, "binance", "fetchTicker"; timeout=120.0)
-    end
-    @testset "Dict{Symbol,Any} body with timeout via keyword pass-through" begin
-        empty!(mock_bodies)
-        # Simulate the pattern used by choosefunc / exchange_funcs.jl:
-        # CcxtGateway.call_exchange(client, exchange_id, method; body=Dict{Symbol,Any}(), timeout=60.0)
-        body = Dict{Symbol,Any}(:params => Dict{String,Any}("type" => "swap"))
-        result = call_exchange(client, "binance", "fetchTickers"; body=body, timeout=60.0)
-        @test length(mock_bodies) == 1
-    end
-
-    # Restore original HTTP functions
-    Rest.set_http_post!(HTTP.post)
 end
 
 println("REST module edge case tests passed!")

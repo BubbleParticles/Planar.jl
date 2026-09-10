@@ -349,10 +349,10 @@ function test_positions()
         using .inst
         using .inst: CCash, entryprice!, pnlpct, cash
     end
-    prev = get(ENV, "JULIA_TEST_FAILFAST", false)
-    ENV["JULIA_TEST_FAILFAST"] = true
-    @testset "positions" begin
-        try
+    # withenv auto-restores (or unsets) the flag — never leaks Bool/string
+    # residue into ENV for later suites.
+    withenv("JULIA_TEST_FAILFAST" => "true") do
+        @testset "positions" begin
             Base.invokelatest(test_position_constructor)
             Base.invokelatest(test_reset_function)
             Base.invokelatest(test_leverage_function)
@@ -386,8 +386,6 @@ function test_positions()
             Base.invokelatest(test_leverage_updated_function)
             Base.invokelatest(test_print_function)
             Base.invokelatest(test_show_function)
-        finally
-            ENV["JULIA_TEST_FAILFAST"] = prev
         end
     end
 end

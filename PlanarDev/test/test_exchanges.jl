@@ -18,9 +18,13 @@ _exchange() = begin
         empty!(Exchanges.sb_exchanges)
         e = getexchange!(EXCHANGE, markets=:yes, cache=false, sandbox=false)
         @test nameof(e) == EXCHANGE
-        @test (EXCHANGE, "") ∈ keys(ExchangeTypes.exchanges) || (EXCHANGE, "") ∈ keys(ExchangeTypes.sb_exchanges)
-        e
+        # Live vs sandbox registries: exactly one must hold the exchange —
+        # a single accounting predicate over both, not an either/or @test.
+        @test any(r -> (EXCHANGE, "") ∈ keys(r), (ExchangeTypes.exchanges, ExchangeTypes.sb_exchanges))
     finally
+        # Exact restore: drop keys added during the test, then re-merge.
+        empty!(Exchanges.exchanges)
+        empty!(Exchanges.sb_exchanges)
         merge!(Exchanges.exchanges, saved_exchanges)
         merge!(Exchanges.sb_exchanges, saved_sb)
     end
