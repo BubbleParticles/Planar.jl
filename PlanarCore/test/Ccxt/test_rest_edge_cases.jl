@@ -358,6 +358,9 @@ end
     @test Rest.REST_GATEWAY_DIR isa String
     @test Rest.REST_GATEWAY_PIDFILE isa String
     @test Rest.REST_GATEWAY_LOCKFILE isa String
+    # mkpath: with cached precompilation the module-top-level mkpath may not
+    # have re-run, so ensure the dir before asserting existence (no flake).
+    mkpath(Rest.REST_GATEWAY_DIR)
     @test isdir(Rest.REST_GATEWAY_DIR)
     @test occursin("ccxt-gateway", Rest.REST_GATEWAY_DIR)
     @test occursin(".cache", Rest.REST_GATEWAY_DIR)

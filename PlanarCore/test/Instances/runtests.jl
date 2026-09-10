@@ -8,6 +8,7 @@ using PlanarCore.Instances.DataStructures: SortedDict
 using PlanarCore.Instances.TimeTicks: TimeFrame, @tf_str
 using PlanarCore.Instances.Data: DataFrame
 using PlanarCore.Instances.Misc: NoMargin, Isolated, Cross, DFT, Long, Short, WithMargin, IsolatedHedged, CrossHedged, CrossMargin, Hedged, NotHedged, opposite
+using PlanarCore.Instances.OrderTypes: Trade, Order, MarketOrder, Buy, PositionUpdated, MarginUpdated, LeverageUpdated
 using Test
 
 const _Dates = Instances.TimeTicks.Dates
@@ -244,7 +245,6 @@ end
 # 7. Events
 # =============================================================
 @testset "Position events" begin
-    using PlanarCore.Instances.OrderTypes: PositionUpdated, MarginUpdated, LeverageUpdated
     pe = PositionUpdated{:mocktest}(
         :liq_event, :default, "BTC/USDT", (Long(), true),
         date, 45000.0, 48000.0, 1000.0, 2000.0, 10.0, 50000.0
@@ -762,7 +762,6 @@ end
 # 24. Typed attrs and pushtrade! (2nd-round Task 1)
 # =============================================================
 @testset "Typed attrs and pushtrade!" begin
-    using PlanarCore.Instances.OrderTypes: Trade, Order, MarketOrder, Buy
 
     limits = (leverage=(min=1.0, max=10.0), amount=(min=1e-8, max=1e8),
               price=(min=1e-8, max=1e8), cost=(min=1e-8, max=1e8))
