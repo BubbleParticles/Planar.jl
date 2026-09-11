@@ -622,6 +622,7 @@ end
     out2 = sprint(show, ii)
     @test out2 isa String
     @test occursin(raw(ii), out2)
+end
 
 
 # =============================================================
