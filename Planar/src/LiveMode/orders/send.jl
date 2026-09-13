@@ -1,6 +1,7 @@
 using .Executors.Instruments: freecash
 using .Executors: @price!, @amount!
 using .Data: default_value
+using ..PaperMode.SimMode: singlewaycheck
 
 @doc "Represents a trigger order with fields for the order type, price, and trigger condition."
 const TriggerOrderTuple = NamedTuple{(:type, :price, :trigger)}
@@ -162,6 +163,13 @@ function live_send_order(
     # @price! ii stop_loss stop_price price profit_price take_profit
     # @amount! ii amount
     if !skipchecks
+        # Non-hedged margin gating (same rule as Sim/Paper `singlewaycheck`):
+        # without this, a direct `live_send_order` could open an opposite-side
+        # position that Sim/Paper order paths would refuse.
+        if s isa MarginStrategy && !singlewaycheck(s, ii, t)
+            @warn "send order: double direction order in non hedged mode" ii = raw(ii) t
+            return nothing
+        end
         if !check_available_cash(s, ii, amount, price, t)
             @warn "send order: not enough cash" this_cash = cash(ii, posside(t)) ai_comm = committed(
                 ii, posside(t)

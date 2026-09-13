@@ -2,7 +2,7 @@ using .st: NoMarginStrategy, MarginStrategy, Strategy
 using .Executors: AnyLimitOrder, AnyMarketOrder, CancelOrders, hasorders
 using ..PaperMode.OrderTypes: BuyOrSell, OrderSide
 using ..PaperMode.SimMode: singlewaycheck
-using PlanarCore.Instances: raw, InstrumentInstance, NoMarginInstance
+using PlanarCore.Instances: raw, InstrumentInstance, NoMarginInstance, posside
 using PlanarCore.Misc: Short
 using PlanarCore.OrderTypes: positionside
 @doc """ Places a limit order and synchronizes the cash balance.
@@ -72,7 +72,10 @@ function call!(
             s, ii, t; skipchecks, amount, price, waitfor, synced, kwargs=order_kwargs
         )
         if synced && trade isa Trade
-            live_sync_cash!(s, ii; since=trade.date, waitfor=@timeout_now)
+            # Sync the traded side explicitly: the `get_position_side`
+            # default can resolve to the opposite side on hedged instances,
+            # leaving the side the trade just opened stale.
+            live_sync_cash!(s, ii, posside(trade); since=trade.date, waitfor=@timeout_now)
         end
         trade
     end
@@ -133,7 +136,8 @@ function call!(
         )
         if synced && trade isa Trade
             waitorder(s, ii, trade.order; waitfor=@timeout_now)
-            live_sync_cash!(s, ii; since=trade.date, waitfor=@timeout_now)
+            # See limit-order path: sync the traded side, not the default side.
+            live_sync_cash!(s, ii, posside(trade); since=trade.date, waitfor=@timeout_now)
         end
         trade
     end

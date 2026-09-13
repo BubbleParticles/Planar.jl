@@ -5,8 +5,8 @@ using ..Executors.Instances: leverage_tiers, tier, position
 import ..Executors.Instances: Position, MarginInstance
 using ..Executors: withtrade!, maintenance!, orders, isliquidatable, LIQUIDATION_FEES, hasorders
 using ..Instances: PositionOpen, PositionUpdate, PositionClose
-using ..Instances: margin, maintenance, status, posside, ishedged, isopen, iszero, isdust, cash
-using ..Misc: DFT, Long, Short
+using ..Instances: margin, maintenance, status, posside, ishedged, isopen, iszero, isdust, cash, value
+using ..Misc: DFT, Long, Short, marginmode, CrossMargin
 import ..Executors: position!
 
 """
@@ -136,16 +136,57 @@ function liquidate!(
     close_position!(s, ii, p)
 end
 
+@doc """ Check whether a cross-margin account covers total maintenance margin.
+
+$(TYPEDSIGNATURES)
+
+Cross-margin positions share the strategy-level QC pool as collateral: the
+exchange liquidates the *account*, not the position. A position breaching its
+standalone liquidation price must therefore not liquidate while account equity
+(`s.cash` + position values at `date` candle prices) still covers the total
+maintenance margin of all open cross positions. Returns `false` (fall back to
+per-position liquidation) when prices are unavailable, e.g. Paper dates with
+no loaded candle.
 """
+function _cross_account_covered(s::MarginStrategy, date::DateTime)
+    equity = try
+        s.cash.value
+    catch
+        return false
+    end
+    tot_maint = zero(DFT)
+    for ii in s.holdings
+        marginmode(ii) isa CrossMargin || continue
+        for p in (Long(), Short())
+            isopen(ii, p) || continue
+            cp = try
+                p isa Long ? st.lowat(ii, date) : st.highat(ii, date)
+            catch
+                return false
+            end
+            equity += value(ii, p; current_price=cp)
+            tot_maint += maintenance(ii, p)
+        end
+    end
+    equity >= tot_maint
+end
+
+@doc """
 Checks asset positions for liquidations and executes them (Non hedged mode, so only the currently open position).
 
 $(TYPEDSIGNATURES)
 
 If a position is open and liquidatable, it is liquidated using the `liquidate!` function.
 The liquidation is performed on the asset positions in `ii` on the specified `date`.
+Cross-margin positions additionally require the whole account to be under
+water (see `_cross_account_covered`): shared collateral absorbs a single
+position's excursion past its standalone liquidation price.
 
 """
 function maybe_liquidate!(s::MarginStrategy, ii::MarginInstance, date::DateTime)
+    if marginmode(ii) isa CrossMargin && _cross_account_covered(s, date)
+        return nothing
+    end
     if ishedged(ii)
         for p in (Long(), Short())
             if isopen(ii, p) && isliquidatable(s, ii, p, date)

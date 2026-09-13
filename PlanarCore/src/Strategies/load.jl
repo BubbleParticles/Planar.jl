@@ -114,6 +114,35 @@ function _file(src, cfg, is_project)
     file
 end
 
+function _marginmode_param(body::DataType)
+    # Strategy{X,N,E,M,C}: locate the MarginMode parameter by constraint, not
+    # by position — a hardcoded `parameters[4]` silently returns the wrong
+    # type if the parameter order ever changes.
+    for p in body.parameters
+        if p isa Type && p <: MarginMode
+            return p()
+        end
+    end
+    nothing
+end
+
+function _defined_marginmode_type(S)
+    if S isa Type{<:Strategy}
+        return marginmode(S)
+    elseif S isa UnionAll
+        # For parametric type alias like S{M}, the margin mode is in the DataType body
+        body = S.body
+        while body isa UnionAll
+            body = body.body
+        end
+        if body isa DataType && body.name.wrapper == Strategy
+            mm = _marginmode_param(body)
+            !isnothing(mm) && return mm
+        end
+    end
+    nothing
+end
+
 @doc """ Determines the margin mode of a module.
 
 $(TYPEDSIGNATURES)
@@ -124,36 +153,12 @@ If this fails, it then tries to access the `SC` property of the module.
 """
 function _defined_marginmode(mod)
     if isdefined(mod, :S)
-        S = invokelatest(getfield, mod, :S)
-        # Handle both concrete types and UnionAll (parametric) type aliases
-        if S isa Type{<:Strategy}
-            return marginmode(S)
-        elseif S isa UnionAll
-            # For parametric type alias like S{M}, the margin mode is in the DataType body
-            body = S.body
-            while body isa UnionAll
-                body = body.body
-            end
-            if body isa DataType && body.name.wrapper == Strategy
-                mm_type = body.parameters[4]  # MarginMode is 4th parameter of Strategy
-                return mm_type()  # Return instance, not type
-            end
-        end
+        mm = _defined_marginmode_type(invokelatest(getfield, mod, :S))
+        !isnothing(mm) && return mm
     end
     if isdefined(mod, :SC)
-        SC = invokelatest(getfield, mod, :SC)
-        if SC isa Type{<:Strategy}
-            return marginmode(SC)
-        elseif SC isa UnionAll
-            body = SC.body
-            while body isa UnionAll
-                body = body.body
-            end
-            if body isa DataType && body.name.wrapper == Strategy
-                mm_type = body.parameters[4]
-                return mm_type()
-            end
-        end
+        mm = _defined_marginmode_type(invokelatest(getfield, mod, :SC))
+        !isnothing(mm) && return mm
     end
     error("Strategy module $mod does not define S or SC margin mode")
 end
@@ -451,12 +456,14 @@ function strategy!(mod::Module, cfg::Config)
     elseif def_mm != cfg.margin
         # The strategy object's margin type param `M` is authoritative for all
         # local dispatch (`singlewaycheck`, `positions!`, `isopen`, ...), and
-        # `_strat_load_checks` asserts `marginmode(s) == config.margin`. A
-        # mismatch would only fail at load time, so reconcile here: adopt the
-        # strategy-defined mode and warn loudly instead of proceeding into a
-        # guaranteed assertion failure.
-        @warn "Mismatching margin mode — adopting strategy-defined mode" config = cfg.margin strategy = def_mm
-        cfg.margin = def_mm
+        # `_strat_load_checks` asserts `marginmode(s) == config.margin`.
+        # Silently adopting either side would run a different margin/hedge
+        # model than requested (wrong collateral buckets, wrong liquidation,
+        # wrong hedged gating), so an explicit conflict is a hard error —
+        # matching `default_load`/`bare_load`, which fail the assert instead
+        # of proceeding. Align the strategy `S`/`SC` margin mode with the
+        # config, or leave the config margin unset to adopt the strategy default.
+        error("Mismatching margin mode: config requests '$(cfg.margin)' but strategy defines '$(def_mm)'.")
     end
     s_type = _strategy_type(mod, cfg)
     strat_exc = Symbol(exchangeid(s_type))

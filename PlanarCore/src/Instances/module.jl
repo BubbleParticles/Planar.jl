@@ -246,7 +246,13 @@ _ishedged(::Union{T,Type{T}}) where {T<:MarginMode{H}} where {H} = H == Hedged
 ishedged(args...; kwargs...) = _ishedged(args...; kwargs...)
 @doc "Check if the `InstrumentInstance` is hedged."
 ishedged(ii::InstrumentInstance) = marginmode(ii) |> ishedged
-@doc "Check if the `InstrumentInstance` is open."
+@doc """ Check if the `InstrumentInstance` is open.
+
+Inspects `lastpos` (the last opened side) only. On hedged instances both
+sides can be open simultaneously, so a `false` here does not imply the other
+side is flat — use per-side `isopen(ii, side)` or `iszero(ii)` (both sides
+via cash) when hedged.
+"""
 isopen(ii::NoMarginInstance) = !iszero(ii)
 isopen(ii::MarginInstance) =
     let po = position(ii)
@@ -1064,11 +1070,26 @@ end
 
 $(TYPEDSIGNATURES)
 
-This function sets the leverage for a `CrossInstance` to the maximum value for the current tier. Some exchanges interpret a leverage value of 0 as max leverage in cross margin mode. This means that the maximum amount of borrowed capital will be used to increase the potential return of the investment. We use a very high leverage value (1e10) instead of 0 to avoid division by zero in cost calculations, while preserving the "infinite leverage" semantics.
+Sets the leverage to the highest value the exchange allows for the position's
+tier (capped by the market leverage limits). Cross margin has no fixed
+leverage, but local margin math (`margin = notional / leverage`, liquidation
+price) needs a finite value — an unbounded sentinel would zero the margin and
+push the liquidation price past the entry price.
 """
 function leverage!(ii::CrossInstance, p::PositionSide, ::Val{:max})
     po = position(ii, p)
-    po.leverage[] = 1e10  # Use very high leverage instead of 0.0 to represent "infinite" leverage
+    # "Max" leverage is bounded by the exchange tier/limits for the position —
+    # never an unbounded sentinel. A 1e10 sentinel makes margin ≈ 0, which
+    # pushes liqprice above the entry price for longs
+    # (`liq = entry * (1 - 1/lev + mmr)`) and liquidates the position on the
+    # next candle. Resolve the real ceiling instead.
+    cap = min(maxleverage(po), ii.limits.leverage.max)
+    if !isfinite(cap) || cap < 1.0
+        @warn "leverage: cannot resolve finite max leverage, keeping current" current = leverage(po)
+        return leverage(po)
+    end
+    leverage!(po, cap)
+    leverage(po)
 end
 
 @doc "The opposite position w.r.t. the asset instance and another `Position` or `PositionSide`."

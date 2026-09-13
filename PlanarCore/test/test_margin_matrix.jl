@@ -16,7 +16,7 @@ using PlanarCore.OrderTypes: Buy, Sell
 using PlanarCore.Executors: iscommittable
 using PlanarCore.Executors.Instances: committed as exe_committed
 import PlanarCore.Executors: committed
-using Dates: DateTime
+using Dates: DateTime, Minute
 
 
 # Reuse mock from hedged_margin.jl style
@@ -173,4 +173,89 @@ end
     # _filter_positions and resp checks still separate
     @test occursin("resp_position_hedged", src)
     @test occursin("resp_position_margin_mode", src)
+end
+
+using PlanarCore.Misc: Config
+using PlanarCore.Strategies: strategy!
+using PlanarCore.Instances:
+    leverage, leverage!, maintenance!, margin!, notional!, entryprice!, liqprice!, status!, PositionOpen, CrossMargin, value, cash!
+using PlanarCore.SimMode: isliquidatable, maybe_liquidate!
+import PlanarCore.SimMode: _cross_account_covered
+
+module _MMProbeIso
+using PlanarCore.Strategies: Strategy
+using PlanarCore.Misc: Sim, Isolated
+using PlanarCore.ExchangeTypes: ExchangeID
+const S = Strategy{Sim,:MMProbeIso,ExchangeID{:binance},Isolated,:USDT}
+end
+module _MMProbeCrossSC
+using PlanarCore.Strategies: Strategy
+using PlanarCore.Misc: Sim, Cross
+using PlanarCore.ExchangeTypes: ExchangeID
+const SC{E} = Strategy{Sim,:MMProbeCross,E,Cross,:USDT}
+end
+
+@testset "Strategy-defined margin resolution" begin
+    @test PlanarCore.Strategies._defined_marginmode(_MMProbeIso) == Isolated()
+    @test PlanarCore.Strategies._defined_marginmode(_MMProbeCrossSC) == Cross()
+end
+
+@testset "Config/strategy margin mismatch is an error" begin
+    cfg = Config(; margin=Cross(), mode=Sim(), exchange=:binance)
+    @test_throws ErrorException strategy!(_MMProbeIso, cfg)
+end
+
+@testset "Cross max leverage is tier-bounded" begin
+    exc = _make_exchange_matrix(:crossmax_test)
+    tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
+    _TIER_CACHES[(:crossmax_test, "BTC/USDT:USDT")] = ([tier], time()*1000)
+    ii = _make_instance_matrix(Cross(), exc)
+    leverage!(ii, Long(), Val(:max))
+    # A 1e10 sentinel would zero the margin and push liqprice past entry
+    @test leverage(ii, Long()) == 10.0
+    @test leverage(ii, Long()) < 1e9
+end
+
+@testset "Cross liquidation is account-level" begin
+    exc = _make_exchange_matrix(:crossliq_test)
+    tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
+    _TIER_CACHES[(:crossliq_test, "BTC/USDT:USDT")] = ([tier], time()*1000)
+    uni = InstrumentCollection(["BTC/USDT:USDT"]; exc=exc, margin=Cross(), load_data=false)
+    cfg = Config(; qc=:USDT, initial_cash=100000.0)
+    s = Strategy(Main, Sim(), Cross(), TimeFrame("1m"), exc, uni; config=cfg)
+    # Crash candles: 50k -> 40k, below the standalone long liq (45.5k)
+    df = DataFrame(
+        timestamp=[DateTime(2024, 1, 1) + Minute(i) for i in 0:3],
+        open=[50000.0, 50000.0, 40000.0, 40000.0],
+        high=[50005.0, 50005.0, 40005.0, 40005.0],
+        low=[49995.0, 39900.0, 39900.0, 39990.0],
+        close=[50000.0, 40000.0, 40000.0, 40000.0],
+        volume=[100.0, 100.0, 100.0, 100.0],
+    )
+    a = parse(Derivative, "BTC/USDT:USDT")
+    data = SortedDict{TimeFrame,DataFrame}(TimeFrame("1m") => df)
+    limits = (leverage=(; min=1.0, max=10.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8))
+    precision = (amount=1e-8, price=1e-8)
+    fees = (taker=0.001, maker=0.001, min=0.001, max=0.001)
+    ii = InstrumentInstance(a, data, exc, Cross(); limits=limits, precision=precision, fees=fees)
+    po = position(ii, Long())
+    cash!(cash(po), 1.0)
+    entryprice!(po, 50000.0)
+    notional!(po, 50000.0)
+    leverage!(po, 10.0)
+    margin!(po)
+    maintenance!(po, 500.0)
+    liqprice!(po, 45500.0)
+    status!(ii, Long(), PositionOpen())
+    push!(s.holdings, ii)
+    date = DateTime(2024, 1, 1, 0, 1)
+    # Standalone the position is liquidatable (39900 <= 45500) ...
+    @test isliquidatable(s, ii, Long(), date)
+    # ... but the funded account absorbs it: no liquidation
+    @test _cross_account_covered(s, date)
+    maybe_liquidate!(s, ii, date)
+    @test isopen(ii, Long())
+    # A drained account is under water: falls back to per-position liquidation
+    cash!(s.cash, 100.0)
+    @test !_cross_account_covered(s, date)
 end
