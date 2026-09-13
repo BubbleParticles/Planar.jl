@@ -1,21 +1,21 @@
 using Test
 using PlanarCore
-using PlanarCore.Misc: Sim, Paper, Live, Isolated, IsolatedHedged, Cross, CrossHedged, NoMargin, DFT
+using PlanarCore.Misc: Sim, Paper, Live, Isolated, IsolatedHedged, Cross, CrossHedged, NoMargin, DFT, Hedged, MarginMode
 using PlanarCore.Strategies: Strategy
 using PlanarCore.Strategies.Instances: ishedged, isopen, Long, Short, position, freecash, cash, committed
-using PlanarCore.Instances: InstrumentInstance
+using PlanarCore.Instances: InstrumentInstance, cash!
 using PlanarCore.Instances.Instruments.Derivatives: Derivative
 using PlanarCore.ExchangeTypes: CcxtExchange, ExchangeID, ExcPrecisionMode
 using PlanarCore.ExchangeTypes.OrderedCollections: OrderedSet
 using PlanarCore.Collections: InstrumentCollection
 using PlanarCore.TimeTicks: TimeFrame
-using PlanarCore.Exchanges: _TIER_CACHES, LeverageTier
+using PlanarCore.Exchanges: _TIER_CACHES, LeverageTier, marginmode!
 using PlanarCore.Instances.Data: DataFrame
 using PlanarCore.Instances.DataStructures: SortedDict
-using PlanarCore.OrderTypes: Buy, Sell
+using PlanarCore.OrderTypes: Buy, Sell, BuyOrder, SellOrder, ShortBuyOrder
 using PlanarCore.Executors: iscommittable
-using PlanarCore.Executors.Instances: committed as exe_committed
-import PlanarCore.Executors: committed
+using PlanarCore.Executors: committed as exe_committed
+using PlanarCore.ExchangeTypes.CcxtGateway.Rest
 using Dates: DateTime, Minute
 
 
@@ -78,101 +78,160 @@ function _make_instance_matrix(margin, exc)
     fees = (taker=0.001, maker=0.001, min=0.001, max=0.001)
     InstrumentInstance(a, data, exc, margin; limits=limits, precision=precision, fees=fees)
 end
+# Live Strategy construction hits the gateway (setMarginMode/setPositionMode).
+# Mock those endpoints so Live cells construct for real instead of skipping.
+function _with_live_margin_mock(f)
+    prev_post = Rest._http_post[]
+    prev_get = Rest._http_get[]
+    prev_init = Rest._gateway_initialized[]
+    Rest._gateway_initialized[] = true
+    mock_post = (url; headers=[], body=nothing, kwargs...) -> begin
+        if occursin("/setMarginMode", url) ||
+           occursin("/setPositionMode", url) ||
+           occursin("/setLeverage", url) ||
+           occursin(r"/exchanges/[^/]+/start", url)
+            return Rest.HTTP.Response(
+                200, Rest.JSON3.write(Dict("result" => true, "error" => nothing, "error_code" => nothing))
+            )
+        end
+        return prev_post(url; headers=headers, body=body, kwargs...)
+    end
+    Rest.set_http_post!(mock_post)
+    try
+        f()
+    finally
+        Rest.set_http_post!(prev_post)
+        Rest.set_http_get!(prev_get)
+        Rest._gateway_initialized[] = prev_init
+    end
+end
 
 @testset "Margin × Hedged × ExecMode matrix (15 cells)" begin
-    margins = (NoMargin(), Isolated(), IsolatedHedged(), Cross(), CrossHedged())
-    modes = (Sim(), Paper(), Live())
-    for margin in margins, mode in modes
-        label = "$(typeof(margin).name.name)/$(typeof(mode).name.name)"
-        @testset "$label" begin
-            eid_sym = Symbol("t_$(typeof(mode).name.name)_$(typeof(margin).name.name)")
-            exc = _make_exchange_matrix(eid_sym)
-            # seed tier cache
-            tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
-            _TIER_CACHES[(Symbol(eid_sym), "BTC/USDT:USDT")] = ([tier], time()*1000)
-            uni = InstrumentCollection(["BTC/USDT:USDT"]; exc=exc, margin=margin, load_data=false)
-            cfg = PlanarCore.Misc.Config(; qc=:USDT, initial_cash=100000.0)
-            # Live construction tries gateway POST; in isolated test env gateway may be absent (404).
-            # Treat gateway error as skip for Live cells — hedged dispatch still verified via instance.
-            s = try
-                Strategy(Main, mode, margin, TimeFrame("1m"), exc, uni; config=cfg)
-            catch e
-                if mode isa Live
-                    # Live gateway 404 expected for mock t_Live_* exchange (not in gateway)
-                    ii = _make_instance_matrix(margin, exc)
-                    @test ishedged(ii) == (margin isa Union{IsolatedHedged, CrossHedged})
-                    continue
+    _with_live_margin_mock() do
+        margins = (NoMargin(), Isolated(), IsolatedHedged(), Cross(), CrossHedged())
+        modes = (Sim(), Paper(), Live())
+        for margin in margins, mode in modes
+            label = "$(typeof(margin).name.name)/$(typeof(mode).name.name)"
+            @testset "$label" begin
+                eid_sym = Symbol("t_$(typeof(mode).name.name)_$(typeof(margin).name.name)")
+                exc = _make_exchange_matrix(eid_sym)
+                # seed tier cache
+                tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
+                _TIER_CACHES[(Symbol(eid_sym), "BTC/USDT:USDT")] = ([tier], time()*1000)
+                uni = InstrumentCollection(["BTC/USDT:USDT"]; exc=exc, margin=margin, load_data=false)
+                cfg = PlanarCore.Misc.Config(; qc=:USDT, initial_cash=100000.0)
+                # Live gateway endpoints are mocked above: construction must succeed
+                # for real in all 15 cells (no skip/continue).
+                s = Strategy(Main, mode, margin, TimeFrame("1m"), exc, uni; config=cfg)
+                @test s isa Strategy
+                ii = _make_instance_matrix(margin, exc)
+                if margin isa NoMargin
+                    @test ii isa PlanarCore.Instances.NoMarginInstance
+                elseif margin isa Union{IsolatedHedged, CrossHedged}
+                    @test ii isa PlanarCore.Instances.HedgedInstance
                 else
-                    rethrow(e)
+                    @test ii isa PlanarCore.Instances.MarginInstance
+                    @test !(ii isa PlanarCore.Instances.HedgedInstance)
                 end
-            end
-            @test s isa Strategy
-            ii = _make_instance_matrix(margin, exc)
-            if margin isa NoMargin
-                @test ii isa PlanarCore.Instances.NoMarginInstance
-            elseif margin isa Union{IsolatedHedged, CrossHedged}
-                @test ii isa PlanarCore.Instances.HedgedInstance
-            else
-                @test ii isa PlanarCore.Instances.MarginInstance
-                @test !(ii isa PlanarCore.Instances.HedgedInstance)
-            end
-            # Hedged flag propagates from margin to instance
-            @test ishedged(ii) == (margin isa Union{IsolatedHedged, CrossHedged})
-            # Strategy marginmode matches (instance compare, not typeof)
-            @test PlanarCore.Misc.marginmode(s) == margin
-            # Cash buckets: freecash(s) vs freecash(ii, side)
-            # Increase bucket is strategy, Reduce is position
-            # Verify via _cashfrom indirectly: it should not throw
-            using PlanarCore.Executors: committed as exe_committed
-            # Live check_available_cash bucket probe (no gateway needed)
-            if mode isa Live && margin isa PlanarCore.Misc.WithMargin
-                # ensure_marginmode stores full MarginMode, not string
-                ii[:live_margin_mode] = margin
-                @test ii[:live_margin_mode] === margin
-                delete!(ii.attrs, :live_margin_mode)
+                # Hedged flag propagates from margin to instance
+                @test ishedged(ii) == (margin isa Union{IsolatedHedged, CrossHedged})
+                # Strategy marginmode matches (instance compare, not typeof)
+                @test PlanarCore.Misc.marginmode(s) == margin
             end
         end
     end
 end
 
-@testset "Cash buckets: iscommittable / _cashfrom parity" begin
+@testset "Cash buckets: Increase→strategy, Reduce→position" begin
     exc = _make_exchange_matrix(:bucket_test)
     tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
     _TIER_CACHES[(:bucket_test, "BTC/USDT:USDT")] = ([tier], time()*1000)
     uni = InstrumentCollection(["BTC/USDT:USDT"]; exc=exc, margin=Isolated(), load_data=false)
     cfg = PlanarCore.Misc.Config(; qc=:USDT, initial_cash=100000.0)
     s = Strategy(Main, Sim(), Isolated(), TimeFrame("1m"), exc, uni; config=cfg)
-    ii = _make_instance_matrix(Isolated(), exc)
-    # _cashfrom: Increase uses st.freecash(s), Reduce uses Instances.freecash(ii, side)
-    # Verify file now uses Instances.freecash for Reduce (bug fix)
-    src = read(joinpath(@__DIR__, "../src/Executors/orders/limit.jl"), String)
-    @test occursin("Instances.freecash(ii, positionside(o)())", src)
-    @test !occursin("st.freecash(ii, positionside", src)
-    # iscommittable overloads: Type+Ref vs instance — existence check via methods
-    @test length(methods(iscommittable)) >= 6
-    @test any(m -> occursin("Type", string(m)), methods(iscommittable))
+    # Use the universe member so inuniverse(ii, s) holds.
+    ii = first(s.universe)
+    # Fund the long position bucket; strategy bucket starts at 100k.
+    po = position(ii, Long())
+    cash!(cash(po), 500.0)
+    # Increase reads the strategy bucket: small commit passes on funded strategy.
+    @test iscommittable(s, BuyOrder, Ref(10.0), ii)
+    # Reduce reads the position bucket: small commit passes on funded position.
+    @test iscommittable(s, SellOrder, Ref(10.0), ii)
+    # Oversized commits are rejected per-bucket.
+    @test !iscommittable(s, BuyOrder, Ref(1_000_000_000.0), ii)
+    @test !iscommittable(s, SellOrder, Ref(1_000_000_000.0), ii)
+    # Drain the strategy bucket: Increase blocks, Reduce (position bucket) still passes.
+    # This is the regression guard for the old `st.freecash(ii, ...)` bug where
+    # Reduce incorrectly read the strategy bucket.
+    cash!(s.cash, 100.0)
+    @test !iscommittable(s, BuyOrder, Ref(50_000.0), ii)
+    @test iscommittable(s, SellOrder, Ref(10.0), ii)
 end
 @testset "Margin-mode setting authoritative" begin
-    # leverage.jl: marginmode!(MarginMode) should derive hedged from mode, not caller hedged kwarg
-    src = read(joinpath(@__DIR__, "../src/Exchanges/leverage.jl"), String)
-    @test occursin("hedged = mode isa MarginMode{Hedged}", src) || occursin("hedged = ishedged(mode)", src)
-    @test !occursin("function marginmode!(exc::Exchange, mode::MarginMode, symbol=\"\"; hedged", src)
-    mod_src = read(joinpath(@__DIR__, "../src/Strategies/module.jl"), String)
-    @test occursin("marginmode!(exc, margin, \"\")", mod_src)
-    @test !occursin("marginmode!(exc, margin, \"\"; hedged", mod_src)
-    send_src = read(joinpath(@__DIR__, "../../Planar/src/LiveMode/orders/send.jl"), String)
-    @test occursin("marginmode!(exc, remote_mode, raw(ii))", send_src)
-    @test !occursin("marginmode!(exc, remote_mode, raw(ii); hedged", send_src)
+    exc = _make_exchange_matrix(:auth_test)
+    tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
+    _TIER_CACHES[(:auth_test, "BTC/USDT:USDT")] = ([tier], time()*1000)
+    prev_post = Rest._http_post[]
+    prev_init = Rest._gateway_initialized[]
+    Rest._gateway_initialized[] = true
+    sent_hedged = Any[]
+    n_posts = Ref(0)
+    mock_post = (url; headers=[], body=nothing, kwargs...) -> begin
+        n_posts[] += 1
+        if occursin("/setPositionMode", url)
+            raw = isnothing(body) ? get(kwargs, :body, nothing) : body
+            hv = missing
+            if raw isa AbstractDict
+                hv = get(raw, "hedged", get(raw, :hedged, missing))
+            elseif !isnothing(raw)
+                parsed = try
+                    Rest.JSON3.read(string(raw), Dict{String,Any})
+                catch
+                    Dict{String,Any}()
+                end
+                hv = get(parsed, "hedged", missing)
+            end
+            push!(sent_hedged, hv)
+        end
+        return Rest.HTTP.Response(
+            200, Rest.JSON3.write(Dict("result" => true, "error" => nothing, "error_code" => nothing))
+        )
+    end
+    Rest.set_http_post!(mock_post)
+    try
+        # Hedged mode must send hedged=true derived from the MarginMode itself.
+        @test marginmode!(exc, IsolatedHedged(), "BTC/USDT:USDT")
+        @test !isempty(sent_hedged) && last(sent_hedged) === true
+        empty!(sent_hedged)
+        # Non-hedged mode must send hedged=false.
+        @test marginmode!(exc, Cross(), "BTC/USDT:USDT")
+        @test !isempty(sent_hedged) && last(sent_hedged) === false
+        # NoMargin is a local no-op: returns true without gateway traffic.
+        n_before = n_posts[]
+        @test marginmode!(exc, NoMargin(), "BTC/USDT:USDT")
+        @test n_posts[] == n_before
+    finally
+        Rest.set_http_post!(prev_post)
+        Rest._gateway_initialized[] = prev_init
+    end
 end
 
-@testset "Live sync hedged dispatch" begin
-    src = read(joinpath(@__DIR__, "../../Planar/src/LiveMode/positions/sync.jl"), String)
-    @test occursin("function live_sync_position!(s::LiveStrategy, ii::HedgedInstance", src)
-    @test occursin("function live_sync_position!(s::LiveStrategy, ii::MarginInstance", src)
-    @test occursin("ishedged(ii) == (typeof(ii) <: HedgedInstance)", src)
-    # _filter_positions and resp checks still separate
-    @test occursin("resp_position_hedged", src)
-    @test occursin("resp_position_margin_mode", src)
+@testset "Hedged instance type discipline" begin
+    exc = _make_exchange_matrix(:hedgetype_test)
+    tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
+    _TIER_CACHES[(:hedgetype_test, "BTC/USDT:USDT")] = ([tier], time()*1000)
+    ii_h = _make_instance_matrix(IsolatedHedged(), exc)
+    ii_s = _make_instance_matrix(Isolated(), exc)
+    # Hedged instances carry both sides and stay a MarginInstance subtype.
+    @test ii_h isa PlanarCore.Instances.HedgedInstance
+    @test ii_h isa PlanarCore.Instances.MarginInstance
+    @test ishedged(ii_h)
+    @test !isnothing(position(ii_h, Long())) && !isnothing(position(ii_h, Short()))
+    # Single-way instances are margin but not hedged.
+    @test ii_s isa PlanarCore.Instances.MarginInstance
+    @test !(ii_s isa PlanarCore.Instances.HedgedInstance)
+    @test !ishedged(ii_s)
 end
 
 using PlanarCore.Misc: Config
