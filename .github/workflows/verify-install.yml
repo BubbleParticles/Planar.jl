@@ -21,7 +21,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  JULIA_VERSION: "1.12"
+  JULIA_VERSION: "1.13"
   REGISTRY_URL: "https://github.com/BubbleParticles/PlanarRegistry.git"
 
 jobs:

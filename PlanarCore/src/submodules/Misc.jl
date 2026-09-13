@@ -1,5 +1,5 @@
 module Misc
-    using ConcurrentCollections, Dates, Distributed, DocStringExtensions, FunctionalCollections
+    using Dates, Distributed, DocStringExtensions, FunctionalCollections
     using JSON3, LoggingExtras, OrderedCollections, Pkg, PrecompileTools, Reexport
     using Serialization, TOML
     include("../Misc/module.jl")

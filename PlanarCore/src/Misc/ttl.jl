@@ -2,7 +2,7 @@
 
 """
 module TimeToLive
-using ConcurrentCollections: modify!, Delete, ConcurrentDict
+using ..ConcurrentCollections: ConcurrentDict
 
 export TTL, safettl
 
@@ -53,16 +53,6 @@ function safettl(K::Type, V::Type, ttl; kwargs...)
 end
 
 Base.delete!(t::TTL, key) = (delete!(t.dict, key); t)
-Base.empty!(t::ConcurrentDict{K,V}) where {K,V} =
-    for k in keys(t)
-        modify!(t, k) do value
-            Delete(value)
-        end
-    end
-Base.delete!(t::ConcurrentDict{K,V}, k) where {K,V} =
-    modify!(t, k) do value
-        Delete(value)
-    end
 
 Base.empty!(t::TTL) = (empty!(t.dict); t)
 # Specifying ::Function fixes some method invalidations

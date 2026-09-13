@@ -17,7 +17,7 @@ PlanarCore = "1"
 Statistics = "1.11.1"
 StatsBase = "0.34.12"
 TimeFrames = "0.2.0"
-julia = "1.12"
+julia = "1.13"
 
 [deps]
 Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"

@@ -1,4 +1,4 @@
-FROM julia:1.12 AS base
+FROM julia:1.13 AS base
 RUN mkdir /planar \
     && mkdir -p /planar/user \
     && apt-get update \

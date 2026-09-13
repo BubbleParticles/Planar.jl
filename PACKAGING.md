@@ -89,7 +89,7 @@ so users only need `Pkg.add("Planar")`. Status and remaining requirements:
    was added (runs nightly, `subdirs = [ ...9 packages... ]`) to keep them in
    sync with new releases. Merge its PRs regularly.
 2. **Broaden `julia` compat — PENDING CI proof.** Packages currently declare
-   `julia = "1.12"`. General prefers wider ranges (e.g. `1.9`–`1.12`). Loosen
+   `julia = "1.13"`. General prefers wider ranges (e.g. `1.9`–`1.13`). Loosen
    after CI proves older versions work.
 3. **License — DONE.** The project license is **Apache-2.0** (root `LICENSE.md`,
    *not* MIT). RegistryCI automerge requires an OSI-approved license file in the

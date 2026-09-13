@@ -4,7 +4,6 @@ using JSON3
 using ..TimeTicks
 using ..TimeTicks: Lang
 using FunctionalCollections: PersistentHashMap
-using ConcurrentCollections: ConcurrentCollections
 using OrderedCollections: OrderedCollections, OrderedDict, LittleDict
 
 using LoggingExtras: LoggingExtras
@@ -12,6 +11,7 @@ const LOGGING_GROUPS = Set{Symbol}()
 export LOGGING_GROUPS
 
 include("defs.jl")
+include("concurrent.jl")
 include("lists.jl")
 include("sandbox.jl")
 include("types.jl")

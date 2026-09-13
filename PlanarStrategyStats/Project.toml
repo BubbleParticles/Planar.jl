@@ -8,7 +8,7 @@ license = "Apache-2.0"
 OnlineTechnicalIndicators = "0.1.2"
 PlanarCore = "1"
 Statistics = "1.11.1"
-julia = "1.12"
+julia = "1.13"
 
 [deps]
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"

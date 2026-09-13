@@ -20,7 +20,7 @@ on:
     branches: [main, master]
 
 env:
-  JULIA_VERSION: '1.12'
+  JULIA_VERSION: '1.13'
   PYTHON: python3
 
 jobs:

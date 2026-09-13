@@ -1,10 +1,10 @@
-# Dev container for Planar.jl — mirrors CI (Julia 1.12, direnv-driven env).
+# Dev container for Planar.jl — mirrors CI (Julia 1.13, direnv-driven env).
 #
 # The production Dockerfile is deliberately NOT reused: it builds a compiled
 # sysimage (Planar.so) for releases and requires sandbox API keys as build
 # args. A devcontainer needs the raw toolchain, the workspace bind-mounted
 # (see .devcontainer/devcontainer.json), and env vars from .envrc via direnv.
-FROM julia:1.12
+FROM julia:1.13
 
 # CI parity: `xauth direnv` (see .github/workflows/tests.yml). Plus the
 # ccxt-gateway stack: python3/venv/pip (the Julia side auto-creates the

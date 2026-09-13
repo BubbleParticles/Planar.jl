@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: true
-      JULIA_VERSION: 1.12
+      JULIA_VERSION: 1.13
       PLANARWEBSITE_TOKEN: ${{ secrets.PLANARWEBSITE_TOKEN }}
     permissions: write-all
 
@@ -42,7 +42,7 @@ jobs:
       - name: Set up Julia
         uses: julia-actions/setup-julia@v2
         with:
-          version: "1.12"
+          version: "1.13"
           include-all-prereleases: false
       - uses: actions/cache@v4
         id: julia-cache
