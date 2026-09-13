@@ -378,6 +378,13 @@ end
 
 function _ensure_gateway_running()
     get(ENV, "CCXT_GATEWAY_DISABLE", "") == "true" && return nothing
+    # No-op during precompilation (as documented on `default_client`): the
+    # gateway starts lazily on first exchange use, never while generating
+    # precompile output. Without this, `using PlanarCore` on a machine without
+    # ccxt-gateway installed throws from `_find_gateway_python` (installs are
+    # disabled under `generating_output`), and `spawn_gateway` runs its
+    # stale-PID kill and port-ping sweep as a precompile side effect.
+    Base.generating_output() && return nothing
     _gateway_initialized[] && return nothing
     lock(_gateway_init_lock) do
         _gateway_initialized[] && return nothing
@@ -645,8 +652,15 @@ function _kill_process_on_port(port::Int)
         @debug "No process found on port $port or lsof unavailable"
     end
 end
-
 function spawn_gateway(; python_path=nothing, gateway_path="ccxt_gateway.main")
+    # Fail fast during precompilation, before any side effects (stale-PID kill,
+    # port-ping sweep, log truncation): resolving or installing the gateway
+    # Python needs network and a live process, both off-limits while generating
+    # precompile output. Precompile workloads that need the gateway catch this
+    # and skip those paths; the gateway still starts lazily on first runtime
+    # exchange use. Runtime callers are unaffected.
+    Base.generating_output() &&
+        error("ccxt-gateway spawn skipped during precompilation (starts lazily on first exchange use)")
     @debug "spawn_gateway: starting"
     lock(_gateway_init_lock) do
         # Check if gateway is already running (must respond to HTTPS ping)

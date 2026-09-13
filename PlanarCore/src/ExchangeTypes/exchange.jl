@@ -93,7 +93,9 @@ function Exchange(sym::Symbol; account="", kwargs...)
             catch
                 @debug "spawn_gateway failed (may already be running)"
             end
-            sleep(3)
+            # No point waiting on a gateway that cannot exist during precompilation
+            # (`spawn_gateway` fail-fasts under `generating_output` above).
+            Base.generating_output() || sleep(3)
         end
         resp = CcxtGateway.start_exchange(client, name)
         if resp isa Dict
@@ -118,7 +120,13 @@ function Exchange(sym::Symbol; account="", kwargs...)
             sleep(1)
         end
     catch e
-        @warn "Failed to start exchange $name on gateway: $e"
+        # Expected offline during precompilation: the workload catches further
+        # up and skips, so keep it at debug; runtime keeps the `@warn`.
+        if Base.generating_output()
+            @debug "Failed to start exchange $name on gateway (precompilation, skipping)" exception=e
+        else
+            @warn "Failed to start exchange $name on gateway: $e"
+        end
     end
     has_sym = Dict{Symbol,Any}()
     tfs = OrderedSet{String}()

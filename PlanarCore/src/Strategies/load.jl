@@ -424,7 +424,14 @@ function _strategy_type(mod, cfg)
             end
             try
                 if E !== nothing && E !== cfg.exchange
-                    @warn "loading: overriding default exchange with config" E cfg.exchange
+                    # Precompile workloads routinely construct strategies whose
+                    # default exchange differs from the scratch `Config()`;
+                    # stay quiet there, warn at runtime.
+                    if Base.generating_output()
+                        @debug "loading: overriding default exchange with config" E cfg.exchange
+                    else
+                        @warn "loading: overriding default exchange with config" E cfg.exchange
+                    end
                 end
                 invokelatest(getfield, mod, :SC){ExchangeID{cfg.exchange}}
             catch

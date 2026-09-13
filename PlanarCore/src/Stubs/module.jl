@@ -134,7 +134,13 @@ function stub_strategy(mod=StubStrategy, args...; dostub=true, cfg=Config(), kwa
         Strategies.strategy(mod, cfg; kwargs...)
     catch e
         e isa InterruptException && rethrow(e)
-        @error "stubs: strategy construction failed" exception=(e, catch_backtrace())
+        # Same best-effort rationale as `loadmarkets!`: during precompilation
+        # the caller catches and skips, so stay quiet; runtime keeps `@error`.
+        if Base.generating_output()
+            @debug "stubs: strategy construction failed (precompilation, skipping)" exception=(e, catch_backtrace())
+        else
+            @error "stubs: strategy construction failed" exception=(e, catch_backtrace())
+        end
         rethrow(e)
     end
     @assert s isa Strategy

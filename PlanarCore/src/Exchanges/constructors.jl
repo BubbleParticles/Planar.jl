@@ -135,7 +135,15 @@ function loadmarkets!(exc; cache=true, agemax=Day(1))
                 end
             end
         catch e
-            @error "Failed to load markets from gateway" exc = exc.name exception = e
+            # Best-effort during precompilation: the surrounding workload
+            # catches this and skips gateway-dependent paths, so a red
+            # `@error` on a fresh offline `Pkg.precompile` would only alarm.
+            # Runtime failures keep the `@error` since the caller rethrows.
+            if Base.generating_output()
+                @debug "Failed to load markets from gateway (precompilation, skipping)" exc = exc.name exception = e
+            else
+                @error "Failed to load markets from gateway" exc = exc.name exception = e
+            end
             rethrow(e)
         end
     end
