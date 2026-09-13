@@ -193,9 +193,10 @@ const NoMarginStrategy = Strategy{X,N,<:ExchangeID,NoMargin,C} where {X<:ExecMod
 const STRATEGY_LOAD_CALLBACKS = (; (m => Function[] for m in (:sim, :paper, :live))...)
 # Convenience constructors for type aliases.
 # These allow creating strategies with just a name and margin mode for testing.
-# The inner constructor requires (mode, margin, timeframe, exchange, universe);
-# build those explicitly (plus a default timeframe) instead of dispatching to
-# the asset-list constructor, which has no matching method.
+# Build explicitly through the inner constructor (mode, margin, timeframe,
+# exchange, universe) with an empty universe and default timeframe, so no
+# exchange/universe resolution runs (the asset-list outer constructor would
+# do gateway-tinged `getexchange!` + callback work).
 function _empty_test_strategy(name::String, mode::ExecMode, margin::MarginMode)
     cfg = Config()
     cfg.mode = mode

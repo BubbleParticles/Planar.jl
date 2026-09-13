@@ -25,6 +25,5 @@ using PlanarCore.Misc: swapkeys
 using PlanarCore.Misc.DocStringExtensions
 
 # include("consts.jl")
-include("types/constructors.jl")
 include("types/datahandlers.jl")
 include("functions.jl")

@@ -797,3 +797,14 @@ end
     @test length(Instances.trades(ii)) == 1
     @test last(Instances.trades(ii)) === t
 end
+# =============================================================
+@testset "string margin parsing rejects unknown modes" begin
+    # A typo'd margin mode must fail fast, not silently become NoMargin spot.
+    @test Instances._margin_from_string("spot") isa NoMargin
+    @test Instances._margin_from_string("") isa NoMargin
+    @test Instances._margin_from_string("isolated") isa Isolated
+    @test Instances._margin_from_string("isolated_hedged") isa IsolatedHedged
+    @test Instances._margin_from_string("cross") isa Cross
+    @test Instances._margin_from_string("cross-hedged") isa CrossHedged
+    @test_throws ErrorException Instances._margin_from_string("isolatd")
+end

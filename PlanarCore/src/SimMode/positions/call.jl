@@ -4,6 +4,7 @@ using ..Executors.OrderTypes: postoside
 using ..Strategies: MarginStrategy, NoMarginStrategy
 using ..Instances: ishedged, NoMarginInstance
 using ..Lang: splitkws
+using ..Misc: LittleDict
 
 const _PROTECTIONS_WARNING = """
 !!! warning "Protections"
@@ -30,42 +31,6 @@ function singlewaycheck(s, ii, t)
     end
     return true
 end
-@doc "Creates a simulated limit order, updating a levarged position."
-function call!(
-    s::MarginStrategy{Sim},
-    ii::MarginInstance,
-    t::Type{<:AnyLimitOrder};
-    amount,
-    kwargs...,
-)
-    !singlewaycheck(s, ii, t) && return nothing
-    fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
-    o = create_sim_limit_order(s, t, ii; amount, order_kwargs...)
-    return if !isnothing(o)
-        t = order!(s, o, o.date, ii; fees_kwarg...)
-        @deassert abs(committed(o)) > DFT(0.0) || pricetime(o) ∉ keys(orders(s, ii, o))
-        t
-    end
-end
-
-@doc """"Creates a simulated market order, updating a levarged position.
-$_PROTECTIONS_WARNING
-"""
-function call!(
-    s::MarginStrategy{Sim},
-    ii::MarginInstance,
-    t::Type{<:AnyMarketOrder};
-    amount,
-    date,
-    kwargs...,
-)
-    !singlewaycheck(s, ii, t) && return nothing
-    fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
-    o = create_sim_market_order(s, t, ii; amount, date, order_kwargs...)
-    isnothing(o) && return nothing
-    marketorder!(s, o, ii, amount; date, fees_kwarg...)
-end
-
 
 @doc "Closes a leveraged position."
 function call!(
@@ -88,13 +53,13 @@ function call!(
 end
 
 @doc "Closes all strategy positions"
-function call!(s::MarginStrategy{Sim}, side::ByPos, date, ::PositionClose; kwargs...)
+function call!(s::MarginStrategy{<:Union{Sim,Paper}}, side::ByPos, date, ::PositionClose; kwargs...)
     LittleDict(
         ii => call!(s, ii, side, date, PositionClose(); kwargs...) for ii in s.universe
     )
 end
 @doc "Closes all strategy positions (no margin)"
-function call!(s::NoMarginStrategy{Sim}, side::ByPos, date, ::PositionClose; kwargs...)
+function call!(s::NoMarginStrategy{<:Union{Sim,Paper}}, side::ByPos, date, ::PositionClose; kwargs...)
     LittleDict(
         ii => call!(s, ii, side, date, PositionClose(); kwargs...) for ii in s.universe
     )

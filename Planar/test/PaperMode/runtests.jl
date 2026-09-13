@@ -224,5 +224,42 @@ end
     @test haskey(s.attrs, :is_stop)
 end
 
+@testset "paper order task store roundtrip (orders/limit.jl)" begin
+    # The task store is two-level `{ii => {o => (task, alive)}}`. Registration
+    # used a malformed 3-param LittleDict ctor (hard TypeError), so no Paper
+    # limit order ever got a fill task; init used a flat Dict that mismatched
+    # the nested accessors. Roundtrip must work for any limit order type.
+    exc = make_mock_exchange()
+    ii = make_asset_instance(exc)
+    s = _make_paper_strategy(exc, ii)
+    PaperMode.st.default!(s)
+    store = s.attrs[:paper_order_tasks]
+    @test isempty(store)
+    for o in (_limit_buy(), _limit_sell())
+        task = @task nothing
+        alive = Ref(true)
+        PaperMode._register_paper_order_task!(s, ii, o, task, alive)
+        @test haskey(store, ii) && haskey(store[ii], o)
+        @test store[ii][o][2] === alive
+        PaperMode._remove_paper_order_task!(s, ii, o)
+        @test alive[] == false
+        @test !haskey(store, ii) # empty per-instance dict pruned
+    end
+end
+@testset "NoMargin short limit rejected before liquidity (orders/call.jl)" begin
+    # Spot strategies can't short: Sim/Live reject Short limit+market
+    # explicitly. The Paper limit path used singlewaycheck (which always
+    # passes NoMargin sides) — it must reject like the rest, before any
+    # volumecap! reservation.
+    exc = make_mock_exchange()
+    ii = make_asset_instance(exc)
+    s = _make_paper_strategy(exc, ii)
+    PaperMode.st.default!(s)
+    ShortLimit =
+        PlanarCore.OrderTypes.ShortLimitOrder{PlanarCore.OrderTypes.Sell}
+    @test isnothing(PaperMode.call!(s, ii, ShortLimit; amount=1.0, date=_dt))
+    @test isempty(s.attrs[:paper_liquidity])
+end
+
 end  # @testset PaperMode
 end  # module Runtests

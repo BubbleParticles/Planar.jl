@@ -29,7 +29,7 @@ function call!(s::MarginStrategy{Sim}, ii, t::Type{<:AnyLimitOrder}; amount, kwa
     fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
     o = create_sim_limit_order(s, t, ii; amount, order_kwargs...)
     isnothing(o) && return nothing
-    limitorder_ifprice!(s, o, o.date, ii; fees_kwarg...)
+    order!(s, o, o.date, ii; fees_kwarg...)
 end
 
 @doc """ Creates a simulated market order for a margin strategy.

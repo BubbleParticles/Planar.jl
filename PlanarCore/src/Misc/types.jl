@@ -52,7 +52,7 @@ marginmode(v::String) = let ml = lowercase(replace(v, "-" => "_", " " => "_"))
         Cross
     elseif ml in ("cross_hedged", "crosshedged", "cross_hedge", "crosshedge")
         CrossHedged
-    elseif ml == "nomargin" || ml == "no_margin" || ml == "none" || ml == "no-margin" || ml == ""
+    elseif ml == "nomargin" || ml == "no_margin" || ml == "none" || ml == "no-margin" || ml == "" || ml == "spot"
         NoMargin
     else
         error("unsupported margin mode $v")

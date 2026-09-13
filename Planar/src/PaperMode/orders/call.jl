@@ -89,7 +89,13 @@ function call!(
     date,
     kwargs...,
 )
-    !singlewaycheck(s, ii, t) && return nothing
+    # Spot-only: mirror Sim/Live NoMargin entry points — reject shorts before
+    # any liquidity reservation. (singlewaycheck is for margin hedged gating
+    # and always passes NoMargin sides since isopen(ii, side) === false.)
+    if positionside(t) == Short()
+        @debug "NoMargin: rejecting short limit order" ii=raw(ii) order_type=t
+        return nothing
+    end
     create_paper_limit_order!(s, ii, t; amount, date, kwargs...)
 end
 

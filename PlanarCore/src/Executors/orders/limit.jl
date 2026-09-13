@@ -101,6 +101,13 @@ function queue!(
     @debug "queue limitorder:" is_comm = iscommittable(s, o, ii)
     # This is already done in general by the function that creates the order
     skipcommit || iscommittable(s, o, ii) || return false
+    # Orders are keyed by (price, date): a second order with an identical key
+    # would trip the `push!` uniqueness assert. Reject gracefully instead —
+    # `create_sim_limit_order` already maps `false` to `nothing`.
+    if !skipcommit && isqueued(o, s, ii)
+        @debug "queue limitorder: duplicate (price, date) key" ii = raw(ii) o.price o.date
+        return false
+    end
     push!(s, ii, o)
     @deassert hasorders(s, ii, positionside(o))
     skipcommit || commit!(s, o, ii)

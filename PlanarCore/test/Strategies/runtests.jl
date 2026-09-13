@@ -469,6 +469,41 @@ end
             @test !haskey(cfg.sources, missing_src)
         end
     end
+    @testset "asset-list outer constructor writes back config" begin
+        # default_load depends on Strategy(mod, assets; config) in
+        # PlanarCore-only (no Engine). It must resolve the exchange and
+        # write mode/margin/timeframe back so s.mode == execmode(s).
+        sb = ExchangeTypes.sb_exchanges
+        had = haskey(sb, (:test, ""))
+        old = had ? sb[(:test, "")] : nothing
+        sb[(:test, "")] = mock_exc
+        try
+            cfg = Config(; qc=:USDT, initial_cash=1000.0, sandbox=true, exchange=:test)
+            cfg.mode = Sim()
+            cfg.margin = NoMargin()
+            s = Strategies.Strategy(@__MODULE__, String[]; config=cfg)
+            @test s isa Strategies.SimStrategy
+            @test Strategies.execmode(s) isa Sim
+            @test s.mode isa Sim
+            @test Strategies.marginmode(s) isa NoMargin
+            @test cfg.margin isa NoMargin
+            @test isempty(Strategies.universe(s))
+        finally
+            had ? (sb[(:test, "")] = old) : delete!(sb, (:test, ""))
+        end
+    end
+    @testset "similar syncs config mode/timeframe" begin
+        # PlanarOptim clones Paper/Live strategies into Sim; the copy's
+        # config must follow the new type params (s.mode reads config).
+        s = _make_strategy()
+        c = Base.similar(s; mode=Paper(), exc=mock_exc)
+        @test c isa Strategies.PaperStrategy
+        @test Strategies.execmode(c) isa Paper
+        @test c.mode isa Paper
+        @test c.min_timeframe == c.timeframe
+        @test Strategies.marginmode(c) isa NoMargin
+        @test c.config.margin isa NoMargin
+    end
 
 end
 

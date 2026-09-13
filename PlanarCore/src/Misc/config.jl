@@ -271,10 +271,10 @@ function _parse(k, v)
             Cross()
         elseif m in ("cross_hedged", "crosshedged", "cross_hedge", "crosshedge")
             CrossHedged()
-        elseif m == "nomargin" || m == "no_margin" || m == "none" || m == "no-margin" || m == ""
+        elseif m == "nomargin" || m == "no_margin" || m == "none" || m == "no-margin" || m == "" || m == "spot"
             NoMargin()
         else
-            error("unsupported margin mode $m (expected one of isolated, isolated_hedged, cross, cross_hedged, nomargin, none)")
+            error("unsupported margin mode $m (expected one of isolated, isolated_hedged, cross, cross_hedged, nomargin, none, spot)")
         end
     else
         v

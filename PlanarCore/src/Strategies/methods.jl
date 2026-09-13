@@ -498,14 +498,24 @@ It allows for optional changes to the mode, timeframe, and exchange.
 The new strategy is created with the same self, margin mode, and universe as the original, but with a copy of the original's configuration.
 """
 function Base.similar(s::Strategy; mode=s.mode, timeframe=s.timeframe, exc=exchange(s))
-    s = Strategy(
+    # The type params (mode/margin/timeframe) are authoritative for dispatch
+    # (`execmode`, `marginmode`), but `s.mode`/`s.margin`/`s.min_timeframe`
+    # read through `config` — sync the copy so `clone.mode == execmode(clone)`
+    # (PlanarOptim clones Paper/Live strategies into Sim; a stale config.mode
+    # diverges). Note config.margin can even be `nothing` when the source was
+    # built via the inner constructor directly, so always write it back.
+    cfg = copy(s.config)
+    cfg.mode = mode
+    cfg.margin = marginmode(s)
+    cfg.min_timeframe = timeframe
+    Strategy(
         s.self,
         mode,
         marginmode(s),
         timeframe,
         exc,
         similar(universe(s));
-        config=copy(s.config),
+        config=cfg,
     )
 end
 

@@ -2,7 +2,7 @@ using .Misc: LittleDict, start_task, init_task, DFT
 using .Misc.Lang: @lget!, @ifdebug, @deassert, Option
 using .Instances.Exchanges: has
 using PlanarCore.SimMode: trade!
-using .Executors: AnyGTCOrder
+using .Executors: AnyGTCOrder, AnyLimitOrder
 using PlanarCore.OrderTypes: ImmediateOrderType, OrderCanceled
 using PlanarCore.TimeTicks: TimeFrame
 
@@ -29,100 +29,19 @@ If the order is triggered, it executes a trade for the minimum of the trade amou
 If the order is filled, it stops tracking the order.
 
 """
-function paper_limitorder!(s::PaperStrategy, ii, o::GTCOrder; kwargs...)
+function paper_limitorder!(s::PaperStrategy, ii, o::AnyLimitOrder; kwargs...)
     isfilled(ii, o) && return nothing
     throttle = attr(s, :throttle)
     exc = ii.exchange
     pyfunc = first(exc, :watchTrades, :fetchTrades)
-    sym = ii.asset.raw
-    backoff = Second(0)
-    alive = Ref(true)
-    # Create task WITHOUT starting it to avoid race condition
-    task = @task begin
-        try
-            last_date = TimeTicks.DateTime(0)
-            while alive[] && isopen(ii, o)
-                trades = pyfunc(
-                    sym;
-                    since=ifelse(
-                        last_date == TimeTicks.DateTime(0),
-                        nothing,
-                        TimeTicks.timestamp(last_date + Millisecond(1)),
-                    ),
-                )
-                trades isa AbstractVector || continue
-                isempty(trades) && (sleep_pad_interruptible(TimeTicks.now(), throttle, alive); continue)
-                last_trade = last(trades)
-                dt = get(last_trade, "datetime", nothing)
-                this_date = _asdate(last_trade)::TimeTicks.DateTime
-                if last_date < this_date
-                    last_date = this_date
-                    for t in trades
-                        price_val = get(t, "price", nothing)
-                        amount_val = get(t, "amount", nothing)
-                        price_val === nothing && continue
-                        amount_val === nothing && continue
-                        price = Float64(price_val)
-                        if _istriggered(o, price)
-                            actual_amount = min(Float64(amount_val), abs(unfilled(o)))
-                            trade!(
-                                s,
-                                o,
-                                ii;
-                                price,
-                                date=_asdate(t),
-                                actual_amount,
-                                slippage=false,
-                                kwargs...,
-                            )
-                            isfilled(ii, o) && begin
-                                alive[] = false
-                                _remove_paper_order_task!(s, ii, o)
-                                # Release remaining reserved volume since order is filled
-                                volrelease!(s, ii; amount=abs(unfilled(o)))
-                                break
-                            end
-                        end
-                    end
-                end
-                sleep_pad_interruptible(TimeTicks.now(), throttle, alive)
-            end
-            # Order closed/cancelled - release any remaining reserved volume
-            isopen(ii, o) || volrelease!(s, ii; amount=abs(unfilled(o)))
-            return
-        catch e
-            e isa InterruptException && rethrow(e)
-            @error "paper_limitorder: error watching fills" exception = (e, catch_backtrace()) raw(ii)
-            alive[] = false
-            _remove_paper_order_task!(s, ii, o)
-            # Release remaining reserved volume on error
-            volrelease!(s, ii; amount=abs(unfilled(o)))
-        end
+    # Offline (or restricted) exchange: no trade feed available. Leave the
+    # order queued (Sim semantics) instead of spawning a task that would
+    # immediately fail on `pyfunc(...)`.
+    if isnothing(pyfunc)
+        @debug "paper limit order: no trade feed, skipping fill task" raw(ii)
+        return nothing
     end
-    # Initialize task storage and register for cleanup BEFORE scheduling
-    init_task(task, IdDict())
-    _register_paper_order_task!(s, ii, o, task, alive)
-    schedule(task)
-end
-
-@doc """ Updates a limit order in PaperMode for a MarginStrategy.
-
-$(TYPEDSIGNATURES)
-
-The function checks if the order is filled.
-If not, it fetches the trades for the given asset and exchange.
-It then checks each trade to see if the order is triggered.
-If the order is triggered, it executes a trade for the minimum of the trade amount and the unfilled order amount.
-If the order is filled, it stops tracking the order.
-
-"""
-function paper_limitorder!(s::MarginStrategy{Paper}, ii, o::GTCOrder; kwargs...)
-    isfilled(ii, o) && return nothing
-    throttle = attr(s, :throttle)
-    exc = ii.exchange
-    pyfunc = first(exc, :watchTrades, :fetchTrades)
     sym = ii.asset.raw
-    backoff = Second(0)
     alive = Ref(true)
     # Create task WITHOUT starting it to avoid race condition
     task = @task begin
@@ -200,7 +119,7 @@ $(TYPEDSIGNATURES)
 The function first checks if the order volume exceeds the daily limit using the `volumecap!` function.
 If the volume is within the limit, it creates a simulated limit order using the `create_sim_limit_order` function.
 If the order is not filled and is of type ImmediateOrderType, it cancels the order.
-For Good Till Canceled (GTC) orders, it queues them for execution using the `paper_limitorder!` function.
+For persistent orders (GTC and generic limit), it queues them for execution using the `paper_limitorder!` function.
 
 """
 function create_paper_limit_order!(s, ii, t; amount, date, kwargs...)
@@ -218,14 +137,22 @@ function create_paper_limit_order!(s, ii, t; amount, date, kwargs...)
         return nothing
     end
     try
-        obside = orderbook_side(ii, t)
+        obside = try
+            orderbook_side(ii, t)
+        catch e
+            e isa InterruptException && rethrow(e)
+            @debug "paper limit order: orderbook fetch failed" exception=e raw(ii) t
+            Any[]
+        end
         trade = nothing
         if !isempty(obside)
             _, _, trade = from_orderbook(obside, s, ii, o; o.amount, date)
             @debug "paper limit order: trade from orderbook" o.asset o.price o.amount trade
         end
-        # Queue GTC orders
-        if o isa AnyGTCOrder
+        # Queue persistent orders (GTC and generic limit): Sim keeps them
+        # working, so Paper must track them with a fill task too. Immediate
+        # (FOK/IOC) orders that didn't fill are canceled below.
+        if o isa AnyGTCOrder || !(ordertype(o) <: ImmediateOrderType)
             @debug "paper limit order: queuing gtc order" o o.asset o.price o.amount
             paper_limitorder!(s, ii, o; fees_kwarg...)
             return @something trade missing
@@ -246,7 +173,7 @@ function create_paper_limit_order!(s, ii, t; amount, date, kwargs...)
 end
 
 function _register_paper_order_task!(s, ii, o, task, alive)
-    tasks = @lget! attr(s, :paper_order_tasks) ii LittleDict{Order,Tuple{Task,Ref{Bool}},Vector}()
+    tasks = @lget! attr(s, :paper_order_tasks) ii Dict{Order,Tuple{Task,Ref{Bool}}}()
     tasks[o] = (task, alive)
 end
 

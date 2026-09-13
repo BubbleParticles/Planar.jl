@@ -234,6 +234,55 @@ function bare_load(mod::Module, t::Type, config::Config)
     s = Strategy(mod, config.mode, config.margin, TF, exc, uni; config)
     _strat_load_checks(s, config)
 end
+# NOTE: this constructor can't be revised, requires a restart
+@doc """Initializes a Strategy object from an asset list.
+
+$(TYPEDSIGNATURES)
+
+Takes `self` (strategy module) and `assets` (dict or iterable of market
+names), resolves the exchange from `config` (`params`/`account`/`sandbox`),
+builds the `InstrumentCollection` with `config.margin`, and forwards to the
+inner constructor. `mode`/`margin`/`sandbox`/`timeframe` default to the
+config values and are written back into `config` so `s.mode == execmode(s)`
+and `marginmode(s) == config.margin` hold (`_strat_load_checks`).
+Lives here (not Engine) so `default_load` works in PlanarCore-only contexts.
+
+"""
+function Strategy(
+    self::Module,
+    assets::Union{Dict,Iterable{String}};
+    load_data=false,
+    config::Config,
+    params=config.params,
+    account=config.account,
+    mode=something(config.mode, Sim()),
+    margin=config.margin !== nothing ? config.margin : NoMargin(),
+    sandbox=mode isa Sim ? true : config.sandbox,
+    timeframe=config.min_timeframe,
+)
+    setproperty!(config, :sandbox, sandbox)
+    setproperty!(config, :mode, mode)
+    setproperty!(config, :margin, margin)
+    setproperty!(config, :min_timeframe, timeframe)
+    exc = Exchanges.getexchange!(config.exchange, params; sandbox, account)
+    uni = if isempty(assets)
+        InstrumentCollection()
+    else
+        InstrumentCollection(assets; load_data, timeframe=string(timeframe), exc, margin)
+    end
+    s = Strategy(self, mode, margin, timeframe, exc, uni; config)
+    mode_k = if mode isa Sim
+        :sim
+    elseif mode isa Paper
+        :paper
+    else
+        :live
+    end
+    for f in getproperty(STRATEGY_LOAD_CALLBACKS, mode_k)
+        f(s)
+    end
+    s
+end
 
 @doc """ Loads a strategy from a symbol source.
 

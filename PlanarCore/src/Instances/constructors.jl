@@ -14,35 +14,30 @@ function Instances.InstrumentInstance(a; data, exc, margin, min_amount=1e-15)
     fees = market_fees(a.raw, exc)
     InstrumentInstance(a, data, exc, margin; limits, precision=prec, fees)
 end
-@doc """ Creates an InstrumentInstance from strings.
-
-$(TYPEDSIGNATURES)
-
-This function creates an InstrumentInstance using the provided strings for the asset (`s`), data type (`t`), exchange (`e`), and margin type (`m`).
-
-"""
+@doc "Parse a margin mode string (isolated/cross[/_hedged]/nomargin/none/spot) into a `MarginMode` instance; errors on unknown input."
+function _margin_from_string(m::AbstractString)
+    ml = lowercase(replace(m, "-" => "_", " " => "_"))
+    if ml == "isolated"
+        Isolated()
+    elseif ml in ("isolated_hedged", "isolatedhedged", "isolated_hedge", "isolatedhedge")
+        IsolatedHedged()
+    elseif ml == "cross"
+        Cross()
+    elseif ml in ("cross_hedged", "crosshedged", "cross_hedge", "crosshedge")
+        CrossHedged()
+    elseif ml == "nomargin" || ml == "no_margin" || ml == "none" || ml == "no-margin" || ml == "" || ml == "spot"
+        NoMargin()
+    else
+        error("unsupported margin mode '$m' (expected one of isolated, isolated_hedged, cross, cross_hedged, nomargin, none, spot)")
+    end
+end
 function Instances.InstrumentInstance(
     s::S, t::S, e::S, m::S; sandbox::Bool, params=nothing, account=""
 ) where {S<:AbstractString}
     a = parse(AbstractInstrument, s)
     tf = convert(TimeFrame, t)
     exc = getexchange!(Symbol(e), params; sandbox, account)
-    margin = let ml = lowercase(replace(m, "-" => "_", " " => "_"))
-        if ml == "isolated"
-            Isolated()
-        elseif ml in ("isolated_hedged", "isolatedhedged", "isolated_hedge", "isolatedhedge")
-            IsolatedHedged()
-        elseif ml == "cross"
-            Cross()
-        elseif ml in ("cross_hedged", "crosshedged", "cross_hedge", "crosshedge")
-            CrossHedged()
-        elseif ml == "nomargin" || ml == "no_margin" || ml == "none" || ml == "no-margin" || ml == "" || ml == "spot"
-            NoMargin()
-        else
-            @warn "Unknown margin mode '$m', defaulting to NoMargin"
-            NoMargin()
-        end
-    end
+    margin = _margin_from_string(m)
     loaded = load(zi, exc.name, a.raw, t)
     # `load` returns `nothing` on a cache miss (first run, purge, partial save).
     # A `nothing` DataFrame in `data` would crash downstream code that treats

@@ -794,4 +794,81 @@ end
     @test LiveMode.get_float(Dict{String,Any}("price" => nothing), "price", -1.0; ii=nothing) == -1.0
 end
 
+# ══════════════════════════════════════════════════════════════
+# ensure_marginmode caches the confirmed mode (no per-order gateway)
+# ══════════════════════════════════════════════════════════════
+
+# No-op trace backend: mock exchanges are built without one, and
+# ensure_marginmode emits MarginUpdated events on success.
+struct _LiveMMTrace end
+Base.push!(::_LiveMMTrace, v; kwargs...) = v
+
+@testset "ensure_marginmode caches confirmed mode" begin
+    import PlanarCore
+    ET = LiveMode.PaperMode.Instances.ExchangeTypes
+    OrderedSet = ET.OrderedCollections.OrderedSet
+    IMisc = LiveMode.PaperMode.Instances.Misc
+    old_get = Rest._http_get[]
+    old_post = Rest._http_post[]
+    margin_posts = Ref(0)
+    try
+        Rest.set_http_get!(function(url; kwargs...)
+            if occursin("ping", url)
+                return HTTP.Response(200, "pong")
+            elseif occursin("exchange_has", url) || occursin("/has", url)
+                return HTTP.Response(200, JSON3.write(Dict("result" => Dict(
+                    "setMarginMode" => true, "setPositionMode" => true,
+                    "setLeverage" => true, "fetchMarketLeverageTiers" => false))))
+            end
+            return HTTP.Response(404, "Not Found")
+        end)
+        Rest.set_http_post!(function(url; kwargs...)
+            if occursin("setMarginMode", url) || occursin("setPositionMode", url)
+                margin_posts[] += 1
+            end
+            return HTTP.Response(200, JSON3.write(Dict("result" => true)))
+        end)
+        eid = ET.ExchangeID{:test_mm_cache}()
+        exc = ET.CcxtExchange{typeof(eid)}(
+            eid, "test_mm_cache", "", OrderedSet{String}(["1m"]),
+            Dict{String,Dict{String,Any}}(
+                "BTC/USDT:USDT" => Dict{String,Any}(
+                    "id" => "BTC/USDT:USDT", "base" => "BTC", "quote" => "USDT",
+                    "type" => "future", "active" => true, "spot" => false, "linear" => true,
+                    "precision" => Dict{String,Any}("amount" => 8, "price" => 2),
+                    "limits" => Dict{String,Any}(
+                        "amount" => Dict{String,Any}("min" => 1e-6, "max" => 1e8),
+                        "price" => Dict{String,Any}("min" => 0.01, "max" => 1e6),
+                        "cost" => Dict{String,Any}("min" => 1.0, "max" => 1e8)),
+                    "taker" => 0.001, "maker" => 0.001)),
+            Set{Symbol}([:future]),
+            Dict{Symbol,Any}(:taker => 0.001, :maker => 0.001),
+            Dict{Symbol,Any}(:fetchTicker => true, :setMarginMode => true,
+                :setPositionMode => true, :setLeverage => true),
+            ET.ExcPrecisionMode(2), nothing, [:fetchTicker], Dict{String,Any}())
+        exc._trace = _LiveMMTrace()
+        margin = IMisc.Isolated()
+        uni = PlanarCore.Collections.InstrumentCollection(
+            ["BTC/USDT:USDT"]; exc=exc, margin=margin, load_data=false)
+        cfg = IMisc.Config(; qc=:USDT, initial_cash=10000.0)
+        s = PlanarCore.Strategies.Strategy(
+            LiveModeTests, IMisc.Live(), margin,
+            LiveMode.PaperMode.SimMode.TimeFrame("1m"), exc, uni; config=cfg)
+        ii = first(s.universe)
+        @test ii isa PlanarCore.Instances.MarginInstance
+        n0 = margin_posts[]
+        @test LiveMode.ensure_marginmode(s, ii) == true
+        # setPositionMode + setMarginMode both fire once...
+        @test margin_posts[] == n0 + 2
+        # ...and the confirmed mode is cached on the instance...
+        @test ii[:live_margin_mode] === PlanarCore.Instances.marginmode(ii)
+        # ...so the second call skips the gateway entirely.
+        @test LiveMode.ensure_marginmode(s, ii) == true
+        @test margin_posts[] == n0 + 2
+    finally
+        Rest.set_http_get!(old_get)
+        Rest.set_http_post!(old_post)
+    end
+end
+
 end # module LiveModeTests

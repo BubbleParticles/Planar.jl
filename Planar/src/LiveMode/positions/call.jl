@@ -370,3 +370,27 @@ function call!(
     @deassert !isopen(ii, side) "NoMarginStrategy should not have open positions"
     true
 end
+@doc "Closes all strategy positions (live)."
+function call!(
+    s::MarginStrategy{Live},
+    side::ByPos,
+    date,
+    ::PositionClose;
+    kwargs...,
+)
+    LittleDict(
+        ii => call!(s, ii, side, date, PositionClose(); kwargs...) for ii in s.universe
+    )
+end
+@doc "Closes all strategy positions (live, no margin)."
+function call!(
+    s::NoMarginStrategy{Live},
+    side::ByPos,
+    date,
+    ::PositionClose;
+    kwargs...,
+)
+    LittleDict(
+        ii => call!(s, ii, side, date, PositionClose(); kwargs...) for ii in s.universe
+    )
+end

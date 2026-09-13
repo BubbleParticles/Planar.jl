@@ -5,7 +5,7 @@ using ..Executors.Instances
 using ..Executors.Instruments
 using ..Executors.Instances: NoMarginInstance, Instances as inst, price
 using ..Strategies: lowat, highat, closeat, openat, volumeat
-using ..Strategies: IsolatedStrategy, NoMarginStrategy, MarginStrategy
+using ..Strategies: NoMarginStrategy, MarginStrategy
 using ..OrderTypes: BuyOrder, SellOrder, ShortBuyOrder, ShortSellOrder
 using ..OrderTypes: OrderTypes as ot, PositionSide
 import ..Strategies: call!

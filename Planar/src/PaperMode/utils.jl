@@ -28,10 +28,11 @@ This function sets the default attributes for a given strategy. It initializes t
 function st.default!(s::Strategy{Paper})
     attrs = s.attrs
     @lget! attrs :paper_liquidity Dict{InstrumentInstance,InstrumentLiquidity}()
-    # ensure order tasks do not linger
-    tasks = @lget! attrs :paper_order_tasks Dict{Order,OrderTaskTuple}()
-    for task_tuple in values(tasks)
-        task_tuple.alive[] = false
+    # ensure order tasks do not linger. Store is two-level
+    # `{ii => {o => (task, alive)}}` (see `_register_paper_order_task!`).
+    tasks = @lget! attrs :paper_order_tasks Dict{InstrumentInstance,Dict{Order,Tuple{Task,Ref{Bool}}}}()
+    for ai_tasks in values(tasks), (_, (_, alive)) in pairs(ai_tasks)
+        alive[] = false
     end
     empty!(tasks)
     _simmode_defaults!(s, attrs)

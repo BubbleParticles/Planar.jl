@@ -423,6 +423,20 @@ end
     @test SimMode.OrderTypes.trades(ii2)[end].price == SimMode.DFT(101.0)
 end
 
+@testset "duplicate limit (price, date) rejected gracefully (Executors/orders/limit.jl)" begin
+    s = _make_tick_strategy([_make_tick_ii("BTC/USDT")])
+    ii = first(s.universe)
+    reset!(s)
+    o = _make_sim_order(ii, OT.LimitOrder{Buy}; price=100.0)
+    @test _queue_order!(s, ii, o)
+    # identical (price, date, side) key: queue! returns false instead of
+    # tripping the push! uniqueness assert; the first order is untouched.
+    o2 = _make_sim_order(ii, OT.LimitOrder{Buy}; price=100.0)
+    @test _queue_order!(s, ii, o2) == false
+    @test SimMode.isqueued(o, s, ii)
+    @test length(values(SimMode.Executors.orders(s, ii, Buy))) == 1
+end
+
 @testset "UpdateOrdersTick fills (SimMode/orders/updates.jl)" begin
     # queued buy limit fills at the exact tick price (no slippage)
     s = _make_tick_strategy([_make_tick_ii("BTC/USDT")])

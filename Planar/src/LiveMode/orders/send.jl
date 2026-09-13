@@ -77,6 +77,12 @@ function ensure_marginmode(s::LiveStrategy, ii::MarginInstance)
             event!(
                 exc, MarginUpdated(Symbol(:margin_mode_set_, mode_str), s, position(ii, Short))
             )
+            # Cache the confirmed mode so subsequent orders skip the gateway
+            # round-trip (`marginmode!` = setPositionMode + setMarginMode).
+            # Fieldless `MarginMode` singletons are `===`-equal, so the `!==`
+            # check above hits once stored. Store only on success: a `false`
+            # return retries on the next order.
+            ii[:live_margin_mode] = mm
             true
         else
             false
