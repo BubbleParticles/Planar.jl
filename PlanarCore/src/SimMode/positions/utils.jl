@@ -4,10 +4,10 @@ using ..Strategies.Instruments.Derivatives: Derivative
 using ..Executors.Instances: leverage_tiers, tier, position
 import ..Executors.Instances: Position, MarginInstance
 using ..Executors: withtrade!, maintenance!, orders, isliquidatable, LIQUIDATION_FEES, hasorders
-using ..Instances: PositionOpen, PositionUpdate, PositionClose
+using ..Instances: PositionOpen, PositionUpdate, PositionClose, lastprice
 using ..Instances: margin, maintenance, status, posside, ishedged, isopen, iszero, isdust, cash, value, raw
 using ..Strategies: lowat, highat
-using ..Misc: DFT, Long, Short, marginmode, CrossMargin
+using ..Misc: DFT, Long, Short, marginmode, CrossMargin, Live
 import ..Executors: position!
 
 """
@@ -173,6 +173,47 @@ function _cross_account_covered(s::MarginStrategy, date::DateTime)
             end
             equity += value(ii, p; current_price=cp)
             tot_maint += maintenance(ii, p)
+        end
+    end
+    equity >= tot_maint
+end
+
+function _cross_account_covered(s::MarginStrategy{Live}, date::DateTime)
+    # Live: standalone `isliquidatable(::Live)` uses `lastprice(ii)` (gateway),
+    # not candle lows/highs. The generic cover above would use stale candle
+    # prices and could suppress a live liquidation (account looks covered on
+    # stale candle while live price is already underwater). Use live prices
+    # here; fall back to candle only if the ticker fetch fails — matches
+    # `isliquidatable(::Live)` fallback semantics (live first, candle on error).
+    equity = try
+        s.cash.value
+    catch
+        return false
+    end
+    tot_maint = zero(DFT)
+    for ii in s.holdings
+        marginmode(ii) isa CrossMargin || continue
+        for p in (Long(), Short())
+            isopen(ii, p) || continue
+            cp = try
+                lastprice(ii)
+            catch
+                try
+                    p isa Long ? lowat(s, ii, date) : highat(s, ii, date)
+                catch
+                    return false
+                end
+            end
+            equity += try
+                value(ii, p; current_price=cp)
+            catch
+                return false
+            end
+            tot_maint += try
+                maintenance(ii, p)
+            catch
+                return false
+            end
         end
     end
     equity >= tot_maint

@@ -165,8 +165,12 @@ $(TYPEDSIGNATURES)
 
 Called once per tick in tick-mode backtesting. Only the asset of the current tick is
 checked — that asset's tick price is the only price that can have moved. No
-`_check_update_date` (same-millisecond ticks are valid), no `positions!` (Sim has no
-price-based liquidation: `isliquidatable` is `Paper`/`Live` only), no `_lastupdate!`.
+`_check_update_date` (same-millisecond ticks are valid), no `_lastupdate!`.
+`positions!` (OHLCV gap-fill) is intentionally not invoked per tick to keep the
+hot path O(1); tick-mode liquidations remain trade-triggered via
+`position!(s, ii, t::PositionTrade)` → `maybe_liquidate!` after each fill.
+This trades paper/live parity for speed: an underwater position on an idle
+instrument will not liquidate until its next tick arrives.
 """
 function update!(s::Strategy{Sim}, tick::TradeTick, ::UpdateOrdersTick)
     ii = tick.asset
