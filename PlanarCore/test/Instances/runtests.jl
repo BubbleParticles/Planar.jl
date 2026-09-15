@@ -553,7 +553,7 @@ end
         "tier" => 1, "notionalFloor" => 0.0, "notionalCap" => 100000.0,
         "maxLeverage" => 10.0, "maintenanceMarginRate" => 0.01,
         "maintAmtNotional" => 0.0, "minNotional" => 0.0))
-    Exchanges._TIER_CACHES[tier_key] = ([tier1], time() * 1000)
+    Exchanges._TIER_CACHES[tier_key] = ([tier1], time())
 
     ii = Instances.InstrumentInstance(da, data, exc, Isolated(); limits=limits, precision=precision, fees=fees)
     @test ii isa Instances.InstrumentInstance
@@ -602,7 +602,7 @@ end
         "tier" => 1, "notionalFloor" => 0.0, "notionalCap" => 100000.0,
         "maxLeverage" => 10.0, "maintenanceMarginRate" => 0.01,
         "maintAmtNotional" => 0.0, "minNotional" => 0.0))
-    Exchanges._TIER_CACHES[tier_key] = ([tier1], time() * 1000)
+    Exchanges._TIER_CACHES[tier_key] = ([tier1], time())
     ii = Instances.InstrumentInstance(da, data, exc, Isolated(); limits=limits, precision=precision, fees=fees)
     # guarded getters must not crash on a normal instance
     @test Instances.cash(ii, Long()) !== nothing
@@ -735,7 +735,7 @@ end
         "tier" => 1, "notionalFloor" => 0.0, "notionalCap" => 100000.0,
         "maxLeverage" => 10.0, "maintenanceMarginRate" => 0.01,
         "maintAmtNotional" => 0.0, "minNotional" => 0.0))
-    Exchanges._TIER_CACHES[tier_key] = ([tier1], time() * 1000)
+    Exchanges._TIER_CACHES[tier_key] = ([tier1], time())
     limits = (leverage=(min=1.0, max=10.0), amount=(min=1e-8, max=1e8),
               price=(min=1e-8, max=1e8), cost=(min=10.0, max=1e8))
     precision = (amount=1e-8, price=1e-8)

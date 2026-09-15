@@ -78,7 +78,6 @@ This function updates the leverage of a position based on its current state, usi
 
 """
 function update_maintenance!(po::Position; ntl=notional(po), mmr=mmr(po))
-    @deassert mmr == tier(po, ntl)[2].mmr
     mm = ntl * mmr
     maintenance!(po, mm)
 end

@@ -268,7 +268,7 @@ end
 liqside(::Union{Long,Type{Long}}) = Sell
 liqside(::Union{Short,Type{Short}}) = Buy
 @doc """Is the order a liquidation order"""
-isliquidation(::Order{O}) where {O<:OrderType} = O == LiquidationType
+isliquidation(::Order{O}) where {O<:OrderType} = O <: LiquidationType
 sidetopos(::Order{<:OrderType{Buy}}) = Long
 sidetopos(::Order{<:OrderType{Sell}}) = Short
 @doc """Test if an order is a long order"""

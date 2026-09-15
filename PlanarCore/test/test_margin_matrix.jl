@@ -117,7 +117,7 @@ end
                 exc = _make_exchange_matrix(eid_sym)
                 # seed tier cache
                 tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
-                _TIER_CACHES[(Symbol(eid_sym), "BTC/USDT:USDT")] = ([tier], time()*1000)
+                _TIER_CACHES[(Symbol(eid_sym), "BTC/USDT:USDT")] = ([tier], time())
                 uni = InstrumentCollection(["BTC/USDT:USDT"]; exc=exc, margin=margin, load_data=false)
                 cfg = PlanarCore.Misc.Config(; qc=:USDT, initial_cash=100000.0)
                 # Live gateway endpoints are mocked above: construction must succeed
@@ -145,7 +145,7 @@ end
 @testset "Cash buckets: Increase→strategy, Reduce→position" begin
     exc = _make_exchange_matrix(:bucket_test)
     tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
-    _TIER_CACHES[(:bucket_test, "BTC/USDT:USDT")] = ([tier], time()*1000)
+    _TIER_CACHES[(:bucket_test, "BTC/USDT:USDT")] = ([tier], time())
     uni = InstrumentCollection(["BTC/USDT:USDT"]; exc=exc, margin=Isolated(), load_data=false)
     cfg = PlanarCore.Misc.Config(; qc=:USDT, initial_cash=100000.0)
     s = Strategy(Main, Sim(), Isolated(), TimeFrame("1m"), exc, uni; config=cfg)
@@ -171,7 +171,7 @@ end
 @testset "Margin-mode setting authoritative" begin
     exc = _make_exchange_matrix(:auth_test)
     tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
-    _TIER_CACHES[(:auth_test, "BTC/USDT:USDT")] = ([tier], time()*1000)
+    _TIER_CACHES[(:auth_test, "BTC/USDT:USDT")] = ([tier], time())
     prev_post = Rest._http_post[]
     prev_init = Rest._gateway_initialized[]
     Rest._gateway_initialized[] = true
@@ -220,7 +220,7 @@ end
 @testset "Hedged instance type discipline" begin
     exc = _make_exchange_matrix(:hedgetype_test)
     tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
-    _TIER_CACHES[(:hedgetype_test, "BTC/USDT:USDT")] = ([tier], time()*1000)
+    _TIER_CACHES[(:hedgetype_test, "BTC/USDT:USDT")] = ([tier], time())
     ii_h = _make_instance_matrix(IsolatedHedged(), exc)
     ii_s = _make_instance_matrix(Isolated(), exc)
     # Hedged instances carry both sides and stay a MarginInstance subtype.
@@ -267,7 +267,7 @@ end
 @testset "Cross max leverage is tier-bounded" begin
     exc = _make_exchange_matrix(:crossmax_test)
     tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
-    _TIER_CACHES[(:crossmax_test, "BTC/USDT:USDT")] = ([tier], time()*1000)
+    _TIER_CACHES[(:crossmax_test, "BTC/USDT:USDT")] = ([tier], time())
     ii = _make_instance_matrix(Cross(), exc)
     leverage!(ii, Long(), Val(:max))
     # A 1e10 sentinel would zero the margin and push liqprice past entry
@@ -278,7 +278,7 @@ end
 @testset "Cross liquidation is account-level" begin
     exc = _make_exchange_matrix(:crossliq_test)
     tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
-    _TIER_CACHES[(:crossliq_test, "BTC/USDT:USDT")] = ([tier], time()*1000)
+    _TIER_CACHES[(:crossliq_test, "BTC/USDT:USDT")] = ([tier], time())
     uni = InstrumentCollection(["BTC/USDT:USDT"]; exc=exc, margin=Cross(), load_data=false)
     cfg = Config(; qc=:USDT, initial_cash=100000.0)
     s = Strategy(Main, Sim(), Cross(), TimeFrame("1m"), exc, uni; config=cfg)
