@@ -1,8 +1,7 @@
-using .st: NoMarginStrategy, MarginStrategy, Strategy
+using .st: NoMarginStrategy, Strategy
 using .Executors: AnyLimitOrder, AnyMarketOrder, CancelOrders, hasorders
 using ..PaperMode.OrderTypes: BuyOrSell, OrderSide
-using ..PaperMode.SimMode: singlewaycheck
-using PlanarCore.Instances: raw, InstrumentInstance, NoMarginInstance, posside
+using PlanarCore.Instances: raw, InstrumentInstance, NoMarginInstance
 using PlanarCore.Misc: Short
 using PlanarCore.OrderTypes: positionside
 @doc """ Places a limit order and synchronizes the cash balance.
@@ -46,40 +45,6 @@ function call!(
 end
 
 
-@doc """ Places a limit order and synchronizes the cash balance (margin).
-
-$(TYPEDSIGNATURES)
-
-Same as `NoMarginStrategy` but for margin strategies.
-
-"""
-function call!(
-    s::MarginStrategy{Live},
-    ii,
-    t::Type{<:AnyLimitOrder};
-    amount,
-    price=lastprice(s, ii, t),
-    waitfor=Second(5),
-    synced=true,
-    skipchecks=false,
-    kwargs...,
-)::Union{<:Trade,Nothing,Missing}
-    @timeout_start
-    @lock ii begin
-        skipchecks || !singlewaycheck(s, ii, t) && return nothing
-        order_kwargs = withoutkws(:fees; kwargs)
-        trade = _live_limit_order(
-            s, ii, t; skipchecks, amount, price, waitfor, synced, kwargs=order_kwargs
-        )
-        if synced && trade isa Trade
-            # Sync the traded side explicitly: the `get_position_side`
-            # default can resolve to the opposite side on hedged instances,
-            # leaving the side the trade just opened stale.
-            live_sync_cash!(s, ii, posside(trade); since=trade.date, waitfor=@timeout_now)
-        end
-        trade
-    end
-end
 
 function call!(
     s::NoMarginStrategy{Live},
@@ -105,39 +70,6 @@ function call!(
         )
         if synced && trade isa Trade
             live_sync_cash!(s, ii; since=trade.date, waitfor=@timeout_now)
-        end
-        trade
-    end
-end
-
-@doc """ Places a market order and synchronizes the cash balance (margin).
-
-$(TYPEDSIGNATURES)
-
-Same as `NoMarginStrategy` but for margin strategies.
-
-"""
-function call!(
-    s::MarginStrategy{Live},
-    ii,
-    t::Type{<:AnyMarketOrder};
-    amount,
-    waitfor=Second(5),
-    synced=true,
-    skipchecks=false,
-    kwargs...,
-)
-    @timeout_start
-    @lock ii begin
-        skipchecks || !singlewaycheck(s, ii, t) && return nothing
-        order_kwargs = withoutkws(:fees; kwargs)
-        trade = _live_market_order(
-            s, ii, t; skipchecks, amount, synced, waitfor, kwargs=order_kwargs
-        )
-        if synced && trade isa Trade
-            waitorder(s, ii, trade.order; waitfor=@timeout_now)
-            # See limit-order path: sync the traded side, not the default side.
-            live_sync_cash!(s, ii, posside(trade); since=trade.date, waitfor=@timeout_now)
         end
         trade
     end
