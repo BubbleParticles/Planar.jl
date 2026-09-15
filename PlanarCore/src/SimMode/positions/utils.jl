@@ -5,7 +5,8 @@ using ..Executors.Instances: leverage_tiers, tier, position
 import ..Executors.Instances: Position, MarginInstance
 using ..Executors: withtrade!, maintenance!, orders, isliquidatable, LIQUIDATION_FEES, hasorders
 using ..Instances: PositionOpen, PositionUpdate, PositionClose
-using ..Instances: margin, maintenance, status, posside, ishedged, isopen, iszero, isdust, cash, value
+using ..Instances: margin, maintenance, status, posside, ishedged, isopen, iszero, isdust, cash, value, raw
+using ..Strategies: lowat, highat
 using ..Misc: DFT, Long, Short, marginmode, CrossMargin
 import ..Executors: position!
 
@@ -68,10 +69,13 @@ function force_exit_position(s::Strategy, ii, p, date::DateTime; kwargs...)
                 )
             end
             @ifdebug @deassert isdust(ii, price, p)
+            return true
         else
-            @debug "force_exit_position: call! returned nothing for amount=$amount price=$price"
+            @warn "force_exit_position: close trade failed, position state kept" ii = raw(ii) side = p amount price date
+            return false
         end
     end
+    return true
 end
 
 """
@@ -86,7 +90,10 @@ It then resets the position, deletes it from the holdings, and checks that the p
 function close_position!(s::MarginStrategy, ii, p::PositionSide, date=nothing; kwargs...)
     # when a date is given we should close pending orders and sell remaining cash
     if !isnothing(date)
-        force_exit_position(s, ii, p, date; kwargs...)
+        # A failed force-exit (no price, dust-reject, order construction
+        # failure) must not zero position state: keep the position and report
+        # failure so the `PositionClose` caller can surface it.
+        force_exit_position(s, ii, p, date; kwargs...) || return false
     end
     reset!(ii, p)
     # In hedged mode, the opposite side may still be open — only remove from holdings when both sides are closed.
@@ -160,7 +167,7 @@ function _cross_account_covered(s::MarginStrategy, date::DateTime)
         for p in (Long(), Short())
             isopen(ii, p) || continue
             cp = try
-                p isa Long ? st.lowat(ii, date) : st.highat(ii, date)
+                p isa Long ? lowat(s, ii, date) : highat(s, ii, date)
             catch
                 return false
             end
@@ -183,7 +190,7 @@ water (see `_cross_account_covered`): shared collateral absorbs a single
 position's excursion past its standalone liquidation price.
 
 """
-function maybe_liquidate!(s::MarginStrategy, ii::MarginInstance, date::DateTime)
+function _maybe_liquidate_positions!(s::MarginStrategy, ii::MarginInstance, date::DateTime)
     if marginmode(ii) isa CrossMargin && _cross_account_covered(s, date)
         return nothing
     end
@@ -199,6 +206,26 @@ function maybe_liquidate!(s::MarginStrategy, ii::MarginInstance, date::DateTime)
         p = posside(pos)
         isliquidatable(s, ii, p, date) && liquidate!(s, ii, p, date)
     end
+end
+
+function maybe_liquidate!(s::MarginStrategy, ii::MarginInstance, date::DateTime)
+    _maybe_liquidate_positions!(s, ii, date)
+end
+
+# Rate-limit live liquidation checks: `isliquidatable(::Strategy{Live}, ...)`
+# calls `lastprice(ii)` which hits the gateway. Checking on every trade would
+# produce O(trades × open_positions) HTTP calls — gate to once per minute,
+# tracked per instance so one busy instrument doesn't suppress the rest.
+const _LIQ_CHECK_INTERVAL = Minute(1)
+function maybe_liquidate!(s::MarginStrategy{Live}, ii::MarginInstance, date::DateTime)
+    checks = @lget! s.attrs :live_last_liq_check Dict{UInt,DateTime}()
+    key = objectid(ii)
+    last = get(checks, key, nothing)
+    if !isnothing(last) && tt.now() - last < _LIQ_CHECK_INTERVAL
+        return nothing
+    end
+    checks[key] = tt.now()
+    _maybe_liquidate_positions!(s, ii, date)
 end
 @doc """Updates the position by applying a position trade.
 
@@ -250,7 +277,7 @@ function position!(
     end
 end
 
-@doc """ Updates a margin position in `Sim` mode from a new candle.
+@doc """ Updates a margin position in `Sim`/`Paper` mode from a new candle.
 
 $(TYPEDSIGNATURES)
 
@@ -258,8 +285,11 @@ This function checks if a position is open and updates the timestamp.
 If the position is liquidatable, it is liquidated.
 Otherwise, the position remains open and a `PositionUpdate` is pinged.
 
+Paper shares Sim liquidation/position-update semantics (candle prices),
+so the Paper method delegates to the Sim implementation.
+
 """
-function position!(s::MarginStrategy{Sim}, ii, date::DateTime, pos::Position=position(ii))
+function _date_position!(s::MarginStrategy, ii, date::DateTime, pos::Position)
     # NOTE: Order of calls is important
     @ifdebug @deassert isopen(pos)
     p = posside(pos)
@@ -271,6 +301,12 @@ function position!(s::MarginStrategy{Sim}, ii, date::DateTime, pos::Position=pos
         # position is still open
         call!(s, ii, date, pos, PositionUpdate())
     end
+end
+function position!(s::MarginStrategy{Sim}, ii, date::DateTime, pos::Position=position(ii))
+    _date_position!(s, ii, date, pos)
+end
+function position!(s::MarginStrategy{Paper}, ii, date::DateTime, pos::Position=position(ii))
+    _date_position!(s, ii, date, pos)
 end
 
 _checkorders(s) = begin

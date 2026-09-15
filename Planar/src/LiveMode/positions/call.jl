@@ -1,9 +1,11 @@
 using ..PaperMode.SimMode: _lev_value, leverage!, leverage, position!, singlewaycheck
+using .Lang: splitkws
 using .st: MarginStrategy, NoMarginStrategy
 using .Executors: hasorders, update_leverage!
 using .st: exchange
 using .Executors.Instances: raw, MarginInstance
-using ..PaperMode.OrderTypes: postoside
+using .Instances: ishedged
+using ..PaperMode.OrderTypes: postoside, BuyOrSell
 import .Executors: call!
 
 @doc """ Updates leverage or places an order in a live trading strategy.
@@ -183,11 +185,12 @@ function _posclose_maybesync(s, ii, pside, waitfor)
     @timeout_start
     update = live_position(s, ii, pside; since=timestamp(ii, pside) - Millisecond(1), waitfor=@timeout_now)
     if isnothing(update)
-        @warn "call pos close: no position update (resetting)" ii pside
-        if isopen(ii, pside)
-            reset!(ii, pside)
-        end
-        return (update, true)
+        # Indeterminate: the gateway dropped the fetch while the remote state
+        # is unknown. Even when local is flat, the remote may still hold the
+        # position — never report success here; the caller returns `false`
+        # so the close is retried instead of falsely confirmed.
+        @warn "call pos close: no position update (remote unknown)" ii pside isopen = isopen(ii, pside)
+        return (update, false)
     end
     # ensure the last update is read
     if !(update.read[])
@@ -201,9 +204,12 @@ function _posclose_maybesync(s, ii, pside, waitfor)
 end
 
 function _posclose_waitsync(s, ii, pside, waitfor)
-    @debug "call pos close: wait for orders" _module = LogPosClose ii pside
-    if !waitordclose(s, ii, waitfor)
-        @error "call pos close: orders still pending" ii orderscount(s, ii) cash(ii) committed(
+    # Side-scoped wait: `_posclose_cancel` cancels only `postoside(pside)` in
+    # hedged mode, so waiting on `BuyOrSell` would burn the shared `waitfor`
+    # budget on opposite-side orders that were deliberately left alone.
+    t = ishedged(ii) ? postoside(pside) : BuyOrSell
+    if !waitordclose(s, ii, waitfor; t)
+        @error "call pos close: orders still pending" ii orderscount(s, ii, t) cash(ii) committed(
             ii
         )
     end
@@ -216,12 +222,18 @@ function _posclose_waitsync(s, ii, pside, waitfor)
     end
 end
 
-function _posclose_amount(s, ii, pside; kwargs)
+function _posclose_amount(s, ii, pside; amount=nothing, kwargs...)
+    # Bind caller-supplied `:amount` explicitly (e.g. `_sync_oppos!`
+    # forced-side close passes the remote contract count, which is fresher
+    # than local cash mid-sync). This also keeps it out of `this_kwargs`,
+    # avoiding a duplicate `amount=` splat in `_posclose_trade`.
     _, this_kwargs = splitkws(:reduce_only, :tag; kwargs)
-    amount = cash(ii, pside) |> abs
-    @debug "call pos close: get amount" _module = LogPosClose ii pside amount
-    @deassert resp_position_contracts(live_position(s, ii).resp, exchangeid(ii)) == amount
-    return amount, this_kwargs
+    amt = isnothing(amount) ? abs(cash(ii, pside)) : abs(amount)
+    @debug "call pos close: get amount" _module = LogPosClose ii pside amt
+    @deassert let pup = live_position(s, ii, pside)
+        isnothing(pup) || resp_position_contracts(pup.resp, exchangeid(ii)) == amt
+    end
+    return amt, this_kwargs
 end
 
 function _posclose_trade(s, ii; t, pside, amount, waitfor, this_kwargs)
@@ -249,10 +261,17 @@ function _posclose_trade(s, ii; t, pside, amount, waitfor, this_kwargs)
         @warn "call pos close: closing order delay" orders = collect(
             values(s, ii, orderside(t))
         ) ii t
-        (false, timestamp(ii, pside) + Millisecond(1))
+        (timestamp(ii, pside) + Millisecond(1), false)
     end
 end
-
+function _posclose_margin_warn(s, ii)
+    # Warn-only: terminal close status is reported by the caller. Returning the
+    # margin result as the close result would flip a fully-closed position to
+    # `false` on a transient `marginmode!` failure.
+    ok = ensure_marginmode(s, ii)
+    ok || @warn "call pos close: margin mode mismatch" ii = raw(ii) mm = marginmode(ii)
+    nothing
+end
 function _posclose_order(s, ii, pside, since, waitfor)
     @debug "call pos close: order" _module = LogPosClose ii pside
     @timeout_start
@@ -266,32 +285,31 @@ function _posclose_order(s, ii, pside, since, waitfor)
         @debug "call pos close: still open (local) position" _module = LogPosClose since pside date = get(
             pup, :date, nothing
         )
-        ensure_marginmode(s, ii)
-        false
+        _posclose_margin_warn(s, ii)
+        return false
     else
-        ensure_marginmode(s, ii)
-        true
+        _posclose_margin_warn(s, ii)
+        return true
     end
 end
-
 function _posclose_lastcheck(s, ii, pside, t, since, waitfor)
     @debug "call pos close: last check" _module = LogPosClose ii pside
     @timeout_start
-    # trade still pending 
+    # trade still pending
     if @lock ii isopen(ii, pside)
         waitsync(ii; since, waitfor=@timeout_now)
         waitsync(s; since, waitfor=@timeout_now())
         return if isopen(ii, pside)
             @error "call pos close: still open orders (not a market order?)" ii pside t
-            ensure_marginmode(s, ii)
+            _posclose_margin_warn(s, ii)
             false
         else
-            ensure_marginmode(s, ii)
+            _posclose_margin_warn(s, ii)
             true
         end
     else
-        ensure_marginmode(s, ii)
-        true
+        _posclose_margin_warn(s, ii)
+        return true
     end
 end
 
@@ -320,32 +338,34 @@ function call!(
 
         # cancel standing orders
         _posclose_cancel(s, ii, t, pside, @timeout_now)
-        # give up if there is no remote position update
+        # `_posclose_maybesync` never reports success on a missing remote
+        # update (indeterminate): fall through to the local checks below;
+        # terminal returns reflect local flatness (`!isopen`).
         update, isclosed = _posclose_maybesync(s, ii, pside, @timeout_now)
         if isclosed
-            ensure_marginmode(s, ii)
-            return true
+            _posclose_margin_warn(s, ii)
+            return !isopen(ii, pside)
         end
         # ensure no more orders are pending and return if pos is closed
         if _posclose_waitsync(s, ii, pside, @timeout_now)
-            ensure_marginmode(s, ii)
-            return true
+            _posclose_margin_warn(s, ii)
+            return !isopen(ii, pside)
         end
         # if still open, close manually with a reduce only order
         # get the amount necessary to close the position
         amount, this_kwargs = _posclose_amount(s, ii, pside; kwargs)
         if iszero(amount)
             # Position closed after last check
-            ensure_marginmode(s, ii)
-            return true
+            _posclose_margin_warn(s, ii)
+            return !isopen(ii, pside)
         end
         since, isclosed = _posclose_trade(
             s, ii; t, pside, amount, waitfor=@timeout_now(), this_kwargs
         )
         # another check for close in case of failing trade
         if isclosed
-            ensure_marginmode(s, ii)
-            return true
+            _posclose_margin_warn(s, ii)
+            return !isopen(ii, pside)
         end
         # trade exec success, wait for completion
         if waitordclose(s, ii, @timeout_now)
@@ -379,7 +399,7 @@ function call!(
     kwargs...,
 )
     LittleDict(
-        ii => call!(s, ii, side, date, PositionClose(); kwargs...) for ii in s.universe
+        ii => call!(s, ii, side, date, PositionClose(); kwargs...) for ii in s.holdings
     )
 end
 @doc "Closes all strategy positions (live, no margin)."

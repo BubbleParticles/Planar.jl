@@ -150,20 +150,43 @@ end
 
 $(TYPEDSIGNATURES)
 
-This function checks whether a position in a Paper or Live strategy should be liquidated at the current price at the specified date.
+This function checks whether a position in a Paper strategy should be liquidated at the
+candle price at the specified date. Paper mode is a simulation, so it uses candle data
+(not a live gateway ticker) for price resolution, matching Sim mode semantics.
 
 """
 function isliquidatable(
-    ::Strategy{<:Union{Paper,Live}}, ii::MarginInstance, p::PositionSide, date::DateTime
+    ::Strategy{Paper}, ii::MarginInstance, p::PositionSide, date::DateTime
+)
+    price = _pricebypos(ii, date, p)
+    buffered = _buffered(price, p)
+    @deassert _checkbuffered(buffered, price, p)
+    return _iscrossed(ii, buffered, p)
+end
+
+@doc """ Tests if a position should be liquidated at the current live price.
+
+$(TYPEDSIGNATURES)
+
+This function checks whether a position in a Live strategy should be liquidated at
+the current exchange price at the specified date. If the gateway ticker is unavailable,
+it falls back to the OHLCV candle price (same logic as Sim).
+
+"""
+function isliquidatable(
+    ::Strategy{Live}, ii::MarginInstance, p::PositionSide, date::DateTime
 )
     price = try
         lastprice(ii)
     catch e
         e isa InterruptException && rethrow(e)
-        # Fallback for Paper/offline or missing ticker: use the OHLCV candle price
-        # (same logic as Sim). This keeps paper simulation functional without gateway.
-        @debug "isliquidatable: lastprice failed, falling back to candle" exception=e raw(ii) date p
+        # Fallback: use the OHLCV candle price (same logic as Sim).
+        # Loud (@warn, not @debug): a gateway outage must not silently flip
+        # the liquidation decision to a possibly-stale candle.
+        @warn "isliquidatable: lastprice failed, falling back to candle" exception=e raw(ii) date p
         _pricebypos(ii, date, p)
     end
-    _iscrossed(ii, price, p)
+    buffered = _buffered(price, p)
+    @deassert _checkbuffered(buffered, price, p)
+    _iscrossed(ii, buffered, p)
 end

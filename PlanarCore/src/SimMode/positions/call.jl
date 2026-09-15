@@ -42,7 +42,8 @@ function call!(
     kwargs...,
 )::Bool
     # In hedged mode, cancel only orders on the side being closed to preserve the opposite side's active orders.
-    call!(s, ii, CancelOrders(); t=ishedged(ii) ? postoside(side) : BuyOrSell)
+    cancel_ok = call!(s, ii, CancelOrders(); t=ishedged(ii) ? postoside(side) : BuyOrSell)
+    cancel_ok || @warn "close_position: failed to cancel orders" ii = scalar(ii) side
     v = close_position!(s, ii, side, date; kwargs...)
     if !v
         @error "close_position! returned false (failed to close position)" ii=scalar(ii) side
@@ -55,7 +56,7 @@ end
 @doc "Closes all strategy positions"
 function call!(s::MarginStrategy{<:Union{Sim,Paper}}, side::ByPos, date, ::PositionClose; kwargs...)
     LittleDict(
-        ii => call!(s, ii, side, date, PositionClose(); kwargs...) for ii in s.universe
+        ii => call!(s, ii, side, date, PositionClose(); kwargs...) for ii in s.holdings
     )
 end
 @doc "Closes all strategy positions (no margin)"

@@ -2,6 +2,7 @@ using .Executors.Instruments: freecash
 using .Executors: @price!, @amount!
 using .Data: default_value
 using ..PaperMode.SimMode: singlewaycheck
+using ..PaperMode.OrderTypes: positionside
 
 @doc "Represents a trigger order with fields for the order type, price, and trigger condition."
 const TriggerOrderTuple = NamedTuple{(:type, :price, :trigger)}
@@ -147,9 +148,12 @@ function live_send_order(
     trailing_trigger_amount=nothing, # fallback to price if set
     kwargs...,
 )
-    # NoMargin short fast-path (BUG-4): Sim blocks instantly via iscashenough=false;
-    # Live must not take gateway round-trip. Check before any cash/margin logic.
-    if s isa NoMarginStrategy && t <: Union{ShortSellOrder, ShortBuyOrder}
+    # NoMargin short fast-path: Sim/Paper/Live entry points all reject via
+    # `positionside(t) == Short()`, which covers every short order type
+    # (Order{T,A,E,Short} is parametric in P, not a fixed Union). A subtype
+    # check against a fixed Union would silently admit future short order
+    # types; keep the single positionside predicate live_send_order-wide.
+    if s isa NoMarginStrategy && positionside(t) == Short()
         @warn "live send order: NoMargin short not supported" s = typeof(s) ii = raw(ii) t amount
         return nothing
     end
