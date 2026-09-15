@@ -182,15 +182,19 @@ function live_send_order(
             ) order_cash = amount t lev = leverage(ii, posside(t))
             return nothing
         end
-        if !ensure_marginmode(s, ii)
-            @warn "send order: margin mode mismatch" this_mm = marginmode(ii) exc = nameof(
-                exchange(ii)
-            ) reduce_only
-            if !reduce_only
-                return nothing
-            end
-        end
     end
+    # Margin mode is a route-level invariant, not a simulation check: the
+    # exchange rejects (or misroutes) orders sent under the wrong mode, so it
+    # must hold even when `skipchecks=true` (e.g. position-close reduce-only
+    # orders that bypass cash gating).
+    if !ensure_marginmode(s, ii)
+        @warn "send order: margin mode mismatch" this_mm = marginmode(ii) exc = nameof(
+            exchange(ii)
+        ) reduce_only
+        if !reduce_only
+            return nothing
+        end
+     end
     sym = raw(ii)
     exc = exchange(ii)
     side = _ccxtorderside(t)

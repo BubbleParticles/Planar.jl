@@ -171,8 +171,16 @@ function _cross_account_covered(s::MarginStrategy, date::DateTime)
             catch
                 return false
             end
-            equity += value(ii, p; current_price=cp)
-            tot_maint += maintenance(ii, p)
+            equity += try
+                value(ii, p; current_price=cp)
+            catch
+                return false
+            end
+            tot_maint += try
+                maintenance(ii, p)
+            catch
+                return false
+            end
         end
     end
     equity >= tot_maint
@@ -196,7 +204,14 @@ function _cross_account_covered(s::MarginStrategy{Live}, date::DateTime)
         for p in (Long(), Short())
             isopen(ii, p) || continue
             cp = try
-                lastprice(ii)
+                let px = lastprice(ii)
+                    # See `isliquidatable(::Live)`: `lastprice` returns 0.0 on
+                    # gateway degradation instead of throwing. A 0.0 `cp`
+                    # would understate equity and force a spurious account-wide
+                    # liquidation — fall back to candle like the standalone check.
+                    (px isa Real && px > 0) ? px :
+                    (p isa Long ? lowat(s, ii, date) : highat(s, ii, date))
+                end
             catch
                 try
                     p isa Long ? lowat(s, ii, date) : highat(s, ii, date)

@@ -138,13 +138,20 @@ This function determines whether a position in a margin strategy is eligible for
 function isliquidatable(
     ::Strategy{Sim}, ii::MarginInstance, p::PositionSide, date::DateTime
 )
-    let price = _pricebypos(ii, date, p)
-        buffered = _buffered(price, p)
+    price = try
+        _pricebypos(ii, date, p)
+    catch e
+        e isa InterruptException && rethrow(e)
+        # `_cross_account_covered` already returns `false` on missing candle
+        # (don't suppress liquidation); per-position must not throw out of
+        # `position!`/`positions!` either — treat as not liquidatable.
+        return false
+    end
+    let buffered = _buffered(price, p)
         @deassert _checkbuffered(buffered, price, p)
         return _iscrossed(ii, buffered, p)
     end
 end
-
 @doc """ Tests if a position should be liquidated at a particular price.
 
 $(TYPEDSIGNATURES)
@@ -157,7 +164,12 @@ candle price at the specified date. Paper mode is a simulation, so it uses candl
 function isliquidatable(
     ::Strategy{Paper}, ii::MarginInstance, p::PositionSide, date::DateTime
 )
-    price = _pricebypos(ii, date, p)
+    price = try
+        _pricebypos(ii, date, p)
+    catch e
+        e isa InterruptException && rethrow(e)
+        return false
+    end
     buffered = _buffered(price, p)
     @deassert _checkbuffered(buffered, price, p)
     return _iscrossed(ii, buffered, p)
@@ -184,6 +196,14 @@ function isliquidatable(
         # the liquidation decision to a possibly-stale candle.
         @warn "isliquidatable: lastprice failed, falling back to candle" exception=e raw(ii) date p
         _pricebypos(ii, date, p)
+    end
+    # `lastprice` returns 0.0 (no throw) when the ticker is missing/empty, so
+    # the try/catch above never fires on gateway degradation. A 0.0 price
+    # would force a spurious Long liquidation (0 <= liqprice) and suppress a
+    # real Short one (0 >= liqprice never holds) — fall back to candle instead.
+    if !(price isa Real) || !(price > 0)
+        @warn "isliquidatable: bad live price, falling back to candle" price raw(ii) date p
+        price = _pricebypos(ii, date, p)
     end
     buffered = _buffered(price, p)
     @deassert _checkbuffered(buffered, price, p)

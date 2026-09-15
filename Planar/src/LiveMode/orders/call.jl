@@ -51,7 +51,6 @@ function call!(
     ii,
     t::Type{<:AnyMarketOrder};
     amount,
-    date,
     price=lastprice(s, ii, t),
     waitfor=Second(5),
     synced=true,
@@ -66,7 +65,7 @@ function call!(
     @lock ii begin
         order_kwargs = withoutkws(:fees; kwargs)
         trade = _live_market_order(
-            s, ii, t; skipchecks, amount, date, price, waitfor, synced, kwargs=order_kwargs
+            s, ii, t; skipchecks, amount, price, waitfor, synced, kwargs=order_kwargs
         )
         if synced && trade isa Trade
             live_sync_cash!(s, ii; since=trade.date, waitfor=@timeout_now)

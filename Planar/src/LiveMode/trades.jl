@@ -1,4 +1,8 @@
 import .SimMode: maketrade, trade!
+import .Executors: aftertrade!
+import .Executors: decommit!, isfilled, position!
+using .Executors: _cashfrom, NotEnoughCash
+using .Executors: AnyFOKOrder, AnyIOCOrder, AnyMarketOrder
 using .SimMode: @maketrade, iscashenough, cost
 using .Misc.TimeToLive: safettl
 using .Misc: toprecision
@@ -467,4 +471,26 @@ function maketrade(s::LiveStrategy, o, ii; resp, trade::Option{Trade}=nothing, k
         ii
     ) s = nameof(s)
     @maketrade
+end
+
+@doc """ Live `aftertrade!`: sync from exchange truth before local position update.
+#
+# The generic `Executors.aftertrade!` runs `position!(s, ii, t)` (with
+# `check_liq=true`) on the *pre-sync* local position. In Live the exchange is
+# authoritative: `live_sync_position!(s, ii, posside(trade))` (called by the
+# order path after `trade!` returns, and by the order watcher for fills that
+# arrive asynchronously) overwrites local state. A stale local breach must not
+# fire `liquidate!` (warn-only in Live, but still noisy and misleading) before
+# that sync lands. Defer the liquidation check: update locally without it.
+# """
+function aftertrade!(s::LiveStrategy, ii::InstrumentInstance, o::Order, t::Trade)
+    position!(s, ii, t; check_liq=false)
+    if o isa Union{AnyFOKOrder,AnyIOCOrder,AnyMarketOrder}
+        decommit!(s, o, ii, true)
+        delete!(s, ii, o)
+        isfilled(ii, o) || st.call!(s, o, NotEnoughCash(_cashfrom(s, ii, o)), ii)
+    elseif isfilled(ii, o)
+        decommit!(s, o, ii)
+        delete!(s, ii, o)
+    end
 end

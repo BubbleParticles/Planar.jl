@@ -6,13 +6,17 @@ This function creates a live market order and then waits for it to either be fil
 The function returns the last trade if any trades have occurred, otherwise it returns a `missing` status.
 
 """
-function _live_market_order(s, ii, t; skipchecks=false, amount, synced, waitfor, kwargs)
+function _live_market_order(s, ii, t; skipchecks=false, amount, synced, waitfor, price=lastprice(s, ii, t), kwargs)
     local o, order_trades
     # NOTE: necessary locks to prevent race conditions between balance/positions updates
     # and order creation
+    # `price` is a display/record fallback only: market execution price comes
+    # from the exchange. Default to the side-aware live price (bid/ask chain),
+    # not the history close, so local records match what `lastprice(s, ii, t)`
+    # callers expect. A caller-supplied `price` shadows the default via kwargs.
     order_trades = begin
         o = create_live_order(
-            s, ii; t, amount, price=lastprice(ii, Val(:history)), exc_kwargs=kwargs, skipchecks
+            s, ii; t, amount, price, exc_kwargs=kwargs, skipchecks
         )
         if !(o isa Order)
             return nothing

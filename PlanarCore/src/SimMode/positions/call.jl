@@ -1,14 +1,13 @@
 using ..Executors.Instances: leverage!, positionside, leverage, MarginInstance
-using ..Executors: hasorders
-using ..Executors.OrderTypes: postoside
+using ..Executors: cancel!
+using ..Executors.Instances: raw
+using ..Executors.OrderTypes: OrderCanceled
 using ..Strategies: MarginStrategy, NoMarginStrategy
 using ..Instances: ishedged, NoMarginInstance
 using ..Lang: splitkws
 using ..Misc: LittleDict
 
 const _PROTECTIONS_WARNING = """
-!!! warning "Protections"
-    Usually an exchange checks before executing a trade if right after the trade
     the position would be liquidated, and would prevent you to do such trade, however we
     always check after the trade, and liquidate accordingly, this is pessimistic since
     we can't ensure that all exchanges have such protections in place.
@@ -31,7 +30,6 @@ function singlewaycheck(s, ii, t)
     end
     return true
 end
-
 @doc "Closes a leveraged position."
 function call!(
     s::MarginStrategy{<:Union{Paper,Sim}},
@@ -41,22 +39,36 @@ function call!(
     ::PositionClose;
     kwargs...,
 )::Bool
-    # In hedged mode, cancel only orders on the side being closed to preserve the opposite side's active orders.
-    cancel_ok = call!(s, ii, CancelOrders(); t=ishedged(ii) ? postoside(side) : BuyOrSell)
-    cancel_ok || @warn "close_position: failed to cancel orders" ii = scalar(ii) side
+    if ishedged(ii)
+        # Position-scoped cancel: `postoside(Long)=Buy` only cancels Long-Buy
+        # orders (Buy side), but a Long position has both Buy (increase) and
+        # Sell (reduce) orders. Cancel every order whose `posside(o)==side`
+        # via `orders(s, ii, side)` (position-scoped) so the opposite position's
+        # orders are preserved.
+        for (_, o) in collect(orders(s, ii, side))
+            cancel!(s, o, ii; err=OrderCanceled(o))
+        end
+    else
+        cancel_ok = call!(s, ii, CancelOrders(); t=BuyOrSell)
+        cancel_ok || @warn "close_position: failed to cancel orders" ii = raw(ii) side
+    end
     v = close_position!(s, ii, side, date; kwargs...)
     if !v
-        @error "close_position! returned false (failed to close position)" ii=scalar(ii) side
-        throw(ArgumentError("Failed to close position for $ii on side $side"))
+        # Live reports close failure as `false` (retryable); Sim/Paper must
+        # match so bulk-close callers get per-ii results instead of an abort
+        # that skips the remaining holdings.
+        @error "close_position! returned false (failed to close position)" ii=raw(ii) side
+        return false
     end
     @deassert !isopen(ii, side)
     v
 end
-
 @doc "Closes all strategy positions"
 function call!(s::MarginStrategy{<:Union{Sim,Paper}}, side::ByPos, date, ::PositionClose; kwargs...)
+    # Snapshot: `close_position!` deletes from `s.holdings` on the last-side
+    # close, so iterating the live set would skip holdings or throw.
     LittleDict(
-        ii => call!(s, ii, side, date, PositionClose(); kwargs...) for ii in s.holdings
+        ii => call!(s, ii, side, date, PositionClose(); kwargs...) for ii in collect(s.holdings)
     )
 end
 @doc "Closes all strategy positions (no margin)"

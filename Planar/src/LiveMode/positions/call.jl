@@ -108,7 +108,7 @@ function Executors.call!(
     ii::MarginInstance,
     t::Type{<:AnyLimitOrder};
     amount,
-    price=lastprice(ii),
+    price=lastprice(s, ii, t),
     waitfor=Second(5),
     skipchecks=false,
     synced=true,
@@ -146,6 +146,7 @@ function Executors.call!(
     ii::MarginInstance,
     t::Type{<:AnyMarketOrder};
     amount,
+    price=lastprice(s, ii, t),
     waitfor=Second(5),
     skipchecks=false,
     synced=true,
@@ -156,7 +157,7 @@ function Executors.call!(
         @timeout_start
         order_kwargs = withoutkws(:fees; kwargs)
         trade = _live_market_order(
-            s, ii, t; skipchecks, amount, synced, waitfor, kwargs=order_kwargs
+            s, ii, t; skipchecks, amount, price, synced, waitfor, kwargs=order_kwargs
         )
         if synced && trade isa Trade
             waitsync(ii, since=trade.date, waitfor=@timeout_now)
@@ -170,11 +171,18 @@ end
 
 _close_order_bypos(::Short) = ShortMarketOrder{Buy}
 _close_order_bypos(::Long) = MarketOrder{Sell}
-
 function _posclose_cancel(s, ii, t, pside, waitfor)
     @debug "call pos close: cancel orders" _module = LogPosClose ii pside
     if hasorders(s, ii, pside)
-        if !call!(s, ii, CancelOrders(); t=ishedged(ii) ? postoside(pside) : BuyOrSell, synced=true, waitfor)
+        # Position-scoped cancel: hedged and non-hedged both route through
+        # `live_cancel` ordered-cancel path which already handles per-position
+        # semantics via `fetch_open_orders(s, ii; side=...)` id collection.
+        # Use the position's order side (`postoside(pside)`) so that a Long
+        # close does not wipe Short orders (and vice versa). Non-hedged uses
+        # the same path — `hasorders(s, ii, pside)` above already confirms
+        # at least one order exists for this position.
+        side = postoside(pside)
+        if !call!(s, ii, CancelOrders(); t=side, synced=true, waitfor)
             @warn "call pos close: failed to cancel orders" ii t
         end
     end
@@ -204,14 +212,16 @@ function _posclose_maybesync(s, ii, pside, waitfor)
 end
 
 function _posclose_waitsync(s, ii, pside, waitfor)
-    # Side-scoped wait: `_posclose_cancel` cancels only `postoside(pside)` in
-    # hedged mode, so waiting on `BuyOrSell` would burn the shared `waitfor`
-    # budget on opposite-side orders that were deliberately left alone.
-    t = ishedged(ii) ? postoside(pside) : BuyOrSell
-    if !waitordclose(s, ii, waitfor; t)
-        @error "call pos close: orders still pending" ii orderscount(s, ii, t) cash(ii) committed(
-            ii
-        )
+    # Position-scoped wait: a hedged Long close must not burn `waitfor` on
+    # Short orders that were deliberately preserved. Gate on the per-position
+    # predicate `hasorders(s, ii, pside)` (both Buy/Sell legs of this position
+    # via `hasorders(::MarginStrategy, ii, ::ByPos{P})`) and wait only on the
+    # position's order side `postoside(pside)`.
+    t = postoside(pside)
+    if hasorders(s, ii, pside)
+        if !waitordclose(s, ii, waitfor; t)
+            @error "call pos close: orders still pending for position $pside" ii orderscount(s, ii, pside) committed(ii, pside)
+        end
     end
     # with no orders in flight the local state should be up to date
     return if !isopen(ii, pside)
@@ -223,11 +233,6 @@ function _posclose_waitsync(s, ii, pside, waitfor)
 end
 
 function _posclose_amount(s, ii, pside; amount=nothing, kwargs...)
-    # Bind caller-supplied `:amount` explicitly (e.g. `_sync_oppos!`
-    # forced-side close passes the remote contract count, which is fresher
-    # than local cash mid-sync). This also keeps it out of `this_kwargs`,
-    # avoiding a duplicate `amount=` splat in `_posclose_trade`.
-    _, this_kwargs = splitkws(:reduce_only, :tag; kwargs)
     amt = isnothing(amount) ? abs(cash(ii, pside)) : abs(amount)
     @debug "call pos close: get amount" _module = LogPosClose ii pside amt
     @deassert let pup = live_position(s, ii, pside)
@@ -398,8 +403,10 @@ function call!(
     ::PositionClose;
     kwargs...,
 )
+    # Snapshot: single-close syncs delete from `s.holdings` on last-side
+    # close — same mutation hazard as Sim/Paper bulk close.
     LittleDict(
-        ii => call!(s, ii, side, date, PositionClose(); kwargs...) for ii in s.holdings
+        ii => call!(s, ii, side, date, PositionClose(); kwargs...) for ii in collect(s.holdings)
     )
 end
 @doc "Closes all strategy positions (live, no margin)."
