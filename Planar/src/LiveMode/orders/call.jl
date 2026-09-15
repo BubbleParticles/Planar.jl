@@ -18,7 +18,7 @@ function call!(
     ii,
     t::Type{<:AnyLimitOrder};
     amount,
-    price=lastprice(s, ii, t),
+    price=nothing,
     waitfor=Second(5),
     synced=true,
     skipchecks=false,
@@ -26,11 +26,13 @@ function call!(
 )::Union{<:Trade,Nothing,Missing}
     # NoMargin strategies are spot-only: short orders have no collateral and would
     # fail at the exchange. Mirror Sim's `iscashenough(::NoMargin, ::ShortSellOrder)=false`
-    # fast path to avoid a needless gateway round-trip.
+    # fast path to avoid a needless gateway round-trip (`price` stays `nothing`
+    # until the reject below, so no `lastprice` fetch pays on this path).
     if positionside(t) == Short()
         @debug "NoMargin: rejecting short limit order" ii=raw(ii) order_type=t
         return nothing
     end
+    price = @something price lastprice(s, ii, t)
     @timeout_start
     @lock ii begin
         order_kwargs = withoutkws(:fees; kwargs)
@@ -51,7 +53,7 @@ function call!(
     ii,
     t::Type{<:AnyMarketOrder};
     amount,
-    price=lastprice(s, ii, t),
+    price=nothing,
     waitfor=Second(5),
     synced=true,
     skipchecks=false,
@@ -61,6 +63,7 @@ function call!(
         @debug "NoMargin: rejecting short market order" ii=raw(ii) order_type=t
         return nothing
     end
+    price = @something price lastprice(s, ii, t)
     @timeout_start
     @lock ii begin
         order_kwargs = withoutkws(:fees; kwargs)

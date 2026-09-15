@@ -1,5 +1,5 @@
 using .st: MarginStrategy, NoMarginStrategy
-using PlanarCore.Executors: CancelOrders
+using PlanarCore.Executors: CancelOrders, call!
 using PlanarCore.OrderTypes: BuyOrSell
 using PlanarCore.Instances: NoMarginInstance, HedgedInstance, MarginInstance, ishedged
 using .Executors: AnyMarketOrder
@@ -23,6 +23,8 @@ function call!(
     ::PositionClose;
     kwargs...,
 )::Bool
-    true
+    # Same contract as the Sim twin: no positions, but pending spot orders
+    # must not survive a reported-successful close.
+    call!(s, ii, CancelOrders(); t=BuyOrSell)
 end
 

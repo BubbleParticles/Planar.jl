@@ -1,7 +1,7 @@
 using ..Executors.Instances: leverage!, positionside, leverage, MarginInstance
-using ..Executors: cancel!
+using ..Executors: cancel!, call!, CancelOrders
 using ..Executors.Instances: raw
-using ..Executors.OrderTypes: OrderCanceled
+using ..Executors.OrderTypes: OrderCanceled, BuyOrSell
 using ..Strategies: MarginStrategy, NoMarginStrategy
 using ..Instances: ishedged, NoMarginInstance
 using ..Lang: splitkws
@@ -45,9 +45,11 @@ function call!(
         # Sell (reduce) orders. Cancel every order whose `posside(o)==side`
         # via `orders(s, ii, side)` (position-scoped) so the opposite position's
         # orders are preserved.
+        cancel_ok = true
         for (_, o) in collect(orders(s, ii, side))
-            cancel!(s, o, ii; err=OrderCanceled(o))
+            cancel_ok &= cancel!(s, o, ii; err=OrderCanceled(o))
         end
+        cancel_ok || @warn "close_position: failed to cancel orders" ii = raw(ii) side
     else
         cancel_ok = call!(s, ii, CancelOrders(); t=BuyOrSell)
         cancel_ok || @warn "close_position: failed to cancel orders" ii = raw(ii) side
@@ -114,5 +116,8 @@ function call!(
     ::PositionClose;
     kwargs...,
 )::Bool
-    true
+    # No positions exist in spot mode, but pending spot orders do — a
+    # "close all" that reports success while leaving them live is a silent
+    # no-op. Cancel everything; the bulk NoMargin path funnels through here.
+    call!(s, ii, CancelOrders(); t=BuyOrSell)
 end

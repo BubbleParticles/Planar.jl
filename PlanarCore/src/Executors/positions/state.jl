@@ -195,7 +195,14 @@ function isliquidatable(
         # Loud (@warn, not @debug): a gateway outage must not silently flip
         # the liquidation decision to a possibly-stale candle.
         @warn "isliquidatable: lastprice failed, falling back to candle" exception=e raw(ii) date p
-        _pricebypos(ii, date, p)
+        try
+            _pricebypos(ii, date, p)
+        catch e2
+            e2 isa InterruptException && rethrow(e2)
+            # Gateway degraded AND candle missing: same contract as Sim/Paper
+            # (return false, never throw out of `position!`/`positions!`).
+            return false
+        end
     end
     # `lastprice` returns 0.0 (no throw) when the ticker is missing/empty, so
     # the try/catch above never fires on gateway degradation. A 0.0 price
@@ -203,7 +210,12 @@ function isliquidatable(
     # real Short one (0 >= liqprice never holds) — fall back to candle instead.
     if !(price isa Real) || !(price > 0)
         @warn "isliquidatable: bad live price, falling back to candle" price raw(ii) date p
-        price = _pricebypos(ii, date, p)
+        price = try
+            _pricebypos(ii, date, p)
+        catch e
+            e isa InterruptException && rethrow(e)
+            return false
+        end
     end
     buffered = _buffered(price, p)
     @deassert _checkbuffered(buffered, price, p)

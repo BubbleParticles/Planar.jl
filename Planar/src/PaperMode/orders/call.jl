@@ -30,8 +30,10 @@ function call!(
         return nothing
     end
     fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
-    # Handle NaN price from priceat
-    price = isnan(price) ? zero(DFT) : convert(DFT, price)
+    # Keep NaN for the empty-orderbook fallback in `create_paper_market_order`
+    # (`isfinite(price) && price > 0` gates the fallback; a premature `zero`
+    # coercion would defeat it — the constructor validates finiteness itself).
+    price = isnan(price) ? price : convert(DFT, price)
     try
         o, obside = create_paper_market_order(s, t, ii; amount, date, price, order_kwargs...)
         isnothing(o) && return nothing
@@ -63,8 +65,8 @@ function call!(
         return nothing
     end
     fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
-    # Handle NaN price from priceat
-    price = isnan(price) ? zero(DFT) : convert(DFT, price)
+    # Same NaN-through contract as the NoMargin twin above.
+    price = isnan(price) ? price : convert(DFT, price)
     try
         o, obside = create_paper_market_order(s, t, ii; amount, date, price, order_kwargs...)
         isnothing(o) && return nothing
@@ -129,5 +131,5 @@ function call!(
     ::CancelOrders;
     kwargs...,
 )::Bool
-    all(cancel!(s, o, ii; err=OrderCanceled(o)) for o in values(s, ii, BuyOrSell))
+    all(cancel!(s, o, ii; err=OrderCanceled(o)) for o in collect(values(s, ii, BuyOrSell)))
 end

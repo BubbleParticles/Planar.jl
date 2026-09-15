@@ -432,8 +432,4 @@ function positions!(s::MarginStrategy{<:Union{Paper,Sim}}, date::DateTime)
     end
 end
 
-@doc """ Warn if a `MarginStrategy` mode has no `positions!` method."""
-positions!(s::MarginStrategy, args...; kwargs...) =
-    @warn "`positions!` not implemented for $(typeof(s))"
-
 positions!(args...; kwargs...) = nothing

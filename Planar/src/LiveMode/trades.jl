@@ -494,3 +494,17 @@ function aftertrade!(s::LiveStrategy, ii::InstrumentInstance, o::Order, t::Trade
         delete!(s, ii, o)
     end
 end
+# Narrow failure-path fallback: the `t=nothing` branch (maketrade failed)
+# would otherwise fall through to the generic `Strategy` method. Any
+# Live-specific decommit bookkeeping added above must apply here too —
+# today that means the same decommit/delete without a position update.
+function aftertrade!(s::LiveStrategy, ii::InstrumentInstance, o::Order, t::Nothing)
+    if o isa Union{AnyFOKOrder,AnyIOCOrder,AnyMarketOrder}
+        decommit!(s, o, ii, true)
+        delete!(s, ii, o)
+        isfilled(ii, o) || st.call!(s, o, NotEnoughCash(_cashfrom(s, ii, o)), ii)
+    elseif isfilled(ii, o)
+        decommit!(s, o, ii)
+        delete!(s, ii, o)
+    end
+end

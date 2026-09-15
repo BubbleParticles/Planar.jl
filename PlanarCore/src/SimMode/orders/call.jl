@@ -78,10 +78,11 @@ function call!(
     t::Type{<:OrderSide}=BuyOrSell,
     kwargs...,
 )::Bool
-    all(cancel!(s, o, ii; err=OrderCanceled(o)) for o in values(s, ii, t))
+    all(cancel!(s, o, ii; err=OrderCanceled(o)) for o in collect(values(s, ii, t)))
 end
 
 @doc """ Cancels all orders for a NoMarginStrategy.
+
 $(TYPEDSIGNATURES)
 """
 function call!(
@@ -90,5 +91,5 @@ function call!(
     ::CancelOrders;
     kwargs...,
 )::Bool
-    all(cancel!(s, o, ii; err=OrderCanceled(o)) for o in values(s, ii, BuyOrSell))
+    all(cancel!(s, o, ii; err=OrderCanceled(o)) for o in collect(values(s, ii, BuyOrSell)))
 end

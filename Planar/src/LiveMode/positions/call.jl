@@ -1,11 +1,12 @@
 using ..PaperMode.SimMode: _lev_value, leverage!, leverage, position!, singlewaycheck
 using .Lang: splitkws
 using .st: MarginStrategy, NoMarginStrategy
-using .Executors: hasorders, update_leverage!
+using .Executors: hasorders, orders, update_leverage!, CancelOrders
 using .st: exchange
 using .Executors.Instances: raw, MarginInstance
 using .Instances: ishedged
 using ..PaperMode.OrderTypes: postoside, BuyOrSell
+using PlanarCore.OrderTypes: orderside, Buy, Sell
 import .Executors: call!
 
 @doc """ Updates leverage or places an order in a live trading strategy.
@@ -171,20 +172,21 @@ end
 
 _close_order_bypos(::Short) = ShortMarketOrder{Buy}
 _close_order_bypos(::Long) = MarketOrder{Sell}
-function _posclose_cancel(s, ii, t, pside, waitfor)
+function _posclose_cancel(s, ii, pside, waitfor)
     @debug "call pos close: cancel orders" _module = LogPosClose ii pside
     if hasorders(s, ii, pside)
-        # Position-scoped cancel: hedged and non-hedged both route through
-        # `live_cancel` ordered-cancel path which already handles per-position
-        # semantics via `fetch_open_orders(s, ii; side=...)` id collection.
-        # Use the position's order side (`postoside(pside)`) so that a Long
-        # close does not wipe Short orders (and vice versa). Non-hedged uses
-        # the same path — `hasorders(s, ii, pside)` above already confirms
-        # at least one order exists for this position.
-        side = postoside(pside)
-        if !call!(s, ii, CancelOrders(); t=side, synced=true, waitfor)
-            @warn "call pos close: failed to cancel orders" ii t
+        # Position-scoped cancel on the exchange side: ccxt `cancel_orders`
+        # filters by ORDER side (buy/sell), so a single `postoside(pside)`
+        # call only cancels one leg of this position (Long-Buy, leaving
+        # Long-Sell reduce orders live, and vice versa). Cancel BOTH legs
+        # that belong to this position; the opposite position's orders are
+        # untouched because `orders(s, ii, pside, side)` filters by posside.
+        ok = true
+        for side in (Buy, Sell)
+            isempty(collect(orders(s, ii, pside, side))) && continue
+            ok &= call!(s, ii, CancelOrders(); t=side, synced=true, waitfor)
         end
+        ok || @warn "call pos close: failed to cancel orders" ii pside
     end
 end
 
@@ -212,15 +214,16 @@ function _posclose_maybesync(s, ii, pside, waitfor)
 end
 
 function _posclose_waitsync(s, ii, pside, waitfor)
-    # Position-scoped wait: a hedged Long close must not burn `waitfor` on
-    # Short orders that were deliberately preserved. Gate on the per-position
-    # predicate `hasorders(s, ii, pside)` (both Buy/Sell legs of this position
-    # via `hasorders(::MarginStrategy, ii, ::ByPos{P})`) and wait only on the
-    # position's order side `postoside(pside)`.
-    t = postoside(pside)
+    # Position-scoped wait: `hasorders(s, ii, pside)` covers both Buy/Sell
+    # legs of this position, so the wait must too — a single-order-side
+    # wait would return immediately while the position's reduce-leg orders
+    # (Long-Sell / Short-Buy) are still pending, racing the close trade.
     if hasorders(s, ii, pside)
-        if !waitordclose(s, ii, waitfor; t)
-            @error "call pos close: orders still pending for position $pside" ii orderscount(s, ii, pside) committed(ii, pside)
+        for side in (Buy, Sell)
+            isempty(collect(orders(s, ii, pside, side))) && continue
+            if !waitordclose(s, ii, waitfor; t=side)
+                @error "call pos close: orders still pending for position $pside" ii orderscount(s, ii, pside) committed(ii, pside)
+            end
         end
     end
     # with no orders in flight the local state should be up to date
@@ -233,11 +236,27 @@ function _posclose_waitsync(s, ii, pside, waitfor)
 end
 
 function _posclose_amount(s, ii, pside; amount=nothing, kwargs...)
-    amt = isnothing(amount) ? abs(cash(ii, pside)) : abs(amount)
-    @debug "call pos close: get amount" _module = LogPosClose ii pside amt
-    @deassert let pup = live_position(s, ii, pside)
-        isnothing(pup) || resp_position_contracts(pup.resp, exchangeid(ii)) == amt
+    # Prefer the exchange truth when a fresh position update is available:
+    # local `cash(ii, pside)` can diverge mid-sync, and a wrong-size
+    # reduce-only close leaves dust (partial close) or gets rejected
+    # (over-size). The @deassert below is stripped in production, so verify.
+    amt = if isnothing(amount)
+        pup = live_position(s, ii, pside)
+        if !isnothing(pup) && !pup.closed[]
+            remote_amt = resp_position_contracts(pup.resp, exchangeid(ii))
+            local_amt = abs(cash(ii, pside))
+            if !isapprox(local_amt, remote_amt; rtol=1e-3)
+                @warn "call pos close: local/remote amount mismatch, using remote" ii pside local_amt remote_amt
+            end
+            remote_amt
+        else
+            abs(cash(ii, pside))
+        end
+    else
+        abs(amount)
     end
+    @debug "call pos close: get amount" _module = LogPosClose ii pside amt
+    _, this_kwargs = splitkws(:reduce_only, :tag; kwargs)
     return amt, this_kwargs
 end
 
@@ -373,7 +392,11 @@ function call!(
             return !isopen(ii, pside)
         end
         # trade exec success, wait for completion
-        if waitordclose(s, ii, @timeout_now)
+        # Scope the wait to the close order's side: the default `BuyOrSell`
+        # wait would burn the shared `waitfor` on the opposite position's
+        # orders in hedged mode (deliberately preserved), then fall into
+        # `_posclose_lastcheck` even though this position's close succeeded.
+        if waitordclose(s, ii, @timeout_now; t=orderside(t))
             # terminal check after closing trade
             _posclose_order(s, ii, pside, since, @timeout_now)
         else
@@ -392,8 +415,10 @@ function call!(
     ::PositionClose;
     kwargs...,
 )::Bool
+    # Same contract as Sim/Paper: cancel pending spot orders so a
+    # "close all" never reports success while orders stay live.
     @deassert !isopen(ii, side) "NoMarginStrategy should not have open positions"
-    true
+    call!(s, ii, CancelOrders(); t=BuyOrSell)
 end
 @doc "Closes all strategy positions (live)."
 function call!(

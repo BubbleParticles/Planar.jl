@@ -166,14 +166,16 @@ function live_send_order(
     # might be used in a specialized function for problematic exchanges
     # @price! ii stop_loss stop_price price profit_price take_profit
     # @amount! ii amount
+    # Direction gating is NOT skippable: Sim/Paper enforce `singlewaycheck`
+    # unconditionally (no `skipchecks` parameter exists there). A Live caller
+    # passing `skipchecks=true` (all posclose internals do) must not open an
+    # opposite-side position that Sim/Paper would refuse — only the cash gate
+    # below is a simulation check.
+    if s isa MarginStrategy && !singlewaycheck(s, ii, t)
+        @warn "send order: double direction order in non hedged mode" ii = raw(ii) t
+        return nothing
+    end
     if !skipchecks
-        # Non-hedged margin gating (same rule as Sim/Paper `singlewaycheck`):
-        # without this, a direct `live_send_order` could open an opposite-side
-        # position that Sim/Paper order paths would refuse.
-        if s isa MarginStrategy && !singlewaycheck(s, ii, t)
-            @warn "send order: double direction order in non hedged mode" ii = raw(ii) t
-            return nothing
-        end
         if !check_available_cash(s, ii, amount, price, t)
             @warn "send order: not enough cash" this_cash = cash(ii, posside(t)) ai_comm = committed(
                 ii, posside(t)
@@ -191,10 +193,11 @@ function live_send_order(
         @warn "send order: margin mode mismatch" this_mm = marginmode(ii) exc = nameof(
             exchange(ii)
         ) reduce_only
-        if !reduce_only
-            return nothing
-        end
-     end
+        # No `reduce_only` carve-out: a close sent under the wrong mode is
+        # exactly the misroute this invariant exists to prevent — the
+        # exchange rejects or books it against the wrong position.
+        return nothing
+    end
     sym = raw(ii)
     exc = exchange(ii)
     side = _ccxtorderside(t)
