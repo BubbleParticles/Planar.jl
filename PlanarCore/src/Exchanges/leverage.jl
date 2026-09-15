@@ -210,7 +210,10 @@ end
 $(TYPEDSIGNATURES)
 """
 function marginmode!(exc::Exchange, mode::MarginMode, symbol=""; kwargs...)
-    mode isa NoMargin && return true
+    if mode isa NoMargin
+        exc.options["defaultMarginMode"] = "nomargin"
+        return true
+    end
     base = mode isa IsolatedMargin ? "isolated" : "cross"
     hedged = mode isa MarginMode{Hedged}
     marginmode!(exc, base, symbol; hedged, kwargs...)
@@ -241,6 +244,7 @@ function marginmode!(exc::Exchange, mode, symbol=""; hedged=false, kwargs...)
         end
         return true
     elseif mode_str == "nomargin"
+        exc.options["defaultMarginMode"] = "nomargin"
         return true
     else
         error("Invalid margin mode $mode")
