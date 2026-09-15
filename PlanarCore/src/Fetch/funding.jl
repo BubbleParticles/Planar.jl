@@ -1,5 +1,5 @@
 using ..Exchanges.Instruments
-using ..Exchanges: has
+using ..Exchanges: has, ExchangeID
 using ..TimeTicks
 using ..Misc: DFT, FUNDING_PERIOD
 using ..Misc.TimeToLive
@@ -202,8 +202,7 @@ end
 const FUNDING_RATE_TTL = Ref(Second(5))
 @doc "Initializes a safe TTL cache for storing funding rates with a specified TTL."
 const FUNDING_RATE_CACHE = safettl(Tuple{String,Symbol}, DFT, FUNDING_RATE_TTL[])
-@doc "Initializes a safe TTL cache for storing multiple funding rates with a specified TTL."
-const FUNDING_RATES_CACHE = safettl(Symbol, Any, FUNDING_RATE_TTL[])
+const FUNDING_RATES_CACHE = safettl(ExchangeID, Any, FUNDING_RATE_TTL[])
 assetkey(ii) = (ii.raw, ii.exchange.id)
 
 export funding_history, funding_rate
