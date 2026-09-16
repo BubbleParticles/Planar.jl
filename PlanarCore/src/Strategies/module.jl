@@ -136,7 +136,7 @@ struct Strategy{X<:ExecMode,N,E<:ExchangeID,M<:MarginMode,C} <: AbstractStrategy
             # (any WithMargin) or setPositionMode (hedged variants). Its return value
             # MUST be honoured (the docstring promises fail-fast).
             check_margin_support!(exc, margin) ||
-                error("Exchange $(nameof(exc)) does not support margin mode '$(margin)'")
+                error("Exchange $(nameof(exc)) does not support margin mode '$(margin)' (hedged=$(ishedged(margin)); need setMarginMode$(margin isa MarginMode{Hedged} ? " + setPositionMode" : ""))")
             ok = marginmode!(exc, margin, "")
             if ok === false
                 error("Exchange $(nameof(exc)) failed to set margin mode '$(margin)' (hedged=$(ishedged(margin))) — gateway setMarginMode/setPositionMode returned false. Check gateway logs, API permissions, and that the mock advertises setMarginMode+setPositionMode.")

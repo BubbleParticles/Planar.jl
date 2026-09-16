@@ -491,3 +491,75 @@ end
         delete!(sandboxCache, ExchangeID{name}())
     end
 end
+
+@testset "String marginmode! normalization + hedge flag" begin
+    # The untyped string overload normalizes case/separators and hedged
+    # suffixes, so "ISOLATED", "isolated-hedged" etc. behave canonically.
+    prev_post = Rest._http_post[]
+    prev_init = Rest._gateway_initialized[]
+    Rest._gateway_initialized[] = true
+    sent = Any[]
+    mock_post = (url; headers=[], body=nothing, kwargs...) -> begin
+        if occursin("/setPositionMode", url)
+            raw = isnothing(body) ? get(kwargs, :body, nothing) : body
+            hv = if raw isa AbstractDict
+                get(raw, "hedged", get(raw, :hedged, missing))
+            elseif !isnothing(raw)
+                parsed = try
+                    Rest.JSON3.read(string(raw), Dict{String,Any})
+                catch
+                    Dict{String,Any}()
+                end
+                get(parsed, "hedged", missing)
+            else
+                missing
+            end
+            push!(sent, hv)
+        end
+        return Rest.HTTP.Response(
+            200, Rest.JSON3.write(Dict("result" => true, "error" => nothing, "error_code" => nothing))
+        )
+    end
+    Rest.set_http_post!(mock_post)
+    try
+        exc = _make_exchange_matrix(:strnorm_test)
+        @test marginmode!(exc, "ISOLATED", "BTC/USDT:USDT")
+        @test PlanarCore.Exchanges.marginmode(exc) == "isolated"
+        @test !isempty(sent) && last(sent) === false
+        empty!(sent)
+        @test marginmode!(exc, "isolated-hedged", "BTC/USDT:USDT")
+        @test PlanarCore.Exchanges.marginmode(exc) == "isolated"
+        @test !isempty(sent) && last(sent) === true
+        empty!(sent)
+        @test marginmode!(exc, "Cross Hedged", "BTC/USDT:USDT")
+        @test PlanarCore.Exchanges.marginmode(exc) == "cross"
+        @test !isempty(sent) && last(sent) === true
+        @test_throws ErrorException marginmode!(exc, "bogus_mode", "BTC/USDT:USDT")
+    finally
+        Rest.set_http_post!(prev_post)
+        Rest._gateway_initialized[] = prev_init
+    end
+end
+
+@testset "Binance sandbox normalization + position mode" begin
+    # Sandbox records the canonical base mode and the hedge flag, so
+    # mixed-case / hedged-suffixed strings stay consistent with live state.
+    using PlanarCore.Exchanges: sandboxCache
+    name = :binance
+    exc = _make_exchange_matrix(name)
+    sandboxCache[ExchangeID{name}()] = true
+    try
+        @test marginmode!(exc, "ISOLATED", "BTC/USDT:USDT")
+        @test PlanarCore.Exchanges.marginmode(exc) == "isolated"
+        @test exc.options["defaultPositionMode"] == "oneway"
+        @test marginmode!(exc, "isolated-hedged", "BTC/USDT:USDT")
+        @test PlanarCore.Exchanges.marginmode(exc) == "isolated"
+        @test exc.options["defaultPositionMode"] == "hedge"
+        @test marginmode!(exc, Cross(), "BTC/USDT:USDT")
+        @test exc.options["defaultPositionMode"] == "oneway"
+        @test marginmode!(exc, CrossHedged(), "BTC/USDT:USDT")
+        @test exc.options["defaultPositionMode"] == "hedge"
+    finally
+        delete!(sandboxCache, ExchangeID{name}())
+    end
+end

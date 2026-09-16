@@ -129,19 +129,19 @@ function from_orderbook(obside, s, ii, o::Order; amount, date)
     _, taken_vol, total_vol = _paper_liquidity(s, ii)
     n_prices = length(obside)
     # Gracefully handle empty orderbook
+    # NOTE: no volumecap accounting here — the caller owns cancel/release.
+    # Releasing here would double-release (caller cancels, and Paper cancel!
+    # releases) or wrongly release a GTC the caller is about to queue.
     if n_prices <= 0
         @debug "paper from ob: empty orderbook"
-        volrelease!(s, ii; amount=amount)
         return zero(DFT), zero(DFT), nothing
     end
     price_idx = max(1, trunc(Int, taken_vol[] * n_prices / total_vol[]))
     this_price, this_vol = obside[price_idx]
     @debug "paper from ob: idx" price_idx this_price this_vol
     this_vol = min(amount, this_vol)
-    islimit = o isa AnyLimitOrder
     if islimit && !_istriggered(o, this_price)
         @debug "paper from ob: limit order not triggered" this_price o
-        volrelease!(s, ii; amount=amount)
         return zero(DFT), zero(DFT), nothing
     end
     # calculate the vwap based on how much orderbook we sweep
@@ -154,7 +154,10 @@ function from_orderbook(obside, s, ii, o::Order; amount, date)
         end
         ob_price, ob_vol = obside[price_idx]
         # If it is a limit order terminate the loop as soon as avg_price
-        # exceeds the limit order avg_price
+        # exceeds the limit order avg_price. The unfilled remainder never
+        # touched the market, so release it here; the caller keeps the
+        # filled portion reserved (no cancel follows on this path — a GTC
+        # queues, an IOC cancels and releases the remainder itself).
         if islimit && !_istriggered(o, ob_price)
             @debug "paper from ob: limit order partially filled" o.price this_price amount this_vol avg_price
             volrelease!(s, ii; amount=amount - this_vol)
@@ -167,16 +170,12 @@ function from_orderbook(obside, s, ii, o::Order; amount, date)
     # Gracefully handle zero volume edge case
     if this_vol <= zero(DFT)
         @debug "paper from ob: zero volume"
-        volrelease!(s, ii; amount=amount)
         return zero(DFT), zero(DFT), nothing
     end
     avg_price /= this_vol
     ob_trade::Union{Nothing,<:Trade} = nothing
     if o isa AnyFOKOrder && this_vol < amount
         @debug "paper from ob: fok order no volume" o.price this_price amount this_vol
-        cancel!(s, o, ii; err=NotEnoughLiquidity())
-        # Release the reserved volume since FOK order failed
-        volrelease!(s, ii; amount=amount)
         return avg_price, zero(DFT), nothing
     end
     prev_cash = s.cash.value
@@ -186,9 +185,6 @@ function from_orderbook(obside, s, ii, o::Order; amount, date)
     @debug "paper from ob:" s.cash.value - avg_price prev_cash this_vol ob_trade.value
     if isnothing(ob_trade)
         @debug "paper from ob: trade failed" o.price this_price amount this_vol
-        cancel!(s, o, ii; err=OrderFailed((; o, obside)))
-        # Release the reserved volume since trade failed
-        volrelease!(s, ii; amount=amount)
     end
     # Gracefully handle edge case instead of asserting
     if !(o.amount ≈ this_vol) &&

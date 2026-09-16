@@ -30,6 +30,7 @@ function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}
     # narrower exc type and a narrower mode type.)
     if mode isa NoMargin
         exc.options["defaultMarginMode"] = "nomargin"
+        exc.options["defaultPositionMode"] = "oneway"
         return true
     end
     _binance_marginmode!(exc, mode isa IsolatedMargin ? "isolated" : "cross", symbol; hedged=mode isa MarginMode{Hedged}, kwargs...)
@@ -47,11 +48,27 @@ function _binance_marginmode!(exc::Exchange, mode, symbol; hedged=false, kwargs.
         # Testnet lacks setMarginMode/setPositionMode, so skip the gateway
         # round-trip — but still record the mode locally, mirroring the
         # generic path (which sets options before its gateway calls).
-        mode_str = string(mode)
-        mode_str in ("isolated", "cross") ||
-            mode_str == "nomargin" ||
+        # Normalize like the generic string path so "Isolated",
+        # "isolated-hedged", etc. record their canonical base mode, and
+        # record the hedge flag so `marginmode(exc)` state stays consistent.
+        mode_norm = lowercase(replace(string(mode), "-" => "_", " " => "_"))
+        mode_str = if mode_norm in ("isolated", "isolated_margin")
+            "isolated"
+        elseif mode_norm in ("isolated_hedged", "isolatedhedged", "isolated_hedge", "isolatedhedge")
+            hedged = true
+            "isolated"
+        elseif mode_norm in ("cross", "cross_margin")
+            "cross"
+        elseif mode_norm in ("cross_hedged", "crosshedged", "cross_hedge", "crosshedge")
+            hedged = true
+            "cross"
+        elseif mode_norm in ("nomargin", "no_margin", "no-margin", "none", "spot", "")
+            "nomargin"
+        else
             error("Invalid margin mode $mode")
+        end
         exc.options["defaultMarginMode"] = mode_str
+        exc.options["defaultPositionMode"] = hedged ? "hedge" : "oneway"
         return true
     end
     invoke(marginmode!, Tuple{Exchange,<:Any,<:Any}, exc, mode, symbol; hedged, kwargs...)

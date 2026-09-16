@@ -219,7 +219,25 @@ function marginmode!(exc::Exchange, mode::MarginMode, symbol=""; kwargs...)
     marginmode!(exc, base, symbol; hedged, kwargs...)
 end
 function marginmode!(exc::Exchange, mode, symbol=""; hedged=false, kwargs...)
-    mode_str = string(mode)
+    # Normalize like `_margin_from_string` (lowercase, `-`/space → `_`) so
+    # "Isolated", "ISOLATED", "isolated-hedged" etc. behave like their
+    # canonical forms. A hedged string sets the hedge flag unless the caller
+    # already passed `hedged=true` explicitly.
+    mode_norm = lowercase(replace(string(mode), "-" => "_", " " => "_"))
+    mode_str, str_hedged = if mode_norm in ("isolated", "isolated_margin")
+        "isolated", false
+    elseif mode_norm in ("isolated_hedged", "isolatedhedged", "isolated_hedge", "isolatedhedge")
+        "isolated", true
+    elseif mode_norm in ("cross", "cross_margin")
+        "cross", false
+    elseif mode_norm in ("cross_hedged", "crosshedged", "cross_hedge", "crosshedge")
+        "cross", true
+    elseif mode_norm in ("nomargin", "no_margin", "no-margin", "none", "spot", "")
+        "nomargin", false
+    else
+        error("Invalid margin mode $mode")
+    end
+    hedged = hedged || str_hedged
     if mode_str in ("isolated", "cross")
         exc.options["defaultMarginMode"] = mode_str
         # Hedge / position mode is account-wide (symbol is optional).
@@ -243,11 +261,9 @@ function marginmode!(exc::Exchange, mode, symbol=""; hedged=false, kwargs...)
             return false
         end
         return true
-    elseif mode_str == "nomargin"
+    else
         exc.options["defaultMarginMode"] = "nomargin"
         return true
-    else
-        error("Invalid margin mode $mode")
     end
 end
 

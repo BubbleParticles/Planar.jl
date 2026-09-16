@@ -152,23 +152,30 @@ function create_paper_limit_order!(s, ii, t; amount, date, kwargs...)
         # Queue persistent orders (GTC and generic limit): Sim keeps them
         # working, so Paper must track them with a fill task too. Immediate
         # (FOK/IOC) orders that didn't fill are canceled below.
+        # Return contract matches Sim (`order!` → Trade or nothing): a queued
+        # but unfilled GTC returns `nothing`, NOT `missing` — callers
+        # (`force_exit_position`, `liquidate!`) test `isnothing(t)` to detect
+        # failure, and `missing` would slip through as success.
         if o isa AnyGTCOrder || !(ordertype(o) <: ImmediateOrderType)
             @debug "paper limit order: queuing gtc order" o o.asset o.price o.amount
             paper_limitorder!(s, ii, o; fees_kwarg...)
-            return @something trade missing
+            return trade
         elseif !isfilled(ii, o) && ordertype(o) <: ImmediateOrderType
             @debug "paper limit order: canceling" o.asset ordertype(o) o.price o.amount
+            # cancel! releases the volumecap reservation (Paper cancel!
+            # override) — no second release here.
             cancel!(s, o, ii; err=OrderCanceled(o))
-            volrelease!(s, ii; amount)
         end
         # return first trade (if any)
         return trade
     catch e
         e isa InterruptException && rethrow(e)
         @error "paper limit order: failed" exception = (e, catch_backtrace()) raw(ii) asset = o.asset
+        # cancel! releases the volumecap reservation (Paper cancel!
+        # override) — no second release here. Return `nothing` (Sim
+        # contract), not `missing`, so `isnothing` failure checks fire.
         !isfilled(ii, o) && cancel!(s, o, ii; err=OrderFailed(o))
-        volrelease!(s, ii; amount)
-        return missing
+        return nothing
     end
 end
 

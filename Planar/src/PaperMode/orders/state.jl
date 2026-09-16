@@ -9,6 +9,13 @@ If the order is associated with a task in the `:paper_order_tasks` attribute of 
 
 """
 function Executors.cancel!(s::Strategy{Paper}, o::Order, ii::T; err::OrderError) where {T}
+    # `volumecap!` reserves against the daily ticker volume before the order
+    # object exists; most failure paths cancel a never-queued order, so the
+    # cash decommit inside `Executors.cancel!` is skipped — but the volume
+    # reservation is real and must be released exactly once. Releasing in the
+    # `finally` keeps queued and never-queued cancels uniform: queued orders
+    # release both cash (decommit) and volume (here), unqueued orders release
+    # only volume. Callers MUST NOT release after cancel!.
     try
         invoke(Executors.cancel!, Tuple{Strategy,Order,T}, s, o, ii; err)
     finally
@@ -79,8 +86,9 @@ function SimMode.marketorder!(s::PaperStrategy, o, ii; date, obside)
     if isempty(obside)
         trade = SimMode.trade!(s, o, ii; date, price=o.price, actual_amount=o.amount, slippage=false)
         if isnothing(trade)
+            # cancel! releases the volumecap reservation (Paper cancel!
+            # override) — no second release here.
             cancel!(s, o, ii; err=OrderCanceled(o))
-            volrelease!(s, ii; amount=o.amount)
             return nothing
         else
             hold!(s, ii, o)
@@ -89,8 +97,9 @@ function SimMode.marketorder!(s::PaperStrategy, o, ii; date, obside)
     end
     _, _, trade = from_orderbook(obside, s, ii, o; o.amount, date)
     if isnothing(trade)
+        # cancel! releases the volumecap reservation (Paper cancel!
+        # override) — no second release here.
         cancel!(s, o, ii; err=OrderCanceled(o))
-        volrelease!(s, ii; amount=o.amount)
         nothing
     else
         hold!(s, ii, o)
