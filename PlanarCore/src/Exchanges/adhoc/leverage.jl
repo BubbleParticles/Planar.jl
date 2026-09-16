@@ -22,11 +22,21 @@ end
 
 @doc """Binance marginmode! override — skip in sandbox."""
 function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}, mode, symbol; hedged=false, kwargs...)
-    if !issandbox(exc)
-        invoke(marginmode!, Tuple{Exchange,<:Any,<:Any}, exc, mode, symbol; hedged, kwargs...)
-    else
-        return true
+    issandbox(exc) && return true
+    if mode isa MarginMode
+        if mode isa NoMargin
+            exc.options["defaultMarginMode"] = "nomargin"
+            return true
+        end
+        # Authoritative hedge flag comes from the MarginMode type, not the
+        # `hedged` keyword default. Normalize to the base string here so the
+        # `invoke` below lands on the string-dispatch method directly — invoking
+        # the `mode::MarginMode` wrapper with a stale `hedged` keyword would
+        # collide with the wrapper's own derived `hedged` downstream.
+        hedged = mode isa MarginMode{Hedged}
+        mode = mode isa IsolatedMargin ? "isolated" : "cross"
     end
+    invoke(marginmode!, Tuple{Exchange,<:Any,<:Any}, exc, mode, symbol; hedged, kwargs...)
 end
 
 @doc "Fetch positions to detect current leverage."

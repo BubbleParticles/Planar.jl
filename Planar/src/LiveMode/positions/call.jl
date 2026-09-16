@@ -1,4 +1,4 @@
-using ..PaperMode.SimMode: _lev_value, leverage!, leverage, position!, singlewaycheck
+using PlanarCore.SimMode: _lev_value, leverage!, leverage, position!, singlewaycheck
 using .Lang: splitkws
 using .st: MarginStrategy, NoMarginStrategy
 using .Executors: hasorders, orders, update_leverage!, CancelOrders

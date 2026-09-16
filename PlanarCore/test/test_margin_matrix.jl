@@ -318,3 +318,113 @@ end
     cash!(s.cash, 100.0)
     @test !_cross_account_covered(s, date)
 end
+
+@testset "CrossHedged liquidation is account-level" begin
+    exc = _make_exchange_matrix(:crosshedged_liq_test)
+    tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
+    _TIER_CACHES[(:crosshedged_liq_test, "BTC/USDT:USDT")] = ([tier], time())
+    uni = InstrumentCollection(["BTC/USDT:USDT"]; exc=exc, margin=CrossHedged(), load_data=false)
+    cfg = Config(; qc=:USDT, initial_cash=100000.0)
+    s = Strategy(Main, Sim(), CrossHedged(), TimeFrame("1m"), exc, uni; config=cfg)
+    # Crash candles: 50k -> 40k, below the standalone long liq (45.5k)
+    df = DataFrame(
+        timestamp=[DateTime(2024, 1, 1) + Minute(i) for i in 0:3],
+        open=[50000.0, 50000.0, 40000.0, 40000.0],
+        high=[50005.0, 50005.0, 40005.0, 40005.0],
+        low=[49995.0, 39900.0, 39900.0, 39990.0],
+        close=[50000.0, 40000.0, 40000.0, 40000.0],
+        volume=[100.0, 100.0, 100.0, 100.0],
+    )
+    a = parse(Derivative, "BTC/USDT:USDT")
+    data = SortedDict{TimeFrame,DataFrame}(TimeFrame("1m") => df)
+    limits = (leverage=(; min=1.0, max=10.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8))
+    precision = (amount=1e-8, price=1e-8)
+    fees = (taker=0.001, maker=0.001, min=0.001, max=0.001)
+    ii = InstrumentInstance(a, data, exc, CrossHedged(); limits=limits, precision=precision, fees=fees)
+    po_long = position(ii, Long())
+    cash!(cash(po_long), 1.0)
+    entryprice!(po_long, 50000.0)
+    notional!(po_long, 50000.0)
+    leverage!(po_long, 10.0)
+    margin!(po_long)
+    maintenance!(po_long, 500.0)
+    liqprice!(po_long, 45500.0)
+    status!(ii, Long(), PositionOpen())
+    # Also open a short position (hedged mode allows both)
+    po_short = position(ii, Short())
+    cash!(cash(po_short), 0.5)
+    entryprice!(po_short, 50000.0)
+    notional!(po_short, 25000.0)
+    leverage!(po_short, 10.0)
+    margin!(po_short)
+    maintenance!(po_short, 250.0)
+    liqprice!(po_short, 54500.0)  # Short liq above entry
+    status!(ii, Short(), PositionOpen())
+    push!(s.holdings, ii)
+    date = DateTime(2024, 1, 1, 0, 1)
+    # Long is liquidatable (39900 <= 45500) but funded account absorbs it
+    @test isliquidatable(s, ii, Long(), date)
+    @test _cross_account_covered(s, date)
+    maybe_liquidate!(s, ii, date)
+    @test isopen(ii, Long())  # Long should NOT be liquidated
+    @test isopen(ii, Short())  # Short should still be open
+    # A drained account is under water: falls back to per-position liquidation
+    cash!(s.cash, 100.0)
+    @test !_cross_account_covered(s, date)
+end
+
+@testset "IsolatedHedged liquidation is per-position" begin
+    exc = _make_exchange_matrix(:isohedged_liq_test)
+    tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
+    _TIER_CACHES[(:isohedged_liq_test, "BTC/USDT:USDT")] = ([tier], time())
+    uni = InstrumentCollection(["BTC/USDT:USDT"]; exc=exc, margin=IsolatedHedged(), load_data=false)
+    cfg = Config(; qc=:USDT, initial_cash=100000.0)
+    s = Strategy(Main, Sim(), IsolatedHedged(), TimeFrame("1m"), exc, uni; config=cfg)
+    # Set SimMode slippage attrs needed for liquidation
+    s.attrs[:sim_base_slippage] = Val(:spread)
+    s.attrs[:sim_market_slippage] = Val(:skew)
+    # Crash candles: 50k -> 40k, below the standalone long liq (45.5k)
+    df = DataFrame(
+        timestamp=[DateTime(2024, 1, 1) + Minute(i) for i in 0:3],
+        open=[50000.0, 50000.0, 40000.0, 40000.0],
+        high=[50005.0, 50005.0, 40005.0, 40005.0],
+        low=[49995.0, 39900.0, 39900.0, 39990.0],
+        close=[50000.0, 40000.0, 40000.0, 40000.0],
+        volume=[100.0, 100.0, 100.0, 100.0],
+    )
+    a = parse(Derivative, "BTC/USDT:USDT")
+    data = SortedDict{TimeFrame,DataFrame}(TimeFrame("1m") => df)
+    limits = (leverage=(; min=1.0, max=10.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8))
+    precision = (amount=1e-8, price=1e-8)
+    fees = (taker=0.001, maker=0.001, min=0.001, max=0.001)
+    ii = InstrumentInstance(a, data, exc, IsolatedHedged(); limits=limits, precision=precision, fees=fees)
+    po_long = position(ii, Long())
+    cash!(cash(po_long), 1.0)
+    entryprice!(po_long, 50000.0)
+    notional!(po_long, 50000.0)
+    leverage!(po_long, 10.0)
+    margin!(po_long)
+    maintenance!(po_long, 500.0)
+    liqprice!(po_long, 45500.0)
+    status!(ii, Long(), PositionOpen())
+    # Also open a short position (hedged mode allows both)
+    po_short = position(ii, Short())
+    cash!(cash(po_short), 0.5)
+    entryprice!(po_short, 50000.0)
+    notional!(po_short, 25000.0)
+    leverage!(po_short, 10.0)
+    margin!(po_short)
+    maintenance!(po_short, 250.0)
+    liqprice!(po_short, 54500.0)  # Short liq above entry
+    status!(ii, Short(), PositionOpen())
+    push!(s.holdings, ii)
+    date = DateTime(2024, 1, 1, 0, 1)
+    # IsolatedHedged: each position liquidates independently
+    # Long is liquidatable (39900 <= 45500)
+    @test isliquidatable(s, ii, Long(), date)
+    # Short is NOT liquidatable (40000 < 54500)
+    @test !isliquidatable(s, ii, Short(), date)
+    maybe_liquidate!(s, ii, date)
+    @test !isopen(ii, Long())  # Long should be liquidated
+    @test isopen(ii, Short())  # Short should still be open
+end

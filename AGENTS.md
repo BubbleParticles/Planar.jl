@@ -896,3 +896,48 @@ which imported unused `now` from `Fetch.Dates` — fixed. The submodule `Misc/sr
 `Processing.propagate_ohlcv!` (DataFrame overload) has three early-return paths that previously were silent: (a) `nrow(src_slice) < min_rows` after `rangeafter(src.timestamp, date_dst)` (gap shrank slice), (b) `isempty(new)` after resample, (c) `!isleftadj(date_dst, firstdate(new))` (resampled block not left-adjacent → gap larger than `dst_tf`). Path (a) lacked the `@warn` that path `nrow(src) < min_rows` had; path (c) returned `dst` unchanged with no log, mirroring Watchers gap lesson #49 where gaps must be explicit not silent. The fix adds `@warn` for (a) and (c) with `date_dst` and `firstdate(new)` context. `rangeafter` already uses `strict=true` (exclusive) correctly — do not change to `strict=false` to "fix" gap width.
 
 **Checklist:** Every `return dst` / `return data` that skips an append due to contiguity must emit `@warn`/`@error` with both timestamps and timeframes, and respect `strict=true` exclusive bounds (`rangeafter(..., strict=true)`).
+## Lessons Learned (2026-09-16 — Runtime Audit: Margin Mode × Hedge Mode × Exec Mode)
+
+During the audit of all 15 combinations (3 margin modes × 2 hedge modes × 3 exec modes), the following issues were found and fixed:
+
+### 27. Binance `marginmode!` override must forward `hedged` keyword correctly
+
+The Binance-specific `marginmode!` override in `PlanarCore/src/Exchanges/adhoc/leverage.jl` accepted `hedged` as a keyword argument but had a method signature with a required positional `symbol` argument. The base `marginmode!` dispatch passes `symbol=""` by default, but the override required a positional argument, causing a method mismatch when called with keyword arguments.
+
+**Fix:** Add a method with `symbol=""` default and ensure both `MarginMode` and raw string method variants properly forward the `hedged` keyword to the base implementation via `invoke`.
+
+### 28. `singlewaycheck` must be exported from SimMode for cross-mode access
+
+The `singlewaycheck` function (which enforces hedged/non-hedged position gating) was defined in `PlanarCore/src/SimMode/positions/call.jl` but not exported. PaperMode and LiveMode imported it via `using ..PaperMode.SimMode: singlewaycheck` or `using PlanarCore.SimMode: singlewaycheck`, but since it wasn't exported, this relied on internal module access which is fragile.
+
+**Fix:** Export `singlewaycheck` from `PlanarCore/src/SimMode/module.jl` and update all imports to use `using PlanarCore.SimMode: singlewaycheck` for stable cross-mode access.
+
+### 29. Cross-margin hedged liquidation requires per-side account-level check
+
+The existing cross-margin liquidation test only covered non-hedged `Cross` mode. In `CrossHedged` mode, both long and short positions can be open simultaneously, and the account-level equity check (`_cross_account_covered`) must consider both sides. The logic in `_maybe_liquidate_positions!` already handles this correctly (iterates both sides when `ishedged(ii)`), but it lacked a test case.
+
+**Fix:** Added explicit test `CrossHedged liquidation is account-level` in `test_margin_matrix.jl` that opens both long and short positions and verifies the funded account absorbs the liquidation risk for both sides.
+
+### 30. Verify all 15 Margin×Hedge×ExecMode combinations construct without error
+
+The margin matrix test (`test_margin_matrix.jl`) now iterates all 15 cells (5 margin modes × 3 exec modes) and validates:
+- Strategy construction succeeds
+- Correct instance type (`NoMarginInstance`, `MarginInstance`, `HedgedInstance`)
+- `ishedged` flag propagates correctly from margin mode to instance
+- Strategy's `marginmode()` matches the requested margin mode
+
+This catches issues where a combination would pass type-checking but fail at runtime due to missing exchange capability checks or incorrect constructor dispatch.
+
+**Best practice:** Run `julia --project=PlanarCore/test test_margin_matrix.jl` after any changes to margin/hedge/exec mode logic.
+
+### 31. Binance sandbox mode should skip margin mode setup but return success
+
+The Binance `marginmode!` override returns `true` immediately in sandbox mode without calling the gateway. This is correct behavior (sandbox doesn't need real margin mode setup), but it must still accept and forward the `hedged` parameter for API compatibility.
+
+**Note:** The original override had `symbol` as a required positional argument, which broke when called with `symbol=""` default. The fix adds a compatible method signature.
+
+### 32. LiveMode order/position paths must use stable SimMode imports
+
+Both `Planar/src/LiveMode/orders/send.jl` and `Planar/src/LiveMode/positions/call.jl` imported `singlewaycheck` from `..PaperMode.SimMode` (a relative path through PaperMode's re-export). This creates an unnecessary dependency chain and is fragile if PaperMode's exports change.
+
+**Fix:** Import directly from `PlanarCore.SimMode: singlewaycheck` in both files.

@@ -1,7 +1,7 @@
 using .Executors.Instruments: freecash
 using .Executors: @price!, @amount!
 using .Data: default_value
-using ..PaperMode.SimMode: singlewaycheck
+using PlanarCore.SimMode: singlewaycheck
 using ..PaperMode.OrderTypes: positionside
 
 @doc "Represents a trigger order with fields for the order type, price, and trigger condition."
