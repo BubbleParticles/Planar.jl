@@ -7,7 +7,7 @@ using .Executors.Instances: raw, MarginInstance
 using .Instances: ishedged
 using ..PaperMode.OrderTypes: postoside, BuyOrSell
 using PlanarCore.OrderTypes: orderside, Buy, Sell
-import .Executors: call!
+using PlanarCore.Instances: NoMarginInstance, PositionSide
 
 @doc """ Updates leverage or places an order in a live trading strategy.
 
@@ -55,6 +55,16 @@ function Executors.call!(
             issameval
         end
     end
+@doc "NoMargin strategies have no leverage; UpdateLeverage is a no-op (returns false, no gateway call)."
+function Executors.call!(
+    s::NoMarginStrategy{Live},
+    ii::NoMarginInstance,
+    lev,
+    ::UpdateLeverage;
+    pos::PositionSide,
+    kwargs...,
+)::Bool
+    false
 end
 @doc """ Checks for open positions on the opposite side in an isolated strategy.
 

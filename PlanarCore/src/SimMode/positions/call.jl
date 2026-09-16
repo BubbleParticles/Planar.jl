@@ -106,6 +106,17 @@ function call!(
         true
     end
 end
+@doc "NoMargin strategies have no leverage; UpdateLeverage is a no-op (returns false)."
+function call!(
+    s::NoMarginStrategy{<:Union{Sim,Paper}},
+    ii::NoMarginInstance,
+    lev,
+    ::UpdateLeverage;
+    pos::PositionSide,
+    kwargs...,
+)::Bool
+    false
+end
 
 @doc "Closes a leveraged position (no margin)."
 function call!(

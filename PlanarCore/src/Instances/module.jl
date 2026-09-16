@@ -330,13 +330,19 @@ function nondust(ii::MarginInstance, price::Number, p=posside(ii))
     amt = c.value
     abs(amt * price * leverage(pos)) < ii.limits.cost.min ? zero(amt) : amt
 end
-
 function nondust(ii::MarginInstance, o::Type{<:Order}, price)
     if o <: ReduceOnlyOrder
         cash(ii, o).value
     else
         invoke(nondust, Tuple{MarginInstance,Number,PositionSide}, ii, price, posside(o))
     end
+end
+function nondust(ii::NoMarginInstance, price::Number)
+    amt = cash(ii) |> value
+    abs(amt) >= ii.limits.amount.min ? amt : zero(amt)
+end
+function nondust(ii::NoMarginInstance, ::Type{<:Order}, price::Number)
+    nondust(ii, price)
 end
 
 @doc """ Check if the amount is below the asset instance's minimum limit.
