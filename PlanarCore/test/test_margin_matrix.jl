@@ -468,3 +468,26 @@ end
     @test hasorders(s, ii, Long())
     @test !isempty(collect(orders(s, ii, Long(), Buy)))
 end
+
+@testset "Binance sandbox marginmode! records mode locally" begin
+    using PlanarCore.Exchanges: sandboxCache
+    name = :binance
+    exc = _make_exchange_matrix(name)
+    # Take the Binance adhoc override's sandbox branch. `issandbox` caches
+    # per ExchangeID, so seed it directly and clear it afterwards to avoid
+    # cross-test leakage.
+    sandboxCache[ExchangeID{name}()] = true
+    try
+        for (margin, expected) in (
+            (Isolated(), "isolated"),
+            (CrossHedged(), "cross"),
+            (NoMargin(), "nomargin"),
+        )
+            @test marginmode!(exc, margin, "BTC/USDT:USDT")
+            @test PlanarCore.Exchanges.marginmode(exc) == expected
+        end
+        @test_throws ErrorException marginmode!(exc, "bogus_mode", "BTC/USDT:USDT")
+    finally
+        delete!(sandboxCache, ExchangeID{name}())
+    end
+end

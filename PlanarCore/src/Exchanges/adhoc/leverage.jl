@@ -1,4 +1,4 @@
-using .Misc: Long, Short
+using .Misc: Long, Short, MarginMode, NoMargin, IsolatedMargin, Hedged
 using .ExchangeTypes: eids
 
 @doc "Binance-specific leverage formatting — integer leverage."
@@ -20,21 +20,39 @@ function _handle_leverage(e::Exchange{<:eids(:binance, :binanceusdm, :binancecoi
     end
 end
 
-@doc """Binance marginmode! override — skip in sandbox."""
-function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}, mode, symbol; hedged=false, kwargs...)
-    issandbox(exc) && return true
-    if mode isa MarginMode
-        if mode isa NoMargin
-            exc.options["defaultMarginMode"] = "nomargin"
-            return true
-        end
-        # Authoritative hedge flag comes from the MarginMode type, not the
-        # `hedged` keyword default. Normalize to the base string here so the
-        # `invoke` below lands on the string-dispatch method directly — invoking
-        # the `mode::MarginMode` wrapper with a stale `hedged` keyword would
-        # collide with the wrapper's own derived `hedged` downstream.
-        hedged = mode isa MarginMode{Hedged}
-        mode = mode isa IsolatedMargin ? "isolated" : "cross"
+@doc """Binance marginmode! override — skip gateway round-trip in sandbox, record locally."""
+function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}, mode::MarginMode, symbol; kwargs...)
+    # Normalize MarginMode → base string + authoritative hedge flag first,
+    # then reuse the single Binance body below. (A separate untyped `mode`
+    # method would be ambiguous against the generic `mode::MarginMode`
+    # method whenever both apply, e.g. `marginmode!(binance_exc,
+    # Isolated(), sym)` — Julia has no most-specific winner between a
+    # narrower exc type and a narrower mode type.)
+    if mode isa NoMargin
+        exc.options["defaultMarginMode"] = "nomargin"
+        return true
+    end
+    _binance_marginmode!(exc, mode isa IsolatedMargin ? "isolated" : "cross", symbol; hedged=mode isa MarginMode{Hedged}, kwargs...)
+end
+function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}, mode::AbstractString, symbol; hedged=false, kwargs...)
+    # String callers (e.g. the generic wrapper's normalized base mode, or
+    # direct string use): no normalization needed. Typed as AbstractString
+    # (not untyped) so MarginMode args keep a single winner — the
+    # `(Binance, MarginMode)` method above — instead of going ambiguous
+    # against the generic `(Exchange, MarginMode)` method.
+    _binance_marginmode!(exc, mode, symbol; hedged, kwargs...)
+end
+function _binance_marginmode!(exc::Exchange, mode, symbol; hedged=false, kwargs...)
+    if issandbox(exc)
+        # Testnet lacks setMarginMode/setPositionMode, so skip the gateway
+        # round-trip — but still record the mode locally, mirroring the
+        # generic path (which sets options before its gateway calls).
+        mode_str = string(mode)
+        mode_str in ("isolated", "cross") ||
+            mode_str == "nomargin" ||
+            error("Invalid margin mode $mode")
+        exc.options["defaultMarginMode"] = mode_str
+        return true
     end
     invoke(marginmode!, Tuple{Exchange,<:Any,<:Any}, exc, mode, symbol; hedged, kwargs...)
 end
