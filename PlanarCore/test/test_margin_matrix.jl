@@ -588,3 +588,16 @@ end
         delete!(sandboxCache, ExchangeID{name}())
     end
 end
+
+@testset "NoMargin dust Type-overload (Sim force-exit path)" begin
+    using PlanarCore.Instances: isdust
+    using PlanarCore.OrderTypes: MarketOrder, Buy, Sell
+    exc = _make_exchange_matrix(:nomargin_dust_test)
+    tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
+    _TIER_CACHES[(:nomargin_dust_test, "BTC/USDT:USDT")] = ([tier], time())
+    ii = _make_instance_matrix(NoMargin(), exc)
+    # Spot dust is side-less: the (ii, OrderType, price) overload must not
+    # `invoke` the MarginInstance/PositionSide method (MethodError on NoMargin).
+    @test isdust(ii, MarketOrder{Buy}, 50000.0) isa Bool
+    @test isdust(ii, MarketOrder{Sell}, 50000.0) == isdust(ii, 50000.0)
+end

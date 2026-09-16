@@ -417,7 +417,9 @@ function call!(
 )::Bool
     # Same contract as Sim/Paper: cancel pending spot orders so a
     # "close all" never reports success while orders stay live.
-    @deassert !isopen(ii, side) "NoMarginStrategy should not have open positions"
+    # (No `isopen(ii, side)` assert: the NoMargin overload always returns
+    # false, and a non-PositionSide `side` would MethodError — spot has no
+    # positions to assert on.)
     call!(s, ii, CancelOrders(); t=BuyOrSell)
 end
 @doc "Closes all strategy positions (live)."

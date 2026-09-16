@@ -306,8 +306,12 @@ end
 function isdust(ii::InstrumentInstance, o::Type{<:Order}, price::Number)
     if o <: ReduceOnlyOrder
         false
+    elseif ii isa NoMarginInstance
+        # `invoke` below targets `Tuple{MarginInstance,Number,PositionSide}`;
+        # a NoMargin instance would hit MethodError — spot dust is side-less.
+        isdust(ii, price)
     else
-        invoke(isdust, Tuple{MarginInstance,Number,PositionSide}, ii, price, posside(ii))
+        invoke(isdust, Tuple{MarginInstance,Number,PositionSide}, ii, price, posside(o))
     end
 end
 @doc """ Get the asset cash rounded to precision.
