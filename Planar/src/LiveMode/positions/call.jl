@@ -55,6 +55,7 @@ function Executors.call!(
             issameval
         end
     end
+end
 @doc "NoMargin strategies have no leverage; UpdateLeverage is a no-op (returns false, no gateway call)."
 function Executors.call!(
     s::NoMarginStrategy{Live},
