@@ -1,6 +1,8 @@
 using ..Strategies: Strategy, NoMarginStrategy, MarginStrategy
-using ..Instances: ispos, position
-using ..OrderTypes: ByPos
+using ..Instances: position, InstrumentInstance
+using ..OrderTypes: ByPos, ispos
+using ..Misc: Long, Short, PositionSide
+using ..OrderTypes: Buy, Sell, OrderSide
 using ..Lang: @caller
 @doc """ Returns a generator for orders matching a given position side and order side
 
@@ -65,8 +67,8 @@ This function checks both Buy and Sell sides for any orders that match the provi
 function hasorders(s::MarginStrategy, ii, ps::PositionSide)
     _hasorders(s, ii, ps, Buy) || _hasorders(s, ii, ps, Sell)
 end
-function hasorders(s::MarginStrategy, ii, ::Long, t::Type{<:OrderSide})
-    hasorders(s, ii, t)
+function hasorders(s::MarginStrategy, ii, ::Long, t::Type{Buy})
+    _hasorders(s, ii, Long(), Buy)
 end
 function hasorders(s::MarginStrategy, ii, ::Long, ::Type{Sell})
     _hasorders(s, ii, Long(), Sell)
@@ -74,11 +76,14 @@ end
 function hasorders(s::MarginStrategy, ii, ::Short, ::Type{Buy})
     _hasorders(s, ii, Short(), Buy)
 end
+function hasorders(s::MarginStrategy, ii, ::Short, ::Type{Sell})
+    _hasorders(s, ii, Short(), Sell)
+end
 
 # NOTE: ByPos has higher priority than BySide for dispatching
 @assert !hasmethod(hasorders, Tuple{MarginStrategy, InstrumentInstance, BySide})
 function hasorders(s::MarginStrategy, ii, ::ByPos{Long})
-    hasorders(s, ii, Long(), Buy) || hasorders(s, ii, Long(), Sell)
+    _hasorders(s, ii, Long(), Buy) || _hasorders(s, ii, Long(), Sell)
 end
 function hasorders(s::MarginStrategy, ii, ::ByPos{Short})
     _hasorders(s, ii, Short(), Buy) || _hasorders(s, ii, Short(), Sell)

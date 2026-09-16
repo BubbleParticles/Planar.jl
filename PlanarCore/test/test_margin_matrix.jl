@@ -428,3 +428,33 @@ end
     @test !isopen(ii, Long())  # Long should be liquidated
     @test isopen(ii, Short())  # Short should still be open
 end
+
+@testset "Margin hasorders covers all position/order-side legs" begin
+    using PlanarCore.OrderTypes: Buy, Sell, MarketOrderType, Order
+    using PlanarCore.Executors: hasorders, orders
+    exc = _make_exchange_matrix(:hasorders_test)
+    tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
+    _TIER_CACHES[(:hasorders_test, "BTC/USDT:USDT")] = ([tier], time())
+    uni = InstrumentCollection(["BTC/USDT:USDT"]; exc=exc, margin=IsolatedHedged(), load_data=false)
+    cfg = Config(; qc=:USDT, initial_cash=100000.0)
+    s = Strategy(Main, Sim(), IsolatedHedged(), TimeFrame("1m"), exc, uni; config=cfg)
+    ii = _make_instance_matrix(IsolatedHedged(), exc)
+    eid = exc.id
+    # A Short-Sell (increase-short) order belongs to the Short position.
+    o = Order(ii.asset, eid, Order{MarketOrderType{Sell}}, Short; price=50000.0, amount=1.0, date=DateTime(2024, 1, 1))
+    push!(s, ii, o)
+    # 4-arg order-side dispatch must see it (Short/Sell leg was missing).
+    @test hasorders(s, ii, Short(), Sell)
+    @test hasorders(s, ii, Short())
+    @test !hasorders(s, ii, Short(), Buy)
+    @test !hasorders(s, ii, Long(), Sell)
+    @test !hasorders(s, ii, Long(), Buy)
+    @test !isempty(collect(orders(s, ii, Short(), Sell)))
+    @test isempty(collect(orders(s, ii, Short(), Buy)))
+    # Long-Buy (increase-long) lands on the Long position.
+    o2 = Order(ii.asset, eid, Order{MarketOrderType{Buy}}, Long; price=50000.0, amount=1.0, date=DateTime(2024, 1, 1))
+    push!(s, ii, o2)
+    @test hasorders(s, ii, Long(), Buy)
+    @test hasorders(s, ii, Long())
+    @test !isempty(collect(orders(s, ii, Long(), Buy)))
+end

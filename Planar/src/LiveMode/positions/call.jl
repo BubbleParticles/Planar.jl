@@ -361,7 +361,7 @@ function call!(
         @timeout_start
 
         # cancel standing orders
-        _posclose_cancel(s, ii, t, pside, @timeout_now)
+        _posclose_cancel(s, ii, pside, @timeout_now)
         # `_posclose_maybesync` never reports success on a missing remote
         # update (indeterminate): fall through to the local checks below;
         # terminal returns reflect local flatness (`!isopen`).
