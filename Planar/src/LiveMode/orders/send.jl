@@ -3,6 +3,7 @@ using .Executors: @price!, @amount!
 using .Data: default_value
 using PlanarCore.SimMode: singlewaycheck
 using ..PaperMode.OrderTypes: positionside
+using .Instances: maxfees
 
 @doc "Represents a trigger order with fields for the order type, price, and trigger condition."
 const TriggerOrderTuple = NamedTuple{(:type, :price, :trigger)}
@@ -30,7 +31,12 @@ The function compares the absolute value of free cash in the strategy to the abs
 """
 function check_available_cash(s, ii, amount, price, o::Type{<:IncreaseOrder})
     lev = abs(leverage(ii, posside(o)))
-    required = if iszero(lev) 0.0 else abs(amount) * price / lev end
+    # Mirror Sim/Paper `committment`: margin + worst-case fees. The exchange
+    # deducts both from strategy cash on fill, so gating on margin alone
+    # admits orders that fail at `iscommittable` time in Sim/Paper.
+    ntl = abs(amount) * price
+    margin = if iszero(lev) 0.0 else ntl / lev end
+    required = margin + ntl * maxfees(ii)
     # Increase orders are always collateralized from the strategy-level QC pool
     # (Executed commit! goes to `s.cash_committed` for all margin modes — isolated
     # and cross alike).  Using `freecash(ii, side)` for isolated would be wrong:

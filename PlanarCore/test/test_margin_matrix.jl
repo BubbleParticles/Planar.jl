@@ -382,6 +382,31 @@ end
     cash!(s.cash, 100.0)
     @test !_cross_account_covered(s, date)
 end
+@testset "Live liquidation throttle uses one clock read" begin
+    using PlanarCore.SimMode: maybe_liquidate!
+    using PlanarCore.Misc.TimeTicks
+    exc = _make_exchange_matrix(:liveliq_test)
+    tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
+    _TIER_CACHES[(:liveliq_test, "BTC/USDT:USDT")] = ([tier], time())
+    # A single read of the live clock must gate the throttle: two back-to-back
+    # calls skip the second one, and the recorded stamp is a DateTime.
+    _with_live_margin_mock() do
+        uni = InstrumentCollection(["BTC/USDT:USDT"]; exc=exc, margin=Isolated(), load_data=false)
+        cfg = Config(; qc=:USDT, initial_cash=100000.0)
+        s = Strategy(Main, Live(), Isolated(), TimeFrame("1m"), exc, uni; config=cfg)
+        ii = _make_instance_matrix(Isolated(), exc)
+        date = DateTime(2024, 1, 1, 0, 6)
+        maybe_liquidate!(s, ii, date)
+        checks = s.attrs[:live_last_liq_check]
+        @test haskey(checks, objectid(ii))
+        @test checks[objectid(ii)] isa DateTime
+        @test checks[objectid(ii)] <= TimeTicks.now()
+        first_stamp = checks[objectid(ii)]
+        maybe_liquidate!(s, ii, date)
+        @test checks[objectid(ii)] == first_stamp
+    end
+end
+
 
 @testset "IsolatedHedged liquidation is per-position" begin
     exc = _make_exchange_matrix(:isohedged_liq_test)

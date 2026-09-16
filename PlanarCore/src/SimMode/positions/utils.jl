@@ -277,10 +277,11 @@ function maybe_liquidate!(s::MarginStrategy{Live}, ii::MarginInstance, date::Dat
     checks = @lget! s.attrs :live_last_liq_check Dict{UInt,DateTime}()
     key = objectid(ii)
     last = get(checks, key, nothing)
-    if !isnothing(last) && tt.now() - last < _LIQ_CHECK_INTERVAL
+    now = tt.now()
+    if !isnothing(last) && now - last < _LIQ_CHECK_INTERVAL
         return nothing
     end
-    checks[key] = tt.now()
+    checks[key] = now
     _maybe_liquidate_positions!(s, ii, date)
 end
 @doc """Updates the position by applying a position trade.
