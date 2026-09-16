@@ -88,10 +88,20 @@ function _with_live_margin_mock(f)
     mock_post = (url; headers=[], body=nothing, kwargs...) -> begin
         if occursin("/setMarginMode", url) ||
            occursin("/setPositionMode", url) ||
-           occursin("/setLeverage", url) ||
-           occursin(r"/exchanges/[^/]+/start", url)
+           occursin("/setLeverage", url)
             return Rest.HTTP.Response(
                 200, Rest.JSON3.write(Dict("result" => true, "error" => nothing, "error_code" => nothing))
+            )
+        elseif occursin(r"/exchanges/[^/]+/start", url)
+            return Rest.HTTP.Response(
+                200, Rest.JSON3.write(Dict("result" => "started", "error" => nothing, "error_code" => nothing))
+            )
+        elseif occursin("/exchanges/", url)
+            # Exchange info/has/markets/urls/fees lookups during Live construction:
+            # return a benign payload instead of delegating to prev_post, which
+            # may be real HTTP (Ccxt suites restore to HTTP.post) → 404.
+            return Rest.HTTP.Response(
+                200, Rest.JSON3.write(Dict("result" => Dict{String,Any}(), "error" => nothing, "error_code" => nothing))
             )
         end
         return prev_post(url; headers=headers, body=body, kwargs...)

@@ -2,9 +2,9 @@
 using JSON3
 
 # Include the actual types.jl
-include("../../src/Ccxt/CcxtGateway/types.jl")
+# NOTE: was include(types.jl) creating a duplicate Main module; use the real package module instead.
 
-using .Types
+using PlanarCore.Ccxt.CcxtGateway.Types
 
 # Test GatewayResponse
 resp = GatewayResponse(type="", id=nothing, data=Dict("key" => "value"), 

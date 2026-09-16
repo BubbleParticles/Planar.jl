@@ -2,8 +2,8 @@
 using Test
 using JSON3
 
-include("../../src/Ccxt/CcxtGateway/websocket.jl")
-using .WSClient
+# NOTE: was include(websocket.jl) creating a duplicate Main module; use the real package module instead.
+using PlanarCore.Ccxt.CcxtGateway.WSClient
 
 @testset "GatewayWSClient construction" begin
     @testset "Default values" begin

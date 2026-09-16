@@ -108,6 +108,8 @@ function _default_mock_post(url; kwargs...)
             return HTTP.Response(200, JSON3.write(Dict("result" => Dict("fundingRate" => 0.0001, "symbol" => "BTC/USDT"), "error" => nothing, "error_code" => nothing)))
         elseif occursin("fetchOHLCV", endpoint) || occursin("fetchMarkOHLCV", endpoint) || occursin("fetchIndexOHLCV", endpoint) || occursin("fetchPremiumIndexOHLCV", endpoint)
             return HTTP.Response(200, JSON3.write(Dict("result" => [[1.700e12, 50000.0, 51000.0, 49000.0, 50500.0, 100.0]], "error" => nothing, "error_code" => nothing)))
+        elseif endpoint == "status"
+            return HTTP.Response(200, JSON3.write(Dict("result" => Dict("running" => true), "error" => nothing, "error_code" => nothing)))
         end
     end
     if occursin("/exchanges/", url)

@@ -2,8 +2,8 @@
 using Test
 using JSON3
 
-include("../../src/Ccxt/CcxtGateway/types.jl")
-using .Types
+# NOTE: was include(types.jl) creating a duplicate Main module; use the real package module instead.
+using PlanarCore.Ccxt.CcxtGateway.Types
 
 @testset "GatewayResponse edge cases" begin
     @testset "Empty dict" begin

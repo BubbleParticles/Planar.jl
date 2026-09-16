@@ -1,9 +1,10 @@
 """Correct test for CcxtGateway - tests forwarding behavior"""
 using Test
 using JSON3
+using PlanarCore.Ccxt.CcxtGateway.Types
 
 # Include the actual types.jl
-include("../../src/Ccxt/CcxtGateway/types.jl")
+# NOTE: was include(types.jl) creating a duplicate Main module; use the real package module instead.
 
 @testset "CcxtGateway.Types - Minimal (correct approach)" begin
     @testset "GatewayResponse" begin

@@ -285,10 +285,14 @@ end
 end
 
 @testset "trades_stats does not mutate live history" begin
-    # Mock HTTP to avoid gateway calls during strategy setup
+    # Mock HTTP to avoid gateway calls during strategy setup — MUST restore
+    # afterwards (even on throw) so later suites (Fetch, margin-matrix) don't
+    # inherit a stale mock that errors on every POST.
     import PlanarCore.ExchangeTypes.CcxtGateway.Rest: set_http_get!, set_http_post!
     _saved_get = PlanarCore.ExchangeTypes.CcxtGateway.Rest._http_get[]
     _saved_post = PlanarCore.ExchangeTypes.CcxtGateway.Rest._http_post[]
+    _saved_init = PlanarCore.ExchangeTypes.CcxtGateway.Rest._gateway_initialized[]
+    PlanarCore.ExchangeTypes.CcxtGateway.Rest._gateway_initialized[] = true
     set_http_get!((url; kwargs...) -> begin
         if occursin("/admin/exchange_names", url)
             return HTTP.Response(200, JSON3.write(Dict("result" => ["binanceusdm"], "error" => nothing, "error_code" => nothing)))
@@ -307,7 +311,7 @@ end
                     "type" => "swap", "active" => true, "swap" => true, "linear" => true,
                     "precision" => Dict{String,Any}("amount" => 0.001, "price" => 0.01),
                     "limits" => Dict{String,Any}("amount" => Dict{String,Any}("min" => 0.001, "max" => 1000.0),
-                        "price" => Dict{String,Any}("min" => 0.01, "max" => 1000000.0),
+                        "price" => Dict{String,Any}("min" => 0.01, "max" => 10000000.0),
                         "cost" => Dict{String,Any}("min" => 1.0, "max" => 10000000.0)),
                     "taker" => 0.0004, "maker" => 0.0002),
                 "SOL/USDT:USDT" => Dict{String,Any}("id" => "SOL/USDT:USDT", "symbol" => "SOL/USDT:USDT", "base" => "SOL", "quote" => "USDT",
@@ -333,36 +337,41 @@ end
             sleep(0.01); error("mock POST $url")
         end
     end)
-    cfg = PlanarCore.Metrics.Instances.Misc.Config()
-    using PlanarCore.Stubs: stub_strategy
-    using PlanarCore.Metrics.Instances: InstrumentInstance
-    using PlanarCore.Metrics.Instances.Instruments: AbstractInstrument, parse
-    using PlanarCore.Metrics.Instances.Misc: NoMargin
-    using PlanarCore.Metrics.Instances.Exchanges.ExchangeTypes: ExchangeID
-    using PlanarCore.Metrics.OrderTypes: Order, Trade, MarketOrderType, Buy
-    s = stub_strategy(; cfg, dostub=false)
-    ii = first(s.universe)
-    # Build two minimal trades (distinct dates) and push into the live history
-    tf_dt = M.ect.TimeTicks.DateTime
-    o1 = Order(ii.asset, ii.exchange.id, Order{MarketOrderType{Buy}}, Metrics.Instances.Misc.Long;
-              price=50000.0, date=tf_dt(2024, 1, 1, 0, 0, 0), amount=0.001)
-    t1 = Trade(o1; date=tf_dt(2024, 1, 1, 0, 0, 0), amount=0.001, price=50000.0,
-               fees=0.0, size=50.0, lev=1.0, entryprice=50000.0, fees_base=0.0)
-    o2 = Order(ii.asset, ii.exchange.id, Order{MarketOrderType{Buy}}, Metrics.Instances.Misc.Long;
-              price=51000.0, date=tf_dt(2024, 1, 1, 0, 1, 0), amount=0.001)
-    t2 = Trade(o2; date=tf_dt(2024, 1, 1, 0, 1, 0), amount=0.001, price=51000.0,
-               fees=0.0, size=51.0, lev=1.0, entryprice=51000.0, fees_base=0.0)
-    push!(ii.history, t1, t2)
-    @test !isempty(ii.history)
-    hist_before = copy(ii.history)
-    # Trigger the filter branch (since >= first history date) which previously
-    # mutated ii.history in place and restored it via finally.
-    # Wrap so the assertion holds even if asset_stats! has its own data requirements.
     try
-        M.trades_stats(s; since=M.ect.TimeTicks.DateTime(2024, 1, 1, 0, 0, 0))
-    catch
+        cfg = PlanarCore.Metrics.Instances.Misc.Config()
+        using PlanarCore.Stubs: stub_strategy
+        using PlanarCore.Metrics.Instances: InstrumentInstance
+        using PlanarCore.Metrics.Instances.Instruments: AbstractInstrument, parse
+        using PlanarCore.Metrics.Instances.Misc: NoMargin
+        using PlanarCore.Metrics.Instances.Exchanges.ExchangeTypes: ExchangeID
+        using PlanarCore.Metrics.OrderTypes: Order, Trade, MarketOrderType, Buy
+        s = stub_strategy(; cfg, dostub=false)
+        ii = first(s.universe)
+        # Build two minimal trades (distinct dates) and push into the live history
+        tf_dt = M.ect.TimeTicks.DateTime
+        o1 = Order(ii.asset, ii.exchange.id, Order{MarketOrderType{Buy}}, Metrics.Instances.Misc.Long;
+                  price=50000.0, date=tf_dt(2024, 1, 1, 0, 0, 0), amount=0.001)
+        t1 = Trade(o1; date=tf_dt(2024, 1, 1, 0, 0, 0), amount=0.001, price=50000.0,
+                   fees=0.0, size=50.0, lev=1.0, entryprice=50000.0, fees_base=0.0)
+        o2 = Order(ii.asset, ii.exchange.id, Order{MarketOrderType{Buy}}, Metrics.Instances.Misc.Long;
+                  price=51000.0, date=tf_dt(2024, 1, 1, 0, 1, 0), amount=0.001)
+        t2 = Trade(o2; date=tf_dt(2024, 1, 1, 0, 1, 0), amount=0.001, price=51000.0,
+                   fees=0.0, size=51.0, lev=1.0, entryprice=51000.0, fees_base=0.0)
+        push!(ii.history, t1, t2)
+        @test !isempty(ii.history)
+        hist_before = copy(ii.history)
+        # Trigger the filter branch (since >= first history date) which previously
+        # mutated ii.history in place and restored it via finally.
+        try
+            M.trades_stats(s; since=M.ect.TimeTicks.DateTime(2024, 1, 1, 0, 0, 0))
+        catch
+        end
+        # The live history must be unchanged (no in-place filter/restore).
+        @test length(ii.history) == length(hist_before)
+        @test collect(ii.history) == collect(hist_before)
+    finally
+        set_http_get!(_saved_get)
+        set_http_post!(_saved_post)
+        PlanarCore.ExchangeTypes.CcxtGateway.Rest._gateway_initialized[] = _saved_init
     end
-    # The live history must be unchanged (no in-place filter/restore).
-    @test length(ii.history) == length(hist_before)
-    @test collect(ii.history) == collect(hist_before)
 end

@@ -6,11 +6,8 @@
 using Test
 using HTTP
 using JSON3
-
-include("../../src/Ccxt/CcxtGateway/types.jl")
-using .Types
-include("../../src/Ccxt/CcxtGateway/rest.jl")
-using .Rest
+using PlanarCore.Ccxt.CcxtGateway.Rest
+using PlanarCore.Ccxt.CcxtGateway.Types
 
 @testset "venv sync" begin
     if Sys.which("uv") !== nothing

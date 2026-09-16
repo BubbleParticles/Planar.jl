@@ -201,7 +201,7 @@ end
 @doc "Defines the time-to-live (TTL) for a funding rate as 5 seconds."
 const FUNDING_RATE_TTL = Ref(Second(5))
 @doc "Initializes a safe TTL cache for storing funding rates with a specified TTL."
-const FUNDING_RATE_CACHE = safettl(Tuple{String,Symbol}, DFT, FUNDING_RATE_TTL[])
+const FUNDING_RATE_CACHE = safettl(Tuple{String,ExchangeID}, DFT, FUNDING_RATE_TTL[])
 const FUNDING_RATES_CACHE = safettl(ExchangeID, Any, FUNDING_RATE_TTL[])
 assetkey(ii) = (ii.raw, ii.exchange.id)
 
