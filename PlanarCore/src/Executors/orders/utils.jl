@@ -3,7 +3,7 @@ using .Checks: iscost, ismonotonic, SanitizeOff, cost, withfees
 using ..Strategies: PriceTime, universe, inuniverse, Strategies as st
 using ..Collections: snapshot
 using ..Instances:
-    MarginInstance, NoMarginInstance, InstrumentInstance, @rprice, @ramount, amount_with_fees
+    MarginInstance, NoMarginInstance, CrossInstance, InstrumentInstance, @rprice, @ramount, amount_with_fees
 using ..OrderTypes:
     IncreaseOrder, ShortBuyOrder, LimitOrderType, MarketOrderType, PostOnlyOrderType
 using ..OrderTypes: ExchangeID, ByPos, ordertype
