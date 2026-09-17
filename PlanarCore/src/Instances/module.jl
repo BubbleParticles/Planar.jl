@@ -163,7 +163,7 @@ function positions(M::Type{<:MarginMode}, a::AbstractInstrument, limits::Limits,
                     asset=a,
                     min_size=limits.amount.min,
                     tiers=[tiers],
-                    this_tier=[isempty(tiers) ? default_tier : first(values(tiers))],
+                    this_tier=[isempty(tiers) ? default_tier : first(tiers)],
                     cash=CurrencyCash(e, a.bc, 0.0),
                     cash_committed=CurrencyCash(e, a.bc, 0.0),
                     hedged=ishedged(M()),
@@ -1064,6 +1064,12 @@ This function returns the maintenance margin rate for a `MarginInstance` for a g
 function mmr(ii::MarginInstance, size, s::ByPos)
     mmr(position(ii, s), size)
 end
+@doc "Instrument position maintenance margin rate for a `NoMarginInstance`."
+mmr(ii::NoMarginInstance, size, s::ByPos) = 0.0
+@doc "Get the bankruptcy price for a `NoMarginInstance`."
+bankruptcy(ii::NoMarginInstance, price, ::ByPos) = NaN
+@doc "Get the bankruptcy price for an asset position (order overload)."
+bankruptcy(ii::NoMarginInstance, o::Order) = NaN
 @doc """ Get the bankruptcy price for an asset position.
 
 $(TYPEDSIGNATURES)

@@ -96,12 +96,26 @@ function committment(
     amount;
     ntl=cost(price, amount),
     fees=ntl * maxfees(ii),
-    lev=leverage(ii, positionside(o)()),
+    lev=committment_lev(ii, positionside(o)()),
     kwargs...,
 )
     margin = ntl / lev
     margin + fees
 end
+
+@doc """ Resolve the effective leverage for a margin commitment.
+
+For a closed position on a `CrossInstance`, the freshly-constructed `Position`
+carries leverage 1.0, which forces `margin = ntl / 1.0 = ntl` — the full notional
+as collateral, even though cross margin should use the account's max leverage.
+Use `ii.limits.leverage.max` as the default for cross margin when no real
+leverage has been set yet.
+"""
+function committment_lev(ii::CrossInstance, p::PositionSide)
+    po = position(ii, p)
+    isnothing(po) || !isopen(po) ? ii.limits.leverage.max : leverage(po)
+end
+committment_lev(ii::MarginInstance, p::PositionSide) = leverage(ii, p)
 
 @doc """
 Calculates the commitment when exiting a position for longs.
