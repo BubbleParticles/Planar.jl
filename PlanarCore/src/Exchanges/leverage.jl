@@ -240,6 +240,7 @@ function marginmode!(exc::Exchange, mode, symbol=""; hedged=false, kwargs...)
     hedged = hedged || str_hedged
     if mode_str in ("isolated", "cross")
         exc.options["defaultMarginMode"] = mode_str
+        exc.options["defaultPositionMode"] = hedged ? "hedge" : "oneway"
         # Hedge / position mode is account-wide (symbol is optional).
         # Some exchanges (e.g. Bybit, Phemex) require `setPositionMode` to be
         # called BEFORE `setMarginMode` when switching to/from hedged mode.
@@ -263,6 +264,7 @@ function marginmode!(exc::Exchange, mode, symbol=""; hedged=false, kwargs...)
         return true
     else
         exc.options["defaultMarginMode"] = "nomargin"
+        exc.options["defaultPositionMode"] = "oneway"
         return true
     end
 end
