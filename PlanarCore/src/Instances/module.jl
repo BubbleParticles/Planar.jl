@@ -1028,6 +1028,22 @@ end
 function additional(ii::MarginInstance, ::ByPos{S}) where {S<:PositionSide}
     position(ii, S) |> additional
 end
+@doc "Instrument position status (open or closed) for a `NoMarginInstance`."
+status(ii::NoMarginInstance, ::ByPos{S}) where {S<:PositionSide} = ClosedStatus()
+@doc "Instrument position maintenance margin for a `NoMarginInstance`."
+maintenance(ii::NoMarginInstance, ::ByPos{S}) where {S<:PositionSide} = 0.0
+@doc "Instrument position initial margin for a `NoMarginInstance`."
+margin(ii::NoMarginInstance, ::ByPos{S}) where {S<:PositionSide} = 0.0
+@doc "Instrument position additional margin for a `NoMarginInstance`."
+additional(ii::NoMarginInstance, ::ByPos{S}) where {S<:PositionSide} = 0.0
+@doc "Instrument position liquidation price for a `NoMarginInstance`."
+liqprice(ii::NoMarginInstance, ::ByPos{S}) where {S<:PositionSide} = NaN
+@doc "Instrument position leverage for a `NoMarginInstance`."
+leverage(ii::NoMarginInstance, ::ByPos{S}) where {S<:PositionSide} = 1.0
+@doc "Instrument position notional value for a `NoMarginInstance`."
+notional(ii::NoMarginInstance, ::ByPos{S}) where {S<:PositionSide} = 0.0
+@doc "Instrument entry price for a `NoMarginInstance`."
+entryprice(ii::NoMarginInstance, fromprice, ::ByPos{S}) where {S<:PositionSide} = fromprice
 @doc """ Get the position tier for a `MarginInstance`.
 
 $(TYPEDSIGNATURES)
