@@ -1091,6 +1091,14 @@ function leverage!(ii, v, p::PositionSide)
     # ensure leverage tiers and limits agree
     @deassert leverage(po) <= ii.limits.leverage.max
 end
+@doc """ Update the leverage for a `NoMarginInstance` (no-op).
+
+$(TYPEDSIGNATURES)
+
+Spot has no leverage; the setter is a no-op so a generic `leverage!(ii, v, p)`
+dispatch does not crash on `position(ii, p) == nothing`.
+"""
+leverage!(::NoMarginInstance, v, ::PositionSide) = v
 
 @doc """ Set the leverage to maximum for a `CrossInstance`.
 

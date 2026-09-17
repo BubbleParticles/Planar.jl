@@ -601,3 +601,19 @@ end
     @test isdust(ii, MarketOrder{Buy}, 50000.0) isa Bool
     @test isdust(ii, MarketOrder{Sell}, 50000.0) == isdust(ii, 50000.0)
 end
+
+@testset "NoMargin leverage! is a no-op (ByPos overload)" begin
+    using PlanarCore.Instances: NoMarginInstance
+    exc = _make_exchange_matrix(:nomargin_lev_test)
+    tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
+    _TIER_CACHES[(:nomargin_lev_test, "BTC/USDT:USDT")] = ([tier], time())
+    ii = _make_instance_matrix(NoMargin(), exc)
+    @test ii isa NoMarginInstance
+    # Spot has no position object: the generic `leverage!(ii, v, p)` must not
+    # fall through to `leverage!(position(ii, p), v)` (== leverage!(nothing, v)).
+    @test leverage!(ii, 100.0, Long()) === 100.0
+    @test leverage!(ii, 100.0, Short()) === 100.0
+    # NoMargin leverage is always 1.0, unaffected by the no-op setter.
+    @test leverage(ii, Long()) == 1.0
+    @test leverage(ii, Short()) == 1.0
+end
