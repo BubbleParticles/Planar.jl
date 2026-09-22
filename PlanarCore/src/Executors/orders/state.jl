@@ -428,7 +428,7 @@ function strategycash!(s::MarginStrategy, ii, t::ReduceTrade)
         po
     ) t.price t.leverage t.amount posside(t) orderside(t)
     add!(s.cash, gained)
-    @deassert s.cash |> gtxzero || (hasorders(s) || hascash(s)) (;
+    @deassert s.cash |> gtxzero || (hasorders(s) || hascash(s)), (;
         s.cash, s.cash_committed, t.price, t.amount, unrealized_pnl, t.fees, margin
     )
 end
