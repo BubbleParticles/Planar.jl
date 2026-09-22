@@ -67,7 +67,7 @@ end
 function order!(
     s::NoMarginStrategy{Sim}, o::Order{<:LimitOrderType}, date::DateTime, ii; kwargs...
 )
-    @deassert abs(committed(o)) > DFT(0.0) o
+    @deassert abs(committed(o)) > DFT(0.0), o
     limitorder_ifprice!(s, o, date, ii; kwargs...)
 end
 
@@ -75,9 +75,9 @@ end
 function order!(
     s::MarginStrategy{Sim}, o::Order{<:LimitOrderType}, date::DateTime, ii; kwargs...
 )
-    @deassert abs(committed(o)) > DFT(0.0) (pricetime(o), o)
+    @deassert abs(committed(o)) > DFT(0.0), (pricetime(o), o)
     t = limitorder_ifprice!(s, o, date, ii; kwargs...)
-    @deassert gtxzero(s.cash_committed, atol=2s.cash_committed.precision) s.cash_committed.value
+    @deassert gtxzero(s.cash_committed, atol=2s.cash_committed.precision), s.cash_committed.value
     t
 end
 
