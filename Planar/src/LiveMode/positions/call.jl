@@ -41,7 +41,7 @@ function Executors.call!(
         issameval = isapprox(prev_lev, new_lev; atol)
         # First update on exchange
         if (force || !issameval) &&
-            leverage!(exchange(ii), new_lev, raw(ii); timeout=throttle(s))
+            leverage!(exchange(ii), new_lev, raw(ii); side=pos, timeout=throttle(s))
             leverage!(this_pos, new_lev)
             event!(ii, LeverageUpdated(:leverage_updated, s, this_pos; from_value=prev_lev))
             if synced

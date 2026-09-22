@@ -871,4 +871,85 @@ Base.push!(::_LiveMMTrace, v; kwargs...) = v
     end
 end
 
+
+@testset "UpdateLeverage forwards position side (hedged long/short)" begin
+    # Regression: the live `call!(UpdateLeverage)` path called
+    # `leverage!(exchange(ii), new_lev, raw(ii); ...)` without forwarding
+    # `pos`, so hedged-mode short-leverage updates were silently dropped
+    # (the exchange setter defaults to `side=Long()`).
+    import PlanarCore
+    ET = LiveMode.PaperMode.Instances.ExchangeTypes
+    OrderedSet = ET.OrderedCollections.OrderedSet
+    IMisc = LiveMode.PaperMode.Instances.Misc
+    old_get = Rest._http_get[]
+    old_post = Rest._http_post[]
+    sent = Any[]
+    try
+        Rest.set_http_get!(function(url; kwargs...)
+            if occursin("ping", url)
+                return HTTP.Response(200, "pong")
+            elseif occursin("exchange_has", url) || occursin("/has", url)
+                return HTTP.Response(200, JSON3.write(Dict("result" => Dict(
+                    "setMarginMode" => true, "setPositionMode" => true,
+                    "setLeverage" => true, "fetchMarketLeverageTiers" => false))))
+            end
+            return HTTP.Response(404, "Not Found")
+        end)
+        Rest.set_http_post!(function(url; body=nothing, kwargs...)
+            push!(sent, (url, body))
+            return HTTP.Response(200, JSON3.write(Dict("result" => true)))
+        end)
+        eid = ET.ExchangeID{:test_lev_side}()
+        exc = ET.CcxtExchange{typeof(eid)}(
+            eid, "test_lev_side", "", OrderedSet{String}(["1m"]),
+            Dict{String,Dict{String,Any}}(
+                "BTC/USDT:USDT" => Dict{String,Any}(
+                    "id" => "BTC/USDT:USDT", "base" => "BTC", "quote" => "USDT",
+                    "type" => "future", "active" => true, "spot" => false, "linear" => true,
+                    "precision" => Dict{String,Any}("amount" => 8, "price" => 2),
+                    "limits" => Dict{String,Any}(
+                        "amount" => Dict{String,Any}("min" => 1e-6, "max" => 1e8),
+                        "price" => Dict{String,Any}("min" => 0.01, "max" => 1e6),
+                        "cost" => Dict{String,Any}("min" => 1.0, "max" => 1e8)),
+                    "taker" => 0.001, "maker" => 0.001)),
+            Set{Symbol}([:future]),
+            Dict{Symbol,Any}(:taker => 0.001, :maker => 0.001),
+            Dict{Symbol,Any}(:fetchTicker => true, :setMarginMode => true,
+                :setPositionMode => true, :setLeverage => true),
+            ET.ExcPrecisionMode(2), _LiveMMTrace(), [:fetchTicker], Dict{String,Any}())
+        margin = IMisc.IsolatedHedged()
+        uni = PlanarCore.Collections.InstrumentCollection(
+            ["BTC/USDT:USDT"]; exc=exc, margin=margin, load_data=false)
+        cfg = IMisc.Config(; qc=:USDT, initial_cash=10000.0)
+        s = PlanarCore.Strategies.Strategy(
+            LiveModeTests, IMisc.Live(), margin,
+            LiveMode.PaperMode.SimMode.TimeFrame("1m"), exc, uni; config=cfg)
+        ii = first(s.universe)
+        @test ii isa PlanarCore.Instances.HedgedInstance
+        # Closed positions only (no open positions/orders) — the UpdateLeverage
+        # gate. Set leverage on both sides locally first.
+        PlanarCore.Instances.leverage!(ii, 10.0, IMisc.Long())
+        PlanarCore.Instances.leverage!(ii, 7.0, IMisc.Short())
+        empty!(sent)
+        # Long side: the setter omits `side` (Long is the ccxt default).
+        @test PlanarCore.Executors.call!(
+            s, ii, 12.0, PlanarCore.Executors.UpdateLeverage();
+            pos=IMisc.Long()) == true
+        @test !isempty(sent) && last(sent)[1] isa String && occursin("setLeverage", last(sent)[1])
+        long_body = Rest.JSON3.parse(last(sent)[2], Dict{String,Any})
+        @test !haskey(long_body, "side")
+        empty!(sent)
+        # Short side forwards side=short (was silently dropped before the fix).
+        @test PlanarCore.Executors.call!(
+            s, ii, 9.0, PlanarCore.Executors.UpdateLeverage();
+            pos=IMisc.Short()) == true
+        @test !isempty(sent) && last(sent)[1] isa String && occursin("setLeverage", last(sent)[1])
+        short_body = Rest.JSON3.parse(last(sent)[2], Dict{String,Any})
+        @test get(short_body, "side", missing) == "short"
+    finally
+        Rest.set_http_get!(old_get)
+        Rest.set_http_post!(old_post)
+    end
+end
+
 end # module LiveModeTests

@@ -66,7 +66,11 @@ function leverage!(exc::Exchange, v, sym; side=Long(), timeout=Second(5))
     lev = leverage_value(exc, v, sym)
     body = Dict("symbol" => sym, "leverage" => lev)
     if side !== Long()
-        body["side"] = string(side)
+        # `string(side)` on a `PositionSide` singleton (e.g. `Short()`) yields
+        # the type repr ("PlanarCore.Misc.Short()"), not the ccxt side string.
+        # Normalize via the canonical lower-case name so the gateway receives
+        # "short" (Binance/Bybit/Phemex all expect "long"/"short").
+        body["side"] = lowercase(string(typeof(side).name.name))
     end
     try
         resp = call_exchange(default_client(), name, "setLeverage"; body=body)
