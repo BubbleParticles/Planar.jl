@@ -588,6 +588,65 @@ end
         delete!(sandboxCache, ExchangeID{name}())
     end
 end
+@testset "Binance non-sandbox string marginmode! forwards hedge flag" begin
+    # The Binance adhoc override's non-sandbox branch falls through to the
+    # generic path (`invoke(marginmode!, Tuple{Exchange,<:Any,<:Any}, ...)`),
+    # which calls `dosetpositionmode` → `call_exchange(..., "setPositionMode")`.
+    # `call_exchange` unwraps the GatewayResponse and returns the raw `result`
+    # (a Bool for these methods). The Binance-specific `resptobool` did not
+    # handle a direct Bool (only the generic path did), so `dosetpositionmode`
+    # always failed on live — `marginmode!` returned false and the exchange
+    # never switched to hedge mode. Guard: the Binance `resptobool` must
+    # recognize a direct Bool the same way the generic path does.
+    prev_post = Rest._http_post[]
+    prev_init = Rest._gateway_initialized[]
+    Rest._gateway_initialized[] = true
+    sent = Any[]
+    mock_post = (url; headers=[], body=nothing, kwargs...) -> begin
+        if occursin("/setPositionMode", url)
+            raw = isnothing(body) ? get(kwargs, :body, nothing) : body
+            hv = if raw isa AbstractDict
+                get(raw, "hedged", get(raw, :hedged, missing))
+            elseif !isnothing(raw)
+                parsed = try
+                    Rest.JSON3.read(string(raw), Dict{String,Any})
+                catch
+                    Dict{String,Any}()
+                end
+                get(parsed, "hedged", missing)
+            else
+                missing
+            end
+            push!(sent, hv)
+        end
+        return Rest.HTTP.Response(
+            200, Rest.JSON3.write(Dict("result" => true, "error" => nothing, "error_code" => nothing))
+        )
+    end
+    Rest.set_http_post!(mock_post)
+    try
+        name = :binance
+        exc = _make_exchange_matrix(name)
+        # Non-sandbox: the sandboxCache must be empty (default issandbox=false).
+        @test !get(sandboxCache, ExchangeID{name}(), false)
+        @test marginmode!(exc, "ISOLATED", "BTC/USDT:USDT")
+        @test PlanarCore.Exchanges.marginmode(exc) == "isolated"
+        @test !isempty(sent) && last(sent) === false
+        empty!(sent)
+        @test marginmode!(exc, "isolated-hedged", "BTC/USDT:USDT")
+        @test PlanarCore.Exchanges.marginmode(exc) == "isolated"
+        @test !isempty(sent) && last(sent) === true
+        empty!(sent)
+        @test marginmode!(exc, "Cross Hedged", "BTC/USDT:USDT")
+        @test PlanarCore.Exchanges.marginmode(exc) == "cross"
+        @test !isempty(sent) && last(sent) === true
+        @test_throws ErrorException marginmode!(exc, "bogus_mode", "BTC/USDT:USDT")
+    finally
+        Rest.set_http_post!(prev_post)
+        Rest._gateway_initialized[] = prev_init
+    end
+end
+
 
 @testset "NoMargin dust Type-overload (Sim force-exit path)" begin
     using PlanarCore.Instances: isdust
