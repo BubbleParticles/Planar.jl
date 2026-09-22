@@ -140,7 +140,7 @@ function from_orderbook(obside, s, ii, o::Order; amount, date)
     this_price, this_vol = obside[price_idx]
     @debug "paper from ob: idx" price_idx this_price this_vol
     this_vol = min(amount, this_vol)
-    if islimit && !_istriggered(o, this_price)
+    if !isimmediate(o) && !_istriggered(o, this_price)
         @debug "paper from ob: limit order not triggered" this_price o
         return zero(DFT), zero(DFT), nothing
     end
@@ -158,7 +158,7 @@ function from_orderbook(obside, s, ii, o::Order; amount, date)
         # touched the market, so release it here; the caller keeps the
         # filled portion reserved (no cancel follows on this path — a GTC
         # queues, an IOC cancels and releases the remainder itself).
-        if islimit && !_istriggered(o, ob_price)
+        if !isimmediate(o) && !_istriggered(o, ob_price)
             @debug "paper from ob: limit order partially filled" o.price this_price amount this_vol avg_price
             volrelease!(s, ii; amount=amount - this_vol)
             break
