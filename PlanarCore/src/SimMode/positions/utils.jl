@@ -23,8 +23,14 @@ function open_position!(
     # NOTE: Order of calls is important
     po = position(ii, P)
     if !ishedged(ii)
-        @deassert cash(ii, opposite(P())) == DFT(0.0) (cash(ii, opposite(P()))),
-        status(ii, opposite(P()))
+        # Non-hedged: the opposite side must be closed (zero cash, closed
+        # status) before opening a new position. The original comma form
+        # `@deassert cond (msg), status(...)` parsed as ONE macro argument
+        # (a tuple), producing a vacuous assertion whose condition was
+        # `DFT(0.0)(cash(ii, ...), status(ii, ...))` — a Float64 call that
+        # MethodErrors under JULIA_DEBUG. Split into two explicit calls.
+        @deassert cash(ii, opposite(P())) == DFT(0.0) (cash(ii, opposite(P())))
+        @deassert status(ii, opposite(P())) == PositionClose()
     end
     @deassert !isopen(po)
     @deassert notional(po) == DFT(0.0)

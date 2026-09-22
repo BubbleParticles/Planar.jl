@@ -497,9 +497,13 @@ function decommit!(s::Strategy, o::IncreaseOrder, ii, canceled=false)
     @deassert canceled || isdust(ii, o) o
     # NOTE: committed can be negative in case the predicted commit is below the executed size
     subzero!(s.cash_committed, abs(committed(o)))
-    @deassert gtxzero(ii, s.cash_committed, Val(:price)) s.cash_committed.value,
-    s.cash.precision,
-    o
+    # The original trailing-comma form
+    #   @deassert gtxzero(ii, s.cash_committed, Val(:price)) s.cash_committed.value,
+    # parsed as ONE macro argument (a 2-tuple), producing a vacuous assertion
+    # whose condition was always truthy. Split into a real condition + msg.
+    @deassert gtxzero(ii, s.cash_committed, Val(:price)) (
+        s.cash_committed.value, s.cash.precision, o
+    )
     attr(o, :committed)[] = 0.0
 end
 
