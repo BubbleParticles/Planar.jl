@@ -3,3 +3,5 @@ For each of these tasks, spawn a good subagent:
 - Performance, find ways to improve the execution speed of the code and reduce memory consumption. Use recommended julia tools to analyze type instabilities like JET.jl. Try to spot codepaths where julia packages like StaticArrays.jl or Bumber.jl can considerably improve performance and are worth using, always benchmark.
 - Security, audit the codebase for potential exploits in api keys, dependencies, code vulnerabilities.
 - Mainteinability, analyze the codebase for fragile code paths, slop or spaghetti code. Consider refactors where necessary for better readability, smaller composable and reusable functions. Follow DRY principles.
+
+NEVER create "refresh binary trade stubs" commits. Trade stub fixtures (Planar*/test/stubs/trades_stub_*.jls) are generated during precompilation and must not be manually committed. If stubs need regeneration, run the precompile workload locally; do not commit binary fixture changes as separate "refresh" commits.

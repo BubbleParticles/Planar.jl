@@ -7,3 +7,5 @@ Ensure total testing integrity across all unit and integration tests.
     Strict Mocking Policy: Do not mock local domain logic or internal code paths. Restrict mocks strictly to external dependencies (e.g., network, filesystem) with accurate schema validation.
 
     High-Value Coverage: Do not write trivial assertions or fluff tests solely to inflate code coverage metrics. Focus on critical paths, boundary conditions, and error state handling.
+
+NEVER create "refresh binary trade stubs" commits. Trade stub fixtures (Planar*/test/stubs/trades_stub_*.jls) are generated during precompilation and must not be manually committed. If stubs need regeneration, run the precompile workload locally; do not commit binary fixture changes as separate "refresh" commits.

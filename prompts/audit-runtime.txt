@@ -1,2 +1,4 @@
 /goal strategy and runtime can be instantiated with combinations none/isolated/cross margin and hedged/non-hedged mode. Audit all combinations for
    correct implementation, audit all code paths for sim/paper/live modes. Then address all the issues found
+
+NEVER create "refresh binary trade stubs" commits. Trade stub fixtures (Planar*/test/stubs/trades_stub_*.jls) are generated during precompilation and must not be manually committed. If stubs need regeneration, run the precompile workload locally; do not commit binary fixture changes as separate "refresh" commits.

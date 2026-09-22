@@ -15,3 +15,5 @@ and maintainable code. Even if I am asking to do it again, don't hesitate, focus
 parts of the code compared to your previous audits and think really hard and deep about all       
 possible scenarios and edge cases you can come up with. Remember to stage and commit before doing 
 heavy modifications.
+
+NEVER create "refresh binary trade stubs" commits. Trade stub fixtures (Planar*/test/stubs/trades_stub_*.jls) are generated during precompilation and must not be manually committed. If stubs need regeneration, run the precompile workload locally; do not commit binary fixture changes as separate "refresh" commits.
