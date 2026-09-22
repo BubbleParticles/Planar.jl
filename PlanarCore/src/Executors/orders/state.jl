@@ -88,7 +88,7 @@ $(TYPEDSIGNATURES)
 
 """
 function Base.delete!(s::Strategy, ii, o::IncreaseOrder)
-    @deassert committed(o) |> approxzero o
+    @deassert committed(o) |> approxzero, o
     delete!(orders(s, ii, orderside(o)), pricetime(o))
     @deassert pricetime(o) ∉ keys(orders(s, ii, orderside(o)))
     # If we don't have cash for this asset, it should be released from holdings
@@ -101,7 +101,7 @@ $(TYPEDSIGNATURES)
 
 """
 function Base.delete!(s::Strategy, ii, o::SellOrder)
-    @deassert committed(o) |> approxzero o
+    @deassert committed(o) |> approxzero, o
     delete!(orders(s, ii, orderside(o)), pricetime(o))
     # If we don't have cash for this asset, it should be released from holdings
     release!(s, ii)
@@ -114,7 +114,7 @@ $(TYPEDSIGNATURES)
 """
 function Base.delete!(s::Strategy, ii, o::ShortBuyOrder)
     # Short buy orders have negative committment
-    @deassert committed(o) |> approxzero o
+    @deassert committed(o) |> approxzero, o
     delete!(orders(s, ii, Buy), pricetime(o))
     # If we don't have cash for this asset, it should be released from holdings
     release!(s, ii)
@@ -389,7 +389,7 @@ function strategycash!(s::MarginStrategy, ii, t::IncreaseTrade)
         ) total = committed(s) t
     end
     subzero!(s.cash_committed, committment(ii, t); atol=ii.limits.cost.min, dothrow=false)
-    @deassert s.cash_committed |> gtxzero s.cash, s.cash_committed.value, orderscount(s)
+    @deassert s.cash_committed |> gtxzero, (s.cash, s.cash_committed.value, orderscount(s))
 end
 
 function _showliq(s, unrealized_pnl, gained, po, t)

@@ -23,7 +23,7 @@ function _live_market_order(s, ii, t; skipchecks=false, amount, synced, waitfor,
         else
             hold!(s, ii, o)
         end
-        @deassert o isa AnyMarketOrder{orderside(t)} o
+        @deassert o isa AnyMarketOrder{orderside(t)}, o
         @debug "market order: created" _module = LogCreateOrder id = o.id o.amount t hasorders(s, ii, o.id) cash(ii)
         trades(o)
     end

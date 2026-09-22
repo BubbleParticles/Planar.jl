@@ -4,19 +4,19 @@ using .Executors: attr, committment, _check_unfillment, IncreaseLimitOrder, stra
 
 # NOTE: unfilled is always negative
 function applyfill!(::NoMarginStrategy{Live}, ii::NoMarginInstance, o::BuyOrder, t::BuyTrade)
-    @deassert o isa IncreaseOrder && _check_unfillment(o) unfilled(o), typeof(o)
+    @deassert o isa IncreaseOrder && _check_unfillment(o), (o, unfilled(o), typeof(o))
     @deassert committed(o) == o.attrs.committed[] && committed(o) >= 0.0
     # from neg to 0 (buy amount is pos)
     attr(o, :unfilled)[] += t.amount + t.fees_base
     @deassert ltxzero(ii, attr(o, :unfilled)[], Val(:amount)) ||
-        gtxzero(ii, t.fees_base, Val(:amount)) (
+        gtxzero(ii, t.fees_base, Val(:amount)), (
         o, attr(o, :unfilled)[], t.amount, t.fees_base
     )
     # from pos to 0 (buy size is neg)
     attr(o, :committed)[] -= committment(ii, t)
     @deassert gtxzero(ii, committed(o), Val(:price)) ||
         o isa MarketOrder ||
-        gtxzero(ii, t.fees_base, Val(:amount)) (
+        gtxzero(ii, t.fees_base, Val(:amount)), (
         o, committed(o), attr(o, :unfilled)[], committment(ii, t), t.fees_base, t.fees
     )
 end
@@ -39,7 +39,7 @@ end
 function applyfill!(
     ::MarginStrategy{Live}, ii::InstrumentInstance, o::ShortBuyOrder, t::ShortBuyTrade
 )
-    @deassert o isa ShortBuyOrder && _check_unfillment(o) o
+    @deassert o isa ShortBuyOrder && _check_unfillment(o), (o, unfilled(o))
     @deassert committed(o) == o.attrs.committed[] && ltxzero(ii, committed(o), Val(:price))
     @deassert attr(o, :unfilled)[] < 0.0
     amt = amount_with_fees(t)
@@ -63,8 +63,8 @@ When entering positions, the cash committed from the trade must be downsized by 
 function applyfill!(
     ::MarginStrategy{Live}, ii::MarginInstance, o::IncreaseOrder, t::IncreaseTrade
 )
-    @deassert o isa IncreaseOrder && _check_unfillment(o) o
-    @deassert committed(o) == o.attrs.committed[] && committed(o) > 0.0 t
+    @deassert o isa IncreaseOrder && _check_unfillment(o), (o, unfilled(o))
+    @deassert committed(o) == o.attrs.committed[] && committed(o) > 0.0, (committed(o), t)
     attr(o, :unfilled)[] += t.amount
     @deassert ltxzero(ii, attr(o, :unfilled)[], Val(:amount)) || o isa ShortSellOrder
     @deassert t.value > 0.0

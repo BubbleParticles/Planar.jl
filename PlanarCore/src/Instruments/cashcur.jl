@@ -176,7 +176,7 @@ $(TYPEDSIGNATURES)
 addzero!(c::Cash, v, args...; kwargs...) = begin
     add!(c, v)
     atleast!(c; kwargs...)
-    @deassert c >= 0.0 v
+    @deassert c >= 0.0, v
     c
 end
 @doc "Sub v to cash, approximating to zero if cash is a small value.
