@@ -670,7 +670,7 @@ $(TYPEDSIGNATURES)
 
 """
 function committed(o::ShortBuyOrder{<:AbstractInstrument,<:ExchangeID})
-    @deassert attr(o, :committed)[] |> ltxzero o
+    @deassert attr(o, :committed)[] |> ltxzero, o
     attr(o, :committed)[]
 end
 
