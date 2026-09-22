@@ -1,6 +1,5 @@
 using .Executors: AnyLimitOrder, committment, unfillment
-using .PaperMode: create_sim_limit_order
-using .PaperMode.SimMode: construct_order_func
+using PlanarCore.SimMode: create_sim_limit_order, construct_order_func
 using .Executors.Instruments: AbstractInstrument
 using .OrderTypes: ordertype, MarketOrderType, GTCOrderType, ForcedOrderType, Order, Trade
 using .Lang: filterkws

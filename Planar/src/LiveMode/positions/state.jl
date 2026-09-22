@@ -1,4 +1,4 @@
-import ..PaperMode.SimMode: liquidate!
+import PlanarCore.SimMode: liquidate!
 using .Instances: value
 
 function _debug_aftertrade1(ii, o, t)

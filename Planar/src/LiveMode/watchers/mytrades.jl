@@ -1,4 +1,4 @@
-using ...PaperMode.SimMode: trade!
+using PlanarCore.SimMode: trade!
 using .Lang: splitkws
 
 using LRUCache

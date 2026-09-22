@@ -3,7 +3,7 @@ using .Executors: filled_amount, orderscount, orders
 using .Executors: isfilled as isorder_filled
 using .Instances: ltxzero, gtxzero
 using .OrderTypes: ReduceOnlyOrder
-using ...PaperMode.SimMode: @maketrade
+using PlanarCore.SimMode: @maketrade
 
 # TODO: `watch_orders!` and `watch_trades!` currently operate on one symbol only.
 # This could be improved by batching new tasks called within a short amount time
