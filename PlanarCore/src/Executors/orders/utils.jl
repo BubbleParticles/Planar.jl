@@ -684,7 +684,7 @@ $(TYPEDSIGNATURES)
 """
 function _check_cash(ii::InstrumentInstance, ::Long)
     @deassert gtxzero(ii, committed(ii, Long()), Val(:amount)) ||
-        ordertype(last(ii.history)) <: MarketOrderType committed(ii, Long()).value
+        ordertype(last(ii.history)) <: MarketOrderType, committed(ii, Long()).value
     @deassert cash(ii, Long()) |> gtxzero
 end
 

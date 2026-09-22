@@ -494,7 +494,7 @@ $(TYPEDSIGNATURES)
 function decommit!(s::Strategy, o::IncreaseOrder, ii, canceled=false)
     @ifdebug _check_committment(o)
     # NOTE: ignore negative values caused by slippage
-    @deassert canceled || isdust(ii, o) o
+    @deassert canceled || isdust(ii, o), o
     # NOTE: committed can be negative in case the predicted commit is below the executed size
     subzero!(s.cash_committed, abs(committed(o)))
     # The original trailing-comma form
@@ -611,7 +611,7 @@ $(TYPEDSIGNATURES)
 
 """
 function hold!(s::Strategy, ii, o::IncreaseOrder)
-    @deassert hasorders(s, ii, orderside(o)) || !iszero(ii) o
+    @deassert hasorders(s, ii, orderside(o)) || !iszero(ii), o
     push!(s.holdings, ii)
 end
 

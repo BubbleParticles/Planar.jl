@@ -398,7 +398,7 @@ function positions!(s::MarginStrategy{<:Union{Paper,Sim}}, date::DateTime)
     # Collect holdings first to avoid mutation during iteration (liquidate! -> close_position! -> delete!(s.holdings, ii))
     holdings_copy = collect(s.holdings)
     for ii in holdings_copy
-        @ifdebug @deassert isopen(ii) || hasorders(s, ii) ii
+        @ifdebug @deassert isopen(ii) || hasorders(s, ii), ii
         if ishedged(ii)
             for p in (Long(), Short())
                 if isopen(ii, p)
