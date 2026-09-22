@@ -24,7 +24,7 @@ reports/
 docs/maintenance/*-report.md
 docs/test/results/
 TODO.txt
-Stubs/test/stubs/trades_stub_*.jls
+PlanarCore/test/test/stubs/trades_stub_*.jls
 PlanarDev/test/stubs/trades_stub_*.jls
 PlanarOptim/test/stubs/trades_stub_*.jls
 
