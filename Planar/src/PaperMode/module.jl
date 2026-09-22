@@ -20,7 +20,7 @@ using PlanarCore.Instances.Exchanges: CcxtTrade
 using PlanarCore.Instances.Data.DataStructures: CircularBuffer
 using PlanarCore.SimMode: AnyMarketOrder, AnyLimitOrder
 import PlanarCore.Executors: call!
-import PlanarCore.Misc: start!, stop!, isrunning, sleep_pad, LOGGING_GROUPS, kill_task, start_task
+import PlanarCore.Misc: start!, stop!, isrunning, sleep_pad, sleep_pad_interruptible, LOGGING_GROUPS, kill_task, start_task
 
 # Compat: define InstrumentInstance in this module regardless of core version
 if !isdefined(@__MODULE__, :InstrumentInstance)
