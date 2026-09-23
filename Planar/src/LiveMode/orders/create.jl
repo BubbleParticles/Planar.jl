@@ -1,4 +1,5 @@
-using .Executors: AnyLimitOrder, committment, unfillment, iscashenough
+using .Executors: AnyLimitOrder, committment, unfillment
+using .SimMode: iscashenough
 using PlanarCore.SimMode: create_sim_limit_order, construct_order_func
 using .Executors.Instruments: AbstractInstrument
 using .OrderTypes: ordertype, MarketOrderType, GTCOrderType, ForcedOrderType, Order, Trade
