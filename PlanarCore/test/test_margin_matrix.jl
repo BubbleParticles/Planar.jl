@@ -695,6 +695,9 @@ end
     uni = InstrumentCollection(["BTC/USDT:USDT"]; exc=exc, margin=Cross(), load_data=false)
     cfg = Config(; qc=:USDT, initial_cash=100000.0)
     s = Strategy(Main, Sim(), Cross(), TimeFrame("1m"), exc, uni; config=cfg)
+    # Set SimMode slippage attrs needed for liquidation (same as IsolatedHedged test)
+    s.attrs[:sim_base_slippage] = Val(:spread)
+    s.attrs[:sim_market_slippage] = Val(:skew)
     df = DataFrame(
         timestamp=[DateTime(2024, 1, 1) + Minute(i) for i in 0:3],
         open=[50000.0, 50000.0, 40000.0, 40000.0],
