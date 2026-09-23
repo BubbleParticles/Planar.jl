@@ -1,7 +1,7 @@
 using Test
 using PlanarCore
 using PlanarCore.Misc: Sim, Paper, Live, Isolated, IsolatedHedged, Cross, CrossHedged, NoMargin, DFT, Hedged, MarginMode
-using PlanarCore.SimMode: position!
+using PlanarCore.Strategies: Strategy
 using PlanarCore.Instances: InstrumentInstance, cash!
 using PlanarCore.Instances.Instruments.Derivatives: Derivative
 using PlanarCore.ExchangeTypes: CcxtExchange, ExchangeID, ExcPrecisionMode
