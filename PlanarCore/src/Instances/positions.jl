@@ -445,7 +445,7 @@ This function sets the liquidation price of a given short position (`po`) to the
 
 """
 function liqprice!(po::Position{Short}, v)
-    @deassert v >= price(po) (v, price(po))
+    @deassert v >= price(po), (v, price(po))
     po.liquidation_price[] = v
 end
 

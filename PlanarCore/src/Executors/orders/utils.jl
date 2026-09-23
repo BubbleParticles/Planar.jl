@@ -643,7 +643,7 @@ Checks a sell trade.
 $(TYPEDSIGNATURES)
 """
 function _check_trade(t::SellTrade, ii)
-    @deassert t.price >= t.order.price || ordertype(t) <: MarketOrderType (
+    @deassert t.price >= t.order.price || ordertype(t) <: MarketOrderType, (
         t.price, t.order.price
     )
     @deassert t.size > 0.0
@@ -669,7 +669,7 @@ Checks a short buy trade.
 $(TYPEDSIGNATURES)
 """
 function _check_trade(t::ShortBuyTrade, ii)
-    @deassert t.price <= t.order.price || ordertype(t) <: MarketOrderType (
+    @deassert t.price <= t.order.price || ordertype(t) <: MarketOrderType, (
         t.price, t.order.price
     )
     @deassert t.size > 0.0

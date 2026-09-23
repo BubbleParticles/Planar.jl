@@ -815,7 +815,7 @@ This function calculates the free cash (cash that is not tied up in trades) of a
 """
 function freecash(ii::NoMarginInstance, args...)
     ca = cash(ii) - committed(ii)
-    @deassert ca |> gtxzero (cash(ii), committed(ii))
+    @deassert ca |> gtxzero, (cash(ii), committed(ii))
     ca
 end
 @doc """ Calculate the free cash for a `MarginInstance` with long position.

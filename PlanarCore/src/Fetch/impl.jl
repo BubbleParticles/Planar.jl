@@ -620,7 +620,7 @@ function update_ohlcv!(df::DataFrame, pair, exc, tf; ohlcv_kind=:default, from=n
         if !iscontig
             deleteat!(df, idx:lastindex(df.timestamp))
         end
-        @deassert dt(last_date) == lastdate(df) dt(last_date), lastdate(df)
+        @deassert dt(last_date) == lastdate(df), (dt(last_date), lastdate(df))
         last_date
     end
     if isnothing(from) || from isa Number

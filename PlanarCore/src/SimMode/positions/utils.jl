@@ -29,7 +29,7 @@ function open_position!(
         # (a tuple), producing a vacuous assertion whose condition was
         # `DFT(0.0)(cash(ii, ...), status(ii, ...))` — a Float64 call that
         # MethodErrors under JULIA_DEBUG. Split into two explicit calls.
-        @deassert cash(ii, opposite(P())) == DFT(0.0) (cash(ii, opposite(P())))
+        @deassert cash(ii, opposite(P())) == DFT(0.0), (cash(ii, opposite(P())))
         @deassert status(ii, opposite(P())) == PositionClose()
     end
     @deassert !isopen(po)
@@ -145,7 +145,7 @@ function liquidate!(
     isnothing(t) || begin
         @ifdebug @deassert t.order.date == date && DFT(0.0) < abs(t.amount) <= abs(t.order.amount)
     end
-    @ifdebug @deassert isdust(ii, price, p) (notional(ii, p), cash(ii, p), cash(ii, p) * price, p)
+    @ifdebug @deassert isdust(ii, price, p), (notional(ii, p), cash(ii, p), cash(ii, p) * price, p)
     close_position!(s, ii, p)
 end
 
