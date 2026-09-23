@@ -43,7 +43,7 @@ export start!
 export stop!
 export singlewaycheck
 export position!
-
+export iscashenough
 function stop!(s::Strategy{Sim})
     @debug "SimMode: stopping strategy" name = nameof(s)
     # Reset strategy state
