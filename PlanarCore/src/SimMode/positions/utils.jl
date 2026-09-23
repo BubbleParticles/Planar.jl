@@ -58,7 +58,7 @@ This function cancels all orders associated with the specified position and upda
 function force_exit_position(s::Strategy, ii, p, date::DateTime; kwargs...)
     @ifdebug @assert !hasorders(s, ii, p)
     @ifdebug @deassert isempty(collect(values(s, ii, p)))
-    @ifdebug @deassert iszero(committed(ii, p)) committed(ii, p)
+    @ifdebug @deassert iszero(committed(ii, p)), committed(ii, p)
     ot = ReduceOnlyOrder(p)
     price = priceat(s, ot, ii, date)
     amount = abs(nondust(ii, ot, price))

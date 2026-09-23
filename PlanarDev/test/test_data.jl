@@ -33,13 +33,8 @@ test_zarrinstance() = begin
     zi
 end
 
-# Preload JSON and Mmap at top-level so JSON binding exists before test function definitions
-try
-    using JSON
-    using Mmap
-catch e
-    @warn "Preloading JSON or Mmap failed; tests may error." exception=(e,catch_backtrace())
-end
+using JSON
+using Mmap
 
 function test_save_json(zi=nothing, key="coingecko/markets/all")
     filepath = joinpath(PROJECT_PATH, "test/stubs/cg_markets.json")
@@ -79,17 +74,7 @@ function test_zarray_save(zi)
     return z
 end
 
-test_data() = @testset "data" failfast = FAILFAST begin
-    @eval begin
-        using .Planar.Engine.Data
-        if !isdefined(@__MODULE__, :da)
-            da = Data
-        end
-        using .Data.Zarr
-        if !isdefined(@__MODULE__, :za)
-            za = Zarr
-        end
-    end
+test_data() = @testset "data" failfast = true begin
     zi = test_zarrinstance()
     test_zarray_save(zi)
     test_save_json(zi)
