@@ -624,11 +624,15 @@ end
         )
     end
     Rest.set_http_post!(mock_post)
+    name = :binance
+    exc = _make_exchange_matrix(name)
+    # Seed sandboxCache so issandbox(exc) returns false WITHOUT a network
+    # call. Without this, issandbox fetches /exchanges/binance/urls via GET
+    # (not mocked here), hits the real gateway, and — because Binance
+    # exposes testnet URLs — returns true, taking the sandbox branch that
+    # skips the gateway entirely and leaves `sent` empty.
+    sandboxCache[ExchangeID{name}()] = false
     try
-        name = :binance
-        exc = _make_exchange_matrix(name)
-        # Non-sandbox: the sandboxCache must be empty (default issandbox=false).
-        @test !get(sandboxCache, ExchangeID{name}(), false)
         @test marginmode!(exc, "ISOLATED", "BTC/USDT:USDT")
         @test PlanarCore.Exchanges.marginmode(exc) == "isolated"
         @test !isempty(sent) && last(sent) === false
@@ -644,6 +648,7 @@ end
     finally
         Rest.set_http_post!(prev_post)
         Rest._gateway_initialized[] = prev_init
+        delete!(sandboxCache, ExchangeID{name}())
     end
 end
 
