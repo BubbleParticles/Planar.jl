@@ -80,4 +80,12 @@ function liquidate!(
     price: $(entryprice(pos)) (entry) $(liqprice(pos)) (liquidation)
     value: $(cnum(value(ii, p)))
     "
+    # Live mode has no unified liquidation API across exchanges: the
+    # `liquidate!` body in `PlanarCore.SimMode` would cancel pending
+    # orders and submit a `LiquidationOrder` via `call!`, which in Live
+    # routes through the gateway to ccxt `createOrder` with
+    # `reduceOnly`/`liquidation` semantics that differ per exchange.
+    # Instead of silently doing nothing or risking a real close, log
+    # the impending liquidation and return without mutating state.
+    return nothing
 end
