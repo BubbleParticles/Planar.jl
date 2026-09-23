@@ -42,6 +42,7 @@ include("s_call.jl")
 export start!
 export stop!
 export singlewaycheck
+export position!
 
 function stop!(s::Strategy{Sim})
     @debug "SimMode: stopping strategy" name = nameof(s)
