@@ -80,8 +80,14 @@ function force_exit_position(s::Strategy, ii, p, date::DateTime; kwargs...)
             @warn "force_exit_position: close trade failed, position state kept" ii = raw(ii) side = p amount price date
             return false
         end
+    elseif !isopen(ii, p)
+        # Dust amount but position already closed — nothing to do
+        return true
+    else
+        # Dust amount but position still open — cannot close, report failure
+        @warn "force_exit_position: dust amount ($(amount)) but position still open" ii = raw(ii) side = p price date
+        return false
     end
-    return true
 end
 
 """

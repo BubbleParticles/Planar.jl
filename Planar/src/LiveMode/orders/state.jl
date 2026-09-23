@@ -74,6 +74,14 @@ function applyfill!(
     @deassert gtxzero(ii, committed(o), Val(:price)) ||
         o isa AnyMarketOrder ||
         o isa IncreaseLimitOrder
+    # D9: post-fill cash gate. A filled increase order on live margin can
+    # overdraw the account (slippage, fees, leverage miscalc) — the pre-fill
+    # `iscashenough` check estimated the committment, but the actual fill
+    # cost may differ. Warn loudly so the strategy can react (margin call,
+    # reduce position) instead of silently running negative equity.
+    if !iscashenough(s, ii, committed(o), o)
+        @warn "applyfill! live margin: post-fill cash insufficient" ii = raw(ii) o.id committed = committed(o) freecash = st.freecash(s) leverage = leverage(ii, posside(o))
+    end
 end
 
 function Instances.cash!(s::LiveStrategy, ii, t::Trade)

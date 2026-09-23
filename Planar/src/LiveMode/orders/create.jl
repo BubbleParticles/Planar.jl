@@ -1,4 +1,4 @@
-using .Executors: AnyLimitOrder, committment, unfillment
+using .Executors: AnyLimitOrder, committment, unfillment, iscashenough
 using PlanarCore.SimMode: create_sim_limit_order, construct_order_func
 using .Executors.Instruments: AbstractInstrument
 using .OrderTypes: ordertype, MarketOrderType, GTCOrderType, ForcedOrderType, Order, Trade
@@ -176,11 +176,20 @@ function _create_live_order(
                         price * abs(amount)
                     end
                 end
-                committed_ref = Ref(committed_val)
-                unfilled_ref = Ref(unfillment(type, amount))
-                attrs = (take = profit, stop = loss, committed = committed_ref, unfilled = unfilled_ref, trades = Trade[])
-                o = Order(ii, type; date = date, price = price, amount = amount, id = id, attrs = attrs)
-                push!(s, ii, o)
+                # D1: cash gate before constructing the fallback order. The
+                # fallback path bypasses `maketrade`/`iscashenough` entirely,
+                # so an order that the exchange filled but the strategy cannot
+                # afford would silently create a position with negative cash.
+                if !iscashenough(s, ii, committed_val, type)
+                    @error "create order: fallback rejected — cash insufficient" ii = raw(ii) committed = committed_val cash = st.freecash(s)
+                    nothing
+                else
+                    committed_ref = Ref(committed_val)
+                    unfilled_ref = Ref(unfillment(type, amount))
+                    attrs = (take = profit, stop = loss, committed = committed_ref, unfilled = unfilled_ref, trades = Trade[])
+                    o = Order(ii, type; date = date, price = price, amount = amount, id = id, attrs = attrs)
+                    push!(s, ii, o)
+                end
             catch err
                 err isa InterruptException && rethrow(err)
                 @warn "create order: fallback construction failed" err = err
