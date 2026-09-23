@@ -86,6 +86,13 @@ function liquidate!(
     # routes through the gateway to ccxt `createOrder` with
     # `reduceOnly`/`liquidation` semantics that differ per exchange.
     # Instead of silently doing nothing or risking a real close, log
-    # the impending liquidation and return without mutating state.
+    # the impending liquidation, cancel any pending orders on this
+    # side (so the exchange can manage the liquidation itself), and
+    # return without mutating state.
+    try
+        call!(s, ii, CancelOrders(); t=orderside(p))
+    catch e
+        @warn "liquidate!: cancel failed" exc = typeof(e) msg = sprint(showerror, e)
+    end
     return nothing
 end

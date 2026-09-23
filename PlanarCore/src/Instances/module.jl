@@ -94,7 +94,7 @@ struct InstrumentInstance{T<:AbstractInstrument,E<:ExchangeID,M<:MarginMode} <: 
 
     $(TYPEDSIGNATURES)
 
-    This function constructs an `InstrumentInstance` with defined asset, data, exchange, margin, and optional parameters for limits, precision, and fees. It initializes long and short positions based on the provided margin and ensures that the margin is not hedged.
+    This function constructs an `InstrumentInstance` with defined asset, data, exchange, margin, and optional parameters for limits, precision, and fees. It initializes long and short positions based on the provided margin mode (hedged modes allow both sides open simultaneously).
 
     """
     function InstrumentInstance(
@@ -1169,8 +1169,13 @@ This function opens or closes the status of a non-hedged position in a `MarginIn
 function status!(ii::MarginInstance, p::PositionSide, pstat::PositionStatus)
     pos = position(ii, p)
     opp = opposite(ii, p)
-    # HACK: the `!iszero` check is needed because in SimMode the `NewTrade` call! in `_update_from_trade!` can trigger aditional trades
-    if pstat == PositionOpen() && status(opp) == PositionOpen() && !iszero(cash(opp))
+    # Single-way guard: only `Isolated` (non-hedged, non-cross) forbids
+    # both sides open simultaneously. `Cross` allows both sides (account-level
+    # margin pool); hedged modes (`IsolatedHedged`, `CrossHedged`) allow both
+    # by definition. The `!iszero` check is needed because in SimMode the
+    # `NewTrade` call! in `_update_from_trade!` can trigger additional trades.
+    if pstat == PositionOpen() && !ishedged(ii) && !(marginmode(ii) isa CrossMargin) &&
+            status(opp) == PositionOpen() && !iszero(cash(opp))
         @error "double position in non hedged mode" ii.longpos ii.shortpos
         error()
     end

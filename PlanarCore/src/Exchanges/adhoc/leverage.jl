@@ -22,12 +22,8 @@ end
 
 @doc """Binance marginmode! override — skip gateway round-trip in sandbox, record locally."""
 function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}, mode::MarginMode, symbol=""; kwargs...)
-    # Normalize MarginMode → base string + authoritative hedge flag first,
-    # then reuse the single Binance body below. (A separate untyped `mode`
-    # method would be ambiguous against the generic `mode::MarginMode`
-    # method whenever both apply, e.g. `marginmode!(binance_exc,
-    # Isolated(), sym)` — Julia has no most-specific winner between a
-    # narrower exc type and a narrower mode type.)
+    # MarginMode args dispatch to this method; the untyped string method
+    # below handles AbstractString. Both funnel into `_binance_marginmode!`.
     if mode isa NoMargin
         exc.options["defaultMarginMode"] = "nomargin"
         exc.options["defaultPositionMode"] = "oneway"
@@ -36,8 +32,7 @@ function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}
     _binance_marginmode!(exc, mode isa IsolatedMargin ? "isolated" : "cross", symbol; hedged=mode isa MarginMode{Hedged}, kwargs...)
 end
 function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}, mode::AbstractString, symbol; hedged=false, kwargs...)
-    # String callers (e.g. the generic wrapper's normalized base mode, or
-    # direct string use): no normalization needed. Typed as AbstractString
+    # String callers: no normalization needed. Typed as AbstractString
     # (not untyped) so MarginMode args keep a single winner — the
     # `(Binance, MarginMode)` method above — instead of going ambiguous
     # against the generic `(Exchange, MarginMode)` method.
@@ -69,6 +64,14 @@ function _binance_marginmode!(exc::Exchange, mode, symbol; hedged=false, kwargs.
         end
         exc.options["defaultMarginMode"] = mode_str
         exc.options["defaultPositionMode"] = hedged ? "hedge" : "oneway"
+        # Hedge mode requires setPositionMode support. If the sandbox
+        # exchange doesn't advertise it, return false so callers see the
+        # same fail-fast behavior as the generic path (which would have
+        # failed at `dosetpositionmode` and returned false).
+        if hedged && !has(exc, :setPositionMode)
+            @warn "sandbox exchange lacks setPositionMode — hedged mode '$mode' not supported" exc = nameof(exc)
+            return false
+        end
         return true
     end
     invoke(marginmode!, Tuple{Exchange,<:Any,<:Any}, exc, mode, symbol; hedged, kwargs...)

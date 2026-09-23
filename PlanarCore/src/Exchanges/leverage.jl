@@ -214,10 +214,14 @@ end
 $(TYPEDSIGNATURES)
 """
 function marginmode!(exc::Exchange, mode::MarginMode, symbol=""; kwargs...)
-    if mode isa NoMargin
+    mode isa NoMargin && begin
         exc.options["defaultMarginMode"] = "nomargin"
         return true
     end
+    # Fail fast when the exchange lacks the capability the strategy needs.
+    # `marginmode!` itself is lenient (warns on `setMarginMode` failure), but
+    # direct callers should not discover the gap only after a gateway error.
+    check_margin_support!(exc, mode) || return false
     base = mode isa IsolatedMargin ? "isolated" : "cross"
     hedged = mode isa MarginMode{Hedged}
     marginmode!(exc, base, symbol; hedged, kwargs...)

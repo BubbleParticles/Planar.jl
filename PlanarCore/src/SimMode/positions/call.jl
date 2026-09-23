@@ -131,4 +131,5 @@ function call!(
     # "close all" that reports success while leaving them live is a silent
     # no-op. Cancel everything; the bulk NoMargin path funnels through here.
     call!(s, ii, CancelOrders(); t=BuyOrSell)
+    true
 end
