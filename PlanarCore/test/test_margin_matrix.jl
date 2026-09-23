@@ -8,7 +8,7 @@ using PlanarCore.ExchangeTypes: CcxtExchange, ExchangeID, ExcPrecisionMode
 using PlanarCore.ExchangeTypes.OrderedCollections: OrderedSet
 using PlanarCore.Collections: InstrumentCollection
 using PlanarCore.TimeTicks: TimeFrame
-using PlanarCore.Exchanges: _TIER_CACHES, LeverageTier, marginmode!
+using PlanarCore.Exchanges: _TIER_CACHES, LeverageTier, marginmode!, sandboxCache
 using PlanarCore.Instances.Data: DataFrame
 using PlanarCore.Instances.DataStructures: SortedDict
 using PlanarCore.OrderTypes: Buy, Sell, BuyOrder, SellOrder, ShortBuyOrder
@@ -84,6 +84,28 @@ function _with_live_margin_mock(f)
     prev_get = Rest._http_get[]
     prev_init = Rest._gateway_initialized[]
     Rest._gateway_initialized[] = true
+    # Seed sandboxCache so `issandbox(exc)` (called by `Strategy` construction
+    # for the Paper branch and by `CurrencyCash`) never makes a real GET to
+    # `/exchanges/<id>/urls`. Without this the mock_post's `/exchanges/`
+    # catch-all never runs (issandbox calls `call_exchange(..., "urls")`
+    # which is NOT in the POST-method set → it routes to GET → real HTTP →
+    # hang/timeout on every Live+Paper cell).
+    sandboxCache[ExchangeID{:binance}()] = false
+    sandboxCache[ExchangeID{:t_sim_Isolated}()] = false
+    sandboxCache[ExchangeID{:t_paper_Isolated}()] = false
+    sandboxCache[ExchangeID{:t_live_Isolated}()] = false
+    sandboxCache[ExchangeID{:t_sim_IsolatedHedged}()] = false
+    sandboxCache[ExchangeID{:t_paper_IsolatedHedged}()] = false
+    sandboxCache[ExchangeID{:t_live_IsolatedHedged}()] = false
+    sandboxCache[ExchangeID{:t_sim_Cross}()] = false
+    sandboxCache[ExchangeID{:t_paper_Cross}()] = false
+    sandboxCache[ExchangeID{:t_live_Cross}()] = false
+    sandboxCache[ExchangeID{:t_sim_CrossHedged}()] = false
+    sandboxCache[ExchangeID{:t_paper_CrossHedged}()] = false
+    sandboxCache[ExchangeID{:t_live_CrossHedged}()] = false
+    sandboxCache[ExchangeID{:t_sim_NoMargin}()] = false
+    sandboxCache[ExchangeID{:t_paper_NoMargin}()] = false
+    sandboxCache[ExchangeID{:t_live_NoMargin}()] = false
     mock_post = (url; headers=[], body=nothing, kwargs...) -> begin
         if occursin("/setMarginMode", url) ||
            occursin("/setPositionMode", url) ||
@@ -95,8 +117,14 @@ function _with_live_margin_mock(f)
             return Rest.HTTP.Response(
                 200, Rest.JSON3.write(Dict("result" => "started", "error" => nothing, "error_code" => nothing))
             )
+        elseif occursin(r"/exchanges/[^/]+/status$", url)
+            # `Exchange` constructor polls this for `running` up to 5×1s;
+            # report ready immediately so construction is fast.
+            return Rest.HTTP.Response(
+                200, Rest.JSON3.write(Dict("result" => Dict("running" => true), "error" => nothing, "error_code" => nothing))
+            )
         elseif occursin("/exchanges/", url)
-            # Exchange info/has/markets/urls/fees lookups during Live construction:
+            # Exchange info/has/markets/fees lookups during Live construction:
             # return a benign payload instead of delegating to prev_post, which
             # may be real HTTP (Ccxt suites restore to HTTP.post) → 404.
             return Rest.HTTP.Response(
@@ -105,13 +133,27 @@ function _with_live_margin_mock(f)
         end
         return prev_post(url; headers=headers, body=body, kwargs...)
     end
+    mock_get = (url; kwargs...) -> begin
+        if occursin("/exchanges/", url)
+            return Rest.HTTP.Response(
+                200, Rest.JSON3.write(Dict("result" => Dict{String,Any}(), "error" => nothing, "error_code" => nothing))
+            )
+        end
+        return prev_get(url; kwargs...)
+    end
     Rest.set_http_post!(mock_post)
+    Rest.set_http_get!(mock_get)
     try
         f()
     finally
         Rest.set_http_post!(prev_post)
         Rest.set_http_get!(prev_get)
         Rest._gateway_initialized[] = prev_init
+        for k in collect(keys(sandboxCache))
+            if startswith(string(k), "t_")
+                delete!(sandboxCache, k)
+            end
+        end
     end
 end
 
