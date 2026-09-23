@@ -1029,7 +1029,7 @@ function additional(ii::MarginInstance, ::ByPos{S}) where {S<:PositionSide}
     position(ii, S) |> additional
 end
 @doc "Instrument position status (open or closed) for a `NoMarginInstance`."
-status(ii::NoMarginInstance, ::ByPos{S}) where {S<:PositionSide} = ClosedStatus()
+status(ii::NoMarginInstance, ::ByPos{S}) where {S<:PositionSide} = PositionClose()
 @doc "Instrument position maintenance margin for a `NoMarginInstance`."
 maintenance(ii::NoMarginInstance, ::ByPos{S}) where {S<:PositionSide} = 0.0
 @doc "Instrument position initial margin for a `NoMarginInstance`."

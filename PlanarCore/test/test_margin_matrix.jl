@@ -1,8 +1,7 @@
 using Test
 using PlanarCore
 using PlanarCore.Misc: Sim, Paper, Live, Isolated, IsolatedHedged, Cross, CrossHedged, NoMargin, DFT, Hedged, MarginMode
-using PlanarCore.Strategies: Strategy
-using PlanarCore.Strategies.Instances: ishedged, isopen, Long, Short, position, freecash, cash, committed
+using PlanarCore.SimMode: position!
 using PlanarCore.Instances: InstrumentInstance, cash!
 using PlanarCore.Instances.Instruments.Derivatives: Derivative
 using PlanarCore.ExchangeTypes: CcxtExchange, ExchangeID, ExcPrecisionMode
@@ -680,4 +679,56 @@ end
     # NoMargin leverage is always 1.0, unaffected by the no-op setter.
     @test leverage(ii, Long()) == 1.0
     @test leverage(ii, Short()) == 1.0
+end
+
+@testset "Cross liquidation via candle path is account-level" begin
+    # Regression: `_date_position!` (the candle path, shared by Sim+Paper via
+    # `position!(s, ii, date, pos)`) used to call `liquidate!` directly,
+    # bypassing the cross-margin `_cross_account_covered` guard that
+    # `_maybe_liquidate_positions!` applies. A cross position breaching its
+    # standalone liq price while the funded account absorbs it would be
+    # liquidated anyway — the account-level semantics only held on the
+    # trade path.
+    exc = _make_exchange_matrix(:crossliq_candle_test)
+    tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
+    _TIER_CACHES[(:crossliq_candle_test, "BTC/USDT:USDT")] = ([tier], time())
+    uni = InstrumentCollection(["BTC/USDT:USDT"]; exc=exc, margin=Cross(), load_data=false)
+    cfg = Config(; qc=:USDT, initial_cash=100000.0)
+    s = Strategy(Main, Sim(), Cross(), TimeFrame("1m"), exc, uni; config=cfg)
+    df = DataFrame(
+        timestamp=[DateTime(2024, 1, 1) + Minute(i) for i in 0:3],
+        open=[50000.0, 50000.0, 40000.0, 40000.0],
+        high=[50005.0, 50005.0, 40005.0, 40005.0],
+        low=[49995.0, 39900.0, 39900.0, 39990.0],
+        close=[50000.0, 40000.0, 40000.0, 40000.0],
+        volume=[100.0, 100.0, 100.0, 100.0],
+    )
+    a = parse(Derivative, "BTC/USDT:USDT")
+    data = SortedDict{TimeFrame,DataFrame}(TimeFrame("1m") => df)
+    limits = (leverage=(; min=1.0, max=10.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8))
+    precision = (amount=1e-8, price=1e-8)
+    fees = (taker=0.001, maker=0.001, min=0.001, max=0.001)
+    ii = InstrumentInstance(a, data, exc, Cross(); limits=limits, precision=precision, fees=fees)
+    po = position(ii, Long())
+    cash!(cash(po), 1.0)
+    entryprice!(po, 50000.0)
+    notional!(po, 50000.0)
+    leverage!(po, 10.0)
+    margin!(po)
+    maintenance!(po, 500.0)
+    liqprice!(po, 45500.0)
+    status!(ii, Long(), PositionOpen())
+    push!(s.holdings, ii)
+    date = DateTime(2024, 1, 1, 0, 1)
+    # Standalone the position is liquidatable (39900 <= 45500) ...
+    @test isliquidatable(s, ii, Long(), date)
+    # ... but the funded account absorbs it: the candle path must NOT liquidate
+    @test _cross_account_covered(s, date)
+    position!(s, ii, date, po)
+    @test isopen(ii, Long())  # candle path preserved account-level semantics
+    # A drained account is under water: falls back to per-position liquidation
+    cash!(s.cash, 100.0)
+    @test !_cross_account_covered(s, date)
+    position!(s, ii, date, po)
+    @test !isopen(ii, Long())  # drained account: candle path liquidates
 end

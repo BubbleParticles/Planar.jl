@@ -358,7 +358,17 @@ function _date_position!(s::MarginStrategy, ii, date::DateTime, pos::Position)
     p = posside(pos)
     @ifdebug @deassert notional(pos) != DFT(0.0)
     timestamp!(pos, date)
-    if isliquidatable(s, ii, p, date)
+    # Cross-margin positions share the strategy-level QC pool as collateral:
+    # the exchange liquidates the *account*, not the position. A position
+    # breaching its standalone liquidation price must not liquidate while
+    # account equity still covers total maintenance margin (see
+    # `_cross_account_covered`). This guard is shared with the trade-path
+    # `_maybe_liquidate_positions!` — without it the candle path would
+    # liquidate a cross position at its standalone liq price while the
+    # funded account absorbs the excursion.
+    if marginmode(ii) isa CrossMargin && _cross_account_covered(s, date)
+        call!(s, ii, date, pos, PositionUpdate())
+    elseif isliquidatable(s, ii, p, date)
         liquidate!(s, ii, p, date)
     else
         # position is still open
