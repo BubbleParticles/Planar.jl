@@ -248,7 +248,7 @@ using PlanarCore.Strategies: strategy!
 using PlanarCore.Instances:
     leverage, leverage!, maintenance!, margin!, notional!, entryprice!, liqprice!, status!, PositionOpen, CrossMargin, value, cash!
 using PlanarCore.SimMode: isliquidatable, maybe_liquidate!
-import PlanarCore.SimMode: _cross_account_covered
+import PlanarCore.SimMode: _cross_account_covered, position!
 
 module _MMProbeIso
 using PlanarCore.Strategies: Strategy
