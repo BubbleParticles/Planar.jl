@@ -31,7 +31,7 @@ function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}
     end
     _binance_marginmode!(exc, mode isa IsolatedMargin ? "isolated" : "cross", symbol; hedged=mode isa MarginMode{Hedged}, kwargs...)
 end
-function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}, mode::AbstractString, symbol; hedged=false, kwargs...)
+function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}, mode::AbstractString, symbol=""; hedged=false, kwargs...)
     # String callers: no normalization needed. Typed as AbstractString
     # (not untyped) so MarginMode args keep a single winner — the
     # `(Binance, MarginMode)` method above — instead of going ambiguous

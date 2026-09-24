@@ -127,7 +127,6 @@ function _live_sync_position!(
             marginmode(ii),
             raw(ii),
             hedged=ishedged(pos),
-            lev=leverage(pos),
         ) "failed to set hedged mode on exchange ($(ii))"
     end
 
@@ -190,7 +189,6 @@ function _live_sync_position!(
                 marginmode(ii),
                 raw(ii);
                 hedged=ishedged(pos),
-                lev=leverage(pos),
             )
                 @warn "sync pos: mismatching margin mode will cause corrupted state" ii
             end
