@@ -21,7 +21,7 @@ function _handle_leverage(e::Exchange{<:eids(:binance, :binanceusdm, :binancecoi
 end
 
 @doc """Binance marginmode! override — skip gateway round-trip in sandbox, record locally."""
-function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}, mode::MarginMode, symbol=""; kwargs...)
+function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}, mode::MarginMode, symbol=""; hedged=false, kwargs...)
     # MarginMode args dispatch to this method; the untyped string method
     # below handles AbstractString. Both funnel into `_binance_marginmode!`.
     if mode isa NoMargin
