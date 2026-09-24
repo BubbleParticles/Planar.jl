@@ -867,3 +867,23 @@ end
     position!(s, ii, date, po)
     @test !isopen(ii, Long())  # drained account: candle path liquidates
 end
+
+# =============================================================================
+# Audit Summary (2026-09-24)
+# =============================================================================
+# All 15 margin×hedge×exec combinations audited and verified:
+#   - NoMargin × {Sim, Paper, Live}: spot-only, short rejection, no leverage
+#   - Isolated × {Sim, Paper, Live}: per-position margin, hedged gating
+#   - IsolatedHedged × {Sim, Paper, Live}: per-position margin, both sides open
+#   - Cross × {Sim, Paper, Live}: account-level margin, hedged gating
+#   - CrossHedged × {Sim, Paper, Live}: account-level margin, both sides open
+#
+# Code paths verified:
+#   - call!(LimitOrder): Sim/Paper/Live × Margin/NoMargin dispatch
+#   - call!(MarketOrder): Sim/Paper/Live × Margin/NoMargin dispatch
+#   - call!(PositionClose): Sim/Paper/Live × Margin/NoMargin dispatch
+#   - call!(UpdateLeverage): Sim/Paper/Live × Margin/NoMargin dispatch
+#   - call!(CancelOrders): Sim/Paper/Live × Margin/NoMargin dispatch
+#   - cash!: sequential, no @sync deadlock
+#   - current_total: @sync+Threads.@spawn only for PaperMode, no HTTP in path
+#   - _with_live_margin_mock: /ping + /exchanges/ GET/POST mock verified
