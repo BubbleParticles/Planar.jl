@@ -136,12 +136,17 @@ function _with_live_margin_mock(f)
         return prev_post(url; headers=headers, body=body, kwargs...)
     end
     mock_get = (url; kwargs...) -> begin
-        if occursin("/exchanges/", url)
+        if occursin("/ping", url)
+            return Rest.HTTP.Response(
+                200, Rest.JSON3.write(Dict("result" => "pong", "error" => nothing, "error_code" => nothing))
+            )
+        elseif occursin("/exchanges/", url)
             return Rest.HTTP.Response(
                 200, Rest.JSON3.write(Dict("result" => Dict{String,Any}(), "error" => nothing, "error_code" => nothing))
             )
+        else
+            return prev_get(url; kwargs...)
         end
-        return prev_get(url; kwargs...)
     end
     Rest.set_http_post!(mock_post)
     Rest.set_http_get!(mock_get)
