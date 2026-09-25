@@ -1,7 +1,7 @@
 using PlanarCore
 using PlanarCore.Fetch: Fetch
 using PlanarCore.SimMode
-using PlanarCore.SimMode.Executors
+using PlanarCore.Executors
 using Base: with_logger
 using PlanarCore.Executors: orders, orderscount
 using PlanarCore.Executors.OrderTypes

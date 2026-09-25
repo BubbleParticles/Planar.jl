@@ -13,15 +13,8 @@ using OptimizationEvolutionary
 using OptimizationOptimJL
 using OptimizationManopt
 using Symbolics
-const HAS_MODELINGTOOLKIT = begin
-    try
-        @eval using ModelingToolkit
-        true
-    catch e
-        @warn "ModelingToolkit not available; optimization features depending on it will be disabled." exception=(e)
-        false
-    end
-end
+const HAS_MODELINGTOOLKIT =
+    !isnothing(Base.find_package("ModelingToolkit"))
 # using OptimizationNOMAD
 # using OptimizationSpeedMapping
 # using Zygote

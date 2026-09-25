@@ -310,6 +310,14 @@ function strategy!(src::Symbol, cfg::Config)
         path = find_path(file, cfg)
         parent = get(cfg.attrs, :parent_module, Strategies)
         @assert parent isa Module
+        # Gotcha #29: `@eval parent` (parent = closed `Strategies` module) breaks
+        # incremental compilation during precompilation. Skip the BareStrat
+        # single-file path entirely under `generating_output()` — the precompile
+        # workload only needs a *loadable* strategy, and the real BareStrat
+        if Base.generating_output()
+            @debug "loading: skipping BareStrat single-file path during precompilation"
+            return nothing
+        end
         mod = if !isdefined(parent, src)
             try
                 @eval parent begin
