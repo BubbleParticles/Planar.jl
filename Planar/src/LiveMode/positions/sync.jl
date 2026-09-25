@@ -120,17 +120,29 @@ function _live_sync_position!(
     # a per-position hedged flag (the common case — hedge mode is account-wide
     # in ccxt, not per-position). Only act on an explicit mismatch.
     resp_hedged = resp_position_hedged(resp, eid)
-    if !isnothing(resp_hedged) && resp_hedged != ishedged(pos)
-        @warn "sync pos: hedged mode mismatch" ii loc = ishedged(pos)
-        @assert marginmode!(
-            exchange(ii),
-            marginmode(ii),
-            raw(ii),
-            hedged=ishedged(pos),
-        ) "failed to set hedged mode on exchange ($(ii))"
+    _live_hedged_mismatch = !isnothing(resp_hedged) && resp_hedged != ishedged(pos)
+    if _live_hedged_mismatch
+        @warn "sync pos: hedged mode mismatch" ii loc = ishedged(pos) remote = resp_hedged
+        # `marginmode!` may legitimately return `false` on a transient gateway
+        # error or unsupported-mode exchange — a hard `@assert` here would
+        # throw out of the position-sync task and abort an otherwise-healthy
+        # position update.  Follow the warn-only pattern used by
+        # `_posclose_margin_warn` (positions/call.jl): report the mismatch,
+        # retry on the next sync tick (the cached `:live_margin_mode` attr is
+        # only stored on success, so `ensure_marginmode` re-attempts).
+        ok = try
+            marginmode!(
+                exchange(ii),
+                marginmode(ii),
+                raw(ii),
+                hedged=ishedged(pos),
+            )
+        catch e
+            @error "sync pos: marginmode! threw on hedged fix-up" ii exception = e
+            false
+        end
+        ok || @warn "sync pos: failed to align hedged mode on exchange" ii
     end
-
-    # hedged mode checks
     if !skipchecks
         if !ishedged(pos) && isopen(opposite(ii, pside)) && !update.closed[]
             _sync_oppos!(s, ii, pside, update, forced_side; waitfor)

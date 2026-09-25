@@ -191,8 +191,6 @@ real boolean: it is passed via the request `body` (POST) so the JSON bool type
 is preserved — a `query=` string would send `"true"`/`"false"` which Python
 treats as truthy (Gotcha #8) and would silently force hedge mode.
 """
-dosetpositionmode(exc::Exchange, mode::AbstractString, symbol::AbstractString; hedged=false, kwargs...) =
-    dosetpositionmode(exc, symbol; hedged, kwargs...)
 function dosetpositionmode(exc, symbol; hedged=false, kwargs...)
     try
         name = string(exc.id)
@@ -264,7 +262,7 @@ function marginmode!(exc::Exchange, mode, symbol=""; hedged=false, kwargs...)
                 @warn "failed to reset position mode to one-way" exc = nameof(exc) symbol
             end
         end
-        ans = isempty(symbol) ? true : dosetmargin(exc, mode_str, symbol; kwargs...)
+        ans = isempty(symbol) ? true : dosetmargin(exc, mode_str, symbol; hedged, kwargs...)
         if ans isa Bool && !ans
             @error "failed to set margin mode" exc = nameof(exc) mode = mode_str symbol
             return false

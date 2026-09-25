@@ -61,7 +61,7 @@ Note:
 When entering positions, the cash committed from the trade must be downsized by leverage (at the time of the trade).
 """
 function applyfill!(
-    ::MarginStrategy{Live}, ii::MarginInstance, o::IncreaseOrder, t::IncreaseTrade
+    s::MarginStrategy{Live}, ii::MarginInstance, o::IncreaseOrder, t::IncreaseTrade
 )
     @deassert o isa IncreaseOrder && _check_unfillment(o), (o, unfilled(o))
     @deassert committed(o) == o.attrs.committed[] && committed(o) > 0.0, (committed(o), t)

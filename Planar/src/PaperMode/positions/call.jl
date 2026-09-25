@@ -17,6 +17,7 @@ function call!(
     # Same contract as the Sim twin: no positions, but pending spot orders
     # must not survive a reported-successful close.
     call!(s, ii, CancelOrders(); t=BuyOrSell)
+    true
 end
 
 

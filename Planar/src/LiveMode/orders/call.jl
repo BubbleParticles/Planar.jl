@@ -45,9 +45,14 @@ function call!(
         trade
     end
 end
+@doc """ Places a market order and synchronizes the cash balance.
 
+$(TYPEDSIGNATURES)
 
-
+This function initiates a market order through the `_live_market_order` function.
+Once the order is placed, it synchronizes the cash balance in the live strategy to reflect the transaction.
+It returns the trade information once the transaction is complete.
+"""
 function call!(
     s::NoMarginStrategy{Live},
     ii,
@@ -59,6 +64,10 @@ function call!(
     skipchecks=false,
     kwargs...,
 )::Union{<:Trade,Nothing,Missing}
+    # NoMargin strategies are spot-only: short orders have no collateral and would
+    # fail at the exchange. Mirror Sim's `iscashenough(::NoMargin, ::ShortSellOrder)=false`
+    # fast path to avoid a needless gateway round-trip (`price` stays `nothing`
+    # until the reject below, so no `lastprice` fetch pays on this path).
     if positionside(t) == Short()
         @debug "NoMargin: rejecting short market order" ii=raw(ii) order_type=t
         return nothing
@@ -76,6 +85,7 @@ function call!(
         trade
     end
 end
+
 
 @doc """ Cancels all live orders of a certain type and synchronizes the cash balance.
 

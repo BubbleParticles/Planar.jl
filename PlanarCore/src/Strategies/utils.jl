@@ -163,7 +163,7 @@ function current_total(s::MarginStrategy{Paper}, price_func=lasttrade_price_func
             end
         end
     end
-    sum(partials) + s.cash
+    sum(partials) + cash(s)
 end
 
 @doc """ Returns the date of the last trade for an asset instance.

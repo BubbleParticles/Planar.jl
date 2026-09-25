@@ -29,7 +29,8 @@ function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}
         exc.options["defaultPositionMode"] = "oneway"
         return true
     end
-    _binance_marginmode!(exc, mode isa IsolatedMargin ? "isolated" : "cross", symbol; hedged=mode isa MarginMode{Hedged}, kwargs...)
+    check_margin_support!(exc, mode) || return false
+    _binance_marginmode!(exc, mode isa IsolatedMargin ? "isolated" : "cross", symbol; hedged=hedged || mode isa MarginMode{Hedged}, kwargs...)
 end
 function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}, mode::AbstractString, symbol=""; hedged=false, kwargs...)
     # String callers: no normalization needed. Typed as AbstractString
@@ -104,11 +105,8 @@ function dosetmargin(exc::Exchange{<:ExchangeID{:phemex}}, mode_str, symbol; hed
     name = string(exc.id)
     try
         lev = _negative_lev_if_cross(mode_str)
-        # Phemex sets hedge mode account-wide (symbol optional). Pass a real
-        # boolean via body= so the JSON bool type is preserved (Gotcha #8).
-        call_exchange(
-            default_client(), name, "setPositionMode"; body=Dict("symbol" => symbol, "hedged" => hedged)
-        )
+        # `setPositionMode` is already called by the generic `marginmode!`
+        # (leverage.jl:258) before this override — do NOT duplicate it here.
         # Phemex also needs the margin mode set (cross margin uses negative leverage).
         call_exchange(
             default_client(), name, "setMarginMode"; body=Dict("marginMode" => mode_str, "symbol" => symbol)
@@ -127,11 +125,8 @@ end
 function dosetmargin(exc::Exchange{<:ExchangeID{:bybit}}, mode_str, symbol; hedged=false, kwargs...)
     name = string(exc.id)
     try
-        # Bybit sets hedge mode account-wide (symbol optional). Pass a real
-        # boolean via body= so the JSON bool type is preserved (Gotcha #8).
-        call_exchange(
-            default_client(), name, "setPositionMode"; body=Dict("symbol" => symbol, "hedged" => hedged)
-        )
+        # `setPositionMode` is already called by the generic `marginmode!`
+        # (leverage.jl:258) before this override — do NOT duplicate it here.
         sleep(0.1)
         resp = call_exchange(default_client(), name, "setMarginMode", body=Dict("marginMode" => mode_str, "symbol" => symbol))
         if resp isa AbstractDict
@@ -144,5 +139,3 @@ function dosetmargin(exc::Exchange{<:ExchangeID{:bybit}}, mode_str, symbol; hedg
         false
     end
 end
-
-_resp2code(resp) = resp isa AbstractDict ? get(resp, "code", "") : ""
