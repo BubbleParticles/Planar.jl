@@ -33,10 +33,15 @@ function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}
     _binance_marginmode!(exc, mode isa IsolatedMargin ? "isolated" : "cross", symbol; hedged=hedged || mode isa MarginMode{Hedged}, kwargs...)
 end
 function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}, mode::AbstractString, symbol=""; hedged=false, kwargs...)
-    # String callers: no normalization needed. Typed as AbstractString
-    # (not untyped) so MarginMode args keep a single winner — the
-    # `(Binance, MarginMode)` method above — instead of going ambiguous
-    # against the generic `(Exchange, MarginMode)` method.
+    # Extract hedged flag from the mode string itself (e.g. "isolated_hedged",
+    # "cross_hedged") before forwarding. The generic string method downstream
+    # also does this, but the Binance sandbox path skips it entirely — a
+    # caller passing `mode="isolated_hedged"` with `hedged=false` would record
+    # the wrong position mode locally and skip the setPositionMode call.
+    m_lower = lowercase(mode)
+    if occursin("hedged", m_lower)
+        hedged = true
+    end
     _binance_marginmode!(exc, mode, symbol; hedged, kwargs...)
 end
 function _binance_marginmode!(exc::Exchange, mode, symbol; hedged=false, kwargs...)

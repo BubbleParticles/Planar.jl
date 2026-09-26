@@ -61,7 +61,7 @@ end
 
 $(TYPEDSIGNATURES)
 """
-function leverage!(exc::Exchange, v, sym; side=Long(), timeout=Second(5))
+function leverage!(exc::Exchange, v, sym::AbstractString; side=Long(), timeout=Second(5))
     name = string(exc.id)
     lev = leverage_value(exc, v, sym)
     body = Dict("symbol" => sym, "leverage" => lev)

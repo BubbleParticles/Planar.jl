@@ -1,9 +1,9 @@
-using ..PaperMode.OrderTypes
 using PlanarCore.Exchanges: islist, isdict
 using Planar.Watchers: Watcher
 using Planar.Watchers.WatchersImpls: _dopush!
-using ..PaperMode: SimMode, strategy_logger!
-using .SimMode: _simmode_defaults!
+using PlanarCore.SimMode: _simmode_defaults!
+using PlanarCore: SimMode
+using ..PaperMode: strategy_logger!
 using .Lang: @lget!, Option, @get, MatchString
 using .TimeTicks: dtstamp
 using .Misc: LittleDict, istaskrunning, @istaskrunning, sleep_pad, LOGGING_GROUPS, kill_task, task_sem
