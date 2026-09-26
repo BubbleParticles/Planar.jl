@@ -1,9 +1,9 @@
-import .SimMode: maketrade, trade!
+import PlanarCore.SimMode: maketrade, trade!
 import .Executors: aftertrade!
 import .Executors: decommit!, isfilled, position!
 using .Executors: _cashfrom, NotEnoughCash
 using .Executors: AnyFOKOrder, AnyIOCOrder, AnyMarketOrder
-using .SimMode: @maketrade, iscashenough, cost
+using PlanarCore.SimMode: @maketrade, iscashenough, cost
 using .Misc.TimeToLive: safettl
 using .Misc: toprecision
 

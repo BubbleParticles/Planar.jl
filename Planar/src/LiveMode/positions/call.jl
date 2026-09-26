@@ -5,7 +5,7 @@ using .Executors: hasorders, orders, update_leverage!, CancelOrders
 using .st: exchange
 using .Executors.Instances: raw, MarginInstance
 using .Instances: ishedged
-using ..PaperMode.OrderTypes: postoside, BuyOrSell
+using PlanarCore.OrderTypes: postoside, BuyOrSell
 using PlanarCore.OrderTypes: orderside, Buy, Sell
 using PlanarCore.Instances: NoMarginInstance, PositionSide
 

@@ -1,6 +1,6 @@
 using .st: NoMarginStrategy, Strategy
 using .Executors: AnyLimitOrder, AnyMarketOrder, CancelOrders, hasorders
-using ..PaperMode.OrderTypes: BuyOrSell, OrderSide
+using PlanarCore.OrderTypes: BuyOrSell, OrderSide
 using PlanarCore.Instances: raw, InstrumentInstance, NoMarginInstance
 using PlanarCore.Misc: Short
 using PlanarCore.OrderTypes: positionside

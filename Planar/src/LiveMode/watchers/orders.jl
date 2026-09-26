@@ -1,4 +1,4 @@
-import .PaperMode: SimMode
+using PlanarCore: SimMode
 using .Executors: filled_amount, orderscount, orders
 using .Executors: isfilled as isorder_filled
 using .Instances: ltxzero, gtxzero

@@ -3,11 +3,11 @@ using Planar.Watchers: Watcher
 using Planar.Watchers.WatchersImpls: _dopush!
 using PlanarCore.SimMode: _simmode_defaults!
 using PlanarCore: SimMode
-using ..PaperMode: strategy_logger!
+import Planar.PaperMode: strategy_logger!
 using .Lang: @lget!, Option, @get, MatchString
 using .TimeTicks: dtstamp
 using .Misc: LittleDict, istaskrunning, @istaskrunning, sleep_pad, LOGGING_GROUPS, kill_task, task_sem
-using .SimMode.Instances.Data: nrow
+using PlanarCore.SimMode.Instances.Data: nrow
 using .st: asset_bysym, symsdict
 import .Instances: timestamp
 import .Data.DFUtils: lastdate

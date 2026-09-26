@@ -1,5 +1,5 @@
-using ..PaperMode
-using ..PaperMode.Executors
+using Planar.PaperMode
+using PlanarCore.Executors
 using PlanarCore
 using PlanarCore.Executors: Strategies as st
 using PlanarCore.Executors.Instances: Instances, Exchanges, Data, MarginInstance, NoMarginInstance, HedgedInstance, _internal_lock
@@ -31,8 +31,8 @@ end
 using PlanarCore.Exchanges
 using PlanarCore.Exchanges: gettimeout, resptobool, islist, isdict
 using .st: Strategy, MarginStrategy, NoMarginStrategy, LiveStrategy, call!, RTStrategy, throttle, ExchangeInstrument, universe, WarmupPeriod
-using ..PaperMode.OrderTypes
-using ..PaperMode.Misc
+using PlanarCore.OrderTypes
+using PlanarCore.Misc
 using PlanarCore.Collections: snapshot
 using PlanarCore.Misc: Lang, LittleDict
 using PlanarCore.Misc.TimeTicks

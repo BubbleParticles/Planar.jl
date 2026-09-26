@@ -1,5 +1,5 @@
 using .Executors: WatchOHLCV
-using .SimMode: _init_data
+using PlanarCore.SimMode: _init_data
 # FIXME: ohlcv watch functions should be moved to the PaperMode module
 @doc """ Executes the OHLCV watcher for a real-time strategy.
 

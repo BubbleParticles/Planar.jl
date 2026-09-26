@@ -1,4 +1,4 @@
-using ..LiveMode.PaperMode: header
+using ..PaperMode: header
 using ..LiveMode.Dates: format
 using ..LiveMode.TimeTicks
 using ..LiveMode: trades, raw, posside
