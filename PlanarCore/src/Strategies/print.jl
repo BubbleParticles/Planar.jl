@@ -41,7 +41,7 @@ $(TYPEDSIGNATURES)
 This function checks if the cash of the NoMarginInstance is not zero. If it's not, it increments the number of holdings and calculates the value of the asset at the current price. It then updates the minimum and maximum holdings using the `_mmh` function. The function returns the updated number of holdings, minimum holdings, and maximum holdings.
 """
 function _assetval(ii::NoMarginInstance, n_holdings, min_hold, max_hold; price)
-    iszero(cash(ii)) || begin
+    if !iszero(cash(ii))
         n_holdings += 1
         val = cash(ii) * price
         min_hold, max_hold = _mmh(ii, val, min_hold, max_hold)
