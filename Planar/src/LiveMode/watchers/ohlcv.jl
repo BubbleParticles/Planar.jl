@@ -498,7 +498,7 @@ end
 function addpropagatetask!(w::Watcher, s::RTStrategy, ii::InstrumentInstance)
     n = 1
     this_sym = Symbol(:propagate_sub, string(n))
-    sub::Union{Rocket.Subscription,Nothing} = nothing
+    sub::Union{Rocket.SubjectSubscription,Nothing} = nothing
     while true
         sub = attr(w, this_sym)
         isnothing(sub) && break

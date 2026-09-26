@@ -143,8 +143,13 @@ function call_exchange(client::GatewayClient, exchange_id::String, ccxt_method::
  path = "/exchanges/$exchange_id/$ccxt_method"
  req_method = body !== nothing ? "POST" : (ccxt_method ∈ ("createOrder", "cancelOrder", "withdraw", "setLeverage", "setMarginMode", "setPositionMode", "setSandboxMode", "set_api_key", "enableRateLimit", "timeout", "rateLimit")) ? "POST" : "GET"
  if timeout !== nothing && body !== nothing
-     body = copy(body)
+     # Widen the value type to `Any` before injecting `_timeout` (a Float64).
+     # A caller may pass a `Dict{String,String}` (e.g. leverage body where
+     # every value is stringified), in which case `copy(body)` preserves the
+     # narrow type and `body["_timeout"] = Float64(...)` throws
+     # `convert(Float64, String)`. See Gotcha #58.
      K = keytype(body)
+     body = Dict{K, Any}(k => v for (k, v) in pairs(body))
      body[K(:_timeout)] = Float64(timeout)
  end
  api_call(client, req_method, path; query, body, timeout=timeout)

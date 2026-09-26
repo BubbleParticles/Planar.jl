@@ -805,6 +805,7 @@ Base.push!(::_LiveMMTrace, v; kwargs...) = v
 
 @testset "ensure_marginmode caches confirmed mode" begin
     import PlanarCore
+    using .Test: @testset, @test
     ET = LiveMode.PaperMode.Instances.ExchangeTypes
     OrderedSet = ET.OrderedCollections.OrderedSet
     IMisc = LiveMode.PaperMode.Instances.Misc
@@ -878,6 +879,7 @@ end
     # `pos`, so hedged-mode short-leverage updates were silently dropped
     # (the exchange setter defaults to `side=Long()`).
     import PlanarCore
+    using .Test: @testset, @test
     ET = LiveMode.PaperMode.Instances.ExchangeTypes
     OrderedSet = ET.OrderedCollections.OrderedSet
     IMisc = LiveMode.PaperMode.Instances.Misc

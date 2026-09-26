@@ -105,7 +105,7 @@ function _w_positions_func(s, w, interval; iswatch, kwargs)
     params, rest = split_params(kwargs)
     timeout = throttle(s)
     @lget! params "settle" guess_settle(s)
-    w[:process_subs] = subs = Rocket.Subscription[]
+    w[:process_subs] = subs = Rocket.SubjectSubscription[]
     w[:errors_count] = errors = Ref(0)
     buffer_size = attr(s, :live_buffer_size, 1000)
     s[:positions_buffer] = w[:buf_process] = buf = Vector{Tuple{Any,Bool}}()

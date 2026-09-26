@@ -211,7 +211,7 @@ function _balance_setup_state!(s, w, attrs)
     s[:balance_buf_subject] = w[:buf_subject] = buf_subject = Rocket.Subject(Any)
     s[:balance_process_subject] = w[:process_subject] = process_subject = Rocket.Subject(Any)
     sizehint!(buf, buffer_size)
-    subs = w[:process_subs] = Vector{Rocket.Subscription}()
+    subs = w[:process_subs] = Vector{Rocket.SubjectSubscription}()
     errors = w[:errors_count] = Ref(0)
     (
         s=s,

@@ -87,16 +87,22 @@ function make_mock_exchange()
     )
 end
 
-function make_asset_instance(exc)
+function make_asset_instance(exc, margin=PlanarCore.Misc.NoMargin())
+    # Margin instances require a derivative asset (e.g. `BTC/USDT:USDT`);
+    # spot instances use the plain `BTC/USDT` Instrument.
+    a = margin isa PlanarCore.Misc.NoMargin ? _asset :
+        PlanarCore.Instances.Instruments.Derivatives.parse(
+            PlanarCore.Instances.Instruments.Derivatives.Derivative, "BTC/USDT:USDT")
     ii = PaperMode.Instances.InstrumentInstance(
-        _asset,
+        a,
         PaperMode.Instances.DataStructures.SortedDict(),
         exc,
-        PaperMode.Instances.Misc.NoMargin();
+        margin;
         limits=(; leverage=(; min=1.0, max=10.0), amount=(; min=1e-8, max=1e8), price=(; min=1e-8, max=1e8), cost=(; min=1e-8, max=1e8)),
         precision=(; amount=1e-8, price=1e-8),
         fees=(; taker=0.01, maker=0.01, min=0.01, max=0.01),
     )
+    return ii
 end
 
 # A real exchange sets `exc._trace` to an EventTrace (see PlanarCore constructors);
@@ -128,13 +134,13 @@ function call!(
 end
 end
 
-function _make_paper_strategy(exc, ii)
+function _make_paper_strategy(exc, ii, margin=PlanarCore.Misc.NoMargin())
     uni = PlanarCore.Collections.InstrumentCollection([ii])
     cfg = PlanarCore.Strategies.Instances.Misc.Config(;
         qc=:USDT, initial_cash=10000.0, sandbox=true,
     )
     PlanarCore.Strategies.Strategy(
-        MonitorStrat, PlanarCore.Misc.Paper(), NoMargin(),
+        MonitorStrat, PlanarCore.Misc.Paper(), margin,
         PaperMode.SimMode.TimeFrame(PaperMode.SimMode.Millisecond(0)), exc, uni;
         config=cfg,
     )
@@ -259,6 +265,38 @@ end
         PlanarCore.OrderTypes.ShortLimitOrder{PlanarCore.OrderTypes.Sell}
     @test isnothing(PaperMode.call!(s, ii, ShortLimit; amount=1.0, date=_dt))
     @test isempty(s.attrs[:paper_liquidity])
+end
+
+@testset "Paper margin PositionClose closes the long position" begin
+    # The Paper margin `call!(…, PositionClose)` dispatch lives in the
+    # `Planar` package (extends `PlanarCore.Executors.call!`); it calls
+    # `force_exit_position` → `priceat` → `lastprice` (fetchTicker via mock
+    # HTTP). This exercises the real Paper runtime path for margin modes.
+    using PlanarCore.Instances: Long, PositionClose, position, cash, cash!,
+        entryprice!, notional!, leverage!, margin!, maintenance!, status!,
+        PositionOpen, isopen
+    import PlanarCore.Executors: call!
+    using PlanarCore.Misc: Isolated
+    with_mock_http() do
+        exc = make_mock_exchange()
+        ii = make_asset_instance(exc, Isolated())
+        s = _make_paper_strategy(exc, ii, Isolated())
+        PaperMode.st.default!(s)
+        # Fund + open a Long position.
+        po = position(ii, Long())
+        cash!(cash(po), 1000.0)
+        entryprice!(po, 50000.0)
+        notional!(po, 1000.0)
+        leverage!(po, 10.0)
+        margin!(po)
+        maintenance!(po, 50.0)
+        status!(ii, Long(), PositionOpen())
+        push!(s.holdings, ii)
+        @test isopen(ii, Long())
+        result = call!(s, ii, Long(), _dt, PositionClose())
+        @test result === true
+        @test !isopen(ii, Long())
+    end
 end
 
 end  # @testset PaperMode

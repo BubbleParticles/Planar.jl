@@ -2,7 +2,7 @@ using ..Data: Cache, tobytes, todata
 using ..Data.DataStructures: SortedDict
 using ..Instruments: splitpair
 using .Misc: IsolatedMargin, CrossMargin, Long, Short, NoMargin, MarginMode, Hedged
-import .ExchangeTypes: has
+import Dates
 @doc """ Checks that the exchange supports the margin mode requested by a strategy.
 
 $(TYPEDSIGNATURES)
@@ -61,7 +61,10 @@ end
 
 $(TYPEDSIGNATURES)
 """
-function leverage!(exc::Exchange, v, sym::AbstractString; side=Long(), timeout=Second(5))
+function leverage!(exc::Exchange, v, sym::AbstractString; side=Long(), timeout::Union{Float64,Dates.Period}=Dates.Second(5))
+    # `call_exchange` types `timeout` as `Union{Nothing,Float64}`; callers may
+    # pass a `Period` (e.g. `throttle(s)`), so normalize to seconds here.
+    timeout = timeout isa Dates.Period ? Float64(Dates.value(Dates.Millisecond(timeout))) / 1000.0 : timeout
     name = string(exc.id)
     lev = leverage_value(exc, v, sym)
     body = Dict("symbol" => sym, "leverage" => lev)
@@ -120,7 +123,7 @@ function LeverageTier(t::AbstractDict)
 end
 
 const _TIER_CACHES = Dict{Tuple{Symbol, String}, Tuple{Vector{LeverageTier}, Float64}}()
-const _TIER_CACHE_TTL = Minute(5)
+const _TIER_CACHE_TTL = Dates.Minute(5)
 
 function leverage_tiers(exc::Exchange, sym; cache=true)
     key = (Symbol(exc.id), sym)
@@ -190,12 +193,13 @@ function _margin_str_norm(mode)
     mode_str, str_hedged
 end
 
-function dosetmargin(exc, mode_str, symbol; kwargs...)
+function dosetmargin(exc, mode_str, symbol; hedged=false, kwargs...)
     try
         name = string(exc.id)
+        body = Dict("marginMode" => mode_str, "symbol" => symbol, "hedged" => hedged)
         resp = call_exchange(
             default_client(), name, "setMarginMode",
-            body=Dict("marginMode" => mode_str, "symbol" => symbol),
+            body=body,
             ; kwargs...,
         )
         resptobool(exc, resp)

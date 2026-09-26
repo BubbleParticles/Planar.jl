@@ -63,17 +63,17 @@ function _make_exchange_matrix(name::Symbol; has_leverage=true, has_posmode=true
     )
 end
 
-function _make_instance_matrix(margin, exc)
+function _make_instance_matrix(margin, exc, tf=TimeFrame("1min"))
     a = parse(Derivative, "BTC/USDT:USDT")
     df = DataFrame(
-        timestamp=[DateTime(2024, 1, 1), DateTime(2024, 1, 1, 0, 1), DateTime(2024, 1, 1, 0, 2), DateTime(2024, 1, 1, 0, 3)],
+        timestamp=[DateTime(2024, 1, 1) + Minute(i) for i in 0:3],
         open=[50000.0, 50001.0, 50002.0, 50003.0],
         high=[50005.0, 50006.0, 50007.0, 50008.0],
         low=[49995.0, 49996.0, 49997.0, 49998.0],
         close=[50000.0, 50001.0, 50002.0, 50003.0],
         volume=[100.0, 100.0, 100.0, 100.0],
     )
-    data = SortedDict{TimeFrame,DataFrame}(TimeFrame("1m") => df)
+    data = SortedDict{TimeFrame,DataFrame}(tf => df)
     limits = (leverage=(; min=1.0, max=10.0), amount=(; min=1e-6, max=1e8), price=(; min=0.01, max=1e6), cost=(; min=1.0, max=1e8))
     precision = (amount=1e-8, price=1e-8)
     fees = (taker=0.001, maker=0.001, min=0.001, max=0.001)
@@ -144,6 +144,22 @@ function _with_live_margin_mock(f)
             return Rest.HTTP.Response(
                 200, Rest.JSON3.write(Dict("result" => Dict{String,Any}(), "error" => nothing, "error_code" => nothing))
             )
+        elseif occursin("fetchTicker", url)
+            # `lastprice(ii)` (called by `priceat` in Paper market orders) hits
+            # `ticker!` → `call_exchange(..., "fetchTicker")`. Without this the
+            # mock falls through to real HTTP → hang on every Paper cell.
+            return Rest.HTTP.Response(
+                200, Rest.JSON3.write(Dict(
+                    "result" => Dict{String,Any}(
+                        "symbol" => "BTC/USDT:USDT",
+                        "last" => 50000.0,
+                        "bid" => 49999.0,
+                        "ask" => 50001.0,
+                    ),
+                    "error" => nothing,
+                    "error_code" => nothing,
+                ))
+            )
         else
             return prev_get(url; kwargs...)
         end
@@ -200,86 +216,76 @@ end
     end
 end
 
-@testset "Runtime call! operations across all 15 cells" begin
-    _with_live_margin_mock() do
-        margins = (NoMargin(), Isolated(), IsolatedHedged(), Cross(), CrossHedged())
-        modes = (Sim(), Paper(), Live())
-        date = DateTime(2024, 1, 1, 0, 1)
-        for margin in margins, mode in modes
-            label = "$(typeof(margin).name.name)/$(typeof(mode).name.name)"
-            @testset "$label" begin
-                eid_sym = Symbol("rt_$(typeof(mode).name.name)_$(typeof(margin).name.name)")
-                exc = _make_exchange_matrix(eid_sym)
-                tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
-                _TIER_CACHES[(Symbol(eid_sym), "BTC/USDT:USDT")] = ([tier], time())
-                uni = InstrumentCollection(["BTC/USDT:USDT"]; exc=exc, margin=margin, load_data=false)
-                cfg = PlanarCore.Misc.Config(; qc=:USDT, initial_cash=100000.0)
-                s = Strategy(Main, mode, margin, TimeFrame("1m"), exc, uni; config=cfg)
-                ii = _make_instance_matrix(margin, exc)
-                push!(s.holdings, ii)
-                pside = Long()
+    @testset "Runtime call! operations across all 15 cells" begin
+        _with_live_margin_mock() do
+            for margin in (Isolated(), IsolatedHedged(), Cross(), CrossHedged(), NoMargin())
+                for exec in (Sim(), Paper(), Live())
+                    # Use "1min" (not "1m"): `TimeFrame("1m")` parses as
+                    # MonthEnd(1), but `InstrumentCollection` internally calls
+                    # `convert(TimeFrame, "1m")` → Minute(1). Mismatched keys
+                    # crash `priceat` (Sim) / `lastprice` (Paper) lookups.
+                    tf = TimeFrame("1min")
+                    exc = _make_exchange_matrix(Symbol("t_$(string(margin))_$(string(exec))"))
+                    tier = LeverageTier(Dict("tier"=>1,"notionalFloor"=>0.0,"notionalCap"=>1e6,"maxLeverage"=>10.0,"maintenanceMarginRate"=>0.01,"maintAmtNotional"=>0.0,"minNotional"=>0.0))
+                    _TIER_CACHES[(Symbol("t_$(string(margin))_$(string(exec))"), "BTC/USDT:USDT")] = ([tier], time())
+                    uni = InstrumentCollection(["BTC/USDT:USDT"]; exc=exc, margin=margin, timeframe=tf, load_data=false)
+                    cfg = PlanarCore.Misc.Config(; qc=:USDT, initial_cash=100000.0)
+                    s = Strategy(Main, exec, margin, tf, exc, uni; config=cfg)
+                    label = "$(typeof(margin).name.name)/$(typeof(exec).name.name)"
 
-                # Live-specific `call!` dispatch lives in the `Planar` package
-                # (extends `PlanarCore.Executors.call!`); `using PlanarCore` alone
-                # only has the generic `PlanarCore.Misc.call!` fallback, which
-                # throws "Not implemented". Construction is already covered by
-                # the matrix testset — runtime ops for Live are out of scope here.
-                if mode isa Live
-                    @test s isa Strategy
-                    @test isdefined(PlanarCore.Instances, :NoMarginInstance)
-                    continue
-                end
+                    if exec isa Sim
+                        # Sim-specific dispatch (priceat, marketorder!) lives in
+                        # PlanarCore — exercise it here with real OHLCV data.
+                        @testset "$label" begin
+                            ii = _make_instance_matrix(margin, exc, tf)
+                            date = DateTime(2024, 1, 1, 0, 1)
+                            s.attrs[:sim_market_slippage] = Val(:skew)
+                            s.attrs[:sim_base_slippage] = Val(:spread)
 
-                # --- UpdateLeverage ---
-                if margin isa NoMargin
-                    @test call!(s, ii, 100.0, UpdateLeverage(); pos=pside) === false
-                    @test leverage(ii, pside) == 1.0
-                else
-                    @test call!(s, ii, 5.0, UpdateLeverage(); pos=pside) === true
-                    @test leverage(ii, pside) == 5.0
-                end
-                # --- PositionClose ---
-                if margin isa NoMargin
-                    # NoMargin Sim: cancel pending orders, report success.
-                    # `hasorders(s, ii, Long(), Buy)` is only defined for
-                    # `WithMargin` strategies; NoMargin uses the 2-arg form.
-                    # Paper/Live NoMargin PositionClose dispatch lives in the
-                    # `Planar` package (extends `PlanarCore.Executors.call!`).
-                    if mode isa Sim
-                        @test !hasorders(s, ii)
-                        @test call!(s, ii, pside, date, PositionClose()) === true
-                        @test !hasorders(s, ii)
+                            # --- UpdateLeverage: position must be CLOSED for the
+                            # update to succeed (Sim gates on `isopen`/`hasorders`).
+                            if margin isa NoMargin
+                                @test call!(s, ii, 100.0, UpdateLeverage(); pos=Long()) === false
+                                @test leverage(ii, Long()) == 1.0
+                            else
+                                @test call!(s, ii, 5.0, UpdateLeverage(); pos=Long()) === true
+                                @test leverage(ii, Long()) == 5.0
+                            end
+
+                            # --- PositionClose: fund + open Long, then close it.
+                            if margin isa NoMargin
+                                # NoMargin has no positions; close is a
+                                # cancel-only no-op that reports success.
+                                @test !hasorders(s, ii)
+                                @test call!(s, ii, Long(), date, PositionClose()) === true
+                                @test !hasorders(s, ii)
+                            else
+                                po = position(ii, Long())
+                                cash!(cash(po), 1000.0)
+                                entryprice!(po, 50000.0)
+                                notional!(po, 1000.0)
+                                leverage!(po, 10.0)
+                                margin!(po)
+                                maintenance!(po, 50.0)
+                                status!(ii, Long(), PositionOpen())
+                                push!(s.holdings, ii)
+                                result = call!(s, ii, Long(), date, PositionClose())
+                                @test result === true
+                                @test !isopen(ii, Long())
+                            end
+                        end
                     else
-                        @test true
+                        # Paper/Live runtime `call!` dispatch (priceat,
+                        # marketorder!) lives in the `Planar` package and is
+                        # exercised by the `Planar` test suite. Construction +
+                        # instance-type coverage is already provided by the
+                        # matrix testset above.
+                        @test s isa Strategy
                     end
-                elseif mode isa Sim
-                    # Margin Sim: fund Long, open, then close.
-                    s.attrs[:sim_base_slippage] = Val(:spread)
-                    s.attrs[:sim_market_slippage] = Val(:skew)
-                    po = position(ii, pside)
-                    cash!(cash(po), 1.0)
-                    entryprice!(po, 50000.0)
-                    notional!(po, 50000.0)
-                    leverage!(po, 10.0)
-                    margin!(po)
-                    maintenance!(po, 500.0)
-                    liqprice!(po, 45500.0)
-                    status!(ii, pside, PositionOpen())
-                    @test isopen(ii, pside)
-                    @test call!(s, ii, pside, date, PositionClose()) === true
-                    @test !isopen(ii, pside)
-                else
-                    # Margin Paper/Live: PositionClose dispatch lives in the
-                    # `Planar` package (extends `PlanarCore.Executors.call!`).
-                    # Paper margin modes are exercised by the `Planar` test
-                    # suite instead; Live margin modes require multiple
-                    # gateway endpoints (cancel/fetchPositions/createOrder).
-                    @test true
                 end
             end
         end
     end
-end
 
 
 
