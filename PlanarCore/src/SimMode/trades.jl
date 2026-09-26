@@ -1,6 +1,6 @@
 using Base: negate
 using ..Executors: @amount!, @price!, NewTrade, trade!
-using ..Executors.Checks: cost, withfees, checkprice
+using ..Executors.Checks: cost, withfees
 using ..Executors.Instances
 using ..Executors.Instruments
 using ..Executors.Instances: NoMarginInstance, Instances as inst, price
