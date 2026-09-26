@@ -27,6 +27,7 @@ function maptf(
 )
     res = []
     # sort timeframes
+    tfs = String.(tfs)
     tfs_idx = sortperm(timefloat.(Symbol.(tfs)))
     permute!(tfs, tfs_idx)
     unique!(tfs)

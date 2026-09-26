@@ -289,7 +289,7 @@ function Strategy(
     else
         :live
     end
-    for f in getproperty(STRATEGY_LOAD_CALLBACKS, mode_k)
+    for f in get(STRATEGY_LOAD_CALLBACKS, mode_k, Function[])
         f(s)
     end
     s
