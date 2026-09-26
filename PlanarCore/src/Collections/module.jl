@@ -101,7 +101,7 @@ function InstrumentCollection(
         instances = Vector{I_conc}(undef, length(assets))
         @sync for (i, ast) in enumerate(assets)
             t = @async instances[i] = get_instance(ast)
-            errormonitor(t)
+            wait(t)
         end
         sort!(instances; by=(ii) -> instances_ord[raw(ii)])
         InstrumentCollection(instances)

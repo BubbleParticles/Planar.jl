@@ -149,7 +149,7 @@ isbase(a::AbstractInstrument, b) = a.bc == b
 isquote(a::AbstractInstrument, q) = a.qc == q
 
 @doc "A regular expression pattern used to match leveraged naming conventions in market symbols. It captures the separator used in leveraged pairs."
-const leverage_pair_rgx = r"(?:(?:BULL)|(?:BEAR)|(?:[0-9]+L)|(?:[0-9]+S)|(?:UP)|(?:DOWN)|(?:[0-9]+LONG)|(?:[0-9+]SHORT))([\/\-\_\.])"
+const leverage_pair_rgx = r"(?:BULL|BEAR|[0-9]+L|[0-9]+S|UP|DOWN|[0-9]+LONG|[0-9]+SHORT)(?=[\/\-\_\.])"
 
 @doc "Test if pair has leveraged naming."
 isleveragedpair(pair) = !isnothing(match(leverage_pair_rgx, pair))
@@ -171,8 +171,8 @@ spotpair(pair::AbstractString) = split(pair, ":")[1]
 @inline function deleverage_pair(pair::T; split=false, sep="/") where {T<:AbstractString}
     # Remove leverage suffixes/prefixes from base currency
     # Pattern matches: 3L, 3S, BULL, BEAR, UP, DOWN, 3LONG, 3SHORT
-    # Keep the separator (\1) to maintain pair format
-    dlv = splitpair(replace(pair, leverage_pair_rgx => s"\1"))
+    # Uses a lookahead for the separator so the separator is preserved in the pair
+    dlv = splitpair(replace(pair, leverage_pair_rgx => s""))
     if isempty(dlv[1])
         # If base currency is empty after deleveraging, extract from prefix
         # e.g., "BULL/USDT" -> "BTC/USDT" is an assumption, better to throw
@@ -194,7 +194,7 @@ deleveraged_quote = deleverage_qc(quote)  # returns "USDT"
 ```
 """
 function deleverage_qc(dlv::Vector{T}) where {T<:AbstractString}
-    deleverage_pair(dlv; split=true)[1]
+    [deleverage_pair(d; split=true)[1] for d in dlv]
 end
 deleverage_qc(pair::AbstractString) = deleverage_pair(pair; split=true)[1]
 

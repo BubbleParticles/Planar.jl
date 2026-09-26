@@ -3,7 +3,8 @@ using .Lang: @preset, @precomp
 @preset let
     pair = first(DEFAULT_ASSETS)
     e = ExchangeID(:bybit)
-    date = dt"2020-01-"
+    date = dt"2020-01-01"
+    a = AssetInstance(pair)
     for T in (MarketOrderType, GTCOrderType, IOCOrderType, FOKOrderType), S in (Buy, Sell)
         @precomp begin
             o = Order(a, e, Order{T{S}}; price=10.0, date, amount=100.0, attrs=(;))

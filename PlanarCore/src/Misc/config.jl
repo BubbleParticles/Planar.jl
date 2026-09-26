@@ -93,7 +93,7 @@ $(TYPEDSIGNATURES)
 This function tries to open and parse a JSON file named after the exchange `name`, which should contain the API keys.
 
 """
-function exchange_keys(name; sandbox, account="")::Dict{String,Any}
+function exchange_keys(name; sandbox::Bool=true, account="")::Dict{String,Any}
     names = ("apiKey", "secret", "password", "walletAddress", "privateKey")
     name_account = isempty(account) ? string(name) : "$(name)_$(account)"
     exc_name = sandbox ? "$(name_account)_sandbox" : name_account
