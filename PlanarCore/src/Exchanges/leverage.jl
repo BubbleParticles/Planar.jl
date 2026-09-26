@@ -73,7 +73,7 @@ function leverage!(exc::Exchange, v, sym::AbstractString; side=Long(), timeout=S
         body["side"] = lowercase(string(typeof(side).name.name))
     end
     try
-        resp = call_exchange(default_client(), name, "setLeverage"; body=body)
+        resp = call_exchange(default_client(), name, "setLeverage"; body=body, timeout=timeout)
         success = _handle_leverage(exc, resp)
         if !success
             result = call_exchange(default_client(), name, "fetchLeverage", query=Dict("symbol" => sym))
@@ -189,15 +189,14 @@ function _margin_str_norm(mode)
     end
     mode_str, str_hedged
 end
+
 function dosetmargin(exc, mode_str, symbol; kwargs...)
     try
         name = string(exc.id)
-        # `setMarginMode` is a POST method in ccxt. Use `body=` (not `query=`)
-        # to send parameters as JSON, preserving type fidelity. Using `query=`
-        # sends as GET query params which many exchanges reject.
         resp = call_exchange(
             default_client(), name, "setMarginMode",
             body=Dict("marginMode" => mode_str, "symbol" => symbol),
+            ; kwargs...,
         )
         resptobool(exc, resp)
     catch e
@@ -221,8 +220,9 @@ function dosetpositionmode(exc, symbol; hedged=false, kwargs...)
         resp = call_exchange(
             default_client(),
             name,
-            "setPositionMode";
+            "setPositionMode",
             body=Dict("hedged" => hedged, "symbol" => symbol),
+            ; kwargs...,
         )
         resptobool(exc, resp)
     catch e

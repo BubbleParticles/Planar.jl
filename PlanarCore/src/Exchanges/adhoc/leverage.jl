@@ -96,10 +96,11 @@ function dosetmargin(exc::Exchange{<:ExchangeID{:phemex}}, mode_str, symbol; kwa
         # (leverage.jl:258) before this override — do NOT duplicate it here.
         # Phemex also needs the margin mode set (cross margin uses negative leverage).
         call_exchange(
-            default_client(), name, "setMarginMode"; body=Dict("marginMode" => mode_str, "symbol" => symbol)
+            default_client(), name, "setMarginMode"; body=Dict("marginMode" => mode_str, "symbol" => symbol), ; kwargs...,
         )
         if lev !== nothing
-            call_exchange(default_client(), name, "setLeverage", body=Dict("symbol" => symbol, "leverage" => string(lev)))
+            call_exchange(default_client(), name, "setLeverage", body=Dict("symbol" => symbol, "leverage" => string(lev)), ; kwargs...,
+        )
         end
         true
     catch e
