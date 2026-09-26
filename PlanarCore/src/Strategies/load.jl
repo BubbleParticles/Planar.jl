@@ -172,9 +172,15 @@ It asserts that the margin mode and execution mode of the strategy match the con
 It also sets the `verbose` property of the strategy to `false`.
 """
 _strat_load_checks(s::Strategy, config::Config) = begin
-    @assert marginmode(s) == config.margin
-    @assert execmode(s) == config.mode
-    @assert account(s) == config.account
+    marginmode(s) == config.margin || error(
+        "Strategy margin mode mismatch: strategy '$(nameof(s))' defines $(marginmode(s)) but config requests $(config.margin).",
+    )
+    execmode(s) == config.mode || error(
+        "Strategy exec mode mismatch: strategy '$(nameof(s))' defines $(execmode(s)) but config requests $(config.mode).",
+    )
+    account(s) == config.account || error(
+        "Strategy account mismatch: strategy '$(nameof(s))' uses $(account(s)) but config requests $(config.account).",
+    )
     s[:verbose] = false
     s
 end

@@ -1006,6 +1006,99 @@ $(TYPEDSIGNATURES)
 function liqprice!(ii::MarginInstance, v, ::ByPos{S}) where {S<:PositionSide}
     liqprice!(position(ii, S), v)
 end
+@doc """ Sets asset position liquidation price for a `NoMarginInstance` (no-op).
+
+$(TYPEDSIGNATURES)
+
+Spot positions have no liquidation price; the setter is a no-op so a generic
+`liqprice!(ii, v, p)` dispatch does not crash on `position(ii, p) == nothing`.
+"""
+liqprice!(::NoMarginInstance, v, ::ByPos{S}) where {S<:PositionSide} = NaN
+
+@doc """ Sets the initial margin for a `MarginInstance` position.
+
+$(TYPEDSIGNATURES)
+
+Delegates to the underlying `Position`'s `margin!` method, which computes
+initial margin from notional value and leverage.
+"""
+margin!(ii::MarginInstance, ::ByPos{S}=posside(ii)) where {S<:PositionSide} =
+    margin!(position(ii, S))
+
+@doc """ Sets the initial margin for a `NoMarginInstance` (no-op).
+
+$(TYPEDSIGNATURES)
+
+Spot has no margin; the setter is a no-op.
+"""
+margin!(::NoMarginInstance, ::ByPos{S}) where {S<:PositionSide} = nothing
+
+@doc """ Sets the maintenance margin for a `MarginInstance` position.
+
+$(TYPEDSIGNATURES)
+"""
+maintenance!(ii::MarginInstance, v, ::ByPos{S}) where {S<:PositionSide} =
+    maintenance!(position(ii, S), v)
+
+@doc """ Sets the maintenance margin for a `NoMarginInstance` (no-op).
+
+$(TYPEDSIGNATURES)
+
+Spot has no maintenance margin; the setter is a no-op.
+"""
+maintenance!(::NoMarginInstance, v, ::ByPos{S}) where {S<:PositionSide} = v
+
+@doc """ Sets the additional margin for a `MarginInstance` position.
+
+$(TYPEDSIGNATURES)
+"""
+additional!(ii::MarginInstance, v, ::ByPos{S}) where {S<:PositionSide} =
+    additional!(position(ii, S), v)
+
+@doc """ Sets the additional margin for a `NoMarginInstance` (no-op).
+
+$(TYPEDSIGNATURES)
+
+Spot has no additional margin; the setter is a no-op.
+"""
+additional!(::NoMarginInstance, v, ::ByPos{S}) where {S<:PositionSide} = v
+@doc """ Sets the entry price for a `MarginInstance` position.
+
+$(TYPEDSIGNATURES)
+"""
+entryprice!(ii::MarginInstance, v, ::ByPos{S}) where {S<:PositionSide} =
+    entryprice!(position(ii, S), v)
+
+@doc """ Sets the entry price for a `NoMarginInstance` (no-op).
+
+$(TYPEDSIGNATURES)
+
+Spot has no position entry price; the setter is a no-op.
+"""
+entryprice!(::NoMarginInstance, v, ::ByPos{S}) where {S<:PositionSide} = v
+
+@doc """ Sets the notional value for a `MarginInstance` position.
+
+$(TYPEDSIGNATURES)
+"""
+notional!(ii::MarginInstance, v, ::ByPos{S}) where {S<:PositionSide} =
+    notional!(position(ii, S), v)
+
+@doc """ Sets the notional value for a `NoMarginInstance` (no-op).
+
+$(TYPEDSIGNATURES)
+
+Spot has no notional value; the setter is a no-op.
+"""
+notional!(::NoMarginInstance, v, ::ByPos{S}) where {S<:PositionSide} = v
+
+@doc """ Sets the status for a `NoMarginInstance` (no-op).
+
+$(TYPEDSIGNATURES)
+
+Spot positions have no status; the setter is a no-op.
+"""
+status!(::NoMarginInstance, p::PositionSide, pstat::PositionStatus) = nothing
 @doc "Instrument position leverage."
 function leverage(ii::MarginInstance, ::ByPos{S}=posside(ii)) where {S<:PositionSide}
     position(ii, S) |> leverage

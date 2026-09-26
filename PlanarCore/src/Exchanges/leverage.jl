@@ -164,7 +164,31 @@ function maxleverage(exc::Exchange, sym, size)
 end
 Base.string(::IsolatedMargin) = "isolated"
 Base.string(::CrossMargin) = "cross"
+@doc """ Normalize a margin-mode string to its canonical form.
 
+$(TYPEDSIGNATURES)
+
+Lowercases the input, replaces `-` and spaces with `_`, and returns the
+canonical `(mode_str, hedged)` tuple. Used by both the generic and
+Binance string `marginmode!` overloads so normalization stays in sync.
+"""
+function _margin_str_norm(mode)
+    mode_norm = lowercase(replace(string(mode), "-" => "_", " " => "_"))
+    mode_str, str_hedged = if mode_norm in ("isolated", "isolated_margin")
+        "isolated", false
+    elseif mode_norm in ("isolated_hedged", "isolatedhedged", "isolated_hedge", "isolatedhedge")
+        "isolated", true
+    elseif mode_norm in ("cross", "cross_margin")
+        "cross", false
+    elseif mode_norm in ("cross_hedged", "crosshedged", "cross_hedge", "crosshedge")
+        "cross", true
+    elseif mode_norm in ("nomargin", "no_margin", "no-margin", "none", "spot", "")
+        "nomargin", false
+    else
+        error("Invalid margin mode $mode")
+    end
+    mode_str, str_hedged
+end
 function dosetmargin(exc, mode_str, symbol; kwargs...)
     try
         name = string(exc.id)
@@ -229,20 +253,7 @@ function marginmode!(exc::Exchange, mode, symbol=""; hedged=false, kwargs...)
     # "Isolated", "ISOLATED", "isolated-hedged" etc. behave like their
     # canonical forms. A hedged string sets the hedge flag unless the caller
     # already passed `hedged=true` explicitly.
-    mode_norm = lowercase(replace(string(mode), "-" => "_", " " => "_"))
-    mode_str, str_hedged = if mode_norm in ("isolated", "isolated_margin")
-        "isolated", false
-    elseif mode_norm in ("isolated_hedged", "isolatedhedged", "isolated_hedge", "isolatedhedge")
-        "isolated", true
-    elseif mode_norm in ("cross", "cross_margin")
-        "cross", false
-    elseif mode_norm in ("cross_hedged", "crosshedged", "cross_hedge", "crosshedge")
-        "cross", true
-    elseif mode_norm in ("nomargin", "no_margin", "no-margin", "none", "spot", "")
-        "nomargin", false
-    else
-        error("Invalid margin mode $mode")
-    end
+    mode_str, str_hedged = _margin_str_norm(mode)
     hedged = hedged || str_hedged
     if mode_str in ("isolated", "cross")
         exc.options["defaultMarginMode"] = mode_str

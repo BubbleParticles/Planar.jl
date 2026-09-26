@@ -33,15 +33,11 @@ function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}
     _binance_marginmode!(exc, mode isa IsolatedMargin ? "isolated" : "cross", symbol; hedged=hedged || mode isa MarginMode{Hedged}, kwargs...)
 end
 function marginmode!(exc::Exchange{<:eids(:binance, :binanceusdm, :binancecoin)}, mode::AbstractString, symbol=""; hedged=false, kwargs...)
-    # Extract hedged flag from the mode string itself (e.g. "isolated_hedged",
-    # "cross_hedged") before forwarding. The generic string method downstream
-    # also does this, but the Binance sandbox path skips it entirely — a
-    # caller passing `mode="isolated_hedged"` with `hedged=false` would record
-    # the wrong position mode locally and skip the setPositionMode call.
-    m_lower = lowercase(mode)
-    if occursin("hedged", m_lower)
-        hedged = true
-    end
+    # No hedge pre-extraction here: `_binance_marginmode!` normalizes the
+    # string via `_margin_str_norm` (both the sandbox and the generic
+    # `invoke` path), which derives the hedge flag from the canonical
+    # `isolated_hedged`/`cross_hedged` forms. A loose `occursin("hedged")`
+    # pre-pass would miss `crosshedge` and double-apply for the rest.
     _binance_marginmode!(exc, mode, symbol; hedged, kwargs...)
 end
 function _binance_marginmode!(exc::Exchange, mode, symbol; hedged=false, kwargs...)
@@ -52,22 +48,8 @@ function _binance_marginmode!(exc::Exchange, mode, symbol; hedged=false, kwargs.
         # Normalize like the generic string path so "Isolated",
         # "isolated-hedged", etc. record their canonical base mode, and
         # record the hedge flag so `marginmode(exc)` state stays consistent.
-        mode_norm = lowercase(replace(string(mode), "-" => "_", " " => "_"))
-        mode_str = if mode_norm in ("isolated", "isolated_margin")
-            "isolated"
-        elseif mode_norm in ("isolated_hedged", "isolatedhedged", "isolated_hedge", "isolatedhedge")
-            hedged = true
-            "isolated"
-        elseif mode_norm in ("cross", "cross_margin")
-            "cross"
-        elseif mode_norm in ("cross_hedged", "crosshedged", "cross_hedge", "crosshedge")
-            hedged = true
-            "cross"
-        elseif mode_norm in ("nomargin", "no_margin", "no-margin", "none", "spot", "")
-            "nomargin"
-        else
-            error("Invalid margin mode $mode")
-        end
+        mode_str, str_hedged = _margin_str_norm(mode)
+        hedged = hedged || str_hedged
         exc.options["defaultMarginMode"] = mode_str
         exc.options["defaultPositionMode"] = hedged ? "hedge" : "oneway"
         # Hedge mode requires setPositionMode support. If the sandbox
@@ -106,7 +88,7 @@ end
 _negative_lev_if_cross(mode) = mode == "cross" ? -1 : nothing
 
 @doc "Phemex-specific dosetmargin."
-function dosetmargin(exc::Exchange{<:ExchangeID{:phemex}}, mode_str, symbol; hedged=false, kwargs...)
+function dosetmargin(exc::Exchange{<:ExchangeID{:phemex}}, mode_str, symbol; kwargs...)
     name = string(exc.id)
     try
         lev = _negative_lev_if_cross(mode_str)
@@ -121,13 +103,13 @@ function dosetmargin(exc::Exchange{<:ExchangeID{:phemex}}, mode_str, symbol; hed
         end
         true
     catch e
-        @warn "Failed to set margin mode on Phemex" nameof(exc) mode_str symbol hedged exception = e
+        @warn "Failed to set margin mode on Phemex" nameof(exc) mode_str symbol exception = e
         false
     end
 end
 
 @doc "Bybit-specific dosetmargin."
-function dosetmargin(exc::Exchange{<:ExchangeID{:bybit}}, mode_str, symbol; hedged=false, kwargs...)
+function dosetmargin(exc::Exchange{<:ExchangeID{:bybit}}, mode_str, symbol; kwargs...)
     name = string(exc.id)
     try
         # `setPositionMode` is already called by the generic `marginmode!`
@@ -140,7 +122,7 @@ function dosetmargin(exc::Exchange{<:ExchangeID{:bybit}}, mode_str, symbol; hedg
         end
         resptobool(exc, resp)
     catch e
-        @warn "Failed to set margin mode on Bybit" nameof(exc) mode_str symbol hedged exception = e
+        @warn "Failed to set margin mode on Bybit" nameof(exc) mode_str symbol exception = e
         false
     end
 end
