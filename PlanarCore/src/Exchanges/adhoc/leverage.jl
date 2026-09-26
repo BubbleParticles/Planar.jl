@@ -96,10 +96,10 @@ function dosetmargin(exc::Exchange{<:ExchangeID{:phemex}}, mode_str, symbol; kwa
         # (leverage.jl:258) before this override — do NOT duplicate it here.
         # Phemex also needs the margin mode set (cross margin uses negative leverage).
         call_exchange(
-            default_client(), name, "setMarginMode"; body=Dict("marginMode" => mode_str, "symbol" => symbol), ; kwargs...,
+            default_client(), name, "setMarginMode", body=Dict("marginMode" => mode_str, "symbol" => symbol), kwargs...,
         )
         if lev !== nothing
-            call_exchange(default_client(), name, "setLeverage", body=Dict("symbol" => symbol, "leverage" => string(lev)), ; kwargs...,
+            call_exchange(default_client(), name, "setLeverage", body=Dict("symbol" => symbol, "leverage" => string(lev)), kwargs...,
         )
         end
         true
@@ -116,7 +116,7 @@ function dosetmargin(exc::Exchange{<:ExchangeID{:bybit}}, mode_str, symbol; kwar
         # `setPositionMode` is already called by the generic `marginmode!`
         # (leverage.jl:258) before this override — do NOT duplicate it here.
         sleep(0.1)
-        resp = call_exchange(default_client(), name, "setMarginMode", body=Dict("marginMode" => mode_str, "symbol" => symbol))
+        resp = call_exchange(default_client(), name, "setMarginMode", body=Dict("marginMode" => mode_str, "symbol" => symbol), kwargs...)
         if resp isa AbstractDict
             code = string(get(resp, "code", ""))
             code in ("110026", "110011") && return true
