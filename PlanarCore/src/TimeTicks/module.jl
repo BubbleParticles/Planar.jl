@@ -272,14 +272,18 @@ macro infertf(data, field=:timestamp)
     quote
         begin
             arr = getproperty($(esc(data)), $(QuoteNode(field)))
-            td1 = arr[begin+1] - arr[begin]
-            td2 = arr[end] - arr[end-1]
-            @assert td1 === td2 """mismatch in dataframe dates found!
-            1: $(arr[begin])
-            2: $(arr[begin+1])
-            -2: $(arr[end-1])
-            -1: $(arr[end])"""
-            $TimeFrame(td1)
+            if length(arr) < 2
+                TimeFrame(Second(0))
+            else
+                td1 = arr[begin+1] - arr[begin]
+                td2 = arr[end] - arr[end-1]
+                @assert td1 === td2 """mismatch in dataframe dates found!
+                +1: $(arr[begin])
+                +2: $(arr[begin+1])
+                -2: $(arr[end-1])
+                -1: $(arr[end])"""
+                $TimeFrame(td1)
+            end
         end
     end
 end

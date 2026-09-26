@@ -1,0 +1,17 @@
+/goal Execute an exhaustive release-readiness audit across the entire codebase to stabilize the framework for long-term production deployment (LTS status).
+
+Audit Objectives & Subagent Allocations:
+
+1. Production Stability & Unhandled Exceptions: Audit all error-handling boundaries across execution modes (Sim, Paper, Live). Ensure zero unhandled exceptions, no unmonitored or silently dying async Tasks, robust channel/stream reconnection mechanics, and reliable fallback handling during network dropouts or broker downtime.
+2. Memory Leaks, Resource Lifecycles & Concurrency: Inspect long-running task allocations, channel buffer overflows, system file handles, memory consumption over extended runs, race conditions, atomic state transitions, and lock-contention hotspots across high-frequency execution paths.
+3. Strict Type Stability & Zero-Allocation Optimization: Run static and dynamic typing analyses (e.g., JET.jl, `@code_warntype`) across all critical loops, data-ingestion pipelines, order-matching logic, and indicator calculations. Eliminate type instabilities, unnecessary allocations, dynamic dispatches, and hidden runtime boxing.
+4. Edge Case Exhaustiveness: Stress-test structural edge cases including extreme market volatility scenarios, empty/corrupted websocket feeds, out-of-order execution reports, partial fills, rapid order cancels/flushes, precision/rounding discrepancies across crypto exchanges, and non-standard margin configurations.
+5. Determinism & Data Integrity: Verify exact bit-for-bit parity and state symmetry between historical simulation execution logs and paper/live trading pipelines. Guarantee thread-safe state mutation and absolute immutability of historical market tick/candle caches.
+6. Absolute Zero-Tolerance Rules:
+* No cheating, no workarounds, no monkeypatches, no shortcuts, no placeholders, no compromise on production safety.
+* Maintain clean, maintainable, idiomatic code adhering strictly to DRY principles.
+* Stage and commit working state incrementally before applying major refactors.
+
+
+
+NEVER create "refresh binary trade stubs" commits. Trade stub fixtures (Planar*/test/stubs/trades_stub_*.jls) are generated during precompilation and must not be manually committed. If stubs need regeneration, run the precompile workload locally; do not commit binary fixture changes as separate "refresh" commits.

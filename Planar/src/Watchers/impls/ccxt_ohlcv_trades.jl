@@ -9,6 +9,7 @@ const CcxtOHLCVVal = Val{:ccxt_ohlcv}
 
 using ..WatchersImpls: _wconvert, _wkey
 using ..Watchers: JSON3
+using PlanarCore.TimeTicks: now
 
 _trades(w::Watcher) = attr(w, :trades)
 _trades!(w) = setattr!(w, CcxtTrade[], :trades)
