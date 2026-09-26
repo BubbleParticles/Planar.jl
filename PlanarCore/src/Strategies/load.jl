@@ -373,11 +373,13 @@ function strategy!(src::Symbol, cfg::Config)
     mod = if !isdefined(parent, src)
         @eval parent begin
             try
-                $Pkg.activate($(project_file); io=Base.devnull)
-                try
-                    $Pkg.instantiate(; io=Base.devnull)
-                catch e
-                    @warn "loading: instantiation failed, will try direct include" exception = e
+                if !Base.generating_output()
+                    $Pkg.activate($(project_file); io=Base.devnull)
+                    try
+                        $Pkg.instantiate(; io=Base.devnull)
+                    catch e
+                        @warn "loading: instantiation failed, will try direct include" exception = e
+                    end
                 end
                 include($(path))
                 using .$(src)
@@ -393,7 +395,9 @@ function strategy!(src::Symbol, cfg::Config)
                 @error "strategy loading: failed to load module" _module=$(src) exception=(e, catch_backtrace())
                 rethrow(e)
             finally
-                $Pkg.activate($(prev_proj); io=Base.devnull)
+                if !Base.generating_output()
+                    $Pkg.activate($(prev_proj); io=Base.devnull)
+                end
             end
         end
     else
