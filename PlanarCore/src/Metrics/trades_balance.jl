@@ -293,7 +293,7 @@ This is effectively a forward fill operation, carrying the most recent non-missi
 """
 ffill!(v, out=v) = begin
     f = first(v)
-    @assert !ismissing(f)
+    ismissing(f) && return out
     accumulate!(((x, y) -> coalesce(y, x)), out, v; init=f)
 end
 ffill(v) = ffill!(v, similar(v))
