@@ -170,7 +170,7 @@ Base.empty!(w::Watcher) = begin
         empty!(view)
     catch e
         if !(e isa MethodError)
-            rethrow(w)
+            rethrow(e)
         end
     end
 end
@@ -331,12 +331,13 @@ function Base.show(out::IO, w::Watcher)
     end
 end
 Base.display(w::Watcher) =
-    try
-        buf = IOBuffer()
-        show(buf, w)
-        Base.println(String(take!(buf)))
-    catch
-        close(buf)
+    let buf = IOBuffer()
+        try
+            show(buf, w)
+            Base.println(String(take!(buf)))
+        finally
+            close(buf)
+        end
     end
 Base.get(w::Watcher, k, def) = attr(w, k, def)
 

@@ -5,6 +5,7 @@ using PlanarCore.Fetch.Processing: iscomplete, fill_missing_candles!
 using PlanarCore.Fetch.Exchanges: ratelimit_njobs
 using PlanarCore.Lang: fromstruct, ifproperty!, ifkey!, @acquire, @add_statickeys!, @k_str
 using ..Watchers: @logerror, _val, default_view, buffer, watcher_tasks
+using PlanarCore.Misc: DFT
 
 const PRICE_SOURCES = (:last, :vwap, :bid, :ask)
 const CcxtOHLCVTickerVal = Val{:ccxt_ohlcv_ticker}

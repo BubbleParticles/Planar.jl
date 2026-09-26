@@ -57,6 +57,9 @@ $(TYPEDSIGNATURES)
 This function prompts the user for confirmation before fetching OHLCV data for the specified arguments `args` and keyword arguments `kwargs`. If the user inputs 'Y', 'y', or simply presses Enter, it proceeds with the `fetch_ohlcv` function. If any other input is given, the function returns `nothing`.
 """
 function fetch_ohlcv(::Val{:ask}, args...; kwargs...)
+    if !isinteractive()
+        return nothing
+    end
     Base.display("fetch? Y/n")
     ans = String(read(stdin, 1))
     ans ∉ ("\n", "y", "Y") && return nothing
