@@ -540,7 +540,7 @@ $(TYPEDSIGNATURES)
 This function checks for stale data in the watcher by iterating over the symbol states and updating the OHLCV if necessary.
 """
 function _checkforstale(w)
-    symstates = get(attr(w, k"symstates", nothing), k"symstates", nothing)
+    symstates = attr(w, k"symstates", nothing)
     isnothing(symstates) && return nothing
     this_tf = _tfr(w)
     # Buffer entries are NamedTuples `(; time, value)` (see defaults.jl).
@@ -566,29 +566,6 @@ function _checkforstale(w)
                     @error "ohlcv tickers watcher: stale update failed for $(state.sym)" exception=(e, catch_backtrace())
                 end
             end
-            push!(tasks, errormonitor(t))
-            sym_procstate!(state, true, latest_timestamp)
-        end
-    end
-end
-    this_tf = _tfr(w)
-    # Buffer entries are NamedTuples `(; time, value)` (see defaults.jl).
-    # `last(buffer(w)).time` is the DateTime of the newest entry; apply()
-    # floors it to the watcher timeframe. The previous code did
-    # `@lget!(last(buffer(w)), 1, ...).time` — but `@lget!` with index 1
-    # already returns the *DateTime* (field 1), so `.time` was applied to a
-    # DateTime and threw FieldError, killing this stale-check task silently
-    # (it runs inside the errormonitor'd fetch loop). Stale/gapped data
-    # was then never recovered. Guard the empty buffer with now().
-    latest_timestamp = apply(
-        this_tf, isempty(buffer(w)) ? now() : last(buffer(w)).time
-    )
-    tasks = watcher_tasks(w)
-    for state in values(symstates)
-        if !state.isprocessed && apply(this_tf, state.processed_time) < latest_timestamp
-            t = @async @lock state.lock _update_sym_ohlcv(
-                w, nothing, latest_timestamp, state.sym
-            )
             push!(tasks, errormonitor(t))
             sym_procstate!(state, true, latest_timestamp)
         end

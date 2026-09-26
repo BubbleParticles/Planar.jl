@@ -36,6 +36,7 @@ It then extracts the OHLCV data for the `InstrumentInstance` within this date ra
 The resultant resampled DataFrame is returned.
 """
 aroundtrades(ii, tf) = begin
+    isempty(ii.history) && return empty_ohlcv()
     start_date = first(ii.history).order.date - tf
     stop_date = last(ii.history).date + tf
     df = ohlcv(ii)[DateRange(start_date, stop_date)]
