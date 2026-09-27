@@ -112,6 +112,10 @@ end
 
 function check_response(resp::HTTP.Response)::GatewayResponse
     parsed = parse_response(resp)
+    if resp.status >= 400
+        err_msg = has_error(parsed) ? (parsed.error !== nothing ? parsed.error : parsed.error_code) : "HTTP $(resp.status)"
+        error("Gateway error: $err_msg")
+    end
     if has_error(parsed)
         err_msg = parsed.error !== nothing ? parsed.error : parsed.error_code
         error("Gateway error: $err_msg")
