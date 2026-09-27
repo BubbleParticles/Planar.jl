@@ -82,6 +82,7 @@ function _restore_mock()
     ExchangeTypes.CcxtGateway.Rest.set_http_get!(HTTP.get)
     ExchangeTypes.CcxtGateway.Rest.set_http_post!(HTTP.post)
 end
+    ExchangeTypes.CcxtGateway.Rest._gateway_initialized[] = false
 
 # Helper: full mock for a named exchange
 function setup_mock(exc_name; market_data=nothing)
@@ -110,6 +111,7 @@ function setup_mock(exc_name; market_data=nothing)
         end
     end
     ExchangeTypes.CcxtGateway.Rest.set_http_get!(get_handler)
+    ExchangeTypes.CcxtGateway.Rest._gateway_initialized[] = true
     ExchangeTypes.CcxtGateway.Rest.set_http_post!((url; kwargs...) -> begin
         if occursin("/exchanges/$exc_name", url)
             HTTP.Response(200, JSON3.write(Dict("result" => "started", "error" => nothing, "error_code" => nothing)))

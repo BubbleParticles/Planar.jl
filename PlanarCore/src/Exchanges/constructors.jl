@@ -10,7 +10,7 @@ using ..Data: Data, DataFrame, eventtrace
 using ..ExchangeTypes: OptionsDict, CcxtExchange
 using ..ExchangeTypes.Ccxt: Ccxt, choosefunc
 import ..Ccxt: issupported
-import ..ExchangeTypes.CcxtGateway: default_client, call_exchange
+import ..ExchangeTypes.CcxtGateway: default_client, call_exchange, Rest
 const HTTP = ExchangeTypes.CcxtGateway.HTTP
 using ..Misc: WithMargin
 using ..Misc: WithMargin
@@ -126,7 +126,7 @@ function loadmarkets!(exc; cache=true, agemax=Day(1))
         # still need force_load() to proceed. In CI (CCXT_GATEWAY_DISABLE=true
         # with no mock), the call would timeout.
         if get(ENV, "CCXT_GATEWAY_DISABLE", "") == "true" &&
-           !PlanarCore.ExchangeTypes.CcxtGateway.Rest._gateway_initialized[]
+           !Rest._gateway_initialized[]
             return nothing
         end
         try

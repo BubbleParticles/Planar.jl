@@ -121,9 +121,11 @@ end
 
 ExchangeTypes.CcxtGateway.Rest.set_http_get!(_default_mock_get)
 ExchangeTypes.CcxtGateway.Rest.set_http_post!(_default_mock_post)
+ExchangeTypes.CcxtGateway.Rest._gateway_initialized[] = true
 
 function _restore_mock()
     ExchangeTypes.CcxtGateway.Rest.set_http_get!(HTTP.get)
+ExchangeTypes.CcxtGateway.Rest._gateway_initialized[] = false
     ExchangeTypes.CcxtGateway.Rest.set_http_post!(HTTP.post)
 end
 
