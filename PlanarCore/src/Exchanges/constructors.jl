@@ -121,6 +121,7 @@ function loadmarkets!(exc; cache=true, agemax=Day(1))
     empty!(exc.markets)
     function force_load()
         isoffline() && return nothing
+        get(ENV, "CCXT_GATEWAY_DISABLE", "") == "true" && return nothing
         try
             @debug "Loading markets from gateway and caching at $mkt."
             name = string(exc.id)
