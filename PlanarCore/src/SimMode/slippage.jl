@@ -166,13 +166,12 @@ function _with_slippage(
     # neg skew makes the price _increase_ while pos skew makes it decrease
     skew_rate = volume_skew + price_skew
     bs = _base_slippage(s, o.date, ii)
-    slp = if skew_rate <= DFT(0.0)
+    bs_skew = clamp_price * skew_rate
+    slp = if isnan(bs_skew) || skew_rate <= DFT(0.0)
         bs
     else
-        bs_skew = clamp_price * skew_rate
         muladd(bs, bs_skew > DFT(10.0) ? log10(bs_skew) : bs_skew / DFT(10.0), bs)
     end
-    @assert !isnan(slp)
     @deassert slp >= DFT(0.0)
     slp_price = _addslippage(o, clamp_price, slp)
     # We only go outside candle high/low boundaries if the candle

@@ -127,7 +127,7 @@ function _parse_balance(exc::Exchange{<:eids(:binanceusdm)}, v)
         end
     catch e
         e isa InterruptException && rethrow(e)
-        @warn "adhoc balance: parsing failed" exception = (e, catch_backtrace()) _module = LogBalance
+        @error "adhoc balance: parsing failed" exception = (e, catch_backtrace()) _module = LogBalance
     end
     return v
 end

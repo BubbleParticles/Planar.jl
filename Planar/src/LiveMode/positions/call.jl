@@ -197,7 +197,7 @@ function _posclose_cancel(s, ii, pside, waitfor)
             isempty(collect(orders(s, ii, pside, side))) && continue
             ok &= call!(s, ii, CancelOrders(); t=side, synced=true, waitfor)
         end
-        ok || @warn "call pos close: failed to cancel orders" ii pside
+        ok || @error "call pos close: failed to cancel orders" ii pside
     end
 end
 

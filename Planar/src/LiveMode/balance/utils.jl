@@ -309,7 +309,7 @@ function st.current_total(
                         price_func(ii)
                     catch e
                         e isa InterruptException && rethrow(e)
-                        @warn "current total: price func failed" exception = (e, catch_backtrace()) exc = nameof(exchange(s)) price_func
+                        @error "current total: price func failed" exception = (e, catch_backtrace()) exc = nameof(exchange(s)) price_func
                         if isopen(ii, Long())
                             entryprice(ii, Long())
                         elseif isopen(ii, Short())
@@ -374,7 +374,7 @@ function st.current_total(
             price_func(ii)
         catch e
             e isa InterruptException && rethrow(e)
-            @warn "current total: price func failed" exc = nameof(exchange(s)) price_func
+            @error "current total: price func failed" exc = nameof(exchange(s)) price_func
             @debug_backtrace
             zero(tot[])
         end

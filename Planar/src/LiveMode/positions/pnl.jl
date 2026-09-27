@@ -28,7 +28,7 @@ function live_pnl(
     if iszero(pnl)
         amount = resp_position_contracts(lp, eid)
         function dowarn(a, b)
-            @warn "live pnl: position amount not matching exchange" ii = raw(ii) exc = nameof(
+            @error "live pnl: position amount not matching exchange" ii = raw(ii) exc = nameof(
                 exchange(ii)
             ) a != b
         end

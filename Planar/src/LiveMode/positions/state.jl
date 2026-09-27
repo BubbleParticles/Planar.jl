@@ -92,7 +92,7 @@ function liquidate!(
     try
         call!(s, ii, CancelOrders(); t=orderside(p))
     catch e
-        @warn "liquidate!: cancel failed" exc = typeof(e) msg = sprint(showerror, e)
+        @error "liquidate!: cancel failed" exc = typeof(e) msg = sprint(showerror, e)
     end
     return nothing
 end

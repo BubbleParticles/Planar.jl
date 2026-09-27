@@ -118,7 +118,7 @@ macro compile_call()
                 for otp in dispatched_orders()
                     if !Base.generating_output()
                         try
-                            @async call!(s, ii, otp; amount, date, prc, synced=false)
+                            call!(s, ii, otp; amount, date, prc, synced=false)
                         catch e
                             if e isa InterruptException
                                 rethrow(e)
@@ -129,7 +129,7 @@ macro compile_call()
                 end
                 if !Base.generating_output()
                     try
-                        @async call!(
+                        call!(
                             Returns(nothing),
                             s,
                             ect.InitData();
@@ -146,7 +146,7 @@ macro compile_call()
                 end
                 if !Base.generating_output()
                     try
-                        @async call!(
+                        call!(
                             Returns(nothing),
                             s,
                             ect.UpdateData();
@@ -163,7 +163,7 @@ macro compile_call()
                 end
                 if !Base.generating_output()
                     try
-                        @async call!(s, ect.WatchOHLCV(), synced=false)
+                        call!(s, ect.WatchOHLCV(), synced=false)
                     catch e
                         if e isa InterruptException
                             rethrow(e)
@@ -173,7 +173,7 @@ macro compile_call()
                 end
                 if !Base.generating_output()
                     try
-                        @async call!(s, ii, 1.0, ect.UpdateLeverage(); pos=Long(), synced=false)
+                        call!(s, ii, 1.0, ect.UpdateLeverage(); pos=Long(), synced=false)
                     catch e
                         if e isa InterruptException
                             rethrow(e)
@@ -183,7 +183,7 @@ macro compile_call()
                 end
                 if !Base.generating_output()
                     try
-                        @async call!(s, ii, Short(), date, ect.PositionClose(), synced=false)
+                        call!(s, ii, Short(), date, ect.PositionClose(), synced=false)
                     catch e
                         if e isa InterruptException
                             rethrow(e)
@@ -193,7 +193,7 @@ macro compile_call()
                 end
                 if !Base.generating_output()
                     try
-                        @async call!(s, ii, ect.CancelOrders(), synced=false)
+                        call!(s, ii, ect.CancelOrders(), synced=false)
                     catch e
                         if e isa InterruptException
                             rethrow(e)
@@ -201,7 +201,6 @@ macro compile_call()
                         @error "Precompile call! failed for CancelOrders" exception=(e, catch_backtrace())
                     end
                 end
-            end
         end
     end
     esc(expr)

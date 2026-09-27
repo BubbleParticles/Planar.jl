@@ -31,7 +31,7 @@ function _phemex_parse_positions(
         resp["info"]["data"]["positions"]
     catch e
         e isa InterruptException && rethrow(e)
-        @warn "ccxt: failed to parse positions" resp
+        @error "ccxt: failed to parse positions" resp
         return nothing
     end
     return exchange(s).parsePositions(positions)

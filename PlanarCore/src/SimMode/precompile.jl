@@ -29,7 +29,7 @@ if get(ENV, "CCXT_GATEWAY_DISABLE", "") != "true"
             end
             if !Base.generating_output()
                 try
-                    start!(s, ect.Context(now() - Year(1), tf"1d", Year(1)))
+                    start!(s, ect.Context(tt.now() - Year(1), tf"1d", Year(1)))
                 catch e
                     @error "Precompile start! with Context failed" exception=(e, catch_backtrace())
                     rethrow(e)
