@@ -708,6 +708,7 @@ end
                 error("Unexpected GET: $url")
             end
         end
+        ExchangeTypes.CcxtGateway.Rest._gateway_initialized[] = true
         ExchangeTypes.CcxtGateway.Rest.set_http_get!(get_handler)
         ExchangeTypes.CcxtGateway.Rest.set_http_post!((url; kwargs...) -> begin
             if occursin("/exchanges/$exc_name/setSandboxMode", url)
