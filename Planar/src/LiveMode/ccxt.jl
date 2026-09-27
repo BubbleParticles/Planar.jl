@@ -2,8 +2,33 @@ using .OrderTypes
 using .Misc: IsolatedMargin, CrossMargin, NoMargin, IsolatedHedged, CrossHedged, DFT, ZERO
 const ot = OrderTypes
 
+# `_execfunc_timeout` accepts a `timeout` keyword but previously discarded it,
+# calling `f(args...; kwargs...)` with no timeout enforcement. A hanging gateway
+# call (e.g. a slow `fetchPositions`/`fetchBalance`) would then block the
+# strategy loop indefinitely. Implement a real deadline using an async task
+# that is interrupted once `timeout` elapses, and rethrow the interrupt so the
+# caller's `@timeout_start`/`@timeout_now` machinery still sees it.
+function _execfunc_timeout(f, args...; timeout, kwargs...)
+    task = @task f(args...; kwargs...)
+    schedule(task)
+    if !isnothing(timeout) && timeout > Second(0)
+        t0 = TimeTicks.now()
+        try
+            while !istaskdone(task)
+                if TimeTicks.now() - t0 >= timeout
+                    @warn "ccxt: timeout reached, interrupting" timeout = timeout f = f
+                    Base.interrupt(task)
+                    break
+                end
+                sleep(min(Second(1), timeout - (TimeTicks.now() - t0)))
+            end
+        catch e
+            e isa InterruptException && rethrow(e)
+        end
+    end
+    return task.result
+end
 _execfunc(f, args...; kwargs...) = f(args...; kwargs...)
-_execfunc_timeout(f, args...; timeout, kwargs...) = f(args...; kwargs...)
 _execfunc(f::Function, args...; kwargs...) = f(args...; kwargs...)
 
 get_str(v, k) = something(get(v, string(k), nothing), "") |> string

@@ -143,6 +143,7 @@ function handle_events(obj, events=get_events(obj), cond=condition(obj))
                         @error "event handler: wakeup failed" exception = (e, catch_backtrace())
                     end
                 end
+                filter!(!istaskdone, sleep_tasks)
                 push!(sleep_tasks, sleep_task)
                 return nothing
             end
@@ -222,7 +223,7 @@ function _stop_handler!(obj)
                 kill_task(t)
             end
             # Clean up any pending sleep tasks
-            sleep_tasks = get(obj.attrs, :handler_sleep_tasks, nothing)
+            sleep_tasks = get(attrs(obj), :handler_sleep_tasks, nothing)
             if !isnothing(sleep_tasks)
                 for task in sleep_tasks
                     if istaskrunning(task)

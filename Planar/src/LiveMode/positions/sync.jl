@@ -171,6 +171,9 @@ function _live_sync_position!(
         timestamp!(pos, update.date)
         # Remove from strategy holdings only when both sides are flat (hedged:
         # the opposite side may still be open and must keep holdings).
+        # NOTE: `iszero(ii)` checks BOTH sides via cash (see
+        # `Base.iszero(ii::InstrumentInstance)`), which is the correct
+        # predicate for hedged mode. Do NOT replace with a single-side check.
         if iszero(ii)
             delete!(s.holdings, ii)
         end

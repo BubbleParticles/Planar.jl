@@ -8,6 +8,7 @@ using ..Instances: PositionOpen, PositionUpdate, PositionClose, lastprice
 using ..Instances: margin, maintenance, status, posside, ishedged, isopen, iszero, isdust, cash, value, raw
 using ..Strategies: lowat, highat
 using ..Misc: DFT, Long, Short, marginmode, CrossMargin, Live
+using ..TimeTicks: TimeTicks as tt, Minute
 import ..Executors: position!
 
 """

@@ -353,14 +353,17 @@ function live_send_order(
             end
         end
     end
-    return if isnothing(resp) || resp isa Exception
+    # Decrement the pending-orders counter exactly once on every path.
+    # The counter was previously only decremented on the failure branches,
+    # so a successful order leaked a permanent +1 that eventually made
+    # `pending_orders(ii)` grow without bound and starve order slots.
+    dec_pending_orders!(ii)
+    if isnothing(resp) || resp isa Exception
         @warn "send order: failed" sym ii exception = resp args params
-        dec_pending_orders!(ii)
-        resp
+        return resp
     elseif isnothing(resp_order_id(resp, exchangeid(ii)))
-        dec_pending_orders!(ii)
-        nothing
+        return nothing
     else
-        resp
+        return resp
     end
 end
