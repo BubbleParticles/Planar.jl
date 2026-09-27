@@ -108,6 +108,7 @@ function paper_limitorder!(s::PaperStrategy, ii, o::AnyLimitOrder; kwargs...)
                 e2 isa InterruptException && rethrow(e2)
                 @error "paper_limitorder: volrelease in catch failed" exception = (e2, catch_backtrace())
             end
+        end
     end
     # Initialize task storage and register for cleanup BEFORE scheduling
     init_task(task, IdDict())
