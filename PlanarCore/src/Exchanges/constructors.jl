@@ -121,7 +121,14 @@ function loadmarkets!(exc; cache=true, agemax=Day(1))
     empty!(exc.markets)
     function force_load()
         isoffline() && return nothing
-        get(ENV, "CCXT_GATEWAY_DISABLE", "") == "true" && return nothing
+        # Skip gateway markets load when gateway is disabled AND not mocked.
+        # Tests set _gateway_initialized[] = true and mock HTTP, so they
+        # still need force_load() to proceed. In CI (CCXT_GATEWAY_DISABLE=true
+        # with no mock), the call would timeout.
+        if get(ENV, "CCXT_GATEWAY_DISABLE", "") == "true" &&
+           !PlanarCore.ExchangeTypes.CcxtGateway.Rest._gateway_initialized[]
+            return nothing
+        end
         try
             @debug "Loading markets from gateway and caching at $mkt."
             name = string(exc.id)
