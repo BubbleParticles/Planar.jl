@@ -15,6 +15,7 @@ function _check_update_date(s, date)
     return nothing
 end
 
+using ..OrderTypes: OrderFailed
 using ..Executors.Instances.DataStructures: SAIterationState
 using ..Simulations.Random: shuffle!
 
@@ -37,16 +38,21 @@ $(TYPEDSIGNATURES)
 This function iterates over each order in `ai_orders` and checks if it is already queued in the simulation `s`.
 If not, it calls the `order!` function to add the order to the simulation at the specified `date`.
 """
-_docall!(s, ii, ai_orders, date) =
+function _docall!(s, ii, ai_orders, date)
     for o in collect(ai_orders)
         isqueued(o, s, ii) || continue
         try
             order!(s, o, date, ii)
         catch e
             @error "Error processing order" order=o asset=ii date=date exception=(e, catch_backtrace())
+            try
+                cancel!(s, o, ii; err=OrderFailed(string(e)))
+            catch cancel_err
+                @warn "Failed to cancel order after error" order=o asset=ii exception=(cancel_err, catch_backtrace())
+            end
         end
     end
-
+end
 @doc """Iterates over all pending orders checking for new fills.
 
 $(TYPEDSIGNATURES)
