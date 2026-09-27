@@ -108,10 +108,16 @@ function volrelease!(s, ii; amount)
 end
 
 function orderbook_side(ii, t::Type{<:Order})
-    ob = orderbook(ii.exchange, raw(ii); limit=100)
-    side = ifelse(t <: AnyBuyOrder, :asks, :bids)
-    @debug "papermode: obside" t side
-    getproperty(ob, side)
+    try
+        ob = orderbook(ii.exchange, raw(ii); limit=100)
+        side = ifelse(t <: AnyBuyOrder, :asks, :bids)
+        @debug "papermode: obside" t side
+        getproperty(ob, side)
+    catch e
+        e isa InterruptException && rethrow(e)
+        @debug "paper: orderbook fetch failed" exception=e raw(ii) t
+        Any[]
+    end
 end
 
 @doc """ Simulates price and volume for an order from the live orderbook.
