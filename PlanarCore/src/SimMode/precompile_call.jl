@@ -12,7 +12,7 @@ macro compile_call()
             ii = first(s.universe)
             amount = ii.limits.amount.min
             prc = min(ii.limits.price.min * 10, ii.limits.price.max)
-            date = now()
+            date = tt.now()
             function dispatched_orders()
                 out = Type{<:Order}[]
                 for name in names(ot; all=true)
@@ -115,92 +115,6 @@ macro compile_call()
                     end
                 end
             end
-                for otp in dispatched_orders()
-                    if !Base.generating_output()
-                        try
-                            call!(s, ii, otp; amount, date, prc, synced=false)
-                        catch e
-                            if e isa InterruptException
-                                rethrow(e)
-                            end
-                            @error "Precompile call! failed for order type" order_type=otp exception=(e, catch_backtrace())
-                        end
-                    end
-                end
-                if !Base.generating_output()
-                    try
-                        call!(
-                            Returns(nothing),
-                            s,
-                            ect.InitData();
-                            cols=(:abc,),
-                            timeframe=tf"1d",
-                            synced=false,
-                        )
-                    catch e
-                        if e isa InterruptException
-                            rethrow(e)
-                        end
-                        @error "Precompile call! failed for InitData" exception=(e, catch_backtrace())
-                    end
-                end
-                if !Base.generating_output()
-                    try
-                        call!(
-                            Returns(nothing),
-                            s,
-                            ect.UpdateData();
-                            cols=(:abc,),
-                            timeframe=tf"1d",
-                            synced=false,
-                        )
-                    catch e
-                        if e isa InterruptException
-                            rethrow(e)
-                        end
-                        @error "Precompile call! failed for UpdateData" exception=(e, catch_backtrace())
-                    end
-                end
-                if !Base.generating_output()
-                    try
-                        call!(s, ect.WatchOHLCV(), synced=false)
-                    catch e
-                        if e isa InterruptException
-                            rethrow(e)
-                        end
-                        @error "Precompile call! failed for WatchOHLCV" exception=(e, catch_backtrace())
-                    end
-                end
-                if !Base.generating_output()
-                    try
-                        call!(s, ii, 1.0, ect.UpdateLeverage(); pos=Long(), synced=false)
-                    catch e
-                        if e isa InterruptException
-                            rethrow(e)
-                        end
-                        @error "Precompile call! failed for UpdateLeverage" exception=(e, catch_backtrace())
-                    end
-                end
-                if !Base.generating_output()
-                    try
-                        call!(s, ii, Short(), date, ect.PositionClose(), synced=false)
-                    catch e
-                        if e isa InterruptException
-                            rethrow(e)
-                        end
-                        @error "Precompile call! failed for PositionClose" exception=(e, catch_backtrace())
-                    end
-                end
-                if !Base.generating_output()
-                    try
-                        call!(s, ii, ect.CancelOrders(), synced=false)
-                    catch e
-                        if e isa InterruptException
-                            rethrow(e)
-                        end
-                        @error "Precompile call! failed for CancelOrders" exception=(e, catch_backtrace())
-                    end
-                end
         end
     end
     esc(expr)
