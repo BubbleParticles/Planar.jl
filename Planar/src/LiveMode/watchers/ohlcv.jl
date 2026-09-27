@@ -277,7 +277,7 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
                                     @async try
                                         Watchers.load!(w, sym)
                                     catch e
-                                        @debug "dynamic universe: load! for added sym failed" sym exception=(e, catch_backtrace())
+                                        @error "dynamic universe: load! for added sym failed" sym exception=(e, catch_backtrace())
                                     end
                                 end
                                 @info "dynamic universe: added symbol to aggregated ohlcv watcher" sym met

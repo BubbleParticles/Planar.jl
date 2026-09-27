@@ -274,9 +274,15 @@ end
 function _posclose_trade(s, ii; t, pside, amount, waitfor, this_kwargs)
     @debug "call pos close: trade" _module = LogPosClose ii pside t
     @timeout_start
-    close_trade = call!(
-        s, ii, t; amount, reduce_only=true, tag="position_close", waitfor, this_kwargs...
-    )
+    close_trade = try
+        call!(
+            s, ii, t; amount, reduce_only=true, tag="position_close", waitfor, this_kwargs...
+        )
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "call pos close: call! threw" ii pside t exception = (e, catch_backtrace())
+        nothing
+    end
     if close_trade isa Trade
         (close_trade.date, false)
     elseif isnothing(close_trade)
@@ -285,8 +291,12 @@ function _posclose_trade(s, ii; t, pside, amount, waitfor, this_kwargs)
         (
             DateTime(0),
             if !isopen(ii, pside)
-                @deassert isnothing(pup) || pup.closed[]
-                true
+                if !isnothing(pup) && !pup.closed[]
+                    @error "call pos close: position reported open by exchange" ii pside pup
+                    false
+                else
+                    true
+                end
             else
                 @error "call pos close: failed to reduce position to zero" ii pside t
                 false

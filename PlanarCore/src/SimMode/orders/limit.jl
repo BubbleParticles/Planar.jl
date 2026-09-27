@@ -157,11 +157,8 @@ function limitorder_ifvol!(s::Strategy{Sim}, o::AnyLimitOrder, date, ii; kwargs.
             @deassert amount == actual_amount
             ans = trade!(s, o, ii; price=o.price, date, actual_amount, kwargs...)
         else
-            if cancel!(
-                s, o, ii; err=NotMatched(o.price, priceat(s, o, ii, date), amount, cdl_vol)
-            )
-                ans = nothing
-            end
+            cancel!(s, o, ii; err=NotMatched(o.price, priceat(s, o, ii, date), amount, cdl_vol))
+            ans = nothing
         end
         @deassert !isqueued(o, s, ii)
     else
@@ -179,12 +176,11 @@ function limitorder_ifvol!(s::Strategy{Sim}, o::AnyLimitOrder, date, ii; kwargs.
                 trade!(s, o, ii; price=o.price, date, actual_amount, kwargs...)
             end
         else
-            # Cancel IOC orders if partially filled
-            if o isa AnyIOCOrder &&
-                !isfilled(ii, o) &&
+            # Cancel IOC orders if not filled; GTC stays in the book
+            if o isa AnyIOCOrder && !isfilled(ii, o)
                 cancel!(s, o, ii; err=NotFilled(amount, cdl_vol))
-                ans = nothing
             end
+            ans = nothing
         end
         @deassert o isa AnyGTCOrder || !isqueued(o, s, ii)
     end

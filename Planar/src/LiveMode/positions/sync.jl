@@ -295,7 +295,14 @@ function _live_sync_position!(
             notional(pos)
         end
     end
-    @assert ntl > 0.0 "sync pos: notional can't be zero ($ii)"
+    # NOTE: a hard `@assert` here would throw out of the position-sync task
+    # (which runs inside watcher / aftertrade async tasks) and abort an
+    # otherwise-healthy update on a transient exchange quirk (dust, zero
+    # notional). Warn and skip the derived field updates instead.
+    if !(ntl > 0.0)
+        @warn "sync pos: notional not positive, skipping derived fields" ii ntl = ntl
+        return pos
+    end
 
     tier!(pos, ntl)
     lqp = resp_position_liqprice(resp, eid)
@@ -357,27 +364,43 @@ function _live_sync_position!(
     function higherwarn(whata, whatb, a, b)
         "sync pos: ($(raw(ii))) $whata ($(a)) can't be higher than $whatb ($(b))"
     end
-    @assert maintenance(pos) <= collateral(pos) higherwarn(
-        "maintenance", "collateral", maintenance(pos), collateral(pos)
-    )
-
-    @assert liqprice(pos) > 0.0 "liqprice can't be negative ($(liqprice(pos)))"
-    @assert entryprice(pos) > 0.0 "entryprice can't be negative ($(entryprice(pos)))"
-    @assert notional(pos) > 0.0 "notional can't be negative ($(notional(pos)))"
-
-    @assert liqprice(pos) <= entryprice(pos) || isshort(pside) higherwarn(
-        "liquidation price", "entry price", liqprice(pos), entryprice(pos)
-    )
-    @assert committed(pos) <= abs(cash(pos)) higherwarn(
-        "committment", "cash", abs(committed(pos)), abs(cash(pos))
-    )
-    @assert leverage(pos) <= maxleverage(pos) higherwarn(
-        "leverage", "max leverage", leverage(pos), maxleverage(pos)
-    )
-    if pos.min_size <= notional(pos)
-        @assert abs(cash(pos)) >= ii.limits.amount.min higherwarn(
-            "min size", "notional", pos.min_size, notional(pos)
+    if !(maintenance(pos) <= collateral(pos))
+        @warn higherwarn(
+            "maintenance", "collateral", maintenance(pos), collateral(pos)
         )
+    end
+
+    if !(liqprice(pos) > 0.0)
+        @warn "sync pos: liqprice not positive ($(liqprice(pos)))" ii
+    end
+    if !(entryprice(pos) > 0.0)
+        @warn "sync pos: entryprice not positive ($(entryprice(pos)))" ii
+    end
+    if !(notional(pos) > 0.0)
+        @warn "sync pos: notional not positive ($(notional(pos)))" ii
+    end
+
+    if !(liqprice(pos) <= entryprice(pos) || isshort(pside))
+        @warn higherwarn(
+            "liquidation price", "entry price", liqprice(pos), entryprice(pos)
+        )
+    end
+    if !(committed(pos) <= abs(cash(pos)))
+        @warn higherwarn(
+            "committment", "cash", abs(committed(pos)), abs(cash(pos))
+        )
+    end
+    if !(leverage(pos) <= maxleverage(pos))
+        @warn higherwarn(
+            "leverage", "max leverage", leverage(pos), maxleverage(pos)
+        )
+    end
+    if pos.min_size <= notional(pos)
+        if !(abs(cash(pos)) >= ii.limits.amount.min)
+            @warn higherwarn(
+                "min size", "notional", pos.min_size, notional(pos)
+            )
+        end
     end
     timestamp!(pos, this_timestamp)
     @debug "sync pos: synced" _module = LogPosSync ii this_timestamp resp_position_contracts(
