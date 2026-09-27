@@ -39,7 +39,7 @@ This function iterates over each order in `ai_orders` and checks if it is alread
 If not, it calls the `order!` function to add the order to the simulation at the specified `date`.
 """
 function _docall!(s, ii, ai_orders, date)
-    for o in collect(ai_orders)
+    for (pt, o) in collect(ai_orders)
         isqueued(o, s, ii) || continue
         try
             order!(s, o, date, ii)

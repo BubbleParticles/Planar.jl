@@ -52,7 +52,7 @@ The function `lowat` and `highat` are used to get the low and high prices respec
 _priceskew(ii, date) = begin
     h = highat(ii, date)
     l = lowat(ii, date)
-    if h <= DFT(0.0)
+    if isnan(h) || isnan(l) || h <= DFT(0.0)
         DFT(0.0)
     else
         DFT(1.0) - l / h
