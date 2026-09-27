@@ -20,7 +20,7 @@ using PlanarCore.Instances.Exchanges: CcxtTrade
 using PlanarCore.Instances.Data.DataStructures: CircularBuffer
 using PlanarCore.SimMode: AnyMarketOrder, AnyLimitOrder
 import PlanarCore.Executors: call!
-import PlanarCore.Misc: start!, stop!, isrunning, sleep_pad, sleep_pad_interruptible, LOGGING_GROUPS, kill_task, start_task
+import PlanarCore.Misc: start!, stop!, isrunning, sleep_pad, sleep_pad_interruptible, LOGGING_GROUPS, kill_task, start_task, safenotify
 
 # Compat: define InstrumentInstance in this module regardless of core version
 if !isdefined(@__MODULE__, :InstrumentInstance)
@@ -213,7 +213,11 @@ function start!(
             # Release lock before running foreground
         else
             # Create and register task atomically within the lock to prevent race with stop!
-            logger = s[:logger]
+            logger = attr(s, :logger, nothing)
+            if isnothing(logger)
+                strategy_logger!(s)
+                logger = s[:logger]
+            end
             task = @task begin
                 try
                     with_logger(logger) do
@@ -319,27 +323,9 @@ function stop!(s::Strategy{<:Union{Paper,Live}})
         @debug "stop: locked"
         running = attr(s, :is_running, missing)
         task = attr(s, :run_task, missing)
-        # Set is_running to false BEFORE waiting on task to prevent race with start!
-        if running isa Ref{Bool}
-            running[] = false
-        end
-        if istaskrunning(task)
-            waitforcond(() -> istaskdone(task), throttle(s))
-            if istaskrunning(task)
-                @warn "strategy: hanging task, killing" task
-                try
-                    killed = kill_task(task)
-                    if !killed && istaskrunning(task)
-                        @warn "strategy: waiting for task to stop after kill"
-                        waitforcond(() -> istaskdone(task), throttle(s))
-                    end
-                catch e
-                    e isa InterruptException && rethrow(e)
-                    @error "stop: failed to kill strategy task" exception = (e, catch_backtrace())
-                end
-            end
-        end
-        # Stop paper order and position tasks INSIDE the lock to prevent race with start!
+        # Stop paper order and position tasks FIRST, before signaling main task
+        # to stop. This prevents races where the main task tries to use them
+        # while they are being torn down.
         @debug "strategy: stopping paper order tasks" mode = execmode(s)
         try
             stop_all_paper_order_tasks!(s)
@@ -353,6 +339,36 @@ function stop!(s::Strategy{<:Union{Paper,Live}})
         catch e
             e isa InterruptException && rethrow(e)
             @error "strategy: error stopping paper position tasks" exception = (e, catch_backtrace()) s = nameof(s)
+        end
+        # Set is_running to false BEFORE waiting on task to prevent race with start!
+        if running isa Ref{Bool}
+            running[] = false
+        end
+        if istaskrunning(task)
+            try
+                waitforcond(() -> istaskdone(task), throttle(s); timeout=30.0)
+            catch e
+                e isa InterruptException && rethrow(e)
+                @error "stop: waiting for strategy task timed out" exception = (e, catch_backtrace())
+            end
+            if istaskrunning(task)
+                @warn "strategy: hanging task, killing" task
+                try
+                    killed = kill_task(task)
+                    if !killed && istaskrunning(task)
+                        @warn "strategy: waiting for task to stop after kill"
+                        try
+                            waitforcond(() -> istaskdone(task), throttle(s); timeout=10.0)
+                        catch e2
+                            e2 isa InterruptException && rethrow(e2)
+                            @debug "stop: task still not done after kill"
+                        end
+                    end
+                catch e
+                    e isa InterruptException && rethrow(e)
+                    @error "stop: failed to kill strategy task" exception = (e, catch_backtrace())
+                end
+            end
         end
     end
     @debug "strategy: calling StopStrategy" mode = execmode(s)

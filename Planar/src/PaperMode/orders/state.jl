@@ -35,41 +35,41 @@ Finally, it creates a simulated market order using the `create_sim_market_order`
 
 """
 function create_paper_market_order(s, t, ii; amount, date, price, kwargs...)
-    if volumecap!(s, ii; amount)
-    else
-        @debug "paper market order: overcapacity" ii = raw(ii) amount liq = _paper_liquidity(
-            s, ii
-        )
+    volumecap!(s, ii; amount) || begin
+        @debug "paper market order: overcapacity" ii = raw(ii) amount liq = _paper_liquidity(s, ii)
         return nothing
     end
-    obside = try
-        orderbook_side(ii, t)
+    try
+        obside = try
+            orderbook_side(ii, t)
+        catch e
+            e isa InterruptException && rethrow(e)
+            @debug "paper market order: orderbook fetch failed" exception=e raw(ii) t
+            Any[]
+        end
+        if isempty(obside)
+            @debug "paper market order: empty OB (using provided price)" ii = raw(ii) t price
+            if isfinite(price) && !isnan(price) && price > 0
+                o = create_sim_market_order(s, t, ii; amount, date, price, kwargs...)
+                isnothing(o) && (volrelease!(s, ii; amount); return nothing)
+                return o, Any[]
+            else
+                @debug "paper market order: empty OB and no price" ii = raw(ii) t
+                volrelease!(s, ii; amount)
+                return nothing
+            end
+        end
+        if isnan(price)
+            price = first(obside)[1]
+        end
+        o = create_sim_market_order(s, t, ii; amount, date, price, kwargs...)
+        return o, obside
     catch e
         e isa InterruptException && rethrow(e)
-        @debug "paper market order: orderbook fetch failed" exception=e raw(ii) t
-        Any[]
+        @error "paper market order: failed" exception = (e, catch_backtrace()) raw(ii)
+        volrelease!(s, ii; amount)
+        return nothing
     end
-    if isempty(obside)
-        @debug "paper market order: empty OB (using provided price)" ii = raw(ii) t price
-        # Fallback: if a finite price was supplied, create the order without an orderbook.
-        # This keeps Paper Sim functional in unit tests / offline envs where the gateway
-        # orderbook is unavailable. VWAP simulation is skipped; we trade at the given price.
-        if isfinite(price) && !isnan(price) && price > 0
-            o = create_sim_market_order(s, t, ii; amount, date, price, kwargs...)
-            isnothing(o) && (volrelease!(s, ii; amount); return nothing)
-            # empty obside sentinel: marketorder! will handle the fallback path
-            return o, Any[]
-        else
-            @debug "paper market order: empty OB and no price" ii = raw(ii) t
-            volrelease!(s, ii; amount)
-            return nothing
-        end
-    end
-    if isnan(price)
-        price = first(obside)[1]
-    end
-    o = create_sim_market_order(s, t, ii; amount, date, price, kwargs...)
-    o, obside
 end
 @doc """ Executes a market order in PaperMode.
 

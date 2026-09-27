@@ -3,13 +3,13 @@ using .Misc.Lang: @lget!, @ifdebug, @deassert, Option
 using .Instances.Exchanges: has
 using PlanarCore.SimMode: trade!
 using .Executors: AnyGTCOrder, AnyLimitOrder
-using PlanarCore.OrderTypes: ImmediateOrderType, OrderCanceled
+using PlanarCore.OrderTypes: ImmediateOrderType, OrderCanceled, OrderFailed
 using PlanarCore.TimeTicks: TimeFrame
 
 function _asdate(d)
     if d isa AbstractString
         s = rstrip(d, 'Z')
-        return TimeTicks.DateTime(s, dateformat"yyyy-mm-ddTHH:MM:SS.s")
+        return TimeTicks.DateTime(s, dateformat"yyyy-MM-ddTHH:mm:SS.s")
     end
     dt_val = get(d, "datetime", nothing)
     if dt_val === nothing || dt_val === missing
@@ -102,8 +102,12 @@ function paper_limitorder!(s::PaperStrategy, ii, o::AnyLimitOrder; kwargs...)
             alive[] = false
             _remove_paper_order_task!(s, ii, o)
             # Release remaining reserved volume on error
-            volrelease!(s, ii; amount=abs(unfilled(o)))
-        end
+            try
+                volrelease!(s, ii; amount=abs(unfilled(o)))
+            catch e2
+                e2 isa InterruptException && rethrow(e2)
+                @error "paper_limitorder: volrelease in catch failed" exception = (e2, catch_backtrace())
+            end
     end
     # Initialize task storage and register for cleanup BEFORE scheduling
     init_task(task, IdDict())
@@ -131,8 +135,15 @@ function create_paper_limit_order!(s, ii, t; amount, date, kwargs...)
         return nothing
     end
     fees_kwarg, order_kwargs = splitkws(:fees; kwargs)
-    o = create_sim_limit_order(s, t, ii; amount, date, order_kwargs...)
-    isnothing(o) && begin
+    try
+        o = create_sim_limit_order(s, t, ii; amount, date, order_kwargs...)
+        isnothing(o) && begin
+            volrelease!(s, ii; amount)
+            return nothing
+        end
+    catch e
+        e isa InterruptException && rethrow(e)
+        @error "paper limit order: create_sim_limit_order failed" exception = (e, catch_backtrace()) raw(ii)
         volrelease!(s, ii; amount)
         return nothing
     end
@@ -174,7 +185,14 @@ function create_paper_limit_order!(s, ii, t; amount, date, kwargs...)
         # cancel! releases the volumecap reservation (Paper cancel!
         # override) — no second release here. Return `nothing` (Sim
         # contract), not `missing`, so `isnothing` failure checks fire.
-        !isfilled(ii, o) && cancel!(s, o, ii; err=OrderFailed(o))
+        if !isfilled(ii, o)
+            try
+                cancel!(s, o, ii; err=OrderFailed(o))
+            catch e2
+                e2 isa InterruptException && rethrow(e2)
+                @error "paper limit order: cancel in catch failed" exception = (e2, catch_backtrace())
+            end
+        end
         return nothing
     end
 end

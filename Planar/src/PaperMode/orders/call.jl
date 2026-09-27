@@ -131,5 +131,13 @@ function call!(
     ::CancelOrders;
     kwargs...,
 )::Bool
-    all(cancel!(s, o, ii; err=OrderCanceled(o)) for o in collect(values(s, ii, BuyOrSell)))
+    all(collect(values(s, ii, BuyOrSell))) do o
+        try
+            cancel!(s, o, ii; err=OrderCanceled(o))
+        catch e
+            e isa InterruptException && rethrow(e)
+            @error "CancelOrders: cancel failed" exception = (e, catch_backtrace())
+            false
+        end
+    end
 end

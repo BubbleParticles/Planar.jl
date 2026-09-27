@@ -136,7 +136,11 @@ function from_orderbook(obside, s, ii, o::Order; amount, date)
         @debug "paper from ob: empty orderbook"
         return zero(DFT), zero(DFT), nothing
     end
-    price_idx = max(1, trunc(Int, taken_vol[] * n_prices / total_vol[]))
+    if total_vol[] <= zero(DFT)
+        @debug "paper from ob: zero total volume"
+        return zero(DFT), zero(DFT), nothing
+    end
+    price_idx = min(max(1, trunc(Int, taken_vol[] * n_prices / total_vol[])), n_prices)
     this_price, this_vol = obside[price_idx]
     @debug "paper from ob: idx" price_idx this_price this_vol
     this_vol = min(amount, this_vol)
