@@ -261,13 +261,14 @@ It returns a dictionary with the symbols and quote currency.
 macro fromassets(fname)
     mod = __module__
     this = @__MODULE__
-    fname_sym = esc(fname)
     ex = quote
-        function $mod.$(fname_sym)(aa::AbstractVector{<:AbstractInstrument}; kwargs...)
+        function $mod.func(aa::AbstractVector{<:AbstractInstrument}; kwargs...)
             _, kwargs = $this.splitkws(:quote_currency; kwargs)
             syms, quote_currency = $this.fromassets(aa)
-            $mod.$(fname_sym)(syms; quote_currency, kwargs...)
+            $mod.func(syms; quote_currency, kwargs...)
         end
     end
+    swapfname!(ex.args[2].args[1].args, 1, fname)
+    swapfname!(ex.args[2].args[2].args[7].args, 1, fname)
     ex
 end

@@ -1,3 +1,6 @@
+# Import @_coalesce before it's used in _ensure_env! (line 16)
+using PlanarCore.Lang: @_coalesce
+
 # using PythonCall: PyList, pynew, Py
 # using PythonCall.C.CondaPkg: envdir
 # using PythonCall.GC: GC as PyGC
@@ -186,8 +189,9 @@ macro pymodule(name, modname=nothing)
 end
 
 include("functions.jl")
-using PlanarCore.Lang: @_coalesce
+
 using PlanarCore.TimeTicks.Reexport
+
 # NOTE: This must be done after all the global code in this module has been execute
 @reexport using PythonCall
 export @pymodule, clearpypath!, pytryfloat
