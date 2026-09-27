@@ -9,7 +9,7 @@ using PlanarCore.TimeTicks: TimeFrame
 function _asdate(d)
     if d isa AbstractString
         s = rstrip(d, 'Z')
-        return TimeTicks.DateTime(s, dateformat"yyyy-MM-ddTHH:mm:SS.s")
+        return parse(TimeTicks.DateTime, s)
     end
     dt_val = get(d, "datetime", nothing)
     if dt_val === nothing || dt_val === missing
