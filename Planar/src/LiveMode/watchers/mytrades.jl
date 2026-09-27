@@ -61,9 +61,16 @@ function watch_trades!(s::LiveStrategy, ii; exc_kwargs=(;))
             return nothing
         end
         loop_func, iswatch = define_trades_loop_funct(s, ii, exc; exc_kwargs)
-        task = @start_task IdDict() manage_trade_updates!(
-            s, ii, stop_delay, loop_func, iswatch
-        )
+        task = @start_task IdDict() begin
+            try
+                manage_trade_updates!(
+                    s, ii, stop_delay, loop_func, iswatch
+                )
+            catch e
+                e isa InterruptException && rethrow(e)
+                @error "watch trades: manage_trade_updates! failed" ii exception = (e, catch_backtrace())
+            end
+        end
         tasks.byname[:trades_task] = task
         @debug "watch trades: new task" _module = LogTasks2 ii task istaskstarted(task) first(
             keys(task.storage)

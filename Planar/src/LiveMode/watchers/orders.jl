@@ -200,9 +200,16 @@ function watch_orders!(s::LiveStrategy, ii; exc_kwargs=(;))
         # Call the top-level functions
         stop_delay = initialize_watch_tasks!(s, ii)
         loop_func, iswatch = define_loop_funct(s, ii; exc_kwargs)
-        task = @start_task IdDict() manage_order_updates!(
-            s, ii, stop_delay, loop_func, iswatch
-        )
+        task = @start_task IdDict() begin
+            try
+                manage_order_updates!(
+                    s, ii, stop_delay, loop_func, iswatch
+                )
+            catch e
+                e isa InterruptException && rethrow(e)
+                @error "watch orders: manage_order_updates! failed" ii exception = (e, catch_backtrace())
+            end
+        end
         stop_task = @start_task IdDict() begin
             try
                 monitor_stop_conditions!(s, ii, task, stop_delay, tasks)

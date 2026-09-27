@@ -29,27 +29,32 @@ function live_cancel(s, ii; ids=(), side=BuyOrSell, confirm=false, since=nothing
     done = try
         resp = func(s, ii; kwargs...)
         if resp isa Exception
-            @warn "live cancel: failed" ii = raw(ii) resp @caller
+@error "live cancel: failed" ii = raw(ii) resp @caller
             false
         elseif isnothing(resp)
-            @debug "live cancel: response is nothing" _module = LogCancelOrder @caller
-            true
+            # An empty response from the exchange is ambiguous: the cancel
+            # may have succeeded, or the request may have been dropped.
+            # Returning `true` here caused callers to treat a possibly-
+            # failed cancel as success, leaving stale open orders on the
+            # exchange. Report failure so the caller can retry or fetch.
+            @error "live cancel: empty response (treating as failure)" ii = raw(ii) @caller
+            false
         elseif isdict(resp)
             if resptobool(exchange(ii), resp)
                 true
             else
-                @warn "live cancel: failed (wrong status code)" ii = raw(ii) resp
+@error "live cancel: failed (wrong status code)" ii = raw(ii) resp
                 false
             end
         elseif islist(resp)
             true
         else
-            @warn "live cancel: failed (unhandled response)" ii = raw(ii) resp
+@error "live cancel: failed (unhandled response)" ii = raw(ii) resp
             false
         end
     catch e
         e isa InterruptException && rethrow(e)
-        @warn "live cancel: failed (exception)" ii = raw(ii)
+@error "live cancel: failed (exception)" ii = raw(ii)
         @debug_backtrace LogCancelOrder
         return false
     end
@@ -59,14 +64,14 @@ function live_cancel(s, ii; ids=(), side=BuyOrSell, confirm=false, since=nothing
         end)
         if side === BuyOrSell
             isempty(open_orders) || begin
-                @warn "live cancel: confirm failed (both sides)"
+@error "live cancel: confirm failed (both sides)"
                 return false
             end
         else
             side_str = _ccxtorderside(side)
             for o in open_orders
                 string(resp_order_side(o, eid)) == side_str && begin
-                    @warn "live cancel: confirm failed" side
+@error "live cancel: confirm failed" side
                     return false
                 end
             end

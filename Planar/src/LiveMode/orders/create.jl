@@ -13,7 +13,7 @@ function isactive(s::Strategy, ii::InstrumentInstance, resp, eid::EIDType; fetch
 
     @debug "create order: isopen" _module = LogCreateOrder isopen hasfill oid hasid
     if !isopen && !hasfill && !hasid
-        @warn "create order: refusing" ii oid isopen hasfill hasid
+        @error "create order: refusing" ii oid isopen hasfill hasid
         return false, resp
     else
         status = resp_order_status(resp, eid)
@@ -33,11 +33,11 @@ function isactive(s::Strategy, ii::InstrumentInstance, resp, eid::EIDType; fetch
                     return false, resp
                 end
             else
-                @warn "create order: unknown status" ii oid hasfill hasid resp status
+                @error "create order: unknown status" ii oid hasfill hasid resp status
                 return hasid, resp
             end
         elseif _ccxtisstatus(status, "canceled", "rejected", "expired") || fetched
-            @warn "create order: $status" ii oid hasfill hasid
+            @error "create order: $status" ii oid hasfill hasid
             return false, resp
         end
     end
@@ -114,10 +114,12 @@ function _create_live_order(
             this_date
         end
         id = @something _orderid(resp, eid) begin
-            @warn "create order: missing id (default to pricetime hash)" ii = raw(ii) s = nameof(
+            @error "create order: missing id (default to pricetime hash)" ii = raw(ii) s = nameof(
                 s
             )
-            string(hash((price, date)))
+            # Include the instance hash in the fallback id so two orders on
+            # the same asset at the same price/date ms do not collide.
+            string(hash((hash(ii), price, date)))
         end
     catch e
         e isa InterruptException && rethrow(e)

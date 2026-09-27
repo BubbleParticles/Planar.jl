@@ -262,13 +262,17 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
                                         get!(w.view, sym) do
                                             DataFrame(timestamp=DateTime[], open=DFT[], high=DFT[], low=DFT[], close=DFT[], volume=DFT[])
                                         end
-                                    catch
+                                    catch e
+                                        e isa InterruptException && rethrow(e)
+                                        @error "ohlcv: swallowed exception in try/catch" exception = (e, catch_backtrace())
                                     end
                                     # ensure strategy data dict entry exists
                                     try
                                         @lget! ii.data s.timeframe DataFrame(timestamp=DateTime[], open=DFT[], high=DFT[], low=DFT[], close=DFT[], volume=DFT[])
-                                    catch
-                                    end
+                                    catch e
+                                    e isa InterruptException && rethrow(e)
+                                    @error "ohlcv: swallowed exception in try/catch" exception = (e, catch_backtrace())
+                                end
                                     # trigger async backfill for the new symbol
                                     @async try
                                         Watchers.load!(w, sym)
@@ -290,7 +294,10 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
                         sym = string(raw(ii))
                         w2 = get(ow, ii, nothing)
                         if !isnothing(w2)
-                            try close(w2) catch; end
+                            try close(w2) catch e
+                                    e isa InterruptException && rethrow(e)
+                                    @error "ohlcv: swallowed exception in try/catch" exception = (e, catch_backtrace())
+                                end
                             delete!(ow, ii)
                         end
                         if met != :trades
@@ -300,13 +307,19 @@ function watch_ohlcv!(s::RTStrategy; exc=exchange(s), kwargs...)
                                 if haskey(w.attrs, :symstates)
                                     delete!(w.attrs[:symstates], sym)
                                 end
-                                try delete!(w.view, sym) catch; end
+                                try delete!(w.view, sym) catch e
+                                    e isa InterruptException && rethrow(e)
+                                    @error "ohlcv: swallowed exception in try/catch" exception = (e, catch_backtrace())
+                                end
                             catch e
                                 @debug "dynamic universe aggregated remove cleanup failed" sym exception=(e, catch_backtrace())
                             end
                         end
                         if get(attrs(s), :purge_on_remove, false) == true
-                            try empty_ohlcv(s, ii) catch; end
+                            try empty_ohlcv(s, ii) catch e
+                                    e isa InterruptException && rethrow(e)
+                                    @error "ohlcv: swallowed exception in try/catch" exception = (e, catch_backtrace())
+                                end
                         end
                     catch e
                         @warn "dynamic universe ohlcv remove handler failed" exception=(e, catch_backtrace())
