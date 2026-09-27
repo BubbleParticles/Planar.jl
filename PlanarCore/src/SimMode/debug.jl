@@ -2,6 +2,7 @@ using ..OrderTypes: LimitOrderType, ordertype
 using ..Strategies: Strategies as st
 using ..Misc: DFT
 using ..Lang: @ifdebug
+using ..Lang: @_coalesce
 
 """
 Debug state attached to strategy instead of globals to avoid race conditions.
@@ -113,8 +114,8 @@ end
 
 function _check_committments(s, ii::InstrumentInstance, t::Trade)
     get(s.attrs, :verbose, false) && begin
-        @show (@something ii.longpos ii).cash_committed
-        @show (@something ii.shortpos ii).cash_committed
+        @show (@_coalesce ii.longpos ii).cash_committed
+        @show (@_coalesce ii.shortpos ii).cash_committed
     end
     orders_long = DFT(0.0)
     orders_short = DFT(0.0)

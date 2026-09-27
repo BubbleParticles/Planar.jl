@@ -172,7 +172,7 @@ If all chunks are present, it sorts the DataFrames in `out`, ensures their times
 
 """
 function mergechunks(files, out; strict=false)
-    if strict && length(out) == length(files)
+    if strict && length(out) < length(files)
         @error "Couldn't download all chunks! $(length(out)) < $(length(files))"
         return nothing
     end
@@ -261,14 +261,13 @@ It returns a dictionary with the symbols and quote currency.
 macro fromassets(fname)
     mod = __module__
     this = @__MODULE__
+    fname_sym = esc(fname)
     ex = quote
-        function $mod.func(aa::AbstractVector{<:AbstractInstrument}; kwargs...)
+        function $mod.$(fname_sym)(aa::AbstractVector{<:AbstractInstrument}; kwargs...)
             _, kwargs = $this.splitkws(:quote_currency; kwargs)
             syms, quote_currency = $this.fromassets(aa)
-            $mod.func(syms; quote_currency, kwargs...)
+            $mod.$(fname_sym)(syms; quote_currency, kwargs...)
         end
     end
-    swapfname!(ex.args[2].args[1].args, 1, fname)
-    swapfname!(ex.args[2].args[2].args[7].args, 1, fname)
     ex
 end

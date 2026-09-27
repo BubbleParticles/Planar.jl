@@ -23,7 +23,7 @@ using .Lang: Option, @deassert, @lget!, @caller
 import Base: position, isopen
 import ..Exchanges: lastprice, leverage!
 import ..OrderTypes: trades
-
+using ..Lang: @_coalesce
 baremodule InstancesLock end
 
 @doc """Defines the abstract type for an instance.
@@ -698,7 +698,7 @@ function _load_rest!(
     name = ii.asset.raw
     dr = daterange(from_data)
     ai_tfs = Set(keys(ii.data))
-    from = @something from dr.start
+    from = @_coalesce from dr.start
     for to_tf in tfs
         if to_tf ∉ ai_tfs || force # current tfs
             from_sto = load(zi, exc_name, ii.asset.raw, string(to_tf); from, to=dr.stop)

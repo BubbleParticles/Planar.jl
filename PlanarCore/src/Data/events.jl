@@ -1,3 +1,4 @@
+using ..Lang: @_coalesce
 @doc """EventTrace structure for managing event data.
 
 $(FIELDS)
@@ -15,7 +16,7 @@ mutable struct EventTrace{I<:ZarrInstance,Z<:ZArray}
     last_flush::DateTime
     function EventTrace(name; freq=Second(1), path=nothing, zi=nothing)
         zi_args = isnothing(path) ? () : (path,)
-        zi = @something zi ZarrInstance(zi_args...)
+        zi = @_coalesce zi ZarrInstance(zi_args...)
         loaded = load_data(zi, string(name); serialized=true, as_z=true)
         arr = isnothing(loaded) ? error("Failed to load data for EventTrace: $name") : loaded[1]
         cache = Vector{Vector{Vector{UInt8}}}[]

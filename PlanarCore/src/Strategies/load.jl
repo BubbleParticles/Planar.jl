@@ -6,7 +6,7 @@ using ..Instances.DataStructures: SortedDict
 using ..Instances.Data.TimeTicks: TimeFrame
 using ..Instances.Data.DataFrames: DataFrame
 using ..Misc: user_dir, config_path
-using ..Misc.Lang: @debug_backtrace
+using ..Misc.Lang: @debug_backtrace, @_coalesce
 using TOML
 using JSON3
 
@@ -201,7 +201,7 @@ function default_load(mod::Module, t::Type, config::Config)
     else
         call!
     end
-    assets = @something _universe_members(config) invokelatest(call_func, t, StrategyMarkets())
+    assets = @_coalesce _universe_members(config) invokelatest(call_func, t, StrategyMarkets())
     # Sandbox must stay an explicit user choice (keys, exchange selection and
     # margin-mode support checks all depend on it). Forcing it here silently
     # swaps the exchange object under strategies that set `sandbox=false`
@@ -235,7 +235,7 @@ function bare_load(mod::Module, t::Type, config::Config)
     else
         call!
     end
-    syms = @something _universe_members(config) invokelatest(call_func, t, StrategyMarkets())
+    syms = @_coalesce _universe_members(config) invokelatest(call_func, t, StrategyMarkets())
     exc = Exchanges.getexchange!(config.exchange; sandbox=config.sandbox, config.account)
     TF = invokelatest(getfield, mod, :TF)
     if config.margin === nothing
@@ -514,7 +514,7 @@ function strategy!(mod::Module, cfg::Config)
     else
         call!
     end
-    s = @something invokelatest(call_func, s_type, cfg, LoadStrategy()) try
+    s = @_coalesce invokelatest(call_func, s_type, cfg, LoadStrategy()) try
         default_load(mod, s_type, cfg)
     catch e
         @error "strategy loading: default_load failed, falling back to bare_load" exception=(e, catch_backtrace())

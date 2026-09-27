@@ -10,9 +10,10 @@ using ..Data.DataFrames: DataFrame
 import ..Data: seeddata!
 using CSV: CSV as CSV
 using Pkg: Pkg
+using ..Lang: @_coalesce
 
 const PROJECT_PATH = try
-    @something Base.ACTIVE_PROJECT[] Pkg.project().path
+    @_coalesce Base.ACTIVE_PROJECT[] Pkg.project().path
 catch
     pkgdir(@__MODULE__)
 end
@@ -33,7 +34,7 @@ end
 function stubscache_path()
     try
         proj = Pkg.project()
-        @something get(ENV, "PLANAR_STUBS_PATH", nothing) joinpath(dirname(something(proj.path, PROJECT_PATH)), "test", "stubs")
+        @_coalesce get(ENV, "PLANAR_STUBS_PATH", nothing) joinpath(dirname(something(proj.path, PROJECT_PATH)), "test", "stubs")
     catch e
         e isa InterruptException && rethrow(e)
         @debug "stubs: stubscache_path fallback" exception=(e, catch_backtrace())

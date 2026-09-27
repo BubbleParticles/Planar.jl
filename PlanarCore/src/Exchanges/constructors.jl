@@ -171,6 +171,7 @@ end
 getexchange() = exc
 
 using .Misc.Lang: @caller
+using ..Lang: @_coalesce
 @doc """getexchange!: Get ccxt exchange by symbol, either from cache or create anew via CcxtGateway.
 
 $(TYPEDSIGNATURES)
@@ -316,7 +317,7 @@ macro tickers!(type=nothing, force=false, cache=TICKERS_CACHE100)
     cache = esc(cache)
     quote
         local $tickers
-        tp = @something($type, markettype($exc), missing)
+        tp = @_coalesce($type, markettype($exc), missing)
         nm = nameof($(exc))
         k = (nm, tp)
         l = @lget! $(TICKERSLIST_LOCK_DICT) k ReentrantLock()
@@ -360,7 +361,7 @@ end
 $(TYPEDSIGNATURES)
 """
 function tickerprice(tkr)
-    @something get(tkr, "average", nothing) get(tkr, "last", nothing) get(tkr, "bid", nothing)
+    @_coalesce get(tkr, "average", nothing) get(tkr, "last", nothing) get(tkr, "bid", nothing)
 end
 
 @doc """Get price ranges using tickers data from exchange.

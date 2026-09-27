@@ -1,4 +1,5 @@
 using ..Exchanges.Instruments
+using ..Lang: @_coalesce
 using ..Exchanges:
     Exchanges,
     Exchange,
@@ -165,7 +166,7 @@ This function iterates over the timeframes and periods of the exchange to find t
 function find_since(exc::Exchange, pair)
     cache_key = string(exc.name, "-", pair)
     cached_since = load_cache(cache_key; raise=false)
-    @something cached_since begin
+    @_coalesce cached_since begin
         data = ()
         actual = now()
         tfs, periods = __ordered_timeframes(exc)
@@ -517,7 +518,7 @@ function __get_ohlcv(
     this_date = if pair_from_date isa DateTime
         pair_from_date
     else
-        @something tryparse(DateTime, pair_from_date) DateTime(0)
+        @_coalesce tryparse(DateTime, pair_from_date) DateTime(0)
     end
     if !islast(this_date, timeframe)
         ohlcv = _fetch_ohlcv_from_to(

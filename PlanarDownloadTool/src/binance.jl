@@ -21,9 +21,10 @@ using PlanarCore.Data.DataFrames
 using PlanarCore.Pbar
 using PlanarCore.Instruments
 using PlanarCore.Lang:
-    @ifdebug, @lget!, filterkws, splitkws, withoutkws, @argstovec, @acquire, @except
+    @ifdebug, @lget!, filterkws, splitkws, withoutkws, @argstovec, @acquire, @except, @_coalesce
 using PlanarCore.TimeTicks
 using PlanarCore.Misc.DocStringExtensions
+using PlanarCore.TimeTicks: dt
 
 using EzXML: EzXML as ez
 using URIs
@@ -190,7 +191,7 @@ function fetchsym(sym; reset, path_kws...)
     from = if reset
         ""
     else
-        @something ca.load_cache(key_path(sym; path_kws...); raise=false) ca.load_cache(
+        @_coalesce ca.load_cache(key_path(sym; path_kws...); raise=false) ca.load_cache(
             key_path(sym; freq=:monthly, withoutkws(:freq; kwargs=path_kws)...);
             raise=false,
         ) ""

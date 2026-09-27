@@ -3,6 +3,7 @@ module DFUtils
 using DataFrames
 using DataFrames: index
 using ..TimeTicks
+using ..Lang: @_coalesce
 import ..TimeTicks: TimeTicks, timeframe, timeframe!
 import ..Misc: after, before
 using ..Misc.DocStringExtensions
@@ -37,7 +38,7 @@ NOTE: slow func, for speed use [`timeframe!(::DataFrame)`](@ref)"""
 function timeframe(df::D)::TimeFrame where {D<:AbstractDataFrame}
     if hasproperty(df, :timestamp)
         md = @lget!(colmetadata(df), :timestamp, Dict{String,Any}())
-        @something get(md, "timeframe", nothing) begin
+        @_coalesce get(md, "timeframe", nothing) begin
             if size(df, 1) > 0
                 timeframe!(df)
             else
@@ -55,7 +56,7 @@ function timeframe!(df::D, t::T) where {D<:AbstractDataFrame,T<:TimeFrame}
 end
 @doc "Infer the dataframe's timeframe from the `timestamp` column of the dataframe and sets it."
 function timeframe!(df::D) where {D<:AbstractDataFrame}
-    @something colmetadata(df, :timestamp, "timeframe", nothing) begin
+    @_coalesce colmetadata(df, :timestamp, "timeframe", nothing) begin
         tf = @infertf(df)
         colmetadata!(df, :timestamp, "timeframe", tf; style=:note)
         tf

@@ -238,7 +238,8 @@ function pairs_trading_signal_step!(
 end
 
 function pairs_trading_state(
-    s::st.Strategy, asset1_sym::AbstractString, asset2_sym::AbstractString
+    s::st.Strategy, asset1_sym::AbstractString, asset2_sym::AbstractString,
+    ts_idx::DateTime, lookback::Int=20
 )
     pairs_dict = @lget! s :pairs_trading Dict{Tuple{String,String},PairsTradingState}()
     key = (asset1_sym, asset2_sym)
@@ -251,7 +252,7 @@ end
 function pairs_trading_signal_step!(
     s, asset1_sym, asset2_sym, ts_idx; lookback=20, zscore_threshold=2.0, tf=s.timeframe
 )
-    state = pairs_trading_state(s, asset1_sym, asset2_sym)
+    state = pairs_trading_state(s, asset1_sym, asset2_sym, ts_idx, lookback)
     ii1 = asset_bysym(s, asset1_sym)
     ii2 = asset_bysym(s, asset2_sym)
     isnothing(ii1) && return nothing

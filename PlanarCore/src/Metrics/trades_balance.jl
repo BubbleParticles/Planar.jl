@@ -4,6 +4,7 @@ using .ect.Executors.Checks: withfees
 using .ect.Strategies: tradesedge
 using ..Collections: snapshot
 using .ect.Strategies: DateRange
+using .ect.Lang: @_coalesce
 
 @doc """ Replaces missing values in a vector with 0.0.
 
@@ -63,7 +64,7 @@ function _cum_value_balance(ii::MarginInstance, df)
     def_fees = maxfees(ii)
     function cvb(o, ii, entryprice, cum_amount, leverage, close_price)
         this_val = abs(cum_amount * close_price)
-        this_fees = ismissing(o) ? 0.0 : @something fees(o) def_fees
+        this_fees = ismissing(o) ? 0.0 : @_coalesce fees(o) def_fees
         if !ismissing(o)
             last_lev = leverage
             last_ep = entryprice

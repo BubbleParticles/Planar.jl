@@ -104,11 +104,11 @@ function py_start_loop(pa::PythonAsync=gpa)
                     end
                 finally
                     setrunning!(false, pa)
-                    if _pyisrunning(pyloop)
+                    if _pyisrunning(pa.pyloop)
                         try
-                            pyloop.stop()
+                            pa.pyloop.stop()
                         finally
-                            pyloop.close()
+                            pa.pyloop.close()
                         end
                     end
                 end
@@ -128,6 +128,8 @@ function py_start_loop(pa::PythonAsync=gpa)
             start_task()
             sleep_t = 0.0
         end
+        # Refresh local reference to the running loop set by the Python runner
+        pyloop = pa.pyloop
     end
 
     atexit(pyloop_stop_fn())

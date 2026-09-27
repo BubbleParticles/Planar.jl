@@ -1,4 +1,5 @@
 import Base: length, iterate, collect
+using ..Lang: @_coalesce
 
 @doc """A type representing a date range.
 
@@ -33,7 +34,7 @@ date_tuple = convert(DateTuple, d)  # returns a DateTuple with the start and sto
 """
 function Base.convert(::Type{DateTuple}, d::DateRange)
     DateTuple((
-        @something(d.start, typemin(DateTime)), @something(d.stop, typemax(DateTime))
+        @_coalesce(d.start, typemin(DateTime)), @_coalesce(d.stop, typemax(DateTime))
     ))
 end
 

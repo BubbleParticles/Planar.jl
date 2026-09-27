@@ -1,5 +1,5 @@
 using .Data: @to_mat
-using .Lang: @ifdebug
+using .Lang: @ifdebug, @_coalesce
 
 @doc """Check the size of data against a ZArray.
 
@@ -109,7 +109,7 @@ function _save_data(
     local za
 
     za, existing = _get_zarray(
-        zi, key, @something(chunk_size, chunksize(data)); type, overwrite, reset
+        zi, key, @_coalesce(chunk_size, chunksize(data)); type, overwrite, reset
     )
     eltype(data) <: Vector{UInt8} && check_data(data, za)
 
@@ -209,7 +209,7 @@ function load_data(zi::ZarrInstance, key; serialized=false, kwargs...)
 end
 function _wrap_load_data(zi::ZarrInstance, key; sz=nothing, serialized=false, kwargs...)
     # NOTE
-    sz = serialized ? DEFAULT_CHUNK_SIZE : @something sz DEFAULT_CHUNK_SIZE
+    sz = serialized ? DEFAULT_CHUNK_SIZE : @_coalesce sz DEFAULT_CHUNK_SIZE
     @ifdebug @assert all(sz .> 0)
     try
         _load_data(zi, key, sz; kwargs..., serialized)
@@ -300,8 +300,8 @@ function _load_data(
         buf = IOBuffer()
         try
             def_val = nothing
-            first_time = @something(todata(buf, data[begin, 1]), def_val)
-            first_val = @something(todata(buf, data[begin, 2]), def_val)
+            first_time = @_coalesce(todata(buf, data[begin, 1]), def_val)
+            first_val = @_coalesce(todata(buf, data[begin, 2]), def_val)
             first_el = (; time=first_time, value=first_val)
             this_type = typeof(first_el)
             def_val = default_value(this_type)
@@ -310,8 +310,8 @@ function _load_data(
             idx = firstindex(data, 1):size(data, 1)
             for (j, i) in enumerate(Iterators.drop(idx, 1))
                 out[begin + j] = (
-                    time=@something(todata(buf, data[i, 1]), def_val),
-                    value=@something(todata(buf, data[i, 2]), def_val)
+                    time=@_coalesce(todata(buf, data[i, 1]), def_val),
+                    value=@_coalesce(todata(buf, data[i, 2]), def_val)
                 )
             end
             out

@@ -1,7 +1,7 @@
 using Reexport
 @reexport using Dates
 using TimeFrames: TimeFrames, TimeFrame, apply, TimePeriodFrame
-using ..Lang: @lget!, Lang
+using ..Lang: @lget!, Lang, @_coalesce
 using ..Lang.DocStringExtensions
 using Serialization
 using Base: AbstractCmd
@@ -97,7 +97,7 @@ end
 function from_to_dt(prd::Period, from, to)::Tuple{Any, Any}
     doparse(v) = v
     function doparse(v::AbstractString)
-        @something tryparse(Int, v) tryparse(DateTime, v) v
+        @_coalesce tryparse(Int, v) tryparse(DateTime, v) v
     end
     reldate(v, _) = v
     reldate(v::Int, defv) =

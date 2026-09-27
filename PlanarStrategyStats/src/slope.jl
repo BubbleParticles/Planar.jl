@@ -70,7 +70,7 @@ function mlr_slope(y::AbstractArray{T}; n::Int64=10, x::AbstractArray{T}=collect
         xi = const_x ? x : @view(x[i-n+1:i])
         # Use @view to avoid allocating slices (22% win); fused cov/var already via Statistics but views eliminate 40k allocs
         xv = const_x ? const_var : var(xi)
-        out[i] = cov(xi, yi) / xv
+        out[i] = iszero(xv) ? NaN : cov(xi, yi) / xv
     end
     return out
 end

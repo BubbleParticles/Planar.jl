@@ -12,6 +12,7 @@ using .Data.DataFramesMeta
 using .Data.DataFrames
 
 using .ect.TimeTicks
+using .ect.Lang: @_coalesce
 using .ect.Lang
 using Statistics
 using Statistics: median

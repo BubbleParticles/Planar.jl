@@ -3,7 +3,7 @@ include("zarr_utils.jl")
 using DataFrames: DataFrameRow, AbstractDataFrame
 using DataFramesMeta
 using .TimeTicks
-using .Lang: Option, @as, @ifdebug
+using .Lang: Option, @as, @ifdebug, @_coalesce
 using ..Misc: LeftContiguityException, RightContiguityException, config, rangeafter
 
 include("candles.jl")
@@ -185,7 +185,7 @@ function _save_ohlcv(
     local za
     if !(input isa ZArray)
         za, existing = _get_zarray(
-            zi, key, @something(chunk_size, chunksize(data)); type, overwrite, reset
+            zi, key, @_coalesce(chunk_size, chunksize(data)); type, overwrite, reset
         )
     else
         za, existing = input, true

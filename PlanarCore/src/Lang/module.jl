@@ -96,6 +96,8 @@ macro _coalesce(args...)
 end
 
 
+
+
 macro ifundef(name, val, mod=__module__)
     name_var = esc(name)
     name_sym = esc(:(Symbol($(string(name)))))
@@ -193,10 +195,10 @@ end
 
 _asbool(v::Bool, args...) = v
 function _asbool(v::String, name)
-    @something tryparse(Bool, v) occursin(name, v) v == "all"
+    @_coalesce tryparse(Bool, v) occursin(name, v) v == "all"
 end
 function _isdebug(name)
-    @something _asbool((@something get(ENV, "JULIA_DEBUG", nothing) false), name) false
+    @_coalesce _asbool((@_coalesce get(ENV, "JULIA_DEBUG", nothing) false), name) false
 end
 
 @doc """A macro to conditionally execute code in debug mode.

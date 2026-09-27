@@ -13,7 +13,7 @@ function _ensure_env!()
     "JULIA_CONDAPKG_ENV" ∉ keys(ENV) && setindex!(
         ENV, joinpath(dirname(Base.active_project()), ".conda"), "JULIA_CONDAPKG_ENV"
     )
-    if @something tryparse(Bool, get(ENV, "PLANAR_OFFLINE", "")) false
+    if @_coalesce tryparse(Bool, get(ENV, "PLANAR_OFFLINE", "")) false
         ENV["JULIA_CONDAPKG_OFFLINE"] = true
     end
     setpypath!()
@@ -186,6 +186,7 @@ macro pymodule(name, modname=nothing)
 end
 
 include("functions.jl")
+using PlanarCore.Lang: @_coalesce
 using PlanarCore.TimeTicks.Reexport
 # NOTE: This must be done after all the global code in this module has been execute
 @reexport using PythonCall

@@ -1,3 +1,5 @@
+using .Lang: @_coalesce
+
 # countdecimals(num::Float64) = abs(Base.Ryu.reduce_shortest(num)[2])
 # insert_and_dedup!(v::Vector, x) = (splice!(v, searchsorted(v,x), [x]); v)
 
@@ -14,7 +16,7 @@ setoffline!() = begin
     OFFLINE[] = if opt == ""
         false
     else
-        @something tryparse(Bool, opt) false
+        @_coalesce tryparse(Bool, opt) false
     end
 end
 

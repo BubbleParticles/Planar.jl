@@ -21,6 +21,7 @@ using Base.Enums: namemap
 using ..Misc: OrderedDict, OrderedCollections
 using ..Misc.DocStringExtensions
 import ..Misc: reset!
+using ..Lang: @_coalesce
 
 @doc """A type representing a collection of asset instances.
 
@@ -290,7 +291,7 @@ function _daterange(ac::InstrumentCollection, tf=nothing; skip_empty=false)
         d_max = TimeTicks.dtstamp(lastdate(last(ii.data).second))
         d_max < M && (M = d_max)
     end
-    tf = @something tf first(ac.data[begin, :instance].data).first
+    tf = @_coalesce tf first(ac.data[begin, :instance].data).first
     # Cold collection (cache miss / no warmed data): every instance holds an
     # empty OHLCV DataFrame, so `m`/`M` are still at typemin/typemax and passing
     # them to `dt` overflows (InexactError). Fall back to a valid, empty range
@@ -329,7 +330,7 @@ function _daterange_full(ac::InstrumentCollection, tf=nothing; kwargs...)
             d_max > M && (M = d_max)
         end
     end
-    tf = @something tf first(ac.data[begin, :instance].data).first
+    tf = @_coalesce tf first(ac.data[begin, :instance].data).first
     # Cold collection (cache miss / no warmed data): no non-empty instance was
     # found, so `m`/`M` are still at typemax/typemin and `dt` overflows. Fall
     # back to a valid, empty range around the current time (UTC).

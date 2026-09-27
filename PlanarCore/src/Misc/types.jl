@@ -1,3 +1,4 @@
+using .Lang: @_coalesce
 using ..TimeTicks
 using .Sandbox: safereval
 import Base: ==
@@ -92,7 +93,7 @@ const QUOTE_CURRENCY = DEFAULT_QUOTE_CURRENCY = Symbol(get(ENV, "PLANAR_QUOTE_CU
 @doc "The default asset pairs, configurable via \`PLANAR_DEFAULT_ASSETS\` env var (comma-separated)."
 const DEFAULT_ASSETS = DEFAULT_PAIRS = split(get(ENV, "PLANAR_DEFAULT_ASSETS", "BTC/USDT"), ",")
 @doc "The margin of error to use [`2eps`]."
-const ATOL = @something tryparse(DFT, get(ENV, "PLANAR_ATOL", "")) 10 * eps()
+const ATOL = @_coalesce tryparse(DFT, get(ENV, "PLANAR_ATOL", "")) 10 * eps()
 
 @doc "Min, max named tuple"
 const MM{T<:Real} = NamedTuple{(:min, :max),Tuple{T,T}}

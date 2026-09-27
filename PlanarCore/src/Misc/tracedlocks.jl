@@ -1,14 +1,14 @@
 # Import necessary functions from Base
 import Base: lock, unlock, trylock, islocked, getproperty
 using Base.Threads: ReentrantLock, current_task
-using .Lang: @caller
+using .Lang: @caller, @_coalesce
 
 # Define a new lock type for deadlock detection
 @kwdef struct TracedLock <: AbstractLock
     lock = ReentrantLock()
 end
 
-const SafeLock = if @something tryparse(Bool, get(ENV, "PLANAR_TRACE_LOCKS", "0")) false
+const SafeLock = if @_coalesce tryparse(Bool, get(ENV, "PLANAR_TRACE_LOCKS", "0")) false
     TracedLock
 else
     ReentrantLock
