@@ -171,7 +171,11 @@ no loaded candle.
 function _cross_account_covered(s::MarginStrategy, date::DateTime)
     equity = try
         s.cash.value
-    catch
+    catch e
+        @warn "_cross_account_covered: cash value unavailable, falling back to per-position liquidation" exception = (
+            e,
+            catch_backtrace(),
+        )
         return false
     end
     tot_maint = zero(DFT)
@@ -181,17 +185,29 @@ function _cross_account_covered(s::MarginStrategy, date::DateTime)
             isopen(ii, p) || continue
             cp = try
                 p isa Long ? lowat(s, ii, date) : highat(s, ii, date)
-            catch
+            catch e
+                @warn "_cross_account_covered: price unavailable for $p, falling back" exception = (
+                    e,
+                    catch_backtrace(),
+                )
                 return false
             end
             equity += try
                 value(ii, p; current_price=cp)
-            catch
+            catch e
+                @warn "_cross_account_covered: position value unavailable, falling back" exception = (
+                    e,
+                    catch_backtrace(),
+                )
                 return false
             end
             tot_maint += try
                 maintenance(ii, p)
-            catch
+            catch e
+                @warn "_cross_account_covered: maintenance unavailable, falling back" exception = (
+                    e,
+                    catch_backtrace(),
+                )
                 return false
             end
         end
@@ -208,7 +224,11 @@ function _cross_account_covered(s::MarginStrategy{Live}, date::DateTime)
     # `isliquidatable(::Live)` fallback semantics (live first, candle on error).
     equity = try
         s.cash.value
-    catch
+    catch e
+        @warn "_cross_account_covered: cash value unavailable, falling back to per-position liquidation" exception = (
+            e,
+            catch_backtrace(),
+        )
         return false
     end
     tot_maint = zero(DFT)
@@ -225,21 +245,37 @@ function _cross_account_covered(s::MarginStrategy{Live}, date::DateTime)
                     (px isa Real && px > 0) ? px :
                     (p isa Long ? lowat(s, ii, date) : highat(s, ii, date))
                 end
-            catch
+            catch e
+                @warn "_cross_account_covered: live price unavailable, falling back to candle" exception = (
+                    e,
+                    catch_backtrace(),
+                )
                 try
                     p isa Long ? lowat(s, ii, date) : highat(s, ii, date)
-                catch
+                catch e
+                    @warn "_cross_account_covered: candle price also unavailable, falling back" exception = (
+                        e,
+                        catch_backtrace(),
+                    )
                     return false
                 end
             end
             equity += try
                 value(ii, p; current_price=cp)
-            catch
+            catch e
+                @warn "_cross_account_covered: position value unavailable, falling back" exception = (
+                    e,
+                    catch_backtrace(),
+                )
                 return false
             end
             tot_maint += try
                 maintenance(ii, p)
-            catch
+            catch e
+                @warn "_cross_account_covered: maintenance unavailable, falling back" exception = (
+                    e,
+                    catch_backtrace(),
+                )
                 return false
             end
         end

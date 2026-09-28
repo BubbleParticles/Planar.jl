@@ -340,8 +340,13 @@ function _daterange_full(ac::InstrumentCollection, tf=nothing; kwargs...)
     DateRange(TimeTicks.dt(m), TimeTicks.dt(M) + tf, tf)
 end
 
-function snapshot(ac::InstrumentCollection)
-    @lock ac.lock copy(ac.data.instance)
+function snapshot(ac::InstrumentCollection{T,I}) where {T<:AbstractInstrument, I<:InstrumentInstance}
+    @lock ac.lock begin
+        v = copy(ac.data.instance)
+        # Type-assert the instance column so the returned vector is concrete
+        # (Vector{I}) rather than widening to Vector{Any} on heterogeneous push.
+        v isa Vector{I} ? v : convert(Vector{I}, v)
+    end
 end
 
 @inline function Base.iterate(ac::InstrumentCollection)

@@ -467,7 +467,7 @@ function stop_watch_trades!(s::LiveStrategy, ii)
                     @error "mytrades: cleanup task failed" exception = (e, catch_backtrace())
                 end
             end
-            wait(cleanup_task)
+            waitforcond(() -> istaskdone(cleanup_task), @timeout_now())
         end
     end
 end

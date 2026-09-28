@@ -150,9 +150,9 @@ function reset_asset_tasks!(a, tasks)
             push!(completion_tasks, t)
         end
     end
-    # Wait for all completion tasks
+    # Wait for all completion tasks (bounded by the outer @timeout_start)
     for t in completion_tasks
-        wait(t)
+        waitforcond(() -> istaskdone(t), @timeout_now())
     end
     empty!(tasks.byname)
     empty!(tasks.byorder)

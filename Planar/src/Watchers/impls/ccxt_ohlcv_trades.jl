@@ -276,7 +276,12 @@ function _parse_trades(w, pytrades)
         append!(_trades(w), new_trades)
         last_date = last(new_trades).timestamp
         _lastpushed!(w, last_date)
-        if !get(w, :iswatch, false)
+        # Auto-detect WS support from the exchange's `has` dict (Gotcha #50):
+        # a hardcoded `false` default forces REST-only even when the exchange
+        # supports websocket methods. Only an explicit user override wins.
+        if !get(w, :iswatch) do
+            has(exc, :watchTrades) || has(exc, :watchTradesForSymbols)
+        end
             @lock w pushnew!(w, _trades(w))
         end
         return new_trades

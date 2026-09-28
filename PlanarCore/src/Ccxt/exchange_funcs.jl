@@ -50,8 +50,15 @@ function issupported(exchange_id::String, k::String)
     try
         client = CcxtGateway.GatewayClient(; timeout=5.0)
         return exchange_has(client, exchange_id, k)
-    catch
-        false
+    catch e
+        # Gateway unreachable: fail-closed (return false) so callers do not
+        # attempt methods the exchange may not support. Warn so the outage
+        # is visible instead of silently degrading to REST-only behaviour.
+        @warn "issupported: gateway unreachable for $exchange_id, failing closed" exception = (
+            e,
+            catch_backtrace(),
+        )
+        return false
     end
 end
 
