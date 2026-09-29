@@ -142,9 +142,16 @@ function register_package!(
     # (unlike project `semver_spec`) does not split on commas.
     compat_file = joinpath(dir, "Compat.toml")
     compat_toml = isfile(compat_file) ? read_toml(compat_file) : Dict{String,Any}()
+    # Only write compat entries for packages that are also in `deps` (or the
+    # special `julia` key, which the registry reader injects automatically —
+    # see Pkg/src/Registry/registry_instance.jl:441). Project.toml's
+    # `[compat]` may include extras (e.g. SnoopPrecompile) that are NOT in
+    # `[deps]`; the registry reader looks up each compat key in the
+    # corresponding Deps.toml entry, and a compat key with no dep UUID raises
+    # `KeyError: key "X" not found` during `Pkg.add` (see verify-install job).
     compat_toml[range_key(version)] = Dict{String,Any}(
         string(k) => (occursin(',', string(v)) ? [strip(s) for s in split(string(v), ',')] : string(v))
-        for (k, v) in compat
+        for (k, v) in compat if haskey(deps, string(k)) || string(k) == "julia"
     )
     write_toml!(compat_file, compat_toml)
 
