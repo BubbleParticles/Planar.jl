@@ -16,6 +16,3 @@ PythonCall = "6099a3de-0909-46bc-b1f4-468b9a2dfc0d"
 
 [extras]
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
-
-[sources.PlanarCore]
-path = "../PlanarCore"
