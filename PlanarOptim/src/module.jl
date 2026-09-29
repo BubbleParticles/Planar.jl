@@ -908,34 +908,6 @@ lowerupper(params) = begin
 end
 
 delete_sessions!(s::Strategy; kwargs...) = delete_sessions!(string(nameof(s)); kwargs...)
-@doc """ Loads the BayesianOptimization extension.
-
-The function checks if the BayesianOptimization package is installed in the current environment.
-If not, it prompts the user to add it to the main environment.
-
-"""
-function extbayes!()
-    let prev = Pkg.project().path
-        try
-            Pkg.activate("Opt"; io=devnull)
-            if isnothing(@eval Main Base.find_package("BayesianOptimization"))
-                if Base.prompt(
-                    "BayesianOptimization package not found, add it to the main env? y/[n]"
-                ) == "y"
-                    try
-                        Pkg.activate(; io=devnull)
-                        Pkg.add("BayesianOptimization")
-                    finally
-                        Pkg.activate("Opt"; io=devnull)
-                    end
-                end
-            end
-            @eval Main using BayesianOptimization
-        finally
-            Pkg.activate(prev; io=devnull)
-        end
-    end
-end
 
 @doc """ Filters a vector of vectors across dimension 2.
 
@@ -989,7 +961,7 @@ function filtervecs(
     return result
 end
 
-export OptSession, DEFAULT_OBJ, extbayes!
+export OptSession, DEFAULT_OBJ
 
 include("optimize.jl")
 include("grid.jl")
