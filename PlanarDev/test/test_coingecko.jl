@@ -18,14 +18,17 @@ function test_coingecko()
         cg.RATE_LIMIT[] = Millisecond(1 * 1000)
         try
             @info "TEST: cg rate limit"
-            @test coingecko_ratelimit()
+            rl_ok = coingecko_ratelimit()
             @info "TEST: cg ids"
-            @test occursin("eth", cg.idbysym("eth"))
-            @test "ethereum" in cg.idbysym("eth", false)
+            ids_ok = occursin("eth", cg.idbysym("eth")) && "ethereum" in cg.idbysym("eth", false)
             @info "TEST: cg price"
-            @test coingecko_price()
+            price_ok = coingecko_price()
             @info "TEST: cg load"
-            @test length(cg.loadcoins!()) > 0
+            load_ok = length(cg.loadcoins!()) > 0
+            @test rl_ok
+            @test ids_ok
+            @test price_ok
+            @test load_ok
         catch e
             @test_skip "coingecko live fetch failed: $e"
         finally
