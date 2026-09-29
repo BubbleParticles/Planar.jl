@@ -2,6 +2,19 @@
 
 **Trigger:** User asks to register Julia packages to the Julia registry, publish packages, or run `@JuliaRegistrator`.
 
+## ⚠️ **Mandatory: Registrator (not manual PRs)**
+
+Per the upstream JuliaRegistries/General registry rules ([AGENTS.md](https://github.com/JuliaRegistries/General/blob/master/AGENTS.md)):
+
+> *"If a package is hosted on GitHub.com or GitLab.com, Registrator MUST be used to register it. Do NOT make a manual PR to register the package or versions."*
+
+All Planar packages are hosted on **GitHub.com** (`BubbleParticles/Planar.jl` and `BubbleParticles/PlanarStrategies`). Therefore:
+
+- **MUST** trigger `@JuliaRegistrator register subdir=<package>` on a commit comment.
+- **MUST NOT** create a manual PR on `JuliaRegistries/General` to register a package or version — registry maintainers **will reject** such PRs (e.g. [#169724](https://github.com/JuliaRegistries/General/pull/169724), [#169725](https://github.com/JuliaRegistries/General/pull/169725), [#169726](https://github.com/JuliaRegistries/General/pull/169726) — all closed by maintainers with "Registrator required").
+- A fork + manual PR is only a fallback for **drafting** registry files; the merged path is always the Registrator-created PR.
+- The Registrator bot must be installed as a GitHub App on the host org (`juliateam-registrator` on `BubbleParticles`). It responds to `@JuliaRegistrator` comments on commits.
+
 ## Overview
 
 Registers monorepo Julia packages to the General registry by triggering `@JuliaRegistrator` on GitHub commit comments. `PlanarCore` is already on the General registry and is **not** re-registered here (see `PACKAGING.md` §1.4 and `scripts/register.jl:38-41`).

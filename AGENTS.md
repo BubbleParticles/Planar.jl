@@ -2,6 +2,78 @@
 
 # Developer Notes
 
+## Registering Packages to the General Registry
+
+Per the upstream JuliaRegistries/General registry rules ([AGENTS.md](https://github.com/JuliaRegistries/General/blob/master/AGENTS.md)):
+
+> *"If a package is hosted on GitHub.com or GitLab.com, Registrator MUST be used to register it. Do NOT make a manual PR to register the package or versions."*
+
+All Planar packages are hosted on **GitHub.com** (`BubbleParticles/Planar.jl` and `BubbleParticles/PlanarStrategies`). Therefore:
+
+- **MUST** trigger `@JuliaRegistrator register subdir=<package>` on a commit comment.
+- **MUST NOT** create a manual PR on `JuliaRegistries/General` to register a package or version — registry maintainers **will reject** such PRs.
+- A fork + manual PR is only a fallback for **drafting** registry files; the merged path is always the Registrator-created PR.
+- The Registrator bot must be installed as a GitHub App on the host org (`juliateam-registrator` on `BubbleParticles`). It responds to `@JuliaRegistrator` comments on commits.
+
+### Workflow
+
+1. Bump the package version in `Project.toml` and sync all sub-project manifests.
+2. Commit, push, and tag (`v<version>`) on the same commit.
+3. Trigger registration by commenting on the tagged commit in `BubbleParticles/Planar.jl` (or `BubbleParticles/PlanarStrategies` for strategy packages):
+
+   ```
+   @JuliaRegistrator register subdir=PlanarStrategyStats
+   @JuliaRegistrator register subdir=PlanarFeatureSelection
+   @JuliaRegistrator register subdir=PlanarDownloadTool
+   @JuliaRegistrator register subdir=PlanarPython
+   @JuliaRegistrator register subdir=Planar
+   @JuliaRegistrator register subdir=PlanarStrategyTools
+   @JuliaRegistrator register subdir=PlanarOptim
+   @JuliaRegistrator register subdir=PlanarDev
+   ```
+
+   Or use the shell wrapper: `bash .agents/skills/register-packages/register-packages.sh [PACKAGE ...]`
+
+4. Monitor the commit comments for the Registrator response (PR created or error).
+5. Wait for a registry maintainer to review and merge the Registrator-created PR on `JuliaRegistries/General`.
+
+### Registration order (dependency levels)
+
+After `PlanarCore` (already on General), packages are registered in dependency order:
+
+| Level | Package | Depends on (must be merged first) |
+|-------|---------|-----------------------------------|
+| 0 | **PlanarStrategyStats** | PlanarCore ✓ |
+| 0 | **PlanarFeatureSelection** | PlanarCore ✓ |
+| 0 | **PlanarDownloadTool** | PlanarCore ✓ |
+| 0 | **PlanarPython** | PlanarCore ✓ |
+| 1 | **Planar** | PlanarCore ✓, PlanarStrategyStats |
+| 2 | **PlanarStrategyTools** | Planar |
+| 2 | **PlanarOptim** | Planar, PlanarDownloadTool |
+| 2 | **PlanarDev** | Planar |
+
+Level 0 packages can be registered simultaneously; Level 1 must wait for PlanarStrategyStats's PR to merge; Level 2 must wait for Planar's PR to merge. The 12 strategy packages in `BubbleParticles/PlanarStrategies` are registered on the **PlanarStrategies repo**, not Planar.jl — only after Planar (and PlanarOptim) are merged.
+
+### Prerequisites
+
+- `gh` CLI authenticated with write access to `BubbleParticles/Planar.jl`
+- The repo is pushed to GitHub (Registrator needs the commit on GitHub to compute a tarball SHA)
+- A version tag (`v<version>`) exists on the commit being registered
+- The package is registered with JuliaRegistrator (install the [app](https://juliahub.com/Registrator.jl/dev/) on the repo)
+
+### Constraints
+
+- **Commit must be pushed before registering** — `Pkg.add` downloads a tarball from `api.github.com`, so the tree SHA must exist on GitHub.
+- **Version must be unique** across all registries — Registrator rejects re-registration of an already-published version.
+- **Non-General weakdeps block extensions** — Registrator validates UUIDs in `[weakdeps]`/`[extensions]` against General. Packages not in General cause registration to fail. Fix: **remove the `[weakdeps]`/`[extensions]` blocks entirely** and delete the extension file. Do NOT move to `[extras]`/`[targets]` — `Pkg.test` will still fail trying to resolve them.
+- **Compat entries must be present** — `julia`, each external `[dep]`, and each `[weakdeps]` entry must have a `[compat]` row. Missing compat triggers a Registrator error.
+- **`test/Project.toml` must not have `name`/`uuid`/`version`/`authors`** — Registrator treats such files as nested packages and fails precompilation.
+- **MUST wait for dependency PRs to merge before registering downstream packages** — JuliaRegistrator validates every dep's UUID against the *merged* General registry (not pending PRs).
+
+See the [`register-packages`](.agents/skills/register-packages/SKILL.md) skill and `scripts/register.jl` for full details.
+
+---
+
 ## Getting Started
 
 Before running or developing the bot, or executing the test suite locally, ensure the environment variables from the project's `.envrc` are loaded. The `.envrc` sets critical variables used by tests and the development environment (JULIA_PROJECT, JULIA_LOAD_PATH, JULIA_CONDAPKG_ENV, etc.).
