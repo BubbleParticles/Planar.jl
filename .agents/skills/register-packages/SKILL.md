@@ -120,15 +120,16 @@ done
 
 | Package | PR | Status |
 |---------|-----|--------|
-| PlanarStrategyStats v0.1.0 | [General/165040](https://github.com/JuliaRegistries/General/pull/165040) | **All checks PASS** — waiting for merge |
-| PlanarFeatureSelection v0.1.0 | [General/165041](https://github.com/JuliaRegistries/General/pull/165041) | **All checks PASS** — waiting for merge |
-| PlanarPython v0.1.0 | [General/165042](https://github.com/JuliaRegistries/General/pull/165042) | **All checks PASS** (fixed precompile) — waiting for merge |
-| PlanarDownloadTool v0.1.0 | [General/165044](https://github.com/JuliaRegistries/General/pull/165044) | **All checks PASS** — waiting for merge |
-| Planar | — | ❌ Blocked (needs PlanarStrategyStats merged first) |
-| PlanarStrategyTools | — | ❌ Blocked (needs Planar merged first) |
-| PlanarOptim | — | ❌ Blocked (needs Planar merged first) |
-| PlanarDev | — | ❌ Blocked (needs Planar merged first) |
-| PlanarStrategies (12 pkgs) | — | ⏳ Comments triggered, JuliaRegistrator not installed on PlanarStrategies repo; also needs Planar/PlanarOptim in General |
+| PlanarCore v1.0.0 / v1.0.1 | — | ✅ **ON GENERAL** |
+| PlanarStrategyStats v0.1.0 | [General/165040](https://github.com/JuliaRegistries/General/pull/165040) | ✅ **ON GENERAL** (merged) |
+| PlanarFeatureSelection v0.1.0 | [General/165041](https://github.com/JuliaRegistries/General/pull/165041) | ✅ **ON GENERAL** (merged) |
+| PlanarPython v0.1.0 | [General/165042](https://github.com/JuliaRegistries/General/pull/165042) | ✅ **ON GENERAL** (merged) |
+| PlanarDownloadTool v0.1.0 | [General/165044](https://github.com/JuliaRegistries/General/pull/165044) | ✅ **ON GENERAL** (merged) |
+| Planar v1.9.0 | [General/#169714](https://github.com/JuliaRegistries/General/pull/169714) | ⏳ AutoMerge staging approved — waiting for 3-day wait (ends ~2026-10-02T20:42:38Z UTC) |
+| PlanarStrategyTools v0.1.2 | — | ❌ Blocked (needs Planar merged) |
+| PlanarOptim v0.1.2 | — | ❌ Blocked (needs Planar merged) |
+| PlanarDev v0.1.1 | — | ❌ Blocked (needs Planar + PlanarStrategyTools + PlanarOptim merged) |
+| PlanarStrategies (12 pkgs) | — | ⏳ Blocked (needs Planar + PlanarOptim in General; JuliaRegistrator not yet installed on PlanarStrategies repo) |
 
 ## After registration
 
