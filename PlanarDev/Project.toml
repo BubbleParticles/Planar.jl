@@ -1,7 +1,7 @@
 name = "PlanarDev"
 uuid = "df15b565-ff7f-4c64-9bc8-38e9343ea891"
 license = "Apache-2.0"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["zbc"]
 
 [deps]
@@ -14,13 +14,6 @@ PlanarDownloadTool = "38b379f7-ca41-4278-b0dc-774ced1e32bb"
 PlanarStrategyTools = "bc793e09-ff97-408c-9766-388aa928ad5c"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
-[sources]
-Planar = {path = "../Planar"}
-PlanarCore = {path = "../PlanarCore"}
-PlanarDownloadTool = {path = "../PlanarDownloadTool"}
-PlanarOptim = {path = "../PlanarOptim"}
-PlanarStrategyTools = {path = "../PlanarStrategyTools"}
-
 [compat]
 Aqua = "0.8.16"
 CSV = "0.10.16"
@@ -28,13 +21,16 @@ DaemonMode = "0.1.2"
 DataFrames = "1.8.2"
 JSON = "1.6.1"
 Mocking = "0.8.1"
+Pkg = "1"
 Planar = "1.7"
 PlanarCore = "1"
 PlanarDownloadTool = "0.1"
 PlanarOptim = "0.1"
 PlanarStrategyStats = "0.1"
+PlanarStrategyTools = "0.1"
 Revise = "3.16.1"
 TOML = "1.0.3"
+Random = "1"
 julia = "1.13"
 
 [extras]
