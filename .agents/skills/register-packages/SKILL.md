@@ -114,7 +114,7 @@ for pkg in BBWithOpt BollingerBands Example ExampleMargin MarginStrat \
 done
 ```
 
-**All strategy packages depend on `Planar` (not yet in General)**, so registration will fail until Planar's PR is merged. `BBWithOpt` and `ExampleMargin` additionally depend on `PlanarOptim`.
+**`Planar` is merged to General (2026-10-03).** Strategy deps beyond `Planar`: `BBWithOpt` and `ExampleMargin` additionally depend on `PlanarOptim`; `QuickStart` and `StrategyFramework` additionally depend on `PlanarStrategyTools` — those four register after their dependency's PR merges.
 
 ## Current status
 
@@ -125,17 +125,18 @@ done
 | PlanarFeatureSelection v0.1.0 | [General/165041](https://github.com/JuliaRegistries/General/pull/165041) | ✅ **ON GENERAL** (merged) |
 | PlanarPython v0.1.0 | [General/165042](https://github.com/JuliaRegistries/General/pull/165042) | ✅ **ON GENERAL** (merged) |
 | PlanarDownloadTool v0.1.0 | [General/165044](https://github.com/JuliaRegistries/General/pull/165044) | ✅ **ON GENERAL** (merged) |
-| Planar v1.9.0 | [General/#169714](https://github.com/JuliaRegistries/General/pull/169714) | ⏳ AutoMerge staging approved — waiting for 3-day wait (ends ~2026-10-02T20:42:38Z UTC) |
-| PlanarStrategyTools v0.1.2 | — | ❌ Blocked (needs Planar merged) |
-| PlanarOptim v0.1.2 | — | ❌ Blocked (needs Planar merged) |
-| PlanarDev v0.1.1 | — | ❌ Blocked (needs Planar + PlanarStrategyTools + PlanarOptim merged) |
-| PlanarStrategies (12 pkgs) | — | ⏳ Blocked (needs Planar + PlanarOptim in General; JuliaRegistrator not yet installed on PlanarStrategies repo) |
+| Planar v1.9.0 | [General/#169714](https://github.com/JuliaRegistries/General/pull/169714) | ✅ **ON GENERAL** (merged 2026-10-03T16:33:13Z) |
+| PlanarStrategyTools v0.1.2 | [General/#170501](https://github.com/JuliaRegistries/General/pull/170501) | ⏳ Registrator PR created 2026-10-04 from commit `7c1c0152d`; AutoMerge staging (~3-day wait for new packages) |
+| PlanarOptim v0.1.2 | [General/#170502](https://github.com/JuliaRegistries/General/pull/170502) | ⏳ Registrator PR created 2026-10-04 from commit `7c1c0152d`; AutoMerge staging (~3-day wait for new packages) |
+| PlanarDev v0.1.2 | — | ❌ Deferred (needs PlanarStrategyTools merged; PlanarOptim is in `[extras]`) |
+| PlanarStrategies (8 pkgs) | — | ⏳ Registrator comments posted on commit `5f9154b` (2026-10-04): BollingerBands, Example, MarginStrat, RandomStratIso, SimpleStrategy, TickStrat, TwoIntervals, TwoParameters — **BLOCKED: JuliaRegistrator app silent on this repo (not installed); org admin must install `juliateam-registrator` on `BubbleParticles/PlanarStrategies`** |
+| PlanarStrategies (4 pkgs) | — | ❌ Deferred: BBWithOpt + ExampleMargin (need PlanarOptim merged); QuickStart + StrategyFramework (need PlanarStrategyTools merged) |
 
 ## After registration
 
 - Merge the open PRs on `JuliaRegistries/General` (manual review required; only `Planar` qualifies for automerge due to repo URL matching)
 - After merge, re-trigger `@JuliaRegistrator` for the next dependency level
-- Install JuliaRegistrator on `BubbleParticles/PlanarStrategies` before strategy registration can proceed
+- **BLOCKER (2026-10-04):** the JuliaRegistrator app responds on `BubbleParticles/Planar.jl` but is NOT installed on `BubbleParticles/PlanarStrategies` — 8 trigger comments posted on `5f9154b` received zero bot replies in 5+ min (monorepo replies arrived in <90 s). An org admin must install the `juliateam-registrator` GitHub App on the repo (GitHub Apps → juliateam-registrator → Configure → add repo). API installation is impossible with a user PAT (HTTP 403 "must authenticate with an access token authorized to a GitHub App"). After installation, re-post the 8 `@JuliaRegistrator register subdir=<pkg>` comments on the tagged commit.
 - Verify with a fresh environment:
   ```julia
   using Pkg
