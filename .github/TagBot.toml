@@ -1,0 +1,7 @@
+# Monorepo TagBot config. Per-package tag prefixes are passed via the
+# action's `subdir` input in .github/workflows/TagBot.yml (matrix over
+# PlanarStrategyTools, PlanarOptim).
+name = "JuliaTagBot"
+username = "JuliaTagBot[bot]"
+repo = "Planar.jl"
+email = "tagbot@gitlab.com"

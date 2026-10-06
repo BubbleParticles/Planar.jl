@@ -27,4 +27,4 @@ This is one of the foundational strategy packages in the
 [`Planar.jl`](https://github.com/BubbleParticles/Planar.jl) ecosystem (registered
 on [Julia's General registry](https://juliahub.com/ui/P/PlanarStrategyTools)).
 It is consumed by downstream packages and user strategies — see the monorepo
-[`PACKAGING.md`](../../PACKAGING.md) for registry status and layout details.
+[`PACKAGING.md`](../PACKAGING.md) for registry status and layout details.
