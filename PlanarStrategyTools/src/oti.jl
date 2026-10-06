@@ -14,8 +14,8 @@ function indicator_range(
     (Candle(ts[idx], o[idx], h[idx], l[idx], c[idx], v[idx]) for idx in range)
 end
 
-Base.ismissing(val::oti.StochRSIVal{Missing}) = true
-Base.ismissing(val::oti.StochRSIVal) = ismissing(val.d) || ismissing(val.k)
+@doc "True when either StochRSIVal field (`d` or `k`) is `missing`."
+ismissingvalue(val::oti.StochRSIVal) = ismissing(val.d) || ismissing(val.k)
 signal_value(::oti.StochRSI; sig) = begin
     sig.state.value.d
 end

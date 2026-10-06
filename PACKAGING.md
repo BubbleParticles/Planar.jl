@@ -4,7 +4,7 @@ Planar is distributed through two channels:
 
 | Channel | Artifact | Users |
 |---|---|---|
-| Julia registry | `Planar` + 8 companion packages (custom registry, General later) | `Pkg.add("Planar")` |
+| Julia registry | General registry (`Planar` + 8 companion packages, 6 merged + 2 PRs open) | `Pkg.add("Planar")` |
 | PyPI | `planarjl-py` (Python driver for the Julia engine) | `pip install planarjl-py` |
 
 The repository is a monorepo: nine Julia packages live in subdirectories
@@ -16,9 +16,12 @@ The repository is a monorepo: nine Julia packages live in subdirectories
 
 ### 1.1 How it works
 
-None of the packages are in the General registry, so `Pkg.add("Planar")` needs a
-custom registry that points at this monorepo. The registry uses the same mechanism
-as General-registry monorepos (`subdir` entries, e.g. `AppEnv`, `ACEradials`):
+The primary path is Julia's General registry — `Pkg.add("Planar")` works out of the
+box once registration completes. A custom PlanarRegistry remains available for local
+development and rapid iteration.
+
+For General, the monorepo uses the same mechanism as General-registry monorepos
+(`subdir` entries, e.g. `AppEnv`, `ACEradials`):
 
 - each `Package.toml` sets `repo = "https://github.com/BubbleParticles/Planar.jl.git"`
   and `subdir = "Planar"` (the package directory in the monorepo);
@@ -77,10 +80,18 @@ Pkg.add("Planar")          # or Pkg.add(["Planar", "PlanarOptim"])
    users keep working after an update.
 
 ### 1.4 Registering in the General registry (optional, recommended)
+The long-term goal — General registry, so users only need `Pkg.add("Planar")` — is now
+partially achieved. Current status (PRs #170501, #170574):
 
-A custom registry is the fast path, but the long-term goal is the General registry
-so users only need `Pkg.add("Planar")`. Status and remaining requirements:
+- **Merged on General (6):** PlanarCore, Planar, PlanarStrategyStats, PlanarDownloadTool,
+  PlanarFeatureSelection, PlanarPython.
+- **PR open (2):** PlanarStrategyTools (#170501), PlanarOptim (#170574).
+- **Pending (1):** PlanarDev — auto-registered by the registration watcher once
+  PlanarStrategyTools merges (Gate A).
+- **12 strategy packages:** per-package tags on PlanarStrategies; registration
+  triggered via the watcher (`REGISTER_STRATEGIES=true`) once TagBot is installed.
 
+Remaining requirements:
 1. **`[compat]` entries — DONE locally, keep fresh with CompatHelper.** Every
    dependency needs an upper-bounded `[compat]` entry (RegistryCI automerge
    rejects unbounded entries: `"0"` alone, `">=3"`). Entries for all external
@@ -106,20 +117,21 @@ so users only need `Pkg.add("Planar")`. Status and remaining requirements:
      **Renamed to `PlanarPython`** (uuid unchanged, `e8cdc95d-…`); min distance
      is now 5 (to `OlivePython`) — no override label needed.
    - All 9 names pass the distance checks (re-verified after the renames).
-5. **Tree hygiene.** `Manifest.toml`/`LocalPreferences.toml` inside the registered
-   trees are inert for installation and are **not** gated by RegistryCI
-   automerge (no tarball/Manifest check exists there). Note: `PlanarCore`'s
-   committed `Manifest.toml` was stale (referenced a removed `../Metrics` dev
-   path) and was regenerated; regenerate all manifests before the first
-   registration so they match their `Project.toml` files. Optionally gitignore
-   them for cleaner tarballs.
+5. **Tree hygiene.** Trees are checked **without** `Manifest.toml`,
+  `test/Manifest.toml`, `LocalPreferences.toml` and (unless they carry real
+  precompilation workloads) `precompile.jl` — these are inert for registry
+  installs, break local `[sources]` resolution once registered, and `Pkg.test`
+  rejects a `test/Project.toml` that names a package. Empty `precompile.jl` must
+  also be dropped. Note: `PlanarCore`'s committed `Manifest.toml` was stale
+  (referenced a removed `../Metrics` dev path) and was regenerated before its
+  registration.
 6. **Register per package**, in dependency order, with
    [Registrator](https://juliaregistries.github.io/Registrator.jl/stable/):
    comment on the commit/PR
    `@JuliaRegistrator register subdir=PlanarCore` (exact monorepo syntax,
    confirmed in the Registrator README) — repeat for each package.
-   Order: `PlanarCore` → `PlanarStrategyStats` → `Planar` → `PlanarFeatureSelection` →
-   `PlanarDownloadTool` → `PlanarPython` → `PlanarStrategyTools` → `PlanarOptim` → `PlanarDev`.
+   Order of the remaining packages: `PlanarStrategyTools` → `PlanarOptim` →
+   `PlanarDev`.
    Caveat: automerge's "repo URL ends with `/Name.jl.git`" check only matches
    `Planar` (the monorepo is `Planar.jl`); the other packages go through manual
    registry review — normal for monorepo subdir registrations.

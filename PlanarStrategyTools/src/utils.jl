@@ -84,11 +84,11 @@ function degrees(slp)
 end
 
 @doc """
-TimeFrame division
+Duration of a `TimeFrame` scaled by `1 / d` (i.e. equivalent to `tf / d`), as a `Millisecond`.
 
 $(TYPEDSIGNATURES)
 """
-Base.:(/)(tf::TimeFrame, d; type=Millisecond) = begin
+function period_scaled(tf::TimeFrame, d; type=Millisecond)
     p = period(tf)
     v = Millisecond(floor(timefloat(p) / d))
     round(v, Millisecond, RoundDown)

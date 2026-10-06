@@ -166,12 +166,10 @@ end
 @testset "oti type dispatch" begin
     using .ST.oti: StochRSIVal, VTXVal
     # Missing-typed value
-    @test ST.ismissing(StochRSIVal{Missing}(missing, missing))
-    # Float64-typed values
-    @test !ST.ismissing(StochRSIVal{Float64}(0.5, 0.3))
-    # Partial missing via Union
-    @test ST.ismissing(StochRSIVal{Union{Float64, Missing}}(missing, 0.3))
-    @test ST.ismissing(StochRSIVal{Union{Float64, Missing}}(0.5, missing))
+    @test ST.ismissingvalue(StochRSIVal{Missing}(missing, missing))
+    @test !ST.ismissingvalue(StochRSIVal{Float64}(0.5, 0.3))
+    @test ST.ismissingvalue(StochRSIVal{Union{Float64, Missing}}(missing, 0.3))
+    @test ST.ismissingvalue(StochRSIVal{Union{Float64, Missing}}(0.5, missing))
 
     # oti.VTXVal scalar extraction
     vtx = VTXVal(1.5, 0.5)

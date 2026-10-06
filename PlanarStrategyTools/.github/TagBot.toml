@@ -1,0 +1,6 @@
+name = "JuliaTagBot"
+username = "JuliaTagBot[bot]"
+repo = "PlanarStrategyTools"
+tagPrefix = "PlanarStrategyTools-"
+commitTitle = "TagBot-tag {version}"
+commitMessage = "TagBot-tag {version}\n{commitDescription}"

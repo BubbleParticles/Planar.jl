@@ -174,7 +174,7 @@ function update_signal!(ii, ats, ai_signals, sig_name; tf, count)
     this_tf_ats = available(tf, ats)
     @debug "update_signal!" raw(ii) iscontig = isempty(data) ? nothing : contiguous_ts(data) maxlog =
         1
-    if ismissing(this.state.value)
+    if ismissingvalue(this.state.value)
         # Align start date to timeframe boundaries to ensure indexes exist
         start_date = available(tf, ats) - tf * count
         idx_start = dateindex(data, start_date)
@@ -293,7 +293,7 @@ signals!(s, args...; kwargs...) =
 
 function isstalesignal(s::Strategy, ats::DateTime; lifetime=0.25)
     any(
-        ats - apply(sig_def.tf, ats) > sig_def.tf / (1.0 / lifetime) for
+        ats - apply(sig_def.tf, ats) > period_scaled(sig_def.tf, 1.0 / lifetime) for
         sig_def in values(s.signals_def.defs)
     )
 end

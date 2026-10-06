@@ -100,12 +100,11 @@ docker pull docker.io/bubbleparticles/planar-precomp
 
 ### From the Julia registry (recommended)
 
-Planar is distributed through the community `PlanarRegistry`. Requires Julia
-1.9+. In any Julia environment:
+Planar and PlanarOptim are registered on Julia's
+General registry. Requires Julia 1.13+. In any Julia environment:
 
 ```julia
 using Pkg
-Pkg.Registry.add(RegistrySpec(url = "https://github.com/BubbleParticles/PlanarRegistry.git"))
 Pkg.add("Planar")
 ```
 
@@ -130,11 +129,12 @@ or live mode.
 See [`PACKAGING.md`](PACKAGING.md) for the full packaging/registration story.
 
 ### From sources
-Planar.jl requires at least Julia 1.9. Is not in the julia registry, to install it do the following:
+Planar.jl is registered on Julia's General registry — install via `Pkg.add("Planar")`.
+To build from sources instead:
 
 - Clone the repository:
 ```bash
-git clone --recurse-submodules https://github.com/defnlnotme/Planar.jl
+git clone --recurse-submodules https://github.com/BubbleParticles/Planar.jl
 ```
 - Check the env vars in `.envrc`, then enabled them with `direnv allow`.
 ```bash

@@ -6,8 +6,3 @@ PlanarStrategyStats = "d4fe19c2-883d-48d3-92d7-80b36677371b"
 PlanarStrategyTools = "bc793e09-ff97-408c-9766-388aa928ad5c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
-[sources]
-Planar = {path = "../../Planar"}
-PlanarCore = {path = "../../PlanarCore"}
-PlanarStrategyStats = {path = "../../PlanarStrategyStats"}
-PlanarStrategyTools = {path = ".."}

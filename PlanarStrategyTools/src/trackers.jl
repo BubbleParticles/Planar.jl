@@ -279,7 +279,7 @@ isdowntrend(s, ii, sig_name) = signal_trend(s, ii, sig_name) === Down
 ismissing_trend(s, ii, sig_name) = signal_trend(s, ii, sig_name) === MissingTrend
 isstationary(s, ii, sig_name) = signal_trend(s, ii, sig_name) === MissingTrend
 cmptrend(::Any; sig, idx, ov) = begin
-    if iszero(idx) || ismissing(sig.state.value)
+    if iszero(idx) || ismissingvalue(sig.state.value)
         sig.trend = MissingTrend
         false
     else
