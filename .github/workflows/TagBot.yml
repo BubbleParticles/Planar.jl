@@ -1,12 +1,12 @@
 name: TagBot
 on:
-  issue_comment:
-    types: [created]
+  schedule:
+    - cron: "0 0 * * 0"
   workflow_dispatch:
 
 jobs:
   TagBot:
-    if: github.event_name == 'workflow_dispatch' || github.actor == 'JuliaTagBot'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
     runs-on: ubuntu-latest
     permissions:
       contents: write
