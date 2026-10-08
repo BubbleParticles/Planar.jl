@@ -1,3 +1,4 @@
+[![verify-registry](https://github.com/bubbleparticles/Planar.jl/actions/workflows/verify-registry.yml/badge.svg?branch=master)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/verify-registry.yml)
 [![verify-install](https://github.com/bubbleparticles/Planar.jl/actions/workflows/verify-install.yml/badge.svg?branch=master)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/verify-install.yml)
 [![build-status-docs](https://github.com/bubbleparticles/Planar.jl/actions/workflows/docs.yml/badge.svg?branch=master)](https://planar.pages.dev/docs/)
 [![docs-tests](https://github.com/bubbleparticles/Planar.jl/actions/workflows/docs-tests.yml/badge.svg?branch=master)](https://github.com/bubbleparticles/Planar.jl/actions/workflows/docs-tests.yml)
@@ -100,7 +101,7 @@ docker pull docker.io/bubbleparticles/planar-precomp
 
 ### From the Julia registry (recommended)
 
-Planar and PlanarOptim are registered on Julia's
+Planar and its core ecosystem packages are registered on Julia's
 General registry. Requires Julia 1.13+. In any Julia environment:
 
 ```julia
@@ -110,6 +111,17 @@ Pkg.add("Planar")
 
 Then `using Planar`. (If you installed Planar manually before the registry
 existed, remove the old copy first: `Pkg.rm("Planar")`.)
+
+**Available packages:**
+- `PlanarCore` — core types and interfaces
+- `Planar` — main framework
+- `PlanarStrategyStats` — strategy statistics
+- `PlanarDownloadTool` — data downloading utilities
+- `PlanarFeatureSelection` — feature selection tools
+- `PlanarPython` — Python interoperability
+- `PlanarStrategyTools` — strategy development tooling
+- `PlanarOptim` — optimization utilities
+- `PlanarDev` — development utilities
 
 ### Via pip (planar CLI)
 
