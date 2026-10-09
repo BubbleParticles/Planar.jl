@@ -18,8 +18,8 @@ All Planar packages are hosted on **GitHub.com** (`BubbleParticles/Planar.jl` an
 ### Workflow
 
 1. Bump the package version in `Project.toml` and sync all sub-project manifests.
-2. Commit, push, and tag (`v<version>`) on the same commit.
-3. Trigger registration by commenting on the tagged commit in `BubbleParticles/Planar.jl` (or `BubbleParticles/PlanarStrategies` for strategy packages):
+2. Commit and push the fix to GitHub. **Do NOT create a version tag here** — pre-registration tags are rejected by the General registry AutoMerge gate (TagBot creates them after merge instead).
+3. Trigger registration by commenting on the pushed commit (not a tag) in `BubbleParticles/Planar.jl` (or `BubbleParticles/PlanarStrategies` for strategy packages):
 
    ```
    @JuliaRegistrator register subdir=PlanarStrategyStats
@@ -57,8 +57,7 @@ Level 0 packages can be registered simultaneously; Level 1 must wait for PlanarS
 ### Prerequisites
 
 - `gh` CLI authenticated with write access to `BubbleParticles/Planar.jl`
-- The repo is pushed to GitHub (Registrator needs the commit on GitHub to compute a tarball SHA)
-- A version tag (`v<version>`) exists on the commit being registered
+- The commit is pushed to GitHub (Registrator needs the commit on GitHub to compute a tarball SHA). **No version tag is needed before registration** — TagBot creates the tag after the registry PR merges.
 - The package is registered with JuliaRegistrator (install the [app](https://juliahub.com/Registrator.jl/dev/) on the repo)
 
 ### Constraints
