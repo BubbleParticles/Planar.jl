@@ -53,5 +53,7 @@ jobs:
           ])
         shell: julia --color=yes {0}
         env:
+          # No COMPATHELPER_PRIV: it must be a deploy-key SSH private key, and
+          # passing the GITHUB_TOKEN makes CompatHelper try to decode it as one.
+          # The token alone is enough to push to this public repository.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COMPATHELPER_PRIV: ${{ secrets.GITHUB_TOKEN }}
