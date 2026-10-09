@@ -79,17 +79,38 @@ Pkg.add("Planar")          # or Pkg.add(["Planar", "PlanarOptim"])
    The registry is additive — old versions stay in `Versions.toml`, so existing
    users keep working after an update.
 
-### 1.4 Registering in the General registry (optional, recommended)
-The long-term goal — General registry, so users only need `Pkg.add("Planar")` — is now
-partially achieved. Current status (PRs #170501, #170574):
+   **A version that is on General must carry the same `git-tree-sha1` in
+   `PlanarRegistry`.** Pkg hard-fails on disagreement, so as soon as both
+   registries are reachable every install breaks with
+   `ERROR: hash mismatch in registries for <Name> at version <v>`. This is
+   easy to trigger: moving a tag or re-registering a version from a later
+   commit (package cleanup, `[sources]` removal) changes the tree without
+   changing the version number. After any re-registration, compare the
+   overlapping versions:
+   ```bash
+   for d in Planar PlanarCore PlanarDownloadTool PlanarFeatureSelection \
+            PlanarOptim PlanarPython PlanarStrategyStats PlanarStrategyTools; do
+     diff <(curl -sL "https://raw.githubusercontent.com/JuliaRegistries/General/master/P/$d/Versions.toml") \
+          "PlanarRegistry/Packages/P/$d/Versions.toml"
+   done
+   ```
+   Empty output means both registries agree; any `<`/`>` line is a stale tree
+   that has to be repointed at the tree General serves.
 
-- **Merged on General (6):** PlanarCore, Planar, PlanarStrategyStats, PlanarDownloadTool,
-  PlanarFeatureSelection, PlanarPython.
-- **PR open (2):** PlanarStrategyTools (#170501), PlanarOptim (#170574).
-- **Pending (1):** PlanarDev — auto-registered by the registration watcher once
-  PlanarStrategyTools merges (Gate A).
-- **12 strategy packages:** per-package tags on PlanarStrategies; registration
-  triggered via the watcher (`REGISTER_STRATEGIES=true`) once TagBot is installed.
+### 1.4 Registering in the General registry
+
+Registered on General (status as of 2026-10-09): `PlanarCore` 1.0.1,
+`Planar` 1.9.0, `PlanarDownloadTool` 0.1.0/0.1.1, `PlanarFeatureSelection` 0.1.0,
+`PlanarPython` 0.1.0, `PlanarStrategyStats` 0.1.0, `PlanarStrategyTools` 0.1.2,
+`PlanarOptim` 0.1.3. Refresh this list with:
+
+```bash
+curl -sL "https://raw.githubusercontent.com/JuliaRegistries/General/master/P/Planar/Versions.toml"
+```
+
+`PlanarDev` is the only package Registrator has an open PR for (#170973). The
+12 strategy packages are excluded on purpose (`REGISTER_STRATEGIES=false`) and
+stay on `PlanarRegistry` only.
 
 Remaining requirements:
 1. **`[compat]` entries — DONE locally, keep fresh with CompatHelper.** Every

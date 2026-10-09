@@ -1,16 +1,32 @@
 name: CompatHelper
 
-# estimated runtime: ~5 min (registry add + CompatHelper pass over 9 packages)
+# estimated runtime: ~5 min (checkout + registry add + CompatHelper pass over 9 packages)
 
 on:
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  # Clone registries from git instead of the pkg server so CompatHelper sees the
+  # same registry state as a plain developer checkout. Setting this inside the
+  # Julia process is too late for steps that resolve packages.
+  JULIA_PKG_SERVER: ""
+
 jobs:
   compat-helper:
     runs-on: ubuntu-latest
     steps:
+      # CompatHelper.main() operates on the packages in the current working
+      # directory and reads their git history, so it needs the repository.
+      - name: Check out the repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Check if Julia is already available in the PATH
         id: julia_in_path
         run: which julia
@@ -21,11 +37,11 @@ jobs:
           version: '1'
           arch: ${{ runner.arch }}
         if: steps.julia_in_path.outcome != 'success'
-      - name: Add the General registry via Git
+      - name: Add the General registry and install CompatHelper
         run: |
           import Pkg
-          ENV["JULIA_PKG_SERVER"] = ""
           Pkg.Registry.add("General")
+          Pkg.add(name="CompatHelper", version="3")
         shell: julia --color=yes {0}
       - name: Run CompatHelper
         run: |

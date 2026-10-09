@@ -98,6 +98,14 @@ Comment on the tagged commit in `BubbleParticles/Planar.jl`:
   6. **Wait for Planar's PR to be merged** (PlanarOptim also needs PlanarDownloadTool)
   7. Register PlanarStrategies packages on the PlanarStrategies repo — only after Planar (and PlanarOptim) are merged
 
+- **A version on General must keep the same tree in PlanarRegistry** — Pkg aborts with `ERROR: hash mismatch in registries for <Name> at version <v>` when both registries are reachable and disagree. Moving a tag or re-registering a version from a later commit (e.g. package cleanup) changes the tree without changing the version. After any re-registration, diff the overlapping versions and repoint stale trees at the ones General serves:
+  ```bash
+  for d in Planar PlanarCore PlanarDownloadTool PlanarFeatureSelection \
+           PlanarOptim PlanarPython PlanarStrategyStats PlanarStrategyTools; do
+    diff <(curl -sL "https://raw.githubusercontent.com/JuliaRegistries/General/master/P/$d/Versions.toml") \
+         "PlanarRegistry/Packages/P/$d/Versions.toml"
+  done
+  ```
 ## PlanarStrategies registration
 
 The 12 strategy packages in `github.com/BubbleParticles/PlanarStrategies` (submodule at `user/strategies/`) are registered on the **PlanarStrategies repo**, not Planar.jl. Each package's `@JuliaRegistrator register subdir=<package>` comment must be made on a commit in `BubbleParticles/PlanarStrategies`.
