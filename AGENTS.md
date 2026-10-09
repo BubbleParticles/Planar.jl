@@ -1016,3 +1016,43 @@ The Binance `marginmode!` override returns `true` immediately in sandbox mode wi
 Both `Planar/src/LiveMode/orders/send.jl` and `Planar/src/LiveMode/positions/call.jl` imported `singlewaycheck` from `..PaperMode.SimMode` (a relative path through PaperMode's re-export). This creates an unnecessary dependency chain and is fragile if PaperMode's exports change.
 
 **Fix:** Import directly from `PlanarCore.SimMode: singlewaycheck` in both files.
+
+## Lessons Learned (2026-10-09 — Registry verification CI)
+
+### 33. Verify each package in its OWN temporary environment
+
+A registry-verification workflow that added several packages to one shared
+temporary project produced a bogus `Pkg.Resolve.ResolverError`:
+`PlanarOptim`'s `OptimizationManopt` chain needs `Manopt 0.4.x` (which
+requires `DataStructures 0.18` or `>= 0.5.21`), but `PlanarFeatureSelection`
+pins `DataStructures = "0.19.6"`. Resolved alone in a fresh project,
+`Manopt 0.4.69` and `PlanarOptim` install and load fine. The conflict only
+existed because unrelated packages in the list constrained each other.
+
+**Fix:** one `mktempdir()` + `Pkg.activate` per package; `Pkg.add(pkg)`;
+`Pkg.precompile()`; then `Base.eval(Main, Meta.parse("using $pkg"))`. This
+mirrors what a user actually does (`Pkg.add("PlanarOptim")` in a new project)
+and reports genuine registry failures only.
+
+**Checklist:** if a verification job reports a `ResolverError`, re-run that
+single package in a clean project before touching any `Project.toml` compat.
+
+### 34. A registered version is frozen at registration time — a later local fix is invisible to General
+
+`PlanarDownloadTool` 0.1.0 on General was registered from a commit before the
+framework-wide `Asset → Instrument` rename, so its `utils.jl` referenced
+`AbstractAsset`. The local tree already used `AbstractInstrument` and
+`Project.toml` already said `version = "0.1.1"`, but General never saw that
+version. Every downstream consumer (`PlanarOptim` depends on
+`PlanarDownloadTool`) therefore failed to load with
+`UndefVarError: AbstractAsset not defined in PlanarDownloadTool`, and CI
+correctly flagged it.
+
+**Fix:** bump the version in `Project.toml`, push, then trigger
+`@JuliaRegistrator register subdir=PlanarDownloadTool` on the pushed commit.
+Never assume a local fix reaches the registry by itself — the registry only
+contains versions that were explicitly registered.
+
+**Checklist:** when a package loads locally but fails from General, diff the
+registered tree against the local one (`git ls-tree` / `git show <tree>:path`)
+to confirm whether the registered version predates the fix.

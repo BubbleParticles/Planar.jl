@@ -43,90 +43,76 @@ jobs:
       - name: Test installing packages from Julia General registry
         run: |
           julia --project=. -e '
-            using Pkg
-            using Logging
+          using Pkg
 
-            packages = [
-              "PlanarCore",
-              "Planar",
-              "PlanarStrategyStats",
-              "PlanarDownloadTool",
-              "PlanarFeatureSelection",
-              "PlanarPython",
-              "PlanarStrategyTools",
-              "PlanarOptim"
-            ]
+          packages = [
+            "PlanarCore",
+            "Planar",
+            "PlanarStrategyStats",
+            "PlanarDownloadTool",
+            "PlanarFeatureSelection",
+            "PlanarPython",
+            "PlanarStrategyTools",
+            "PlanarOptim"
+          ]
 
-            failed = String[]
-            succeeded = String[]
+          failed = String[]
+          succeeded = String[]
+          orig = Base.active_project()
 
-            @info "Testing Julia packages from General registry..."
+          @info "Testing each package in an isolated environment"
 
-            orig = dirname(Base.active_project())
+          for pkg in packages
+            @info "Testing $pkg ..."
+            # Each package gets its own environment so that unrelated packages
+            # in this list cannot constrain each other'"'"'s resolution.
             tmpdir = mktempdir()
             try
-              Pkg.activate(tmpdir)
-              Pkg.Registry.update()
-
-              for pkg in packages
-                @info "Testing $pkg..."
-                try
-                  Pkg.add(pkg)
-                  try
-                    eval(Meta.parse("using $pkg"))
-                    push!(succeeded, pkg)
-                    @info "✓ $pkg: OK"
-                  catch e
-                    @warn "Package $pkg: failed to load - $e"
-                    push!(failed, pkg)
-                  end
-                catch e
-                  @warn "Package $pkg: failed to add - $e"
-                  push!(failed, pkg)
-                end
-              end
+              Pkg.activate(tmpdir; io=devnull)
+              Pkg.add(pkg; io=devnull)
+              Pkg.precompile(; io=devnull)
+              Base.eval(Main, Meta.parse("using $pkg"))
+              push!(succeeded, pkg)
+              @info "OK: $pkg"
+            catch e
+              push!(failed, pkg)
+              @error "FAILED: $pkg" exception=(e, catch_backtrace())
             finally
-              Pkg.activate(orig)
-              rm(tmpdir, recursive=true, force=true)
+              Pkg.activate(orig; io=devnull)
+              rm(tmpdir; recursive=true, force=true)
             end
+          end
 
-            @info "Results:"
-            @info "Succeeded: $(join(succeeded, ", "))"
-            @info "Failed: $(join(failed, ", "))"
-
-            if !isempty(failed)
-              error("Some packages failed verification: $(join(failed, ", "))")
-            end
+          @info "Succeeded: $(join(succeeded, ", "))"
+          isempty(failed) || error("Some packages failed verification: $(join(failed, ", "))")
           '
 
       - name: Generate verification report
         if: always()
+        env:
+          PACKAGES: >-
+            PlanarCore, Planar, PlanarStrategyStats, PlanarDownloadTool,
+            PlanarFeatureSelection, PlanarPython, PlanarStrategyTools, PlanarOptim
         run: |
-          cat > verification-report.md << 'EOF'
-          # Julia Registry Verification Report
-
-          Run on: ${{ github.run_id }}
-          Date: $(date -u)
-          Julia: ${{ env.JULIA_VERSION }}
-
-          ## Status
-          All packages successfully installed from Julia General registry and verified to load.
-
-          ## Packages Verified
-          - PlanarCore
-          - Planar
-          - PlanarStrategyStats
-          - PlanarDownloadTool
-          - PlanarFeatureSelection
-          - PlanarPython
-          - PlanarStrategyTools
-          - PlanarOptim
-
-          ## Notes
-          - Packages tested via `Pkg.add()` and basic `using` verification
-          - Registry: Julia General
-          - Workflow: ${{ github.workflow }}
-          EOF
+          status="FAILED"
+          if [ "${{ job.status }}" = "success" ]; then status="SUCCESS"; fi
+          {
+            echo "# Julia Registry Verification Report"
+            echo
+            echo "- Run: https://github.com/BubbleParticles/Planar.jl/actions/runs/${{ github.run_id }}"
+            echo "- Commit: ${{ github.sha }}"
+            echo "- Date: $(date -u)"
+            echo "- Julia: ${{ env.JULIA_VERSION }}"
+            echo "- Registry: Julia General"
+            echo "- Status: $status"
+            echo
+            echo "## Packages Verified"
+            echo
+            echo "Each package is added to its own temporary environment with \`Pkg.add\`"
+            echo "and then loaded with \`using\`, so resolution comes from General."
+            echo
+            printf '%s\n' $PACKAGES | tr ',' '\n' | sed 's/^ *//' | grep -v '^$' | sed 's/^/- /'
+          } > verification-report.md
           cat verification-report.md
 
       - name: Upload report
