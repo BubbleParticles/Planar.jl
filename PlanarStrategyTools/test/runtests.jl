@@ -83,12 +83,12 @@ end
 
 @testset "timeframe division" begin
     tf_day = ST.TimeTicks.@tf_str("1d")
-    result = tf_day / (1000 * 60 * 60 * 24 / 12)
-    @test result.value == 12
+    result = ST.period_scaled(tf_day, 1 / 12)
+    @test result.value == 12 * 24 * 60 * 60 * 1000
 
     tf_hour = ST.TimeTicks.@tf_str("1h")
-    result2 = tf_hour / (1000 * 60 * 60 / 4)
-    @test result2.value == 4
+    result2 = ST.period_scaled(tf_hour, 1 / 4)
+    @test result2.value == 4 * 60 * 60 * 1000
 end
 
 @testset "get_signal_value" begin
