@@ -86,31 +86,55 @@ Pkg.add("Planar")          # or Pkg.add(["Planar", "PlanarOptim"])
    easy to trigger: moving a tag or re-registering a version from a later
    commit (package cleanup, `[sources]` removal) changes the tree without
    changing the version number. After any re-registration, compare the
-   overlapping versions:
+   overlapping versions. A plain `diff` per file is **not sufficient** — it
+   misses two cases:
+   1. General has a version that `PlanarRegistry` lacks entirely (e.g.
+      `PlanarCore` 1.0.0, `PlanarOptim` 0.1.3 — `diff` reports nothing because
+      the local file simply does not have that block).
+   2. `PlanarRegistry` carries a stale version General never published (e.g.
+      `PlanarOptim` 0.1.0–0.1.2, `PlanarFeatureSelection` 0.1.1) — `diff`
+      shows extra lines but no one notices they should be deleted.
+   Compare the **full version sets**, not just the shared lines:
    ```bash
    for d in Planar PlanarCore PlanarDownloadTool PlanarFeatureSelection \
             PlanarOptim PlanarPython PlanarStrategyStats PlanarStrategyTools; do
+     curl -sL "https://raw.githubusercontent.com/JuliaRegistries/General/master/P/$d/Versions.toml" \
+       | grep -oP '^\["[^"]+"\]' | sort > /tmp/gen_$d
+     grep -oP '^\["[^"]+"\]' PlanarRegistry/Packages/P/$d/Versions.toml | sort > /tmp/loc_$d
+     echo "=== $d ==="
+     echo "only in General:  $(comm -23 /tmp/gen_$d /tmp/loc_$d)"
+     echo "only locally:    $(comm -13 /tmp/gen_$d /tmp/loc_$d)"
      diff <(curl -sL "https://raw.githubusercontent.com/JuliaRegistries/General/master/P/$d/Versions.toml") \
           "PlanarRegistry/Packages/P/$d/Versions.toml"
    done
    ```
-   Empty output means both registries agree; any `<`/`>` line is a stale tree
-   that has to be repointed at the tree General serves.
-
+   Both `comm` lines must be empty **and** `diff` must be empty. When a version
+   exists only locally, delete that block from `Versions.toml` — a version
+   General never published must not be served by `PlanarRegistry` either
+   (it resolves to a tree no consumer can reach). When a version exists only
+   on General, add it with the matching `git-tree-sha1` (verify the SHA is a
+   real object in `Planar.jl` via `git rev-parse <sha>` before writing it).
+   Then copy `Package.toml`, `Deps.toml`, and `Compat.toml` from General too
+   — the tree SHA alone is not enough; the metadata files must agree or Pkg
+   fails validation.
 ### 1.4 Registering in the General registry
 
-Registered on General (status as of 2026-10-09): `PlanarCore` 1.0.1,
-`Planar` 1.9.0, `PlanarDownloadTool` 0.1.0/0.1.1, `PlanarFeatureSelection` 0.1.0,
-`PlanarPython` 0.1.0, `PlanarStrategyStats` 0.1.0, `PlanarStrategyTools` 0.1.2,
-`PlanarOptim` 0.1.3. Refresh this list with:
+Registered on General (status as of 2026-10-10): `PlanarCore` 1.0.0/1.0.1,
+`Planar` 1.9.0, `PlanarDownloadTool` 0.1.0/0.1.1, `PlanarFeatureSelection`
+0.1.0, `PlanarOptim` 0.1.3, `PlanarPython` 0.1.0, `PlanarStrategyStats`
+0.1.0, `PlanarStrategyTools` 0.1.2. `PlanarDev` is the only package
+Registrator has an open PR for. Refresh this list with:
 
 ```bash
 curl -sL "https://raw.githubusercontent.com/JuliaRegistries/General/master/P/Planar/Versions.toml"
 ```
 
-`PlanarDev` is the only package Registrator has an open PR for (#170973). The
-12 strategy packages are excluded on purpose (`REGISTER_STRATEGIES=false`) and
-stay on `PlanarRegistry` only.
+`PlanarRegistry` is kept byte-identical to General for every shared package
+(`Versions.toml` + `Package.toml` + `Deps.toml` + `Compat.toml`); see §1.3
+for the full-set-diff verification loop. `PlanarDev` is registered on
+`PlanarRegistry` only until its General PR merges. The 12 strategy packages
+are excluded on purpose (`REGISTER_STRATEGIES=false`) and stay on
+`PlanarRegistry` only.
 
 Remaining requirements:
 1. **`[compat]` entries — DONE locally, keep fresh with CompatHelper.** Every
