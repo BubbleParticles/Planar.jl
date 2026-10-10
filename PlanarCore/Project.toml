@@ -43,7 +43,7 @@ WebSockets = "104b5d7c-a370-577a-8038-80a2059c5097"
 Zarr = "0a941bbe-ad1d-11e8-39d9-ab76183a1d99"
 
 [compat]
-CSV = "0.10.16"
+CSV = "0.10.16, 1"
 CodecZlib = "0.7.8"
 DataFrames = "1.8.2"
 DataFramesMeta = "0.15.6"
