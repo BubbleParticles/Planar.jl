@@ -117,8 +117,27 @@ wheel_ver="$(unzip -p dist/*.whl '*/METADATA' | sed -n 's/^Version: //p')"
 if [ "$wheel_ver" != "$tag_ver" ]; then exit 1; fi
 ```
 
-This ensures `hatch-vcs` correctly read the tag.
 
+## Website sync (planarwebsite)
+
+Publishing to PyPI alone does not update the marketing site — the landing page
+reads its version from `defnlnotme/planarwebsite`, so after every PyPI release
+(and after every Julia registry release in `release-planar`) update both
+source-of-truth files:
+
+- `src/lib/versions.ts` — set `PYPI_VERSION` (and `PLANAR_VERSION` /
+  `DOCKER_VERSION` when those channels moved in the same release) to the
+  published version, then verify against the real channel:
+  ```bash
+  curl -s https://pypi.org/pypi/planarjl-py/json | python3 -c "import json,sys; print(json.load(sys.stdin)['info']['version'])"
+  curl -s "https://hub.docker.com/v2/repositories/bubbleparticles/planar-sysimage/tags/<version>"
+  ```
+- `src/lib/changelog.ts` — prepend a `Release` entry (see `release-planar` §
+  Website changelog for the shape and the verification loop).
+
+The website is a separate repo; clone it, edit, commit and push to `main`
+(Cloudflare Pages rebuilds automatically), or run `npm run deploy` for a
+manual `wrangler pages deploy`.
 ## Troubleshooting
 
 | Issue | Cause | Fix |

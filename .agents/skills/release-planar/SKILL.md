@@ -92,10 +92,25 @@ Pkg.add("Planar")
 ## Website changelog (planarwebsite)
 
 After publishing the registry/PyPI release, update the public changelog on the
-marketing site so users see the new version there too.
+marketing site so users see the new version there too. The website has **two**
+source-of-truth files; both must be updated or the displayed version stays stale
+(the changelog is human-written, but the version constants drive every button
+and link on the landing page).
 
 - **Repo**: `https://github.com/defnlnotme/planarwebsite` (Next.js static export; Cloudflare Pages builds on push to `main`, or run `npm run deploy` for a manual `wrangler pages deploy`).
-- **File**: `src/lib/changelog.ts` — prepend a new entry to the `releases` array (newest first):
+- **File 1 — `src/lib/versions.ts`** (source of truth for displayed versions): set all three constants to the released version, matching what is actually published:
+  ```ts
+  export const PLANAR_VERSION = '<version>';   // Planar.jl / General registry
+  export const PYPI_VERSION = '<version>';     // planarjl-py on PyPI
+  export const DOCKER_VERSION = 'v<version>';  // planar-sysimage:tags
+  export const CURRENT_VERSION = PLANAR_VERSION; // unified display version
+  ```
+  Verify each constant against the real channel before editing:
+  - Julia: `Pkg.Registry.add(RegistrySpec(url="https://github.com/BubbleParticles/PlanarRegistry.git")); Pkg.add("Planar")` then `Pkg.add(PackageSpec(name="Planar", version="<version>"))`
+  - PyPI: `curl -s https://pypi.org/pypi/planarjl-py/json | python3 -c "import json,sys; print(json.load(sys.stdin)['info']['version'])"`
+  - Docker: `curl -s "https://hub.docker.com/v2/repositories/bubbleparticles/planar-sysimage/tags/<version>"` (all four images — `planar-sysimage`, `planar-precomp`, `planar-sysimage-optim`, `planar-precomp-optim` — must carry the tag)
+  Update the trailing comment lines too; they document the tag/SHA that was verified.
+- **File 2 — `src/lib/changelog.ts`** — prepend a new entry to the `releases` array (newest first):
   ```ts
   {
     version: 'v<version>',
@@ -108,7 +123,7 @@ marketing site so users see the new version there too.
   },
   ```
 - The `Release` shape is `{ version, date, title, highlights: string[] }` (see the existing entries for style). Keep the title short and the highlights to the user-visible headline changes.
-- Commit and push (or deploy). Verify the entry appears at `https://planar.pages.dev/changelog`.
+- Commit and push (or deploy). Verify the entry appears at `https://planar.pages.dev/changelog` and the landing page shows `v<version>`.
 
 ## Verification
 

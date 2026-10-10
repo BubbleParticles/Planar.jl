@@ -49,4 +49,11 @@ corresponding GitHub release so the release page stays in sync:
 gh release create v<version> --repo BubbleParticles/Planar.jl --title "v<version>" --notes "Release notes"
 ```
 
+
+> **Website sync is not automatic.** Tagging and publishing never touch
+> `defnlnotme/planarwebsite`; after the release completes, update
+> `src/lib/versions.ts` and `src/lib/changelog.ts` per `release-planar` § Website
+> changelog. Skipping this step leaves the landing page pinned to the old
+> version — the exact failure that shipped with 1.9.0.
+
 Then proceed with the registry and PyPI steps in `release-planar`.
